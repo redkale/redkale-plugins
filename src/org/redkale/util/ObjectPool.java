@@ -9,6 +9,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
 import java.util.logging.*;
+import org.redkale.util.Creator.Creators;
 
 /**
  *
@@ -39,7 +40,7 @@ public final class ObjectPool<T> implements Supplier<T> {
     }
 
     public ObjectPool(int max, Class<T> clazz, Consumer<T> prepare, Predicate<T> recycler) {
-        this(max, Creator.create(clazz), prepare, recycler);
+        this(max, Creators.create(clazz), prepare, recycler);
     }
 
     public ObjectPool(Creator<T> creator, Consumer<T> prepare, Predicate<T> recycler) {

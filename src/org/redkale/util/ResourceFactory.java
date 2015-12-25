@@ -182,16 +182,7 @@ public final class ResourceFactory {
                         continue;
                     }
                     if (Modifier.isFinal(field.getModifiers())) continue;
-                    String tname = rc.name();
-                    if (tname.contains(RESOURCE_PARENT_NAME)) {
-                        try {
-                            String srcname = (String) src.getClass().getMethod("name").invoke(src);
-                            tname = tname.replace(RESOURCE_PARENT_NAME, srcname);
-                        } catch (Exception e) { // 获取src中的name()方法的值， 异常则忽略
-                            logger.log(Level.SEVERE, src.getClass().getName() + " not found [public String name()] method", e);
-                        }
-                    }
-                    final String rcname = tname;
+                    final String rcname = (rc.name().contains(RESOURCE_PARENT_NAME) && src instanceof Nameable) ? rc.name().replace(RESOURCE_PARENT_NAME, ((Nameable) src).name()) : rc.name();
                     Object rs = genctype == classtype ? null : find(rcname, genctype);
                     if (rs == null) {
                         if (Map.class.isAssignableFrom(classtype)) {
@@ -204,7 +195,7 @@ public final class ResourceFactory {
                     }
                     if (rs == null) {
                         Intercepter it = findIntercepter(field.getGenericType(), field);
-                        if (it != null) it.invoke(this, src, rcname, field, attachment);
+                        if (it != null) it.invoke(this, src, field, attachment);
                         continue;
                     }
                     if (!rs.getClass().isPrimitive() && classtype.isPrimitive()) {
@@ -248,7 +239,7 @@ public final class ResourceFactory {
 
     public static interface Intercepter {
 
-        public void invoke(ResourceFactory factory, Object src, String resourceName, Field field, Object attachment);
+        public void invoke(ResourceFactory factory, Object src, Field field, Object attachment);
     }
 
 }

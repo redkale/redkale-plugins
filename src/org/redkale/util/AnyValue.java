@@ -27,14 +27,14 @@ public abstract class AnyValue {
     @SuppressWarnings("unchecked")
     public static final class DefaultAnyValue extends AnyValue {
 
-        public static final BiPredicate<String, String> EQUALS = new BiPredicate<String, String>() { //为了兼容Android
+        public static final BiPredicate<String, String> EQUALS = new BiPredicate<String, String>() {
             @Override
             public boolean test(String name1, String name2) {
                 return name1.equals(name2);
             }
         };
 
-        public static final BiPredicate<String, String> EQUALSIGNORE = new BiPredicate<String, String>() { //为了兼容Android
+        public static final BiPredicate<String, String> EQUALSIGNORE = new BiPredicate<String, String>() {
             @Override
             public boolean test(String name1, String name2) {
                 return name1.equalsIgnoreCase(name2);
@@ -156,7 +156,7 @@ public abstract class AnyValue {
 
         @Override
         public String[] getNames() {
-            Set<String> set = new LinkedHashSet<>();
+            Set<String> set = new LinkedHashSet();
             for (Entry en : this.stringValues) {
                 set.add(en.name);
             }

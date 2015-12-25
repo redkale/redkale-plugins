@@ -18,6 +18,7 @@ import java.util.concurrent.*;
 import java.util.regex.*;
 import org.redkale.convert.ext.*;
 import org.redkale.util.*;
+import org.redkale.util.Creator.Creators;
 
 /**
  *
@@ -40,7 +41,7 @@ public abstract class Factory<R extends Reader, W extends Writer> {
     //-----------------------------------------------------------------------------------
     private final ConcurrentHashMap<Class, Creator> creators = new ConcurrentHashMap();
 
-    private final ConcurrentHashMap<String, Class> entitys = new ConcurrentHashMap();
+    private final Map<String, Class> entitys = new ConcurrentHashMap();
 
     private final ConcurrentHashMap<Type, Decodeable<R, ?>> decoders = new ConcurrentHashMap();
 
@@ -131,7 +132,11 @@ public abstract class Factory<R extends Reader, W extends Writer> {
         ConvertColumnEntry en = this.columnEntrys.get(field);
         if (en != null) return en;
         final ConvertType ct = this.getConvertType();
-        for (ConvertColumn ref : field.getAnnotationsByType(ConvertColumn.class)) {
+        final ConvertColumns ccs = field.getAnnotation(ConvertColumns.class);
+        final ConvertColumn cc = field.getAnnotation(ConvertColumn.class);
+        if (ccs == null && cc == null) return null;
+        final ConvertColumn[] cca = (ccs == null) ? new ConvertColumn[]{cc} : ccs.value();
+        for (ConvertColumn ref : cca) {
             if (ref.type().contains(ct)) {
                 ConvertColumnEntry entry = new ConvertColumnEntry(ref);
                 if (skipAllIgnore) {
@@ -232,7 +237,7 @@ public abstract class Factory<R extends Reader, W extends Writer> {
     public final <T> Creator<T> loadCreator(Class<T> type) {
         Creator result = findCreator(type);
         if (result == null) {
-            result = Creator.create(type);
+            result = Creators.create(type);
             creators.put(type, result);
         }
         return result;

@@ -9,6 +9,7 @@ import org.redkale.util.Attribute;
 import java.lang.reflect.*;
 import java.util.*;
 import org.redkale.util.*;
+import org.redkale.util.Attribute.Attributes;
 
 /**
  *
@@ -273,7 +274,7 @@ public final class ObjectEncoder<W extends Writer, T> implements Encodeable<W, T
             }
             fieldalias = ref == null || ref.name().isEmpty() ? mfieldname : ref.name();
         }
-        return Attribute.create(clazz, fieldalias, field, getter, setter);
+        return Attributes.create(clazz, fieldalias, field, getter, setter);
     }
 
 }

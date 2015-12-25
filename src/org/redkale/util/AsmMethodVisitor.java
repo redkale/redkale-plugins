@@ -6,7 +6,7 @@
 package org.redkale.util;
 
 import java.util.*;
-import jdk.internal.org.objectweb.asm.*;
+import org.objectweb.asm.*;
 
 /**
  *
