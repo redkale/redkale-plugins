@@ -13,7 +13,7 @@ import org.redkale.net.Servlet;
  * @see http://www.redkale.org
  * @author zhangjx
  */
-public abstract class SocksServlet implements Servlet<SocksRequest, SocksResponse> {
+public abstract class SocksServlet extends Servlet<SocksRequest, SocksResponse> {
 
     AnyValue conf; //当前Servlet的配置
 
