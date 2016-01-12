@@ -46,7 +46,7 @@ public final class SocksServer extends Server {
         final int port = this.address.getPort();
         AtomicLong createBufferCounter = watch == null ? new AtomicLong() : watch.createWatchNumber("SOCKS_" + port + ".Buffer.creatCounter");
         AtomicLong cycleBufferCounter = watch == null ? new AtomicLong() : watch.createWatchNumber("SOCKS_" + port + ".Buffer.cycleCounter");
-        int rcapacity = Math.max(this.capacity, 8 * 1024);
+        int rcapacity = Math.max(this.bufferCapacity, 8 * 1024);
         ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(createBufferCounter, cycleBufferCounter, this.bufferPoolSize,
                 (Object... params) -> ByteBuffer.allocateDirect(rcapacity), null, (e) -> {
                     if (e == null || e.isReadOnly() || e.capacity() != rcapacity) return false;

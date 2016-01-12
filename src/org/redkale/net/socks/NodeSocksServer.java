@@ -31,7 +31,7 @@ public class NodeSocksServer extends NodeServer {
     private final SocksServer socksServer;
 
     public NodeSocksServer(Application application, AnyValue serconf) {
-        super(application, application.getResourceFactory().createChild(), createServer(application, serconf));
+        super(application, createServer(application, serconf));
         this.socksServer = (SocksServer) server;
     }
 
@@ -51,7 +51,7 @@ public class NodeSocksServer extends NodeServer {
 
     @Override
     protected void loadServlet(ClassFilter<? extends Servlet> servletFilter) throws Exception {
-        if (socksServer != null) loadSocksServlet(this.nodeConf.getAnyValue("servlets"), servletFilter);
+        if (socksServer != null) loadSocksServlet(this.serverConf.getAnyValue("servlets"), servletFilter);
     }
 
     protected void loadSocksServlet(final AnyValue conf, ClassFilter<? extends Servlet> filter) throws Exception {
