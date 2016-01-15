@@ -47,6 +47,7 @@ public class WeiXinQYMessage {
     }
 
     public final void setTextMessage(String content) {
+        if (content == null || content.isEmpty()) return;
         if (text == null) text = new HashMap<>();
         text.put("content", content);
     }

@@ -93,7 +93,6 @@ public class WeiXinQYService implements Service {
 //        message.setAgentid("2");
 //        service.sendQYMessage(message);
 //    }
-
     //-----------------------------------微信企业号接口----------------------------------------------------------
     public Map<String, String> getQYUserCode(String code, String agentid) throws IOException {
         String url = "https://qyapi.weixin.qq.com/cgi-bin/user/getuserinfo?access_token=" + getQYAccessToken() + "&code=" + code + "&agentid=" + agentid;
@@ -115,6 +114,7 @@ public class WeiXinQYService implements Service {
             String result = null;
             try {
                 message.supplyContent();
+                if (message.getText() == null) return; //没内容不需要发
                 String url = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=" + getQYAccessToken();
                 result = postHttpContent(url, convert.convertTo(message));
                 if (finest) logger.finest("sendQYMessage ok: " + message + " -> " + result);
