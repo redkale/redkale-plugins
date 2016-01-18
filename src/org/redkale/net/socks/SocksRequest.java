@@ -10,27 +10,32 @@ import org.redkale.net.http.HttpRequest;
 import java.net.*;
 import java.nio.*;
 import java.nio.channels.*;
+import org.redkale.net.*;
+import org.redkale.net.http.*;
 
 /**
  *
  * @see http://www.redkale.org
  * @author zhangjx
  */
-public class SocksRequest extends HttpRequest {
+public class SocksRequest extends Request<SocksContext> {
+
+    private final ProxyRequest httpRequest;
 
     private boolean http;
 
     private short requestid;
 
     protected SocksRequest(SocksContext context) {
-        super(context, null);
+        super(context);
+        this.httpRequest = new ProxyRequest(context, null);
     }
 
     @Override
     protected int readHeader(ByteBuffer buffer) {
         if (buffer.get(0) > 0x05 && buffer.remaining() > 3) {
             this.http = true;
-            return super.readHeader(buffer);
+            return httpRequest.readHeader(buffer);
         }
         this.http = false;
         if (buffer.get() != 0x05) return -1;
@@ -40,21 +45,19 @@ public class SocksRequest extends HttpRequest {
     }
 
     protected InetSocketAddress parseSocketAddress() {
-        return HttpRequest.parseSocketAddress(getRequestURI());
+        return httpRequest.parseSocketAddress(httpRequest.getRequestURI());
     }
 
     public AsynchronousChannelGroup getAsynchronousChannelGroup() {
-        return ((SocksContext) context).getAsynchronousChannelGroup();
+        return context.getAsynchronousChannelGroup();
     }
 
-    @Override
     protected InetSocketAddress getHostSocketAddress() {
-        return super.getHostSocketAddress();
+        return httpRequest.getHostSocketAddress();
     }
 
-    @Override
     protected AsyncConnection getChannel() {
-        return super.getChannel();
+        return httpRequest.getChannel();
     }
 
     @Override
@@ -64,7 +67,7 @@ public class SocksRequest extends HttpRequest {
 
     @Override
     protected void prepare() {
-        super.prepare();
+        httpRequest.prepare();
     }
 
     @Override
@@ -90,4 +93,44 @@ public class SocksRequest extends HttpRequest {
         this.http = http;
     }
 
+    ProxyRequest getProxyRequest() {
+        return httpRequest;
+    }
+
+}
+
+class ProxyRequest extends HttpRequest {
+
+    public ProxyRequest(HttpContext context, String remoteAddrHeader) {
+        super(context, remoteAddrHeader);
+    }
+
+    protected InetSocketAddress parseSocketAddress() {
+        return super.parseSocketAddress(super.getRequestURI());
+    }
+
+    @Override
+    protected int readHeader(final ByteBuffer buffer) {
+        return super.readHeader(buffer);
+    }
+
+    @Override
+    protected InetSocketAddress getHostSocketAddress() {
+        return super.getHostSocketAddress();
+    }
+
+    @Override
+    protected InetSocketAddress parseSocketAddress(String host) {
+        return super.parseSocketAddress(host);
+    }
+
+    @Override
+    protected void prepare() {
+        super.prepare();
+    }
+
+    @Override
+    protected AsyncConnection getChannel() {
+        return super.getChannel();
+    }
 }

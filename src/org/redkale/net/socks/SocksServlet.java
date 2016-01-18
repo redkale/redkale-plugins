@@ -7,16 +7,15 @@ package org.redkale.net.socks;
 
 import org.redkale.util.AnyValue;
 import org.redkale.net.Servlet;
-import org.redkale.net.http.*;
 
 /**
  *
  * @see http://www.redkale.org
  * @author zhangjx
  */
-public abstract class SocksServlet extends Servlet<HttpContext, SocksRequest, SocksResponse> {
+public abstract class SocksServlet extends Servlet<SocksContext, SocksRequest, SocksResponse> {
 
-    AnyValue conf; //当前Servlet的配置
+    AnyValue _conf; //当前Servlet的配置
 
     @Override
     public final boolean equals(Object obj) {

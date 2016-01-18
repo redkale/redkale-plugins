@@ -12,7 +12,6 @@ import java.io.*;
 import java.net.*;
 import java.nio.*;
 import java.util.logging.*;
-import org.redkale.net.http.*;
 
 /**
  *
@@ -27,7 +26,7 @@ public class SocksConnectServlet extends SocksServlet {
     private byte[] bindAddressBytes = new byte[0];
 
     @Override
-    public void init(HttpContext context, AnyValue config) {
+    public void init(SocksContext context, AnyValue config) {
         if (config == null) {
             this.bindAddress = new InetSocketAddress(Utility.localInetAddress(), context.getServerAddress().getPort());
         } else {
@@ -52,7 +51,7 @@ public class SocksConnectServlet extends SocksServlet {
 
     @Override
     public void execute(SocksRequest request, SocksResponse response) throws IOException {
-        response.getContext().submit(new SocksRunner((SocksContext) response.getContext(), response.removeChannel(), bindAddressBytes));
+        response.getContext().submit(new SocksRunner(response.getContext(), response.removeChannel(), bindAddressBytes));
         response.finish(true);
     }
 
