@@ -77,23 +77,25 @@ class ProxyRequest extends HttpRequest {
         super(context, remoteAddrHeader);
     }
 
-    protected InetSocketAddress parseSocketAddress() {
-        return super.parseSocketAddress(super.getRequestURI());
+    protected InetSocketAddress getURLSocketAddress() {
+        return parseSocketAddress(super.getRequestURI());
+    }
+
+    protected InetSocketAddress getHostSocketAddress() {
+        return parseSocketAddress(getHost());
+    }
+
+    private InetSocketAddress parseSocketAddress(String host) {
+        if (host == null || host.isEmpty()) return null;
+        int pos = host.indexOf(':');
+        String hostname = pos < 0 ? host : host.substring(0, pos);
+        int port = pos < 0 ? 80 : Integer.parseInt(host.substring(pos + 1));
+        return new InetSocketAddress(hostname, port);
     }
 
     @Override
     protected int readHeader(final ByteBuffer buffer) {
         return super.readHeader(buffer);
-    }
-
-    @Override
-    protected InetSocketAddress getHostSocketAddress() {
-        return super.getHostSocketAddress();
-    }
-
-    @Override
-    protected InetSocketAddress parseSocketAddress(String host) {
-        return super.parseSocketAddress(host);
     }
 
     @Override

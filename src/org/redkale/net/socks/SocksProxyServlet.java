@@ -82,7 +82,7 @@ public final class SocksProxyServlet extends SocksServlet {
     }
 
     private void connect(ProxyRequest request, ProxyResponse response, final AsynchronousChannelGroup group) throws IOException {
-        final InetSocketAddress remoteAddress = request.parseSocketAddress();
+        final InetSocketAddress remoteAddress = request.getURLSocketAddress();
         final AsyncConnection remote = remoteAddress.getPort() == 443
                 ? AsyncConnection.create(Utility.createDefaultSSLSocket(remoteAddress)) : AsyncConnection.create("TCP", group, remoteAddress, 6, 6);
         final ByteBuffer buffer0 = response.getContext().pollBuffer();
