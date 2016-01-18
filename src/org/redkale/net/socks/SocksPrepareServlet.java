@@ -6,16 +6,16 @@
 package org.redkale.net.socks;
 
 import org.redkale.util.AnyValue;
-import org.redkale.net.Context;
 import org.redkale.net.PrepareServlet;
 import java.io.*;
+import org.redkale.net.http.*;
 
 /**
  *
  * @see http://www.redkale.org
  * @author zhangjx
  */
-public final class SocksPrepareServlet extends PrepareServlet<SocksRequest, SocksResponse> {
+public final class SocksPrepareServlet extends PrepareServlet<HttpContext, SocksRequest, SocksResponse> {
 
     private SocksServlet socksServlet = new SocksConnectServlet();
 
@@ -25,7 +25,7 @@ public final class SocksPrepareServlet extends PrepareServlet<SocksRequest, Sock
     }
 
     @Override
-    public void init(Context context, AnyValue config) {
+    public void init(HttpContext context, AnyValue config) {
         if (socksServlet != null) socksServlet.init(context, socksServlet.conf == null ? config : socksServlet.conf);
     }
 

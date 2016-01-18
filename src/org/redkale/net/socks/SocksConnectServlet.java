@@ -6,13 +6,13 @@
 package org.redkale.net.socks;
 
 import org.redkale.util.AnyValue;
-import org.redkale.net.Context;
 import org.redkale.util.Utility;
 import org.redkale.util.AutoLoad;
 import java.io.*;
 import java.net.*;
 import java.nio.*;
 import java.util.logging.*;
+import org.redkale.net.http.*;
 
 /**
  *
@@ -27,7 +27,7 @@ public class SocksConnectServlet extends SocksServlet {
     private byte[] bindAddressBytes = new byte[0];
 
     @Override
-    public void init(Context context, AnyValue config) {
+    public void init(HttpContext context, AnyValue config) {
         if (config == null) {
             this.bindAddress = new InetSocketAddress(Utility.localInetAddress(), context.getServerAddress().getPort());
         } else {

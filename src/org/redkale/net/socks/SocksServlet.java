@@ -7,13 +7,14 @@ package org.redkale.net.socks;
 
 import org.redkale.util.AnyValue;
 import org.redkale.net.Servlet;
+import org.redkale.net.http.*;
 
 /**
  *
  * @see http://www.redkale.org
  * @author zhangjx
  */
-public abstract class SocksServlet extends Servlet<SocksRequest, SocksResponse> {
+public abstract class SocksServlet extends Servlet<HttpContext, SocksRequest, SocksResponse> {
 
     AnyValue conf; //当前Servlet的配置
 

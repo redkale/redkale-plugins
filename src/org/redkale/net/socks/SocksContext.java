@@ -26,9 +26,9 @@ public class SocksContext extends HttpContext {
 
     public SocksContext(long serverStartTime, Logger logger, ExecutorService executor, int bufferCapacity, ObjectPool<ByteBuffer> bufferPool,
             ObjectPool<Response> responsePool, int maxbody, Charset charset, InetSocketAddress address, PrepareServlet prepare,
-            WatchFactory watch, int readTimeoutSecond, int writeTimeoutSecond, String contextPath) {
+            WatchFactory watch, int readTimeoutSecond, int writeTimeoutSecond) {
         super(serverStartTime, logger, executor, bufferCapacity, bufferPool, responsePool, maxbody, charset,
-                address, prepare, watch, readTimeoutSecond, writeTimeoutSecond, contextPath);
+                address, prepare, watch, readTimeoutSecond, writeTimeoutSecond);
         AsynchronousChannelGroup g = null;
         try {
             g = AsynchronousChannelGroup.withThreadPool(executor);
