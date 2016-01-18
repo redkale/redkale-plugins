@@ -9,7 +9,6 @@ import org.redkale.net.AsyncConnection;
 import org.redkale.net.http.HttpRequest;
 import java.net.*;
 import java.nio.*;
-import java.nio.channels.*;
 import org.redkale.net.*;
 import org.redkale.net.http.*;
 
@@ -23,8 +22,6 @@ public class SocksRequest extends Request<SocksContext> {
     private final ProxyRequest httpRequest;
 
     private boolean http;
-
-    private short requestid;
 
     protected SocksRequest(SocksContext context) {
         super(context);
@@ -44,22 +41,6 @@ public class SocksRequest extends Request<SocksContext> {
         return 0;
     }
 
-    protected InetSocketAddress parseSocketAddress() {
-        return httpRequest.parseSocketAddress(httpRequest.getRequestURI());
-    }
-
-    public AsynchronousChannelGroup getAsynchronousChannelGroup() {
-        return context.getAsynchronousChannelGroup();
-    }
-
-    protected InetSocketAddress getHostSocketAddress() {
-        return httpRequest.getHostSocketAddress();
-    }
-
-    protected AsyncConnection getChannel() {
-        return httpRequest.getChannel();
-    }
-
     @Override
     protected int readBody(ByteBuffer buffer) {
         return buffer.remaining();
@@ -72,17 +53,8 @@ public class SocksRequest extends Request<SocksContext> {
 
     @Override
     protected void recycle() {
-        this.requestid = 0;
         this.http = false;
         super.recycle();
-    }
-
-    public short getRequestid() {
-        return requestid;
-    }
-
-    public void setRequestid(short requestid) {
-        this.requestid = requestid;
     }
 
     public boolean isHttp() {

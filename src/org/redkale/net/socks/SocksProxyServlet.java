@@ -26,7 +26,7 @@ public final class SocksProxyServlet extends SocksServlet {
 
     @Override
     public void execute(SocksRequest request, SocksResponse response) throws IOException {
-        execute(request.getProxyRequest(), response.getProxyResponse(), request.getAsynchronousChannelGroup());
+        execute(request.getProxyRequest(), response.getProxyResponse(), request.getContext().getAsynchronousChannelGroup());
     }
 
     private void execute(ProxyRequest request, ProxyResponse response, final AsynchronousChannelGroup group) throws IOException {
