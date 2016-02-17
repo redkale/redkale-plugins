@@ -61,7 +61,7 @@ public class NodeSocksServer extends NodeServer {
             Class<SocksServlet> clazz = (Class<SocksServlet>) en.getType();
             if (Modifier.isAbstract(clazz.getModifiers())) continue;
             final SocksServlet servlet = clazz.newInstance();
-            factory.inject(servlet);
+            resourceFactory.inject(servlet);
             DefaultAnyValue servletConf = (DefaultAnyValue) en.getProperty();
             this.socksServer.addSocksServlet(servlet, servletConf);
             if (sb != null) sb.append(threadName).append(" Loaded ").append(clazz.getName()).append(" --> ").append(servletConf).append(LINE_SEPARATOR);
