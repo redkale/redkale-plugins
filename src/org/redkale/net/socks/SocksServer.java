@@ -5,10 +5,10 @@
  */
 package org.redkale.net.socks;
 
+import java.io.*;
 import org.redkale.util.AnyValue;
 import org.redkale.net.Server;
 import org.redkale.util.ObjectPool;
-import org.redkale.net.Context;
 import org.redkale.watch.WatchFactory;
 import org.redkale.net.Response;
 import java.nio.*;
@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.*;
  * @see http://www.redkale.org
  * @author zhangjx
  */
-public final class SocksServer extends Server {
+public final class SocksServer extends Server<Serializable, SocksContext, SocksRequest, SocksResponse> {
 
     public SocksServer() {
         this(System.currentTimeMillis(), null);
@@ -34,13 +34,9 @@ public final class SocksServer extends Server {
         super.init(config);
     }
 
-    public void addSocksServlet(SocksServlet servlet, AnyValue conf) {
-        ((SocksPrepareServlet) this.prepare).setSocksServlet(servlet, conf);
-    }
-
     @Override
     @SuppressWarnings("unchecked")
-    protected Context createContext() {
+    protected SocksContext createContext() {
         if (this.readTimeoutSecond < 1) this.readTimeoutSecond = 6;
         if (this.writeTimeoutSecond < 1) this.writeTimeoutSecond = 6;
         final int port = this.address.getPort();
