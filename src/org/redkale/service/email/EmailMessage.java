@@ -5,6 +5,7 @@
  */
 package org.redkale.service.email;
 
+import java.io.*;
 import java.util.*;
 import org.redkale.convert.json.*;
 
@@ -37,14 +38,21 @@ public class EmailMessage implements java.io.Serializable {
 
     private boolean htmltranfer = true;
 
-    private Map<String, String> files;
+    private Map<String, Serializable> files;
 
     public EmailMessage() {
     }
 
-    public void putFile(String filetitle, String filepath) {
+    public EmailMessage putFile(String filetitle, String filepath) {
         if (this.files == null) this.files = new HashMap<>();
         this.files.put(filetitle, filepath);
+        return this;
+    }
+
+    public EmailMessage putFile(String filetitle, byte[] data) {
+        if (this.files == null) this.files = new HashMap<>();
+        this.files.put(filetitle, data);
+        return this;
     }
 
     @Override
@@ -134,11 +142,11 @@ public class EmailMessage implements java.io.Serializable {
         this.from = from;
     }
 
-    public Map<String, String> getFiles() {
+    public Map<String, Serializable> getFiles() {
         return files;
     }
 
-    public void setFiles(Map<String, String> files) {
+    public void setFiles(Map<String, Serializable> files) {
         this.files = files;
     }
 

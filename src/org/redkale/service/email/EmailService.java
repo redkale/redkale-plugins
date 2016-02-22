@@ -5,6 +5,7 @@
  */
 package org.redkale.service.email;
 
+import java.io.*;
 import java.util.*;
 import java.util.logging.*;
 import javax.activation.*;
@@ -108,9 +109,10 @@ public class EmailService implements org.redkale.service.Service {
                 MimeBodyPart ctx = new MimeBodyPart();
                 ctx.setDataHandler(new DataHandler(new ByteArrayDataSource(content, bean.getContentType())));
                 mp.addBodyPart(ctx);
-                for (Map.Entry<String, String> en : bean.getFiles().entrySet()) {
+                for (Map.Entry<String, Serializable> en : bean.getFiles().entrySet()) {
+                    Serializable data = en.getValue();
                     MimeBodyPart mbp = new MimeBodyPart();
-                    FileDataSource fds = new FileDataSource(en.getValue());
+                    DataSource fds = (data instanceof byte[]) ? new ByteArrayDataSource((byte[]) data, bean.getContentType()) : new FileDataSource((String) data);
                     mbp.setDataHandler(new DataHandler(fds));
                     mbp.setFileName(MimeUtility.encodeWord(en.getKey(), "UTF-8", null));
                     mp.addBodyPart(mbp);
