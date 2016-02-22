@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.*;
  * @see http://www.redkale.org
  * @author zhangjx
  */
-public final class SocksServer extends Server<Serializable, SocksContext, SocksRequest, SocksResponse> {
+public final class SocksServer extends Server<Serializable, SocksContext, SocksRequest, SocksResponse, SocksServlet> {
 
     public SocksServer() {
         this(System.currentTimeMillis(), null);

@@ -8,14 +8,13 @@ package org.redkale.net.socks;
 import org.redkale.util.AnyValue;
 import org.redkale.net.PrepareServlet;
 import java.io.*;
-import org.redkale.net.*;
 
 /**
  *
  * @see http://www.redkale.org
  * @author zhangjx
  */
-public final class SocksPrepareServlet extends PrepareServlet<Serializable, SocksContext, SocksRequest, SocksResponse> {
+public final class SocksPrepareServlet extends PrepareServlet<Serializable, SocksContext, SocksRequest, SocksResponse, SocksServlet> {
 
     private SocksServlet socksServlet = new SocksConnectServlet();
 
@@ -40,7 +39,7 @@ public final class SocksPrepareServlet extends PrepareServlet<Serializable, Sock
     }
 
     @Override
-    public <S extends Servlet<SocksContext, SocksRequest, SocksResponse>> void addServlet(S servlet, Object attachment, AnyValue conf, Serializable... mappings) {
+    public void addServlet(SocksServlet servlet, Object attachment, AnyValue conf, Serializable... mappings) {
         setServletConf(servlet, conf);
         if (servlet != null) this.socksServlet = (SocksServlet) servlet;
     }
