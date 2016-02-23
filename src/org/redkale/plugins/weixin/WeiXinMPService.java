@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkale.service.weixin;
+package org.redkale.plugins.weixin;
 
 import org.redkale.util.Utility;
 import org.redkale.convert.json.JsonConvert;

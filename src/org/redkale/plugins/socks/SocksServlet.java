@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkale.net.socks;
+package org.redkale.plugins.socks;
 
 import org.redkale.net.Servlet;
 

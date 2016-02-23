@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkale.service.redis;
+package org.redkale.plugins.redis;
 
 import java.io.*;
 import java.net.*;
@@ -49,12 +49,10 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     @Override
     public void init(AnyValue conf) {
         if (conf == null) conf = new AnyValue.DefaultAnyValue();
-        AtomicLong createBufferCounter = watchFactory == null ? new AtomicLong() : watchFactory.createWatchNumber(Transport.class.getSimpleName() + ".Buffer.creatCounter");
-        AtomicLong cycleBufferCounter = watchFactory == null ? new AtomicLong() : watchFactory.createWatchNumber(Transport.class.getSimpleName() + ".Buffer.cycleCounter");
         final int bufferCapacity = conf.getIntValue("bufferCapacity", 8 * 1024);
         final int bufferPoolSize = conf.getIntValue("bufferPoolSize", Runtime.getRuntime().availableProcessors() * 8);
         final int threads = conf.getIntValue("threads", Runtime.getRuntime().availableProcessors() * 8);
-        final ObjectPool<ByteBuffer> transportPool = new ObjectPool<>(new AtomicLong(), cycleBufferCounter, bufferPoolSize,
+        final ObjectPool<ByteBuffer> transportPool = new ObjectPool<>(new AtomicLong(), new AtomicLong(), bufferPoolSize,
                 (Object... params) -> ByteBuffer.allocateDirect(bufferCapacity), null, (e) -> {
                     if (e == null || e.isReadOnly() || e.capacity() != bufferCapacity) return false;
                     e.clear();
@@ -132,14 +130,27 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
                     conn0.read(buffer, null, new CompletionHandler<Integer, Void>() {
                         @Override
                         public void completed(Integer result, Void attachment) {
-                            //待写
-                            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                            buffer.flip();
+                            final byte b = buffer.get();
+//                            if (b == PLUS_BYTE) { //fff
+//                                return processStatusCodeReply(is);
+//                            } else if (b == DOLLAR_BYTE) {
+//                                return processBulkReply(is);
+//                            } else if (b == ASTERISK_BYTE) {
+//                                return processMultiBulkReply(is);
+//                            } else if (b == COLON_BYTE) { 
+//                                return processInteger(is);
+//                            } else if (b == MINUS_BYTE) {
+//                                processError(is);
+//                                return null;
+//                            } else {
+//                                throw new RuntimeException("Unknown reply: " + (char) b);
+//                            }
                         }
 
                         @Override
                         public void failed(Throwable exc, Void attachment) {
-                            //待写
-                            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                            future.set(exc instanceof RuntimeException ? (RuntimeException) exc : new RuntimeException(exc));
                         }
 
                     });
