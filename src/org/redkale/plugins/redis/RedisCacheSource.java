@@ -19,7 +19,6 @@ import org.redkale.net.*;
 import org.redkale.service.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import org.redkale.util.AnyValue.DefaultAnyValue;
 import org.redkale.watch.*;
 
 /**
@@ -84,7 +83,8 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
         }
         this.transport = new Transport("Redis-Transport", "TCP", null, transportPool, transportGroup, null, addresses);
     }
-
+    
+    /*
     public static void main(String[] args) throws Exception {
         DefaultAnyValue conf = new DefaultAnyValue();
         conf.addValue("node", new DefaultAnyValue().addValue("addr", "10.28.10.11").addValue("port", "5050"));
@@ -142,7 +142,8 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
         }, "key2", "keyvalue2");
         Thread.sleep(500L);
     }
-
+    */
+    
     private SimpleFuture<byte[]> send(final String command, final K key, final byte[]... args) {
         return send(command, false, key, args);
     }
