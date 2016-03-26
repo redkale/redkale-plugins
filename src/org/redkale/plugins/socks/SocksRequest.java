@@ -5,10 +5,8 @@
  */
 package org.redkale.plugins.socks;
 
-import org.redkale.net.AsyncConnection;
-import org.redkale.net.http.HttpRequest;
-import java.net.*;
-import java.nio.*;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import org.redkale.net.*;
 import org.redkale.net.http.*;
 
@@ -30,14 +28,25 @@ public class SocksRequest extends Request<SocksContext> {
 
     @Override
     protected int readHeader(ByteBuffer buffer) {
-        if (buffer.get(0) > 0x05 && buffer.remaining() > 3) {
+        int remaining = buffer.remaining();
+        if (buffer.get(0) > 0x05 && remaining > 4) {
             this.http = true;
             return httpRequest.readHeader(buffer);
         }
         this.http = false;
-        if (buffer.get() != 0x05) return -1;
-        if (buffer.get() != 0x01) return -1;
-        if (buffer.get() != 0x00) return -1;
+        // 05 01 00 共3字节，这种是要求匿名代理
+        // 05 01 02 共3字节，这种是要求以用户名密码方式验证代理
+        // 05 02 00 02 共4字节，这种是要求以匿名或者用户名密码方式代理        
+        if (remaining == 4) {
+            if (buffer.get() != 0x05) return -1;
+            if (buffer.get() != 0x02) return -1;
+            if (buffer.get() != 0x00) return -1;
+            if (buffer.get() != 0x02) return -1;
+        } else { //3  05 01 02 共3字节，这种是要求以用户名密码方式验证代理, 暂时不支持
+            if (buffer.get() != 0x05) return -1;
+            if (buffer.get() != 0x01) return -1;
+            if (buffer.get() != 0x00) return -1;
+        }
         return 0;
     }
 
