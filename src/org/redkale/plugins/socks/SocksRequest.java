@@ -17,13 +17,13 @@ import org.redkale.net.http.*;
  */
 public class SocksRequest extends Request<SocksContext> {
 
-    private final ProxyRequest httpRequest;
+    private final HttpxRequest httpRequest;
 
     private boolean http;
 
     protected SocksRequest(SocksContext context) {
         super(context);
-        this.httpRequest = new ProxyRequest(context, null);
+        this.httpRequest = new HttpxRequest(context, null);
     }
 
     @Override
@@ -63,6 +63,8 @@ public class SocksRequest extends Request<SocksContext> {
     @Override
     protected void recycle() {
         this.http = false;
+        httpRequest.setChannel(null);
+        httpRequest.recycle();
         super.recycle();
     }
 
@@ -74,15 +76,15 @@ public class SocksRequest extends Request<SocksContext> {
         this.http = http;
     }
 
-    ProxyRequest getProxyRequest() {
+    HttpxRequest getHttpxRequest() {
         return httpRequest;
     }
 
 }
 
-class ProxyRequest extends HttpRequest {
+class HttpxRequest extends HttpRequest {
 
-    public ProxyRequest(HttpContext context, String remoteAddrHeader) {
+    public HttpxRequest(HttpContext context, String remoteAddrHeader) {
         super(context, remoteAddrHeader);
     }
 
@@ -113,7 +115,21 @@ class ProxyRequest extends HttpRequest {
     }
 
     @Override
+    protected void recycle() {
+        super.recycle();
+    }
+
+    @Override
+    public String toString() {
+        return super.toString();
+    }
+
+    @Override
     protected AsyncConnection getChannel() {
         return super.getChannel();
+    }
+
+    protected void setChannel(AsyncConnection channel) {
+        super.channel = channel;
     }
 }

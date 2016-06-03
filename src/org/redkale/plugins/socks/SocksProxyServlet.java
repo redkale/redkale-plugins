@@ -26,10 +26,13 @@ public final class SocksProxyServlet extends SocksServlet {
 
     @Override
     public void execute(SocksRequest request, SocksResponse response) throws IOException {
-        execute(request.getProxyRequest(), response.getProxyResponse(), request.getContext().getAsynchronousChannelGroup());
+        request.getHttpxRequest().setChannel(response.getChannel());
+        response.getHttpxResponse().setChannel(response.getChannel());
+        execute(request.getHttpxRequest(), response.getHttpxResponse(), request.getContext().getAsynchronousChannelGroup());
     }
 
-    private void execute(ProxyRequest request, ProxyResponse response, final AsynchronousChannelGroup group) throws IOException {
+    private void execute(HttpxRequest request, HttpxResponse response, final AsynchronousChannelGroup group) throws IOException {
+        System.out.println("=============" + response.getChannel() + "========" + request);
         response.skipHeader();
         if ("CONNECT".equalsIgnoreCase(request.getMethod())) {
             connect(request, response, group);
@@ -81,10 +84,10 @@ public final class SocksProxyServlet extends SocksServlet {
         });
     }
 
-    private void connect(ProxyRequest request, ProxyResponse response, final AsynchronousChannelGroup group) throws IOException {
+    private void connect(HttpxRequest request, HttpxResponse response, final AsynchronousChannelGroup group) throws IOException {
         final InetSocketAddress remoteAddress = request.getURLSocketAddress();
         final AsyncConnection remote = remoteAddress.getPort() == 443
-                ? AsyncConnection.create(Utility.createDefaultSSLSocket(remoteAddress)) : AsyncConnection.create("TCP", group, remoteAddress, 6, 6);
+            ? AsyncConnection.create(Utility.createDefaultSSLSocket(remoteAddress)) : AsyncConnection.create("TCP", group, remoteAddress, 6, 6);
         final ByteBuffer buffer0 = response.getContext().pollBuffer();
         buffer0.put("HTTP/1.1 200 Connection established\r\nConnection: close\r\n\r\n".getBytes());
         buffer0.flip();
@@ -109,13 +112,13 @@ public final class SocksProxyServlet extends SocksServlet {
 
     private static class ProxyCompletionHandler implements CompletionHandler<Integer, Void> {
 
-        private AsyncConnection remote;
+        private final AsyncConnection remote;
 
-        private ProxyRequest request;
+        private final HttpxRequest request;
 
-        private ProxyResponse response;
+        private final HttpxResponse response;
 
-        public ProxyCompletionHandler(AsyncConnection remote, ProxyRequest request, ProxyResponse response) {
+        public ProxyCompletionHandler(AsyncConnection remote, HttpxRequest request, HttpxResponse response) {
             this.remote = remote;
             this.request = request;
             this.response = response;

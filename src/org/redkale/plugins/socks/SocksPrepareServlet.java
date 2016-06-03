@@ -18,7 +18,7 @@ public final class SocksPrepareServlet extends PrepareServlet<Serializable, Sock
 
     private SocksServlet socksServlet = new SocksConnectServlet();
 
-    private SocksProxyServlet proxyServlet = new SocksProxyServlet();
+    private final SocksProxyServlet proxyServlet = new SocksProxyServlet();
 
     public SocksPrepareServlet() {
     }
