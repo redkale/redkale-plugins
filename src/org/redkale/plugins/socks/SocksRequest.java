@@ -53,7 +53,7 @@ public class SocksRequest extends Request<SocksContext> {
 
     @Override
     protected int readBody(ByteBuffer buffer) {
-        return buffer.remaining();
+        return http ? httpRequest.readBody(buffer) : buffer.remaining();
     }
 
     @Override
@@ -114,10 +114,10 @@ class HttpxRequest extends HttpRequest {
     @Override
     protected int readBody(ByteBuffer buffer) {
         super.skipBodyParse();
-        return super.readHeader(buffer);
+        return super.readBody(buffer);
     }
-    
-    protected ByteArray getDirectBody(){
+
+    protected ByteArray getDirectBody() {
         return super.getDirectBody();
     }
 

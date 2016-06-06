@@ -54,8 +54,8 @@ public final class SocksHttpxServlet extends SocksServlet {
         if (request.getContentType() != null) {
             buffer.put(("Content-Type: " + request.getContentType() + "\r\n").getBytes());
         }
-        if (request.getContentLength() > 0) {  //Proxy-去掉了， content-length值已经变动， 不好计算新值，目前直接屏蔽
-            //    buffer.put(("Content-Length: " + request.getContentLength() + "\r\n").getBytes());
+        if (request.getContentLength() > 0) {  
+                buffer.put(("Content-Length: " + request.getContentLength() + "\r\n").getBytes());
         }
         buffer.put(LINE);
         ByteArray body = request.getDirectBody();
