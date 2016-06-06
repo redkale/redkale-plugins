@@ -12,6 +12,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.*;
 import java.nio.channels.*;
+import org.redkale.util.*;
 
 /**
  * 正向代理
@@ -20,7 +21,7 @@ import java.nio.channels.*;
  * @author zhangjx
  */
 @AutoLoad(false)
-public final class SocksProxyServlet extends SocksServlet {
+public final class SocksHttpxServlet extends SocksServlet {
 
     protected static final byte[] LINE = new byte[]{'\r', '\n'};
 
@@ -32,7 +33,6 @@ public final class SocksProxyServlet extends SocksServlet {
     }
 
     private void execute(HttpxRequest request, HttpxResponse response, final AsynchronousChannelGroup group) throws IOException {
-        System.out.println("=============" + response.getChannel() + "========" + request);
         response.skipHeader();
         if ("CONNECT".equalsIgnoreCase(request.getMethod())) {
             connect(request, response, group);
@@ -54,9 +54,12 @@ public final class SocksProxyServlet extends SocksServlet {
         if (request.getContentType() != null) {
             buffer.put(("Content-Type: " + request.getContentType() + "\r\n").getBytes());
         }
-        if (request.getContentLength() > 0) {
-            buffer.put(("Content-Length: " + request.getContentLength() + "\r\n").getBytes());
+        if (request.getContentLength() > 0) {  //Proxy-去掉了， content-length值已经变动， 不好计算新值，目前直接屏蔽
+            //    buffer.put(("Content-Length: " + request.getContentLength() + "\r\n").getBytes());
         }
+        buffer.put(LINE);
+        ByteArray body = request.getDirectBody();
+        if (!body.isEmpty()) buffer.put(body.directBytes(), 0, body.size());
         buffer.put(LINE);
         buffer.flip();
         final AsyncConnection remote = AsyncConnection.create("TCP", group, request.getHostSocketAddress(), 6, 6);
@@ -131,6 +134,10 @@ public final class SocksProxyServlet extends SocksServlet {
 
                 @Override
                 public void completed(Integer result, Void attachment) {
+                    if (result <= 0) {
+                        failed(null, attachment); //获取信息完毕
+                        return;
+                    }
                     rbuffer.flip();
                     CompletionHandler parent = this;
                     response.sendBody(rbuffer.duplicate().asReadOnlyBuffer(), null, new CompletionHandler<Integer, Void>() {
@@ -164,6 +171,10 @@ public final class SocksProxyServlet extends SocksServlet {
 
                 @Override
                 public void completed(Integer result, Void attachment) {
+                    if (result <= 0) {
+                        failed(null, attachment); //获取信息完毕
+                        return;
+                    }
                     qbuffer.flip();
                     CompletionHandler parent = this;
                     remote.write(qbuffer, null, new CompletionHandler<Integer, Void>() {

@@ -16,32 +16,32 @@ import java.io.*;
  */
 public final class SocksPrepareServlet extends PrepareServlet<Serializable, SocksContext, SocksRequest, SocksResponse, SocksServlet> {
 
-    private SocksServlet socksServlet = new SocksConnectServlet();
+    private SocksServlet socks5Servlet = new Socks5Servlet();
 
-    private final SocksProxyServlet proxyServlet = new SocksProxyServlet();
+    private final SocksHttpxServlet httpxServlet = new SocksHttpxServlet();
 
     public SocksPrepareServlet() {
     }
 
     @Override
     public void init(SocksContext context, AnyValue config) {
-        if (socksServlet != null) socksServlet.init(context, getServletConf(socksServlet) == null ? config : getServletConf(socksServlet));
+        if (socks5Servlet != null) socks5Servlet.init(context, getServletConf(socks5Servlet) == null ? config : getServletConf(socks5Servlet));
     }
 
     // 
     @Override
     public void execute(SocksRequest request, SocksResponse response) throws IOException {
         if (request.isHttp()) {
-            proxyServlet.execute(request, response);
+            httpxServlet.execute(request, response);
         } else {
-            socksServlet.execute(request, response);
+            socks5Servlet.execute(request, response);
         }
     }
 
     @Override
     public void addServlet(SocksServlet servlet, Object attachment, AnyValue conf, Serializable... mappings) {
         setServletConf(servlet, conf);
-        if (servlet != null) this.socksServlet = (SocksServlet) servlet;
+        if (servlet != null) this.socks5Servlet = (SocksServlet) servlet;
     }
 
 }

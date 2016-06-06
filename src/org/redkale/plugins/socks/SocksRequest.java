@@ -9,6 +9,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import org.redkale.net.*;
 import org.redkale.net.http.*;
+import org.redkale.util.ByteArray;
 
 /**
  *
@@ -106,7 +107,18 @@ class HttpxRequest extends HttpRequest {
 
     @Override
     protected int readHeader(final ByteBuffer buffer) {
+        super.skipBodyParse();
         return super.readHeader(buffer);
+    }
+
+    @Override
+    protected int readBody(ByteBuffer buffer) {
+        super.skipBodyParse();
+        return super.readHeader(buffer);
+    }
+    
+    protected ByteArray getDirectBody(){
+        return super.getDirectBody();
     }
 
     @Override

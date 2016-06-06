@@ -19,7 +19,7 @@ import java.util.logging.*;
  * @author zhangjx
  */
 @AutoLoad(false)
-public class SocksConnectServlet extends SocksServlet {
+public class Socks5Servlet extends SocksServlet {
 
     private InetSocketAddress bindAddress;
 
