@@ -33,6 +33,7 @@ public class SocksResponse extends Response<SocksContext, SocksRequest> {
 
     @Override
     public AsyncConnection removeChannel() {
+        this.httpResponse.setChannel(null);
         return super.removeChannel();
     }
 
