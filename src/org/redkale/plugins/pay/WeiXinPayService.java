@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkale.plugins.weixin;
+package org.redkale.plugins.pay;
 
 import org.redkale.util.Utility;
 import org.redkale.convert.json.JsonConvert;
@@ -11,7 +11,7 @@ import org.redkale.service.RetResult;
 import org.redkale.util.AutoLoad;
 import org.redkale.service.LocalService;
 import org.redkale.service.Service;
-import static org.redkale.plugins.weixin.WeiXinPayResult.*;
+import static org.redkale.plugins.pay.WeiXinPayResult.*;
 import java.security.*;
 import java.text.*;
 import java.util.*;
@@ -21,7 +21,7 @@ import javax.annotation.*;
 
 /**
  *
- * @see http://www.redkale.org
+ * @see http://redkale.org
  * @author zhangjx
  */
 @AutoLoad(false)
@@ -83,19 +83,20 @@ public class WeiXinPayService implements Service {
      * @param payid
      * @param orderpayid
      * @param paymoney
+     * @param body
      * @param clientAddr
      * @param notifyurl
      * @param map
      * @return
      */
-    public RetResult<Map<String, String>> paying(long orderid, long payid, long orderpayid, long paymoney, String clientAddr, String notifyurl, Map<String, String> map) {
+    public RetResult<Map<String, String>> paying(long orderid, long payid, long orderpayid, long paymoney, String body, String clientAddr, String notifyurl, Map<String, String> map) {
         RetResult result = null;
         try {
             if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
             map.put("appid", wxpayappid);
             map.put("mch_id", wxpaymchid);
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
-            map.putIfAbsent("body", "服务");
+            map.putIfAbsent("body", body);
             map.put("attach", "" + payid);
             map.put("out_trade_no", "" + orderpayid);
             map.put("total_fee", "" + paymoney);

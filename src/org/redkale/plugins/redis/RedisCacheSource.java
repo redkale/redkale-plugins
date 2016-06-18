@@ -25,7 +25,7 @@ import org.redkale.watch.WatchFactory;
  *
  * @param <K>
  * @param <V>
- * @see http://www.redkale.org
+ * @see http://redkale.org
  * @author zhangjx
  */
 @LocalService

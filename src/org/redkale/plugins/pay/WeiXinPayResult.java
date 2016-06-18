@@ -3,13 +3,14 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkale.plugins.weixin;
+package org.redkale.plugins.pay;
 
+import org.redkale.convert.json.JsonFactory;
 import org.redkale.service.RetResult;
 
 /**
  *
- * @see http://www.redkale.org
+ * @see http://redkale.org
  * @author zhangjx
  */
 public class WeiXinPayResult extends RetResult<String> {
@@ -41,6 +42,11 @@ public class WeiXinPayResult extends RetResult<String> {
         this.paystatus = paystatus;
         this.payedmoney = payedmoney;
         this.setResult(resultcontent);
+    }
+
+    @Override
+    public String toString() {
+        return JsonFactory.root().getConvert().convertTo(this);
     }
 
     public long getOrderid() {

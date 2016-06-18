@@ -13,7 +13,7 @@ import java.util.logging.*;
 
 /**
  *
- * @see http://www.redkale.org
+ * @see http://redkale.org
  * @author zhangjx
  */
 public class SocksRunner implements Runnable {

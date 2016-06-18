@@ -12,7 +12,7 @@ import java.util.function.*;
 /**
  * 微信企业号Service
  *
- * @see http://www.redkale.org
+ * @see http://redkale.org
  * @author zhangjx
  */
 public class WeiXinQYMessage {

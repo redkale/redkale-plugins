@@ -18,7 +18,7 @@ import org.redkale.util.*;
 
 /**
  *
- * @see http://www.redkale.org
+ * @see http://redkale.org
  * @author zhangjx
  */
 @AutoLoad(false)

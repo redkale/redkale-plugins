@@ -11,7 +11,7 @@ import org.redkale.convert.json.*;
 
 /**
  *
- * @see http://www.redkale.org
+ * @see http://redkale.org
  * @author zhangjx
  */
 public class EmailMessage implements java.io.Serializable {
