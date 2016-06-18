@@ -11,13 +11,13 @@ import org.redkale.service.RetResult;
 import org.redkale.util.AutoLoad;
 import org.redkale.service.LocalService;
 import org.redkale.service.Service;
-import static org.redkale.plugins.pay.WeiXinPayResult.*;
 import java.security.*;
 import java.text.*;
 import java.util.*;
 import java.util.logging.*;
 import java.util.regex.*;
 import javax.annotation.*;
+import static org.redkale.plugins.pay.Pays.*;
 
 /**
  *
@@ -87,6 +87,7 @@ public class WeiXinPayService implements Service {
      * @param clientAddr
      * @param notifyurl
      * @param map
+     *
      * @return
      */
     public RetResult<Map<String, String>> paying(long orderid, long payid, long orderpayid, long paymoney, String body, String clientAddr, String notifyurl, Map<String, String> map) {
@@ -191,6 +192,8 @@ public class WeiXinPayService implements Service {
     }
 
     /**
+     * 回调支付接口返回的结果
+     * <p>
      * <xml>
      * <appid><![CDATA[wx4ad12c89818dd981]]></appid>
      * <attach><![CDATA[10000070334]]></attach>
@@ -212,6 +215,7 @@ public class WeiXinPayService implements Service {
      * </xml>
      * <p>
      * @param map
+     *
      * @return
      */
     public WeiXinPayResult callbackPay(Map<String, String> map) {
@@ -224,14 +228,6 @@ public class WeiXinPayService implements Service {
         }
         short paystatus = "SUCCESS".equals(state) ? PAYSTATUS_PAYOK : PAYSTATUS_UNPAY;
         return new WeiXinPayResult(Long.parseLong(map.get("out_trade_no")), Long.parseLong(map.get("attach")), paystatus, Long.parseLong(map.get("total_fee")), convert.convertTo(map));
-    }
-
-    protected static String formatMapToXML(final Map<String, String> map) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("<xml>");
-        map.forEach((x, y) -> sb.append('<').append(x).append('>').append(y.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")).append("</").append(x).append('>'));
-        sb.append("</xml>");
-        return sb.toString();
     }
 
     protected boolean checkSign(Map<String, String> map) {
@@ -247,7 +243,15 @@ public class WeiXinPayService implements Service {
         }
     }
 
-    public static Map<String, String> formatXMLToMap(final String xml) {
+    protected static String formatMapToXML(final Map<String, String> map) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("<xml>");
+        map.forEach((x, y) -> sb.append('<').append(x).append('>').append(y.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")).append("</").append(x).append('>'));
+        sb.append("</xml>");
+        return sb.toString();
+    }
+
+    protected static Map<String, String> formatXMLToMap(final String xml) {
         Map<String, String> map = new TreeMap<>();
         Matcher m = PAYXML.matcher(xml.substring(xml.indexOf('>') + 1));
         while (m.find()) {

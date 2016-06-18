@@ -15,11 +15,6 @@ import org.redkale.service.RetResult;
  */
 public class WeiXinPayResult extends RetResult<String> {
 
-    //待支付
-    public static final short PAYSTATUS_UNPAY = 10;
-
-    //已支付
-    public static final short PAYSTATUS_PAYOK = 30;
 
     private long orderid;
 
