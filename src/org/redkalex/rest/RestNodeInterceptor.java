@@ -13,7 +13,8 @@ import org.redkale.boot.*;
  * @see http://redkale.org
  * @author zhangjx
  */
-public class RestNodeInterceptor extends NodeInterceptor{
+public class RestNodeInterceptor extends NodeInterceptor {
+
     @Override
     public void preStart(NodeServer server) {
 
