@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkale.plugins.redis;
+package org.redkalex.redis;
 
 import java.io.*;
 import java.net.InetSocketAddress;

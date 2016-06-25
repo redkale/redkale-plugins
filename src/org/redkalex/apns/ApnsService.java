@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkale.plugins.apns;
+package org.redkalex.apns;
 
 import org.redkale.util.AnyValue;
 import org.redkale.util.Utility;

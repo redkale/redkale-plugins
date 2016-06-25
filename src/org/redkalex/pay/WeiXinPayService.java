@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkale.plugins.pay;
+package org.redkalex.pay;
 
 import org.redkale.util.Utility;
 import org.redkale.convert.json.JsonConvert;
@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.logging.*;
 import java.util.regex.*;
 import javax.annotation.*;
-import static org.redkale.plugins.pay.Pays.*;
+import static org.redkalex.pay.Pays.*;
 
 /**
  *

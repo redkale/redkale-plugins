@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkale.plugins.socks;
+package org.redkalex.socks;
 
 import java.net.*;
 import org.redkale.net.AsyncConnection;
