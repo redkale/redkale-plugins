@@ -25,6 +25,8 @@ import static java.lang.annotation.RetentionPolicy.*;
 @Repeatable(RestMappings.class)
 public @interface RestMapping {
 
+    boolean ignore() default false; //是否屏蔽该方法的转换
+
     //请求的方法url，必须是/开头，且不能为/结尾
     //默认为方法名的小写(若方法名以createXXX、updateXXX、deleteXXX、queryXXX、findXXX且XXXService为Service的类名将只截取XXX之前)
     String url() default "";

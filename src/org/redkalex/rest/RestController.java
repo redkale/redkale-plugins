@@ -23,10 +23,12 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Retention(RUNTIME)
 public @interface RestController {
 
+    boolean ignore() default false; //是否屏蔽该类的转换
+
     String[] value() default {}; //模块的路径, 必须是/开头，且不能为/结尾
 
     boolean repair() default true; //同&#64;WebServlet的repair属性
-    
+
     boolean authignore() default true; //是否跳过鉴权，默认跳过
 
     int module() default 0; //模块ID值，鉴权时用到

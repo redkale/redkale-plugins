@@ -6,6 +6,7 @@
 package org.redkalex.rest;
 
 import java.io.IOException;
+import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.http.*;
@@ -21,6 +22,14 @@ import org.redkale.source.Flipper;
  */
 public abstract class RestHttpServlet<T> extends BasedHttpServlet {
 
+    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+
+    protected final boolean fine = logger.isLoggable(Level.FINE);
+
+    protected final boolean finer = logger.isLoggable(Level.FINER);
+
+    protected final boolean finest = logger.isLoggable(Level.FINEST);
+
     @Resource
     protected JsonConvert convert;
 
@@ -31,11 +40,13 @@ public abstract class RestHttpServlet<T> extends BasedHttpServlet {
     /**
      * 异常输出
      *
+     * @param req  HTTP请求对象
      * @param resp HTTP响应对象
      * @param exp  异常
      */
-    protected void sendExceptionResult(HttpResponse resp, Throwable exp) {
-        sendRetResult(resp, new RetResult(1, exp.toString()));
+    protected void sendExceptionResult(HttpRequest req, HttpResponse resp, Throwable exp) {
+        logger.log(Level.SEVERE, "request = " + req, exp);
+        sendRetResult(resp, new RetResult(10, "Server Error"));
     }
 
     /**
