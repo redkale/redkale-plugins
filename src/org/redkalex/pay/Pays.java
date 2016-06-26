@@ -22,6 +22,16 @@ public abstract class Pays {
     //支付宝支付
     public static final short PAYTYPE_ALIPAY = 30;
 
+    //--------------------- 支付渠道 -----------------------------
+    //网页支付
+    public static final short PAYWAY_WEB = 10;
+
+    //APP支付
+    public static final short PAYWAY_APP = 20;
+
+    //机器支付
+    public static final short PAYWAY_NATIVE = 30;
+
     //--------------------- 支付状态 -----------------------------
     //待支付
     public static final short PAYSTATUS_UNPAY = 10;
