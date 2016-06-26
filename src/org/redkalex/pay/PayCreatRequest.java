@@ -24,7 +24,7 @@ public class PayCreatRequest extends PayRequest {
 
     protected String tradebody = ""; //订单内容描述
 
-    protected int paytimeout = 300; //支付超时的秒数
+    protected int paytimeout = 600; //支付超时的秒数
 
     protected String clientAddr = "";  //客户端IP地址
 
