@@ -57,7 +57,7 @@ public class PayResponse extends RetResult<Map<String, String>> {
         return this;
     }
 
-    @ConvertColumn(ignore = true, type = ConvertType.JSON)
+    @ConvertColumn(ignore = false, type = ConvertType.JSON)
     public String getResponseText() {
         return responseText;
     }

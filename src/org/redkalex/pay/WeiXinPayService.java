@@ -43,25 +43,19 @@ public class WeiXinPayService extends AbstractPayService {
     protected final boolean finest = logger.isLoggable(Level.FINEST);
 
     @Resource(name = "property.pay.weixin.merchno") //商户ID
-    protected String wxpaymchid = "xxxxxxxxxxx";
+    protected String merchno = "xxxxxxxxxxx";
 
     @Resource(name = "property.pay.weixin.submerchno") //子商户ID，受理模式必填
-    protected String wxpaysdbmchid = "";
+    protected String submerchno = "";
 
     @Resource(name = "property.pay.weixin.appid") //公众账号ID
-    protected String wxpayappid = "wxYYYYYYYYYYYY";
+    protected String appid = "wxYYYYYYYYYYYY";
 
     @Resource(name = "property.pay.weixin.notifyurl") //回调url
-    protected String wxpaynotifyurl = "http: //xxxxxx";
+    protected String notifyurl = "http: //xxxxxx";
 
     @Resource(name = "property.pay.weixin.signkey") //签名算法需要用到的秘钥
-    protected String wxpaykey = "##########################";
-
-    @Resource(name = "property.pay.weixin.certpwd")
-    protected String wxpaycertpwd = "xxxxxxxxxx"; //HTTP证书的密码，默认等于MCHID
-
-    @Resource(name = "property.pay.weixin.certpath") //HTTP证书在服务器中的路径，用来加载证书用
-    protected String wxpaycertpath = "apiclient_cert.p12";
+    protected String signkey = "##########################";
 
     @Resource
     protected JsonConvert convert;
@@ -90,16 +84,16 @@ public class WeiXinPayService extends AbstractPayService {
         try {
             final TreeMap<String, String> map = new TreeMap<>();
             if (request.getMap() != null) map.putAll(request.getMap());
-            map.put("appid", this.wxpayappid);
-            map.put("mch_id", this.wxpaymchid);
+            map.put("appid", this.appid);
+            map.put("mch_id", this.merchno);
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
-            map.putIfAbsent("body", request.getTradebody());
+            map.put("body", request.getTradebody());
             //map.put("attach", "" + payid);
             map.put("out_trade_no", "" + request.getTradeno());
             map.put("total_fee", "" + request.getTrademoney());
             map.put("spbill_create_ip", request.getClientAddr());
             map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getPaytimeout() * 1000));
-            map.put("notify_url", this.wxpaynotifyurl);
+            map.put("notify_url", this.notifyurl);
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map));
@@ -114,7 +108,7 @@ public class WeiXinPayService extends AbstractPayService {
              */
             final Map<String, String> rmap = new TreeMap<>();
             result.setResult(rmap);
-            rmap.put("appId", this.wxpayappid);
+            rmap.put("appId", this.appid);
             rmap.put("timeStamp", Long.toString(System.currentTimeMillis() / 1000));
             rmap.put("nonceStr", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             rmap.put("package", "prepay_id=" + wxresult.get("prepay_id"));
@@ -160,8 +154,8 @@ public class WeiXinPayService extends AbstractPayService {
         final PayQueryResponse result = new PayQueryResponse();
         try {
             final Map<String, String> map = new TreeMap<>();
-            map.put("appid", this.wxpayappid);
-            map.put("mch_id", this.wxpaymchid);
+            map.put("appid", this.appid);
+            map.put("mch_id", this.merchno);
             map.put("out_trade_no", "" + request.getTradeno());
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("sign", createSign(map));
@@ -190,8 +184,8 @@ public class WeiXinPayService extends AbstractPayService {
         final PayResponse result = new PayResponse();
         try {
             Map<String, String> map = new TreeMap<>();
-            map.put("appid", wxpayappid);
-            map.put("mch_id", wxpaymchid);
+            map.put("appid", appid);
+            map.put("mch_id", merchno);
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("out_trade_no", "" + request.getTradeno());
             map.put("sign", createSign(map));
@@ -223,7 +217,7 @@ public class WeiXinPayService extends AbstractPayService {
     protected String createSign(Map<String, String> map) throws NoSuchAlgorithmException {
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> sb.append(x).append('=').append(y).append('&'));
-        sb.append("key=").append(this.wxpaykey);
+        sb.append("key=").append(this.signkey);
         return Utility.binToHexString(MessageDigest.getInstance("MD5").digest(sb.toString().getBytes())).toUpperCase();
     }
 
@@ -232,7 +226,7 @@ public class WeiXinPayService extends AbstractPayService {
         String sign = map.remove("sign");
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> sb.append(x).append('=').append(y).append('&'));
-        sb.append("key=").append(wxpaykey);
+        sb.append("key=").append(signkey);
         try {
             return sign.equals(Utility.binToHexString(MessageDigest.getInstance("MD5").digest(sb.toString().getBytes())).toUpperCase());
         } catch (Exception e) {
