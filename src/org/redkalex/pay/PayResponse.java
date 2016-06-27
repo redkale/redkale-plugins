@@ -47,7 +47,7 @@ public class PayResponse extends RetResult<Map<String, String>> {
 
     @Override
     public PayResponse retinfo(String retinfo) {
-        this.retinfo = retinfo;
+        if (retinfo != null) this.retinfo = retinfo;
         return this;
     }
 

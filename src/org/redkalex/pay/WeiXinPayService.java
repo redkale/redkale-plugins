@@ -28,12 +28,6 @@ public class WeiXinPayService extends AbstractPayService {
 
     private static final Pattern PAYXML = Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
 
-    public static final int PAY_WX_ERROR = 4012101;//微信支付失败
-
-    public static final int PAY_FALSIFY_ORDER = 4012017;//交易签名被篡改
-
-    public static final int PAY_STATUS_ERROR = 4012018;//订单或者支付状态不正确
-
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
     protected final boolean fine = logger.isLoggable(Level.FINE);
@@ -99,9 +93,9 @@ public class WeiXinPayService extends AbstractPayService {
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map));
             result.setResponseText(responseText);
 
-            Map<String, String> wxresult = formatXMLToMap(responseText);
-            if (!"SUCCESS".equals(wxresult.get("return_code"))) return result.retcode(PAY_WX_ERROR);
-            if (!checkSign(wxresult)) return result.retcode(PAY_FALSIFY_ORDER);
+            Map<String, String> resultmap = formatXMLToMap(responseText);
+            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_WEIXIN_ERROR);
+            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             /**
              * "appId" : "wx2421b1c4370ec43b", //公众号名称，由商户传入 "timeStamp":" 1395712654", //时间戳，自1970年以来的秒数 "nonceStr" : "e61463f8efa94090b1f366cccfbbb444", //随机串 "package" :
              * "prepay_id=u802345jgfjsdfgsdg888", "signType" : "MD5", //微信签名方式: "paySign" : "70EA570631E4BB79628FBCA90534C63FF7FADD89" //微信签名
@@ -111,12 +105,12 @@ public class WeiXinPayService extends AbstractPayService {
             rmap.put("appId", this.appid);
             rmap.put("timeStamp", Long.toString(System.currentTimeMillis() / 1000));
             rmap.put("nonceStr", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
-            rmap.put("package", "prepay_id=" + wxresult.get("prepay_id"));
+            rmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
             rmap.put("signType", "MD5");
             rmap.put("paySign", createSign(rmap));
         } catch (Exception e) {
-            result.setRetcode(PAY_WX_ERROR);
-            logger.log(Level.WARNING, "paying error.", e);
+            result.setRetcode(RETPAY_WEIXIN_ERROR);
+            logger.log(Level.WARNING, "create_pay_error", e);
         }
         return result;
     }
@@ -163,17 +157,34 @@ public class WeiXinPayService extends AbstractPayService {
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/orderquery", formatMapToXML(map));
             result.setResponseText(responseText);
 
-            final Map<String, String> wxresult = formatXMLToMap(responseText);
-            result.setResult(wxresult);
+            final Map<String, String> resultmap = formatXMLToMap(responseText);
+            result.setResult(resultmap);
 
-            String state = map.get("trade_state");
+            String state = map.getOrDefault("trade_state", "");
             if (state == null && "SUCCESS".equals(map.get("result_code")) && Long.parseLong(map.get("total_fee")) > 0) {
                 state = "SUCCESS";
             }
-            short paystatus = "SUCCESS".equals(state) ? PAYSTATUS_PAYOK : PAYSTATUS_UNPAY;
+            //trade_state 支付状态: SUCCESS—支付成功 REFUND—转入退款 NOTPAY—未支付 CLOSED—已关闭 REVOKED—已撤销（刷卡支付） USERPAYING--用户支付中 PAYERROR--支付失败(其他原因，如银行返回失败)
+            short paystatus = PAYSTATUS_PAYNO;
+            switch (state) {
+                case "SUCCESS": paystatus = PAYSTATUS_PAYOK;
+                    break;
+                case "NOTPAY": paystatus = PAYSTATUS_UNPAY;
+                    break;
+                case "CLOSED": paystatus = PAYSTATUS_CLOSED;
+                    break;
+                case "REVOKED": paystatus = PAYSTATUS_CANCELED;
+                    break;
+                case "USERPAYING": paystatus = PAYSTATUS_PAYING;
+                    break;
+                case "PAYERROR": paystatus = PAYSTATUS_PAYNO;
+                    break;
+            }
+            result.setPaystatus(paystatus);
+            result.setPayedmoney(Long.parseLong(map.get("total_fee")));
         } catch (Exception e) {
-            result.setRetcode(PAY_WX_ERROR);
-            logger.log(Level.WARNING, "querypay error.", e);
+            result.setRetcode(RETPAY_WEIXIN_ERROR);
+            logger.log(Level.WARNING, "query_pay_error", e);
         }
         return result;
     }
@@ -193,13 +204,14 @@ public class WeiXinPayService extends AbstractPayService {
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/closeorder", formatMapToXML(map));
             result.setResponseText(responseText);
 
-            Map<String, String> wxresult = formatXMLToMap(responseText);
-            result.setResult(wxresult);
-            if (!"SUCCESS".equals(wxresult.get("return_code"))) return result.retcode(PAY_WX_ERROR);
-            if (!checkSign(wxresult)) return result.retcode(PAY_FALSIFY_ORDER);
+            Map<String, String> resultmap = formatXMLToMap(responseText);
+            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_WEIXIN_ERROR);
+            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            result.setResult(resultmap);
+    
         } catch (Exception e) {
-            result.setRetcode(PAY_WX_ERROR);
-            logger.log(Level.WARNING, "closepay error ", e);
+            result.setRetcode(RETPAY_WEIXIN_ERROR);
+            logger.log(Level.WARNING, "close_pay_error", e);
         }
         return result;
     }

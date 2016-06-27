@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import org.redkale.convert.json.*;
 import org.redkale.util.*;
+import static org.redkalex.pay.Pays.*;
 
 /**
  *
@@ -24,7 +25,6 @@ import org.redkale.util.*;
 public class AliPayService extends AbstractPayService {
 
     //private static final Charset UTF8 = Charset.forName("UTF-8");
-
     private static final String format = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; //yyyy-MM-dd HH:mm:ss
 
     private static final Type TYPE_REPONSE_MAP = new TypeToken<HashMap<String, HashMap<String, String>>>() {
@@ -47,7 +47,7 @@ public class AliPayService extends AbstractPayService {
     @Resource(name = "property.pay.alipay.merchno") //商户ID
     protected String merchno = "xxxxxxxxxxx";
 
-    @Resource(name = "property.pay.alipay.charset") //字符集
+    @Resource(name = "property.pay.alipay.charset") //字符集 用UTF-8没调试通过
     protected String charset = "GBK";
 
     @Resource(name = "property.pay.alipay.appid") //公众账号ID
@@ -89,7 +89,7 @@ public class AliPayService extends AbstractPayService {
             map.put("charset", this.charset);
             map.put("format", "json");
             map.put("version", "1.0");
-            map.put("notify_url", this.notifyurl);
+            if (this.notifyurl != null && !this.notifyurl.isEmpty()) map.put("notify_url", this.notifyurl);
             map.put("timestamp", String.format(format, System.currentTimeMillis()));
             map.put("method", "alipay.trade.create");
 
@@ -104,15 +104,19 @@ public class AliPayService extends AbstractPayService {
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(this.charset), joinMap(map));
-            //{"alipay_trade_create_response":{"code":"40002","msg":"Invalid Arguments","sub_code":"isv.invalid-signature","sub_msg":"无效签名"},"sign":"pKAZjddvi+mJDIJnopTjVuwG3yoNc8JKW6HvjZ9v5GQ551NAhuIIJjL1cvAm6Llxxbjm9bYRNWRR0LJsXLaxYKzpymJNOZ0WcZtqcHmTaBzdII/G5boGLQaSl347pywft04Vb/0oeKBuEekqzPXQIma+iBXbK9GP0i5qghxTGHg="}
+            //{"alipay_trade_create_response":{"code":"40002","msg":"Invalid Arguments","sub_code":"isv.invalid-signature","sub_msg":"无效签名"},"sign":"xxxxxxxxxxxx"}
             result.setResponseText(responseText);
-            InnerCreateResponse aliresult = convert.convertFrom(InnerCreateResponse.class, responseText);
-            aliresult.responseText = responseText;
-            System.out.println(checkSign(aliresult));
-            
+            final InnerCreateResponse resp = convert.convertFrom(InnerCreateResponse.class, responseText);
+            resp.responseText = responseText; //原始的返回内容            
+            if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            final Map<String, String> resultmap = resp.alipay_trade_create_response;
+            result.setResult(resultmap);
+            if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
+                return result.retcode(RETPAY_ALIPAY_ERROR).retinfo(resultmap.get("sub_msg"));
+            }
         } catch (Exception e) {
-            result.setRetcode(PAY_WX_ERROR);
-            logger.log(Level.WARNING, "paying error.", e);
+            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            logger.log(Level.WARNING, "create_pay_error", e);
         }
         return result;
     }
@@ -121,7 +125,7 @@ public class AliPayService extends AbstractPayService {
         AliPayService service = new AliPayService();
         service.convert = JsonConvert.root();
         PayCreatRequest request = new PayCreatRequest();
-        request.setPaytype(Pays.PAYTYPE_ALIPAY);
+        request.setPaytype(PAYTYPE_ALIPAY);
         request.setTradetitle("外卖");
         request.setTradebody("白菜");
         request.setTrademoney(1);
@@ -133,12 +137,94 @@ public class AliPayService extends AbstractPayService {
 
     @Override
     public PayQueryResponse query(PayRequest request) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        request.checkVaild();
+        final PayQueryResponse result = new PayQueryResponse();
+        try {
+            final TreeMap<String, String> map = new TreeMap<>();
+            map.put("app_id", this.appid);
+            map.put("sign_type", "RSA");
+            map.put("charset", this.charset);
+            map.put("format", "json");
+            map.put("version", "1.0");
+            //if (this.notifyurl != null && !this.notifyurl.isEmpty()) map.put("notify_url", this.notifyurl); // 查询不需要
+            map.put("timestamp", String.format(format, System.currentTimeMillis()));
+            map.put("method", "alipay.trade.query");
+
+            final TreeMap<String, String> biz_content = new TreeMap<>();
+            biz_content.put("out_trade_no", request.getTradeno());
+            map.put("biz_content", convert.convertTo(biz_content));
+
+            map.put("sign", createSign(map));
+
+            final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(this.charset), joinMap(map));
+
+            result.setResponseText(responseText);
+            final InnerQueryResponse resp = convert.convertFrom(InnerQueryResponse.class, responseText);
+            resp.responseText = responseText; //原始的返回内容            
+            if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            final Map<String, String> resultmap = resp.alipay_trade_query_response;
+            result.setResult(resultmap);
+            if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
+                return result.retcode(RETPAY_ALIPAY_ERROR).retinfo(resultmap.get("sub_msg"));
+            }
+            //trade_status 交易状态：WAIT_BUYER_PAY（交易创建，等待买家付款）、TRADE_CLOSED（未付款交易超时关闭，或支付完成后全额退款）、TRADE_SUCCESS（交易支付成功）、TRADE_FINISHED（交易结束，不可退款）
+            short paystatus = PAYSTATUS_PAYNO;
+            switch (resultmap.get("trade_status")) {
+                case "TRADE_SUCCESS": paystatus = PAYSTATUS_PAYOK;
+                    break;
+                case "WAIT_BUYER_PAY": paystatus = PAYSTATUS_UNPAY;
+                    break;
+                case "TRADE_CLOSED": paystatus = PAYSTATUS_CLOSED;
+                    break;
+                case "TRADE_FINISHED": paystatus = PAYSTATUS_PAYOK;
+                    break;
+            }
+            result.setPaystatus(paystatus);
+            result.setPayedmoney((long) (Double.parseDouble(resultmap.get("receipt_amount")) * 100));
+        } catch (Exception e) {
+            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            logger.log(Level.WARNING, "query_pay_error", e);
+        }
+        return result;
     }
 
     @Override
     public PayResponse close(PayRequest request) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        request.checkVaild();
+        final PayResponse result = new PayResponse();
+        try {
+            final TreeMap<String, String> map = new TreeMap<>();
+            map.put("app_id", this.appid);
+            map.put("sign_type", "RSA");
+            map.put("charset", this.charset);
+            map.put("format", "json");
+            map.put("version", "1.0");
+            if (this.notifyurl != null && !this.notifyurl.isEmpty()) map.put("notify_url", this.notifyurl);
+            map.put("timestamp", String.format(format, System.currentTimeMillis()));
+            map.put("method", "alipay.trade.close");
+
+            final TreeMap<String, String> biz_content = new TreeMap<>();
+            biz_content.put("out_trade_no", request.getTradeno());
+            map.put("biz_content", convert.convertTo(biz_content));
+
+            map.put("sign", createSign(map));
+
+            final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(this.charset), joinMap(map));
+
+            result.setResponseText(responseText);
+            final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
+            resp.responseText = responseText; //原始的返回内容            
+            if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            final Map<String, String> resultmap = resp.alipay_trade_close_response;
+            result.setResult(resultmap);
+            if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
+                return result.retcode(RETPAY_ALIPAY_ERROR).retinfo(resultmap.get("sub_msg"));
+            }
+        } catch (Exception e) {
+            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            logger.log(Level.WARNING, "close_pay_error", e);
+        }
+        return result;
     }
 
     @Override
@@ -171,7 +257,7 @@ public class AliPayService extends AbstractPayService {
 
         Signature signature = Signature.getInstance("SHA1WithRSA");
         signature.initSign(priKey);
-        signature.update(joinMap(map).getBytes());
+        signature.update(joinMap(map).getBytes(this.charset));
         return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8");
     }
 
@@ -179,9 +265,21 @@ public class AliPayService extends AbstractPayService {
         return map.entrySet().stream().map((e -> e.getKey() + "=" + e.getValue())).collect(Collectors.joining("&"));
     }
 
+    public static class InnerCloseResponse extends InnerResponse {
+
+        public Map<String, String> alipay_trade_close_response;
+
+    }
+
+    public static class InnerQueryResponse extends InnerResponse {
+
+        public Map<String, String> alipay_trade_query_response;
+
+    }
+
     public static class InnerCreateResponse extends InnerResponse {
 
-        public TreeMap<String, String> alipay_trade_create_response;
+        public Map<String, String> alipay_trade_create_response;
 
     }
 
@@ -190,7 +288,7 @@ public class AliPayService extends AbstractPayService {
         public String responseText;
 
         public String sign;
-        
+
         @Override
         public String toString() {
             return JsonFactory.root().getConvert().convertTo(this);
