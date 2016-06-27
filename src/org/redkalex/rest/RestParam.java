@@ -22,7 +22,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Retention(RUNTIME)
 public @interface RestParam {
 
-    String name() default ""; //参数名, 默认值为方法反射得来的名称
+    String value() default ""; //参数名, 默认值为方法反射得来的名称
 
     String defvalue() default ""; //默认值 如果类型是数值型， 默认值为0， 其他对象为null
 }

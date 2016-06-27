@@ -12,9 +12,9 @@ import org.redkale.net.sncp.ServiceWrapper;
  * 详情见: http://redkale.org
  * @author zhangjx
  */
-final class RestBuilder {
+final class ServletBuilder {
 
-    private RestBuilder() {
+    private ServletBuilder() {
     }
 
     //待实现

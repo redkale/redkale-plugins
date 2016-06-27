@@ -27,13 +27,13 @@ public @interface RestMapping {
 
     boolean ignore() default false; //是否屏蔽该方法的转换
 
-    //请求的方法url，必须是/开头，且不能为/结尾
+    //请求的方法url, 不能含特殊字符
     //默认为方法名的小写(若方法名以createXXX、updateXXX、deleteXXX、queryXXX、findXXX且XXXService为Service的类名将只截取XXX之前)
     String url() default "";
 
     String[] method() default {}; //HTTP请求的method，为空表示不需要判断method
 
-    boolean authignore() default true; //是否跳过鉴权，默认跳过
+    boolean authignore() default true; //是否跳过鉴权，默认跳过 
 
     int actionid() default 0; //操作ID值，鉴权时用到
 

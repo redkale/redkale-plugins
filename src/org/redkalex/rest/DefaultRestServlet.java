@@ -15,7 +15,7 @@ import org.redkale.net.http.*;
  *
  * @author zhangjx
  */
-public class RestDefaultServlet extends RestHttpServlet<Object> {
+public class DefaultRestServlet extends RestHttpServlet<Object> {
 
     @Override
     protected Object currentUser(HttpRequest req) throws IOException {

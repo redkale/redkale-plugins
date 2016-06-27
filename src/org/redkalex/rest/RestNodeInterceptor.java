@@ -35,9 +35,9 @@ public class RestNodeInterceptor extends NodeInterceptor {
             final String threadName = "[" + Thread.currentThread().getName() + "] ";
             final List<AbstractMap.SimpleEntry<String, String[]>> ss = sb == null ? null : new ArrayList<>();
 
-            final Class<? extends RestHttpServlet> superClass = (Class<? extends RestHttpServlet>) Class.forName(restConf.getValue("servlet", RestDefaultServlet.class.getName()));
+            final Class<? extends RestHttpServlet> superClass = (Class<? extends RestHttpServlet>) Class.forName(restConf.getValue("servlet", DefaultRestServlet.class.getName()));
             nodeServer.getLocalServiceWrappers().forEach((wrapper) -> {
-                RestHttpServlet servlet = RestBuilder.createRestServlet(superClass, wrapper);
+                RestHttpServlet servlet = ServletBuilder.createRestServlet(superClass, wrapper);
                 if (servlet == null) return;
                 server.addHttpServlet(servlet, prefix, wrapper.getConf());
                 if (ss != null) {
