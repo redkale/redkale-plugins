@@ -77,6 +77,9 @@ public abstract class Pays {
 
     @RetInfo("支付状态异常")
     public static final int RETPAY_STATUS_ERROR = 20001003;
+    
+    @RetInfo("退款异常")
+    public static final int RETPAY_REFUND_ERROR = 20001004;
 
     //---------------------------------------------- 微信结果码 -----------------------------------------
     @RetInfo("微信支付失败")

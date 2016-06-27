@@ -5,11 +5,13 @@
  */
 package org.redkalex.pay;
 
+import java.io.*;
 import java.security.*;
 import java.util.*;
 import java.util.logging.*;
 import java.util.regex.*;
 import javax.annotation.Resource;
+import javax.net.ssl.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
 import org.redkale.util.*;
@@ -37,22 +39,58 @@ public class WeiXinPayService extends AbstractPayService {
     protected final boolean finest = logger.isLoggable(Level.FINEST);
 
     @Resource(name = "property.pay.weixin.merchno") //商户ID
-    protected String merchno = "xxxxxxxxxxx";
+    protected String merchno = "";
 
     @Resource(name = "property.pay.weixin.submerchno") //子商户ID，受理模式必填
     protected String submerchno = "";
 
     @Resource(name = "property.pay.weixin.appid") //公众账号ID
-    protected String appid = "wxYYYYYYYYYYYY";
+    protected String appid = "";
 
     @Resource(name = "property.pay.weixin.notifyurl") //回调url
-    protected String notifyurl = "http: //xxxxxx";
+    protected String notifyurl = "";
 
     @Resource(name = "property.pay.weixin.signkey") //签名算法需要用到的秘钥
-    protected String signkey = "##########################";
+    protected String signkey = "";
+
+    @Resource(name = "property.pay.weixin.certpwd")
+    protected String wxpaycertpwd = ""; //HTTP证书的密码，默认等于MCHID
+
+    @Resource(name = "property.pay.weixin.certpath") //HTTP证书在服务器中的路径，用来加载证书用, 不是/开头且没有:字符，视为{APP_HOME}/conf相对下的路径
+    protected String wxpaycertpath = "apiclient_cert.p12";
+
+    @Resource(name = "APP_HOME")
+    protected File home;
+
+    protected SSLContext paySSLContext;
 
     @Resource
     protected JsonConvert convert;
+
+    @Override
+    public void init(AnyValue conf) {
+        if (this.merchno != null && !this.merchno.isEmpty()) { //存在微信支付配置
+            try {
+                File file = (wxpaycertpath.indexOf('/') == 0 || wxpaycertpath.indexOf(':') > 0) ? new File(this.wxpaycertpath) : new File(home, "conf/" + this.wxpaycertpath);
+
+                String path = "/" + WeiXinPayService.class.getPackage().getName().replace('.', '/') + "/" + this.wxpaycertpath;
+                InputStream in = file.isFile() ? new FileInputStream(file) : WeiXinPayService.class.getResourceAsStream(path);
+
+                final KeyStore keyStore = KeyStore.getInstance("PKCS12");
+                keyStore.load(in, this.wxpaycertpwd.toCharArray());
+                in.close();
+                KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                keyManagerFactory.init(keyStore, wxpaycertpwd.toCharArray());
+                TrustManagerFactory trustFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                trustFactory.init(keyStore);
+                SSLContext ctx = SSLContext.getInstance("TLSv1");
+                ctx.init(keyManagerFactory.getKeyManagers(), trustFactory.getTrustManagers(), null);
+                paySSLContext = ctx;
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, "init weixinpay sslcontext error", e);
+            }
+        }
+    }
 
     /**
      * <xml>
@@ -83,7 +121,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("body", request.getTradebody());
             //map.put("attach", "" + payid);
-            map.put("out_trade_no", "" + request.getTradeno());
+            map.put("out_trade_no", request.getTradeno());
             map.put("total_fee", "" + request.getTrademoney());
             map.put("spbill_create_ip", request.getClientAddr());
             map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getPaytimeout() * 1000));
@@ -150,7 +188,7 @@ public class WeiXinPayService extends AbstractPayService {
             final Map<String, String> map = new TreeMap<>();
             map.put("appid", this.appid);
             map.put("mch_id", this.merchno);
-            map.put("out_trade_no", "" + request.getTradeno());
+            map.put("out_trade_no", request.getTradeno());
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("sign", createSign(map));
 
@@ -164,6 +202,7 @@ public class WeiXinPayService extends AbstractPayService {
             if (state == null && "SUCCESS".equals(map.get("result_code")) && Long.parseLong(map.get("total_fee")) > 0) {
                 state = "SUCCESS";
             }
+            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             //trade_state 支付状态: SUCCESS—支付成功 REFUND—转入退款 NOTPAY—未支付 CLOSED—已关闭 REVOKED—已撤销（刷卡支付） USERPAYING--用户支付中 PAYERROR--支付失败(其他原因，如银行返回失败)
             short paystatus = PAYSTATUS_PAYNO;
             switch (state) {
@@ -198,7 +237,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("appid", appid);
             map.put("mch_id", merchno);
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
-            map.put("out_trade_no", "" + request.getTradeno());
+            map.put("out_trade_no", request.getTradeno());
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/closeorder", formatMapToXML(map));
@@ -208,7 +247,7 @@ public class WeiXinPayService extends AbstractPayService {
             if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_WEIXIN_ERROR);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             result.setResult(resultmap);
-    
+
         } catch (Exception e) {
             result.setRetcode(RETPAY_WEIXIN_ERROR);
             logger.log(Level.WARNING, "close_pay_error", e);
@@ -218,12 +257,64 @@ public class WeiXinPayService extends AbstractPayService {
 
     @Override
     public PayRefundResponse refund(PayRefundRequest request) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        request.checkVaild();
+        final PayRefundResponse result = new PayRefundResponse();
+        try {
+            final TreeMap<String, String> map = new TreeMap<>();
+            map.put("appid", this.appid);
+            map.put("mch_id", this.merchno);
+            map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
+            map.put("out_trade_no", request.getTradeno());
+            map.put("total_fee", "" + request.getTrademoney());
+            map.put("out_refund_no", request.getRefundno());
+            map.put("refund_fee", "" + request.getRefundmoney());
+            map.put("op_user_id", this.merchno);
+            map.put("sign", createSign(map));
+
+            final String responseText = Utility.postHttpContent(paySSLContext, "https://api.mch.weixin.qq.com/secapi/pay/refund", formatMapToXML(map));
+            result.setResponseText(responseText);
+
+            Map<String, String> resultmap = formatXMLToMap(responseText);
+            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_REFUND_ERROR);
+            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            result.setRefundedmoney(Long.parseLong(resultmap.get("refund_fee")));
+        } catch (Exception e) {
+            result.setRetcode(RETPAY_REFUND_ERROR);
+            logger.log(Level.WARNING, "refund_pay_error", e);
+        }
+        return result;
     }
 
     @Override
-    public PayRefundQueryResponse queryRefund(PayRequest request) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public PayRefundResponse queryRefund(PayRequest request) {
+        request.checkVaild();
+        final PayRefundResponse result = new PayRefundResponse();
+        try {
+            final Map<String, String> map = new TreeMap<>();
+            map.put("appid", this.appid);
+            map.put("mch_id", this.merchno);
+            map.put("out_trade_no", request.getTradeno());
+            map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
+            map.put("sign", createSign(map));
+
+            final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/refundquery", formatMapToXML(map));
+            result.setResponseText(responseText);
+
+            final Map<String, String> resultmap = formatXMLToMap(responseText);
+            result.setResult(resultmap);
+
+            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_WEIXIN_ERROR);
+            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            //trade_state SUCCESS—退款成功 FAIL—退款失败 PROCESSING—退款处理中 NOTSURE—未确定，需要商户原退款单号重新发起 
+            //CHANGE—转入代发，退款到银行发现用户的卡作废或者冻结了，导致原路退款银行卡失败，资金回流到商户的现金帐号，需要商户人工干预，通过线下或者财付通转账的方式进行退款。
+
+            result.setResult(resultmap);
+            result.setRefundedmoney(Long.parseLong(map.get("refund_fee_$n")));
+        } catch (Exception e) {
+            result.setRetcode(RETPAY_WEIXIN_ERROR);
+            logger.log(Level.WARNING, "query_pay_error", e);
+        }
+        return result;
     }
 
     protected String createSign(Map<String, String> map) throws NoSuchAlgorithmException {

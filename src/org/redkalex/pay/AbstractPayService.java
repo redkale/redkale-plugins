@@ -23,5 +23,5 @@ abstract class AbstractPayService implements Service {
 
     public abstract PayRefundResponse refund(PayRefundRequest request);
 
-    public abstract PayRefundQueryResponse queryRefund(PayRequest request);
+    public abstract PayRefundResponse queryRefund(PayRequest request);
 }

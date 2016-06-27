@@ -229,12 +229,56 @@ public class AliPayService extends AbstractPayService {
 
     @Override
     public PayRefundResponse refund(PayRefundRequest request) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        request.checkVaild();
+        final PayRefundResponse result = new PayRefundResponse();
+        try {
+            final TreeMap<String, String> map = new TreeMap<>();
+            map.put("app_id", this.appid);
+            map.put("sign_type", "RSA");
+            map.put("charset", this.charset);
+            map.put("format", "json");
+            map.put("version", "1.0");
+            map.put("timestamp", String.format(format, System.currentTimeMillis()));
+            map.put("method", "alipay.trade.refund");
+
+            final TreeMap<String, String> biz_content = new TreeMap<>();
+            biz_content.put("out_trade_no", request.getTradeno());
+            biz_content.put("refund_amount", "" + (request.getRefundmoney() / 100.0));
+            map.put("biz_content", convert.convertTo(biz_content));
+
+            map.put("sign", createSign(map));
+
+            final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(this.charset), joinMap(map));
+
+            result.setResponseText(responseText);
+            final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
+            resp.responseText = responseText; //原始的返回内容            
+            if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            final Map<String, String> resultmap = resp.alipay_trade_close_response;
+            result.setResult(resultmap);
+            if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
+                return result.retcode(RETPAY_ALIPAY_ERROR).retinfo(resultmap.get("sub_msg"));
+            }
+            result.setRefundedmoney((long) (Double.parseDouble(resultmap.get("refund_fee")) * 100));
+        } catch (Exception e) {
+            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            logger.log(Level.WARNING, "close_pay_error", e);
+        }
+        return result;
     }
 
     @Override
-    public PayRefundQueryResponse queryRefund(PayRequest request) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public PayRefundResponse queryRefund(PayRequest request) {
+        PayQueryResponse queryResponse = query(request);
+        final PayRefundResponse response = new PayRefundResponse();
+        response.setRetcode(queryResponse.getRetcode());
+        response.setRetinfo(queryResponse.getRetinfo());
+        response.setResponseText(queryResponse.getResponseText());
+        response.setResult(queryResponse.getResult());
+        if (queryResponse.isSuccess()) {
+            response.setRefundedmoney((long) (Double.parseDouble(response.getResult().get("receipt_amount")) * 100));
+        }
+        return response;
     }
 
     protected boolean checkSign(InnerResponse response) throws Exception {
