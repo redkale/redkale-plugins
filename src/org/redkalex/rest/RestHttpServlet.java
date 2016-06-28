@@ -100,8 +100,8 @@ public abstract class RestHttpServlet<T> extends BasedHttpServlet {
     }
 
     /**
-     * 获取翻页对象 http://demo.redkale.org/pipes/records/list/page:1/size:20  <br>
-     * http://demo.redkale.org/pipes/records/list?flipper={'page':1,'size':20}  <br>
+     * 获取翻页对象 http://demo.redkale.org/pipes/records/list/start:0/size:20  <br>
+     * http://demo.redkale.org/pipes/records/list?flipper={'start':0,'size':20}  <br>
      * 以上两种接口都可以获取到翻页对象
      *
      * @param request HTTP请求对象
@@ -116,8 +116,8 @@ public abstract class RestHttpServlet<T> extends BasedHttpServlet {
         Flipper flipper = request.getJsonParameter(Flipper.class, "flipper");
         if (flipper == null) {
             int size = request.getRequstURIPath("size:", defaultSize);
-            int page = request.getRequstURIPath("page:", 0);
-            if (size > 0) flipper = page > 0 ? new Flipper(size, page) : new Flipper(size);
+            int start = request.getRequstURIPath("start:", 0);
+            if (size > 0) flipper = new Flipper(size, start);
         }
         if (flipper == null) flipper = defaultSize > 0 ? new Flipper(defaultSize) : new Flipper();
         return flipper;
