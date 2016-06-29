@@ -27,9 +27,9 @@ public @interface RestMapping {
 
     boolean ignore() default false; //是否屏蔽该方法的转换
 
-    //请求的方法url, 不能含特殊字符
+    //请求的方法名, 不能含特殊字符
     //默认为方法名的小写(若方法名以createXXX、updateXXX、deleteXXX、queryXXX、findXXX且XXXService为Service的类名将只截取XXX之前)
-    String url() default "";
+    String name() default "";
 
     String[] method() default {}; //HTTP请求的method，为空表示不需要判断method
 

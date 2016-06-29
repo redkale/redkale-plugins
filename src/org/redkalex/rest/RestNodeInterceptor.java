@@ -10,6 +10,7 @@ import java.util.logging.*;
 import org.redkale.boot.*;
 import static org.redkale.boot.NodeServer.LINE_SEPARATOR;
 import org.redkale.net.http.*;
+import org.redkale.service.Service;
 import org.redkale.util.AnyValue;
 import org.redkale.util.AnyValue.DefaultAnyValue;
 
@@ -37,7 +38,15 @@ public class RestNodeInterceptor extends NodeInterceptor {
 
             final Class<? extends RestHttpServlet> superClass = (Class<? extends RestHttpServlet>) Class.forName(restConf.getValue("servlet", DefaultRestServlet.class.getName()));
             nodeServer.getLocalServiceWrappers().forEach((wrapper) -> {
-                RestHttpServlet servlet = ServletBuilder.createRestServlet(superClass, wrapper);
+                if(!wrapper.getName().isEmpty()) return;
+                Class stype = null;
+                for(Class clz : wrapper.getTypes()) {
+                    if(Service.class.isAssignableFrom(clz)) {
+                        stype = clz;
+                        break;
+                    }
+                }
+                RestHttpServlet servlet = ServletBuilder.createRestServlet(superClass, wrapper.getName(), stype);  
                 if (servlet == null) return;
                 server.addHttpServlet(servlet, prefix, wrapper.getConf());
                 if (ss != null) {

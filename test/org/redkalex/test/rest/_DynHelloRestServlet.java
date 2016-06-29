@@ -9,40 +9,52 @@ import org.redkale.service.RetResult;
 public class _DynHelloRestServlet extends SimpleRestServlet {
 
     @Resource
-    private HelloService service;
+    private HelloService _service;
 
     @AuthIgnore
     @WebAction(url = "/hello/query")
     public void query(HttpRequest req, HttpResponse resp) throws IOException {
-        resp.finishJson(service.queryHello(req.getJsonParameter(HelloBean.class, "bean"), findFlipper(req)));
+        resp.finishJson(_service.queryHello(req.getJsonParameter(HelloBean.class, "bean"), findFlipper(req)));
     }
 
     @AuthIgnore
     @WebAction(url = "/hello/list")
     public void list(HttpRequest req, HttpResponse resp) throws IOException {
-        resp.finishJson(service.queryHello(req.getJsonParameter(HelloBean.class, "bean")));
+        resp.finishJson(_service.queryHello(req.getJsonParameter(HelloBean.class, "bean")));
     }
 
     @AuthIgnore
     @WebAction(url = "/hello/find/")
     public void find(HttpRequest req, HttpResponse resp) throws IOException {
-        resp.finishJson(service.findHello(Integer.parseInt(req.getRequstURILastPath())));
+        resp.finishJson(_service.findHello(Integer.parseInt(req.getRequstURILastPath())));
+    }
+
+    @AuthIgnore
+    @WebAction(url = "/hello/findname/")
+    public void findname(HttpRequest req, HttpResponse resp) throws IOException {
+        resp.finish(_service.findHelloName(Integer.parseInt(req.getRequstURILastPath())));
+    }
+
+    @AuthIgnore
+    @WebAction(url = "/hello/findtime/")
+    public void findtime(HttpRequest req, HttpResponse resp) throws IOException {
+        resp.finish(String.valueOf(_service.findHelloTime(Integer.parseInt(req.getRequstURILastPath()))));
     }
 
     @AuthIgnore
     @WebAction(url = "/hello/jsfind/")
     public void jsfind(HttpRequest req, HttpResponse resp) throws IOException {
-        sendJsResult(resp, "varhello", service.findHello(Integer.parseInt(req.getRequstURILastPath())));
+        sendJsResult(resp, "varhello", _service.findHello(Integer.parseInt(req.getRequstURILastPath())));
     }
 
     @WebAction(url = "/hello/create")
     public void create(HttpRequest req, HttpResponse resp) throws IOException {
-        sendRetResult(resp, service.createHello(req.getJsonParameter(HelloEntity.class, "bean")));
+        sendRetResult(resp, _service.createHello(req.getJsonParameter(HelloEntity.class, "bean")));
     }
 
     @WebAction(url = "/hello/update")
     public void update(HttpRequest req, HttpResponse resp) throws IOException {
-        service.updateHello(req.getJsonParameter(HelloEntity.class, "bean"));
+        _service.updateHello(req.getJsonParameter(HelloEntity.class, "bean"));
         resp.finishJson(RetResult.SUCCESS);
     }
 
@@ -50,19 +62,19 @@ public class _DynHelloRestServlet extends SimpleRestServlet {
     public void partupdate(HttpRequest req, HttpResponse resp) throws IOException {
         HelloEntity bean = req.getJsonParameter(HelloEntity.class, "bean");
         String[] columns = req.getJsonParameter(String[].class, "columns");
-        service.updateHello(currentUser(req), bean, columns);
+        _service.updateHello(currentUser(req), bean, columns);
         resp.finishJson(RetResult.SUCCESS);
     }
 
     @WebAction(url = "/hello/delete/")
     public void delete(HttpRequest req, HttpResponse resp) throws IOException {
-        service.deleteHello(Integer.parseInt(req.getRequstURILastPath()));
+        _service.deleteHello(Integer.parseInt(req.getRequstURILastPath()));
         resp.finishJson(RetResult.SUCCESS);
     }
 
     @WebAction(url = "/hello/remove")
     public void remove(HttpRequest req, HttpResponse resp) throws IOException {
-        service.deleteHello(req.getJsonParameter(HelloEntity.class, "bean"));
+        _service.deleteHello(req.getJsonParameter(HelloEntity.class, "bean"));
         resp.finishJson(RetResult.SUCCESS);
     }
 }

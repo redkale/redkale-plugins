@@ -38,6 +38,24 @@ public abstract class RestHttpServlet<T> extends BasedHttpServlet {
     protected abstract Class<T> sessionUserType();
 
     /**
+     * 检测Method是否合法，返回true表示合法
+     *
+     * @param req     HTTP请求对象
+     * @param resp    HTTP响应对象
+     * @param methods 有效方法名数组
+     *
+     * @return
+     */
+    protected boolean checkMethod(HttpRequest req, HttpResponse resp, String[] methods) {
+        if (methods == null || methods.length == 0) return true;
+        for (String m : methods) {
+            if (req.getMethod().equalsIgnoreCase(m)) return true;
+        }
+        sendRetResult(resp, new RetResult(11, "Method Error"));
+        return false;
+    }
+
+    /**
      * 异常输出
      *
      * @param req  HTTP请求对象
