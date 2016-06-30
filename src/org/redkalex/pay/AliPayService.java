@@ -44,9 +44,6 @@ public class AliPayService extends AbstractPayService {
 
     protected final boolean finest = logger.isLoggable(Level.FINEST);
 
-    @Resource(name = "property.pay.alipay.merchno") //商户ID
-    protected String merchno = "xxxxxxxxxxx";
-
     @Resource(name = "property.pay.alipay.charset") //字符集 用UTF-8没调试通过
     protected String charset = "GBK";
 
