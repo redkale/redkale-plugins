@@ -171,7 +171,7 @@ public final class RestServletBuilder {
                 final Class ptype = param.getType();
                 RestParam annpara = param.getAnnotation(RestParam.class);
                 String n = annpara == null || annpara.value().isEmpty() ? param.getName() : annpara.value();
-                if (entry.name.startsWith("find") && params.length == 1) {
+                if ((entry.name.startsWith("find") || entry.name.startsWith("delete")) && params.length == 1) {
                     if (ptype.isPrimitive() || ptype == String.class) n = "#";
                 }
                 if (!hasVisitWebAction) {
