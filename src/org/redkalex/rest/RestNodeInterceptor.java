@@ -5,13 +5,13 @@
  */
 package org.redkalex.rest;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.logging.*;
 import java.util.regex.Pattern;
 import org.redkale.boot.*;
 import static org.redkale.boot.NodeServer.LINE_SEPARATOR;
 import org.redkale.net.http.*;
-import org.redkale.service.Service;
 import org.redkale.util.AnyValue;
 import org.redkale.util.AnyValue.DefaultAnyValue;
 
@@ -28,7 +28,8 @@ public class RestNodeInterceptor extends NodeInterceptor {
     public void preStart(final NodeServer nodeServer) {
         final HttpServer server = (HttpServer) nodeServer.getServer();
         final AnyValue serverConf = nodeServer.getServerConf();
-        final String prefix = serverConf == null ? "" : serverConf.getValue("path", "");
+        final AnyValue servletsConf = serverConf == null ? null : serverConf.getAnyValue("servlets");
+        final String prefix = servletsConf == null ? "" : servletsConf.getValue("path", "");
         AnyValue restConf = serverConf == null ? null : serverConf.getAnyValue("rest");
         if (restConf == null) restConf = new DefaultAnyValue();
         try {
@@ -42,19 +43,12 @@ public class RestNodeInterceptor extends NodeInterceptor {
             final Pattern[] includes = ClassFilter.toPattern(restConf.getValue("includes", "").split(";"));
             final Pattern[] excludes = ClassFilter.toPattern(restConf.getValue("excludes", "").split(";"));
 
-            nodeServer.getLocalServiceWrappers().forEach((wrapper) -> {
+            nodeServer.getInterceptorServiceWrappers().forEach((wrapper) -> {
                 if (!wrapper.getName().isEmpty()) return;  //只加载resourceName为空的service
-                Class stype = null;
-                for (Class clz : wrapper.getTypes()) {
-                    if (Service.class.isAssignableFrom(clz)) { //只加载第一个Service的子类型
-                        stype = clz;
-                        break;
-                    }
-                }
-                if (stype == null) return; //没有Service的子类型
+                final Class stype = wrapper.getType();
 
                 String stypename = stype.getName();
-                if(stypename.startsWith("org.redkalex.")) return;                
+                if (stypename.startsWith("org.redkalex.")) return;
                 if (excludes != null) {
                     for (Pattern reg : excludes) {
                         if (reg.matcher(stypename).matches()) return;
@@ -73,7 +67,14 @@ public class RestNodeInterceptor extends NodeInterceptor {
 
                 RestHttpServlet servlet = ServletBuilder.createRestServlet(superClass, wrapper.getName(), stype);
                 if (servlet == null) return;
-                server.addHttpServlet(servlet, prefix, wrapper.getConf());
+                try {
+                    Field serviceField = servlet.getClass().getDeclaredField("_service");
+                    serviceField.setAccessible(true);
+                    serviceField.set(servlet, wrapper.getService());
+                } catch (Exception e) {
+                    throw new RuntimeException(wrapper.getType() + " generate rest servlet error", e);
+                }
+                server.addHttpServlet(servlet, prefix, (AnyValue) null);
                 if (ss != null) {
                     String[] mappings = servlet.getClass().getAnnotation(WebServlet.class).value();
                     for (int i = 0; i < mappings.length; i++) {

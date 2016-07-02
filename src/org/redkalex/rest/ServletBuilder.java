@@ -155,7 +155,7 @@ final public class ServletBuilder {
             final Parameter[] params = method.getParameters();
 
             mv = new AsmMethodVisitor(cw.visitMethod(ACC_PUBLIC, entry.name, "(" + httpRequestDesc + httpResponseDesc + ")V", null, new String[]{"java/io/IOException"}));
-            mv.setDebug(true);
+            //mv.setDebug(true);
             mv.debugLine();
             if (entry.authignore) { //设置 AuthIgnore
                 av0 = mv.visitAnnotation("Lorg/redkale/net/http/BasedHttpServlet$AuthIgnore;", true);
@@ -594,7 +594,15 @@ final public class ServletBuilder {
             if (mapping == null) mapping = DEFAULT__MAPPING;
             this.ignore = mapping.ignore();
             String n = mapping.name().toLowerCase();
-            if (n.isEmpty()) n = method.getName().toLowerCase().replace(defmodulename.toLowerCase(), "");
+            if (n.isEmpty()) {
+                n = method.getName().toLowerCase().replace(defmodulename.toLowerCase(), "");
+                if (n.startsWith("find") && method.getParameterCount() == 1) {
+                    Class cpt = method.getParameterTypes()[0];
+                    if (cpt.isPrimitive() || cpt == String.class) {
+                        n = "#";
+                    }
+                }
+            }
             this.name = n;
             this.mappingMethod = method;
             this.method = mapping.method();
