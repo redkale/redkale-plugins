@@ -40,21 +40,27 @@ public class RestNodeInterceptor extends NodeInterceptor {
 
             final Class<? extends RestHttpServlet> superClass = (Class<? extends RestHttpServlet>) Class.forName(restConf.getValue("servlet", DefaultRestServlet.class.getName()));
 
+            final boolean autoload = restConf.getBoolValue("autoload", true);
             final Pattern[] includes = ClassFilter.toPattern(restConf.getValue("includes", "").split(";"));
             final Pattern[] excludes = ClassFilter.toPattern(restConf.getValue("excludes", "").split(";"));
+            final Set<String> hasServices = new HashSet<>();
+            for (AnyValue item : restConf.getAnyValues("service")) {
+                hasServices.add(item.getValue("value", ""));
+            }
 
             nodeServer.getInterceptorServiceWrappers().forEach((wrapper) -> {
                 if (!wrapper.getName().isEmpty()) return;  //只加载resourceName为空的service
                 final Class stype = wrapper.getType();
 
-                String stypename = stype.getName();
+                final String stypename = stype.getName();
                 if (stypename.startsWith("org.redkalex.")) return;
-                if (excludes != null) {
+                if (!autoload && !hasServices.contains(stypename)) return;
+                if (excludes != null && !hasServices.contains(stypename)) {
                     for (Pattern reg : excludes) {
                         if (reg.matcher(stypename).matches()) return;
                     }
                 }
-                if (includes != null) {
+                if (includes != null && !hasServices.contains(stypename)) {
                     boolean match = false;
                     for (Pattern reg : includes) {
                         if (reg.matcher(stypename).matches()) {
