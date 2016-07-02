@@ -7,6 +7,7 @@ package org.redkalex.rest;
 
 import java.util.*;
 import java.util.logging.*;
+import java.util.regex.Pattern;
 import org.redkale.boot.*;
 import static org.redkale.boot.NodeServer.LINE_SEPARATOR;
 import org.redkale.net.http.*;
@@ -37,16 +38,40 @@ public class RestNodeInterceptor extends NodeInterceptor {
             final List<AbstractMap.SimpleEntry<String, String[]>> ss = sb == null ? null : new ArrayList<>();
 
             final Class<? extends RestHttpServlet> superClass = (Class<? extends RestHttpServlet>) Class.forName(restConf.getValue("servlet", DefaultRestServlet.class.getName()));
+
+            final Pattern[] includes = ClassFilter.toPattern(restConf.getValue("includes", "").split(";"));
+            final Pattern[] excludes = ClassFilter.toPattern(restConf.getValue("excludes", "").split(";"));
+
             nodeServer.getLocalServiceWrappers().forEach((wrapper) -> {
-                if(!wrapper.getName().isEmpty()) return;
+                if (!wrapper.getName().isEmpty()) return;  //只加载resourceName为空的service
                 Class stype = null;
-                for(Class clz : wrapper.getTypes()) {
-                    if(Service.class.isAssignableFrom(clz)) {
+                for (Class clz : wrapper.getTypes()) {
+                    if (Service.class.isAssignableFrom(clz)) { //只加载第一个Service的子类型
                         stype = clz;
                         break;
                     }
                 }
-                RestHttpServlet servlet = ServletBuilder.createRestServlet(superClass, wrapper.getName(), stype);  
+                if (stype == null) return; //没有Service的子类型
+
+                String stypename = stype.getName();
+                if(stypename.startsWith("org.redkalex.")) return;                
+                if (excludes != null) {
+                    for (Pattern reg : excludes) {
+                        if (reg.matcher(stypename).matches()) return;
+                    }
+                }
+                if (includes != null) {
+                    boolean match = false;
+                    for (Pattern reg : includes) {
+                        if (reg.matcher(stypename).matches()) {
+                            match = true;
+                            break;
+                        }
+                    }
+                    if (!match) return;
+                }
+
+                RestHttpServlet servlet = ServletBuilder.createRestServlet(superClass, wrapper.getName(), stype);
                 if (servlet == null) return;
                 server.addHttpServlet(servlet, prefix, wrapper.getConf());
                 if (ss != null) {
@@ -58,7 +83,7 @@ public class RestNodeInterceptor extends NodeInterceptor {
                 }
             });
             //输出信息
-            if (ss != null) {
+            if (ss != null && sb != null) {
                 Collections.sort(ss, (AbstractMap.SimpleEntry<String, String[]> o1, AbstractMap.SimpleEntry<String, String[]> o2) -> o1.getKey().compareTo(o2.getKey()));
                 int max = 0;
                 for (AbstractMap.SimpleEntry<String, String[]> as : ss) {
@@ -82,6 +107,6 @@ public class RestNodeInterceptor extends NodeInterceptor {
 
     @Override
     public void preShutdown(NodeServer nodeServer) {
-
     }
+
 }
