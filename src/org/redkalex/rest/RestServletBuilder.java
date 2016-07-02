@@ -57,7 +57,7 @@ public final class RestServletBuilder {
         final RestController controller = serviceType.getAnnotation(RestController.class);
         if (controller != null && controller.ignore()) return null; //标记为ignore=true不创建Servlet
         ClassLoader loader = Sncp.class.getClassLoader();
-        String newDynName = serviceTypeString.substring(0, serviceTypeString.lastIndexOf('/') + 1) + "_Dyn" + serviceType.getSimpleName().replace("Service", "") + "RestServlet";
+        String newDynName = serviceTypeString.substring(0, serviceTypeString.lastIndexOf('/') + 1) + "_Dyn" + serviceType.getSimpleName().replaceAll("Service.*$", "") + "RestServlet";
         if (!serviceName.isEmpty()) {
             boolean normal = true;
             for (char ch : serviceName.toCharArray()) {//含特殊字符的使用hash值
@@ -76,7 +76,7 @@ public final class RestServletBuilder {
             throw new RuntimeException(e);
         }
         //------------------------------------------------------------------------------
-        final String defmodulename = (controller != null && !controller.value().isEmpty()) ? controller.value() : serviceType.getSimpleName().replace("Service", "");
+        final String defmodulename = (controller != null && !controller.value().isEmpty()) ? controller.value() : serviceType.getSimpleName().replaceAll("Service.*$", "");
         for (char ch : defmodulename.toCharArray()) {
             if (!((ch >= '0' && ch <= '9') || ch == '$' || ch == '_' || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))) { //不能含特殊字符
                 throw new RuntimeException(serviceType.getName() + " has illeal " + RestController.class.getSimpleName() + ".value, only 0-9 a-z A-Z _ $");
