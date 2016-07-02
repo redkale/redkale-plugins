@@ -167,10 +167,18 @@ public final class RestServletBuilder {
             int maxLocals = 3;
             boolean hasVisitWebAction = false;
             final String jsvar = entry.jsvar.isEmpty() ? null : entry.jsvar;
+            int argIndex = 0;
             for (final Parameter param : params) {
                 final Class ptype = param.getType();
                 RestParam annpara = param.getAnnotation(RestParam.class);
-                String n = annpara == null || annpara.value().isEmpty() ? param.getName() : annpara.value();
+                String n = annpara == null || annpara.value().isEmpty() ? null : annpara.value();
+                if (n == null) {
+                    if (param.isNamePresent()) {
+                        n = param.getName();
+                    } else {
+                        n = (++argIndex > 1) ? ("bean" + argIndex) : "bean";
+                    }
+                }
                 if ((entry.name.startsWith("find") || entry.name.startsWith("delete")) && params.length == 1) {
                     if (ptype.isPrimitive() || ptype == String.class) n = "#";
                 }
