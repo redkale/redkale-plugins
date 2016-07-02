@@ -26,7 +26,7 @@ import static org.redkale.net.sncp.Sncp.hash;
  *
  * @author zhangjx
  */
-final public class ServletBuilder {
+public final class RestServletBuilder {
 
     private static final Set<String> EXCLUDERMETHODS = new HashSet<>();
 
@@ -36,7 +36,7 @@ final public class ServletBuilder {
         }
     }
 
-    private ServletBuilder() {
+    private RestServletBuilder() {
     }
 
     //待实现
@@ -162,20 +162,27 @@ final public class ServletBuilder {
                 av0 = mv.visitAnnotation("Lorg/redkale/net/http/BasedHttpServlet$AuthIgnore;", true);
                 av0.visitEnd();
             }
-            {  //设置 WebAction
-                av0 = mv.visitAnnotation("Lorg/redkale/net/http/BasedHttpServlet$WebAction;", true);
-                av0.visit("url", "/" + defmodulename.toLowerCase() + "/" + entry.name);
-                av0.visit("actionid", entry.actionid);
-                av0.visitEnd();
-            }
             final int maxStack = 3 + params.length;
             List<int[]> varInsns = new ArrayList<>();
             int maxLocals = 3;
+            boolean hasVisitWebAction = false;
             final String jsvar = entry.jsvar.isEmpty() ? null : entry.jsvar;
             for (final Parameter param : params) {
                 final Class ptype = param.getType();
                 RestParam annpara = param.getAnnotation(RestParam.class);
-                final String pname = annpara == null || annpara.value().isEmpty() ? param.getName() : annpara.value();
+                String n = annpara == null || annpara.value().isEmpty() ? param.getName() : annpara.value();
+                if (entry.name.startsWith("find") && params.length == 1) {
+                    if (ptype.isPrimitive() || ptype == String.class) n = "#";
+                }
+                if (!hasVisitWebAction) {
+                    hasVisitWebAction = true;
+                    //设置 WebAction
+                    av0 = mv.visitAnnotation("Lorg/redkale/net/http/BasedHttpServlet$WebAction;", true);
+                    av0.visit("url", "/" + defmodulename.toLowerCase() + "/" + entry.name + ("#".equals(n) ? "/" : ""));
+                    av0.visit("actionid", entry.actionid);
+                    av0.visitEnd();
+                }
+                final String pname = n;
                 if ("#".equals(pname)) { //从request.getRequstURI 中去参数
                     if (ptype == boolean.class) {
                         mv.visitVarInsn(ALOAD, 1);
@@ -326,6 +333,15 @@ final public class ServletBuilder {
                 }
                 maxLocals++;
             } // end params for each
+
+            if (!hasVisitWebAction) { //当无参数时则没有设置过 WebAction
+                hasVisitWebAction = true;
+                //设置 WebAction
+                av0 = mv.visitAnnotation("Lorg/redkale/net/http/BasedHttpServlet$WebAction;", true);
+                av0.visit("url", "/" + defmodulename.toLowerCase() + "/" + entry.name);
+                av0.visit("actionid", entry.actionid);
+                av0.visitEnd();
+            }
 
             mv.visitVarInsn(ALOAD, 0); //调用this
             mv.visitFieldInsn(GETFIELD, newDynName, "_service", serviceDesc);
@@ -595,15 +611,7 @@ final public class ServletBuilder {
             if (mapping == null) mapping = DEFAULT__MAPPING;
             this.ignore = mapping.ignore();
             String n = mapping.name().toLowerCase();
-            if (n.isEmpty()) {
-                n = method.getName().toLowerCase().replace(defmodulename.toLowerCase(), "");
-                if (n.startsWith("find") && method.getParameterCount() == 1) {
-                    Class cpt = method.getParameterTypes()[0];
-                    if (cpt.isPrimitive() || cpt == String.class) {
-                        n = "#";
-                    }
-                }
-            }
+            if (n.isEmpty()) n = method.getName().toLowerCase().replace(defmodulename.toLowerCase(), "");
             this.name = n;
             this.mappingMethod = method;
             this.method = mapping.method();

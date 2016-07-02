@@ -71,7 +71,7 @@ public class RestNodeInterceptor extends NodeInterceptor {
                     if (!match) return;
                 }
 
-                RestHttpServlet servlet = ServletBuilder.createRestServlet(superClass, wrapper.getName(), stype);
+                RestHttpServlet servlet = RestServletBuilder.createRestServlet(superClass, wrapper.getName(), stype);
                 if (servlet == null) return;
                 try {
                     Field serviceField = servlet.getClass().getDeclaredField("_service");
