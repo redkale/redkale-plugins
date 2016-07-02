@@ -57,7 +57,7 @@ final public class ServletBuilder {
         final RestController controller = serviceType.getAnnotation(RestController.class);
         if (controller != null && controller.ignore()) return null; //标记为ignore=true不创建Servlet
         ClassLoader loader = Sncp.class.getClassLoader();
-        String newDynName = serviceTypeString.substring(0, serviceTypeString.lastIndexOf('/') + 1) + "_Dyn" + serviceType.getSimpleName() + RestHttpServlet.class.getSimpleName();
+        String newDynName = serviceTypeString.substring(0, serviceTypeString.lastIndexOf('/') + 1) + "_Dyn" + serviceType.getSimpleName().replace("Service", "") + "RestServlet";
         if (!serviceName.isEmpty()) {
             boolean normal = true;
             for (char ch : serviceName.toCharArray()) {//含特殊字符的使用hash值
