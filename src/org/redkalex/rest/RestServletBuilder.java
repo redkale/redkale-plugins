@@ -614,7 +614,6 @@ public final class RestServletBuilder {
             if (n.isEmpty()) n = method.getName().toLowerCase().replace(defmodulename.toLowerCase(), "");
             this.name = n;
             this.mappingMethod = method;
-            this.method = mapping.method();
             this.authignore = mapping.authignore();
             this.actionid = mapping.actionid();
             this.contentType = mapping.contentType();
@@ -626,8 +625,6 @@ public final class RestServletBuilder {
         public final boolean ignore;
 
         public final String name;
-
-        public final String[] method;
 
         public final boolean authignore;
 

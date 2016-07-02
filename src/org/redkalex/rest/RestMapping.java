@@ -31,8 +31,6 @@ public @interface RestMapping {
     //默认为方法名的小写(若方法名以createXXX、updateXXX、deleteXXX、queryXXX、findXXX且XXXService为Service的类名将只截取XXX之前)
     String name() default "";
 
-    String[] method() default {}; //HTTP请求的method，为空表示不需要判断method
-
     boolean authignore() default true; //是否跳过鉴权，默认跳过 
 
     int actionid() default 0; //操作ID值，鉴权时用到
