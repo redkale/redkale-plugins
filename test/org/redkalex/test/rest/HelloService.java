@@ -15,6 +15,22 @@ public class HelloService implements Service {
     @Resource
     private DataSource source;
 
+    @RestMapping(name = "test", authignore = true, actionid = 2001)
+    public void test(@RestParam("boolid") boolean boolid,
+        @RestParam("byteid") byte byteid, 
+        @RestParam("shortid") short shortid, 
+        @RestParam("charid") char charid, 
+        @RestParam("intid") int intid,
+        @RestParam("floatid") float floatid,
+        @RestParam("longid") long longid,
+        @RestParam("doubleid") double doubleid,
+        @RestParam("stringid") String stringid,
+        @RestParam("bean") HelloBean bean, 
+        UserInfo user,
+        Flipper flipper) {
+
+    }
+    
     @RestMapping(name = "query", authignore = true, actionid = 2001)
     public Sheet<HelloEntity> queryHello(@RestParam("bean") HelloBean bean, Flipper flipper) {
         return source.querySheet(HelloEntity.class, flipper, bean);

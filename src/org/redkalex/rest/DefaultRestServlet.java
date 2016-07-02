@@ -23,11 +23,6 @@ public class DefaultRestServlet extends RestHttpServlet<Object> {
     }
 
     @Override
-    protected Class<Object> sessionUserType() {
-        return Object.class;
-    }
-
-    @Override
     public boolean authenticate(int module, int actionid, HttpRequest request, HttpResponse response) throws IOException {
         return true;
     }

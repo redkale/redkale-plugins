@@ -6,13 +6,33 @@ import javax.annotation.Resource;
 import org.redkale.net.http.*;
 import org.redkale.service.RetResult;
 import org.redkale.source.Flipper;
-import org.redkale.util.Sheet;
+import org.redkale.util.*;
 
+@AutoLoad(false)
 @WebServlet(value = {"/hello/*"}, moduleid = 201, repair = true)
 public class _DynHelloRestServlet extends SimpleRestServlet {
 
     @Resource
     private HelloService _service;
+
+    @AuthIgnore
+    @WebAction(url = "/hello/test", actionid = 2001)
+    public void test(HttpRequest req, HttpResponse resp) throws IOException {
+        boolean boolid = req.getBooleanParameter("boolid", false);
+        byte byteid = Byte.parseByte(req.getParameter("byteid", "0"));
+        short shortid = req.getShortParameter("boolid", (short) 0);
+        char charid = req.getParameter("charid", "0").charAt(0);
+        int intid = req.getIntParameter("intid", 0);
+        float floatid = req.getFloatParameter("floatid", 0f);
+        long longid = req.getLongParameter("longid", 0L);
+        double doubleid = req.getDoubleParameter("doubleid", 0.0);
+        String stringid = req.getParameter("stringid", "");
+        HelloBean bean = req.getJsonParameter(HelloBean.class, "bean");
+        UserInfo user = currentUser(req);
+        Flipper flipper = findFlipper(req);
+        _service.test(boolid, byteid, shortid, charid, intid, floatid, longid, doubleid, stringid, bean, user, flipper);
+        sendRetResult(resp, RetResult.SUCCESS);
+    }
 
     @AuthIgnore
     @WebAction(url = "/hello/query", actionid = 2001)
@@ -82,20 +102,20 @@ public class _DynHelloRestServlet extends SimpleRestServlet {
         HelloEntity bean = req.getJsonParameter(HelloEntity.class, "bean");
         String[] columns = req.getJsonParameter(String[].class, "columns");
         _service.updateHello(currentUser(req), bean, columns);
-        resp.finishJson(RetResult.SUCCESS);
+        sendRetResult(resp, RetResult.SUCCESS);
     }
 
     @WebAction(url = "/hello/delete/", actionid = 2004)
     public void delete(HttpRequest req, HttpResponse resp) throws IOException {
         int id = Integer.parseInt(req.getRequstURILastPath());
         _service.deleteHello(id);
-        resp.finishJson(RetResult.SUCCESS);
+        sendRetResult(resp, RetResult.SUCCESS);
     }
 
     @WebAction(url = "/hello/remove", actionid = 2004)
     public void remove(HttpRequest req, HttpResponse resp) throws IOException {
         HelloEntity bean = req.getJsonParameter(HelloEntity.class, "bean");
         _service.deleteHello(bean);
-        resp.finishJson(RetResult.SUCCESS);
+        sendRetResult(resp, RetResult.SUCCESS);
     }
 }

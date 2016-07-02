@@ -35,8 +35,6 @@ public abstract class RestHttpServlet<T> extends BasedHttpServlet {
 
     protected abstract T currentUser(HttpRequest req) throws IOException;
 
-    protected abstract Class<T> sessionUserType();
-
     /**
      * 检测Method是否合法，返回true表示合法
      *
