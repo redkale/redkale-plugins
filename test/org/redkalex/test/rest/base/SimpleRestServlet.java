@@ -1,4 +1,4 @@
-package org.redkalex.test.rest;
+package org.redkalex.test.rest.base;
 
 import java.io.IOException;
 

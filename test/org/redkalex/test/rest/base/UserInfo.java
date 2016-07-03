@@ -1,4 +1,4 @@
-package org.redkalex.test.rest;
+package org.redkalex.test.rest.base;
 
 import org.redkale.convert.json.JsonFactory;
 
@@ -15,6 +15,12 @@ public class UserInfo {
 
     public int getUserid() {
         return userid;
+    }
+
+    public boolean checkAuth(int moduleid, int actionid) {
+        if (moduleid == 0 || actionid == 0) return true;
+        //权限判断
+        return true;
     }
 
     public void setUserid(int userid) {
