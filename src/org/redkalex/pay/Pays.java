@@ -5,10 +5,9 @@
  */
 package org.redkalex.pay;
 
-import java.lang.annotation.*;
 import java.lang.reflect.*;
 import java.util.*;
-import org.redkale.service.RetResult;
+import org.redkale.service.*;
 
 /**
  *
@@ -69,24 +68,24 @@ public abstract class Pays {
     public static final short PAYSTATUS_CANCELED = 95;
 
     //--------------------------------------------- 结果码 ----------------------------------------------
-    @RetInfo("支付失败")
+    @RetLabel("支付失败")
     public static final int RETPAY_PAY_ERROR = 20001001;
 
-    @RetInfo("交易签名被篡改")
+    @RetLabel("交易签名被篡改")
     public static final int RETPAY_FALSIFY_ERROR = 20001002;
 
-    @RetInfo("支付状态异常")
+    @RetLabel("支付状态异常")
     public static final int RETPAY_STATUS_ERROR = 20001003;
-    
-    @RetInfo("退款异常")
+
+    @RetLabel("退款异常")
     public static final int RETPAY_REFUND_ERROR = 20001004;
 
     //---------------------------------------------- 微信结果码 -----------------------------------------
-    @RetInfo("微信支付失败")
+    @RetLabel("微信支付失败")
     public static final int RETPAY_WEIXIN_ERROR = 20010001;
 
     //---------------------------------------------- 支付宝结果码 -----------------------------------------
-    @RetInfo("支付宝支付失败")
+    @RetLabel("支付宝支付失败")
     public static final int RETPAY_ALIPAY_ERROR = 20020001;
 
     //---------------------------------------------------------------------------------------------------
@@ -96,7 +95,7 @@ public abstract class Pays {
         for (Field field : Pays.class.getFields()) {
             if (!Modifier.isStatic(field.getModifiers())) continue;
             if (field.getType() != int.class) continue;
-            RetInfo info = field.getAnnotation(RetInfo.class);
+            RetLabel info = field.getAnnotation(RetLabel.class);
             if (info == null) continue;
             int value;
             try {
@@ -110,20 +109,14 @@ public abstract class Pays {
 
     }
 
-    public static RetResult create(int retcode) {
+    public static RetResult retResult(int retcode) {
         if (retcode == 0) return RetResult.SUCCESS;
-        return new RetResult(retcode, getRetInfo(retcode));
+        return new RetResult(retcode, retInfo(retcode));
     }
 
-    public static String getRetInfo(int retcode) {
+    public static String retInfo(int retcode) {
         if (retcode == 0) return "成功";
         return rets.getOrDefault(retcode, "未知错误");
     }
 
-    @Target(value = {ElementType.FIELD})
-    @Retention(value = RetentionPolicy.RUNTIME)
-    protected @interface RetInfo {
-
-        String value();
-    }
 }

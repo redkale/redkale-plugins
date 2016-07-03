@@ -15,6 +15,7 @@ import javax.mail.internet.*;
 import javax.mail.util.*;
 import org.redkale.service.*;
 import org.redkale.util.*;
+import static org.redkalex.email.EmailCodes.*;
 
 /**
  *
@@ -70,11 +71,12 @@ public class EmailService implements org.redkale.service.Service {
      * 发送邮件
      *
      * @param bean
+     *
      * @return
      */
     public RetResult sendMessage(EmailMessage bean) {
         long t1 = System.currentTimeMillis();
-        if (bean == null) return new RetResult(6010001);
+        if (bean == null) return retResult(RETMAIL_PARAM_ILLEAL);
         bean.setFrom(mail_from_account);
         if (mailauth == null) init(null);
         try {
@@ -124,7 +126,8 @@ public class EmailService implements org.redkale.service.Service {
             return new RetResult();
         } catch (Exception ex) {
             logger.log(Level.WARNING, "sendmail error (" + bean + ") cost times:" + (System.currentTimeMillis() - t1) + "ms", ex);
-            return new RetResult(6010010);
+            return retResult(RETMAIL_SEND_ERROR);
         }
     }
+
 }
