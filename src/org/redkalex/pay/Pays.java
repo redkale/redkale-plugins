@@ -11,7 +11,8 @@ import org.redkale.service.*;
 
 /**
  *
- * @see http://redkale.org
+ * 详情见: http://redkale.org
+ *
  * @author zhangjx
  */
 public abstract class Pays {
@@ -80,13 +81,17 @@ public abstract class Pays {
     @RetLabel("退款异常")
     public static final int RETPAY_REFUND_ERROR = 20001004;
 
-    //---------------------------------------------- 微信结果码 -----------------------------------------
+    //---------------------------------------------- 微信支付结果码 -----------------------------------------
     @RetLabel("微信支付失败")
     public static final int RETPAY_WEIXIN_ERROR = 20010001;
 
     //---------------------------------------------- 支付宝结果码 -----------------------------------------
     @RetLabel("支付宝支付失败")
     public static final int RETPAY_ALIPAY_ERROR = 20020001;
+
+    //---------------------------------------------- 银联支付结果码 -----------------------------------------
+    @RetLabel("银联支付失败")
+    public static final int RETPAY_UNIONPAY_ERROR = 20030001;
 
     //---------------------------------------------------------------------------------------------------
     private static final Map<Integer, String> rets = new HashMap<>();

@@ -9,7 +9,7 @@ import org.redkale.net.Servlet;
 
 /**
  *
- * @see http://redkale.org
+ * 详情见: http://redkale.org
  * @author zhangjx
  */
 public abstract class SocksServlet extends Servlet<SocksContext, SocksRequest, SocksResponse> {

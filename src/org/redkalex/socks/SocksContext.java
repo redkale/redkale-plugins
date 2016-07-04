@@ -18,7 +18,7 @@ import org.redkale.watch.*;
 
 /**
  *
- * @see http://redkale.org
+ * 详情见: http://redkale.org
  * @author zhangjx
  */
 public class SocksContext extends HttpContext {

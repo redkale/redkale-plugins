@@ -42,7 +42,9 @@ public class PayRequest {
     }
 
     public void setTradeno(String tradeno) {
-        this.tradeno = tradeno;
+        if (tradeno != null) {
+            this.tradeno = tradeno.trim();
+        }
     }
 
 }

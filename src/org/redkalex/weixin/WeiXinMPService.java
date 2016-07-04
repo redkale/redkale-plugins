@@ -22,7 +22,7 @@ import javax.annotation.*;
 /**
  * 微信服务号Service
  *
- * @see http://redkale.org
+ * 详情见: http://redkale.org
  * @author zhangjx
  */
 @AutoLoad(false)

@@ -27,7 +27,7 @@ import javax.crypto.spec.*;
 
 /**
  *
- * @see http://redkale.org
+ * 详情见: http://redkale.org
  * @author zhangjx
  */
 @AutoLoad(false)

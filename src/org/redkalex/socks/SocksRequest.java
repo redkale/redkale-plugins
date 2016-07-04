@@ -13,7 +13,7 @@ import org.redkale.util.ByteArray;
 
 /**
  *
- * @see http://redkale.org
+ * 详情见: http://redkale.org
  * @author zhangjx
  */
 public class SocksRequest extends Request<SocksContext> {

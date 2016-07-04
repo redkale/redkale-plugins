@@ -19,7 +19,8 @@ import static org.redkalex.pay.Pays.*;
 
 /**
  *
- * @see http://redkale.org
+ * 详情见: http://redkale.org
+ *
  * @author zhangjx
  */
 @AutoLoad(false)
@@ -69,6 +70,7 @@ public class WeiXinPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
+        if (this.convert == null) this.convert = JsonConvert.root();
         if (this.merchno != null && !this.merchno.isEmpty()) { //存在微信支付配置
             try {
                 File file = (wxpaycertpath.indexOf('/') == 0 || wxpaycertpath.indexOf(':') > 0) ? new File(this.wxpaycertpath) : new File(home, "conf/" + this.wxpaycertpath);

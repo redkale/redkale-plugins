@@ -54,7 +54,7 @@ public class AliPayService extends AbstractPayService {
     protected String notifyurl = "http: //xxxxxx";
 
     /*
-     * signkey = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAMvPGb+aJQX0RPjs"
+     * privatekey = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAMvPGb+aJQX0RPjs"
      * + "x6iZUbcujk9GZhVT1Z7N5hky6rZWkOmO2VLwGaY1zyMwHnPkb3fYcv8lhB/+9LsG"
      * + "sPTdSl1qYOyApI1KLyXZTK/qmHHT9uiX1oz02uwNFuSZb9i7FbYth1vEuuM3qnZE"
      * + "7WmgNQkmcted9JF0f/0jK9IOqqNBAgMBAAECgYAKQmOWbIj+krxCF5E5YHZnlTVe"
@@ -69,14 +69,35 @@ public class AliPayService extends AbstractPayService {
      * + "k8N5DvlCSt2rsBsskz4Uiv3KUCwCqq+Lt6g/uFkrTcoBR7GHKOHyyk+l+aJjtxnD"
      * + "ONuh2psnu0N1vg==";
      */
-    @Resource(name = "property.pay.alipay.signkey") //签名算法需要用到的秘钥
-    protected String signkey = "";
+    @Resource(name = "property.pay.alipay.privatekey") //签名算法需要用到的秘钥
+    protected String privatekey = "";
 
     @Resource(name = "property.pay.alipay.publickey") //公钥
     protected String publickey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDDI6d306Q8fIfCOaTXyiUeJHkrIvYISRcc73s3vF1ZT7XN8RNPwJxo8pWaJMmvyTn9N4HQ632qJBVHf8sxHi/fEsraprwCtzvzQETrNRwVxLO5jVmRGi60j8Ue1efIlzPXV9je9mkjzOmdssymZkh2QhUrCmZYI/FCEa3/cNMW0QIDAQAB";
 
     @Resource
     protected JsonConvert convert;
+
+    protected PrivateKey priKey; //私钥
+
+    protected PublicKey pubKey; //公钥
+
+    @Override
+    public void init(AnyValue conf) {
+        if (this.appid == null || this.appid.isEmpty()) return;//没有启用支付宝支付
+        if (this.privatekey == null || this.privatekey.isEmpty()) return;//没有启用支付宝支付
+        if (this.publickey == null || this.publickey.isEmpty()) return;//没有启用支付宝支付
+
+        if (this.convert == null) this.convert = JsonConvert.root();
+        try {
+            final KeyFactory factory = KeyFactory.getInstance("RSA");
+            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.privatekey));
+            this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.publickey)));
+            this.priKey = factory.generatePrivate(priPKCS8);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @Override
     public PayResponse create(PayCreatRequest request) {
@@ -285,8 +306,6 @@ public class AliPayService extends AbstractPayService {
         String text = response.responseText;
         text = text.substring(text.indexOf(':') + 1, text.indexOf(",\"sign\""));
 
-        final KeyFactory factory = KeyFactory.getInstance("RSA");
-        PublicKey pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.publickey)));
         Signature signature = Signature.getInstance("SHA1WithRSA");
         signature.initVerify(pubKey);
         signature.update(text.getBytes(this.charset));
@@ -294,10 +313,6 @@ public class AliPayService extends AbstractPayService {
     }
 
     protected String createSign(Map<String, String> map) throws Exception {
-
-        PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.signkey));
-        final KeyFactory factory = KeyFactory.getInstance("RSA");
-        PrivateKey priKey = factory.generatePrivate(priPKCS8);
 
         Signature signature = Signature.getInstance("SHA1WithRSA");
         signature.initSign(priKey);
