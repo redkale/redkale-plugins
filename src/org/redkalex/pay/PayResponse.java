@@ -18,6 +18,7 @@ import org.redkale.service.RetResult;
  */
 public class PayResponse extends RetResult<Map<String, String>> {
 
+    @ConvertColumn(ignore = true, type = ConvertType.JSON)
     protected String responseText = ""; //第三方支付返回的结果字符串
 
     public PayResponse() {
@@ -57,7 +58,6 @@ public class PayResponse extends RetResult<Map<String, String>> {
         return this;
     }
 
-    @ConvertColumn(ignore = false, type = ConvertType.JSON)
     public String getResponseText() {
         return responseText;
     }
