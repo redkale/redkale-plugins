@@ -12,7 +12,6 @@ import java.security.*;
 import java.security.spec.*;
 import java.util.*;
 import java.util.logging.*;
-import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import org.redkale.convert.json.*;
 import org.redkale.util.*;
@@ -48,32 +47,16 @@ public class AliPayService extends AbstractPayService {
     protected String charset = "GBK";
 
     @Resource(name = "property.pay.alipay.appid") //应用ID
-    protected String appid = ""; //2015051100069126
+    protected String appid = "";
 
     @Resource(name = "property.pay.alipay.notifyurl") //回调url
-    protected String notifyurl = "http: //xxxxxx";
+    protected String notifyurl = "";
 
-    /*
-     * privatekey = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAMvPGb+aJQX0RPjs"
-     * + "x6iZUbcujk9GZhVT1Z7N5hky6rZWkOmO2VLwGaY1zyMwHnPkb3fYcv8lhB/+9LsG"
-     * + "sPTdSl1qYOyApI1KLyXZTK/qmHHT9uiX1oz02uwNFuSZb9i7FbYth1vEuuM3qnZE"
-     * + "7WmgNQkmcted9JF0f/0jK9IOqqNBAgMBAAECgYAKQmOWbIj+krxCF5E5YHZnlTVe"
-     * + "sjmDS1QOiWjSzehYw2TKDQHNlf6EimLh75Mo3E/sJX4sb9QF1Ey3eW/A877BfBDg"
-     * + "UBDuXJUQXzUL3MJFD0w6+Zsx/xPqQmCl9gYwiR7DMeUKtgUrMmYFQFCELzwlM3st"
-     * + "uVPcjLXMaXT8M0EeDQJBAOcDRH02CpfwvodqSzJxy0TFZtaTbKX39TwxJFcSFfV3"
-     * + "fNYDnSdYTYswQmUWpOLP0hoxrcMGlPbhGzPjSACULE8CQQDh2o/OkVHE1aXr4u5l"
-     * + "Q8OxUIaATGQvstOQL9UA8DmNab4QLrn0Ol8T0p2J4IHeWXa1UFtm34/2amp9Vjkt"
-     * + "kYNvAkARv3uEjyFTOQi6SJ1MW9e9CdlzxNHFEn7ByBi9o8MSH8L0gkSRoEQc3HFN"
-     * + "aOb0EflXT9fEsv3A1dyMKPsAKGIbAkEAv9meysOah+9MMCHmi9KSSu6yMg2yFOp8"
-     * + "2EApWdC1srAeKTTn9NQYq4f/Fn3FE5E/SyllWu+RJKqkpq81hsXStQJADwlOtdyi"
-     * + "k8N5DvlCSt2rsBsskz4Uiv3KUCwCqq+Lt6g/uFkrTcoBR7GHKOHyyk+l+aJjtxnD"
-     * + "ONuh2psnu0N1vg==";
-     */
-    @Resource(name = "property.pay.alipay.privatekey") //签名算法需要用到的秘钥
-    protected String privatekey = "";
+    @Resource(name = "property.pay.alipay.signcertkey") //签名算法需要用到的秘钥
+    protected String signcertkey = "";
 
-    @Resource(name = "property.pay.alipay.publickey") //公钥
-    protected String publickey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDDI6d306Q8fIfCOaTXyiUeJHkrIvYISRcc73s3vF1ZT7XN8RNPwJxo8pWaJMmvyTn9N4HQ632qJBVHf8sxHi/fEsraprwCtzvzQETrNRwVxLO5jVmRGi60j8Ue1efIlzPXV9je9mkjzOmdssymZkh2QhUrCmZYI/FCEa3/cNMW0QIDAQAB";
+    @Resource(name = "property.pay.alipay.verifycertkey") //公钥
+    protected String verifycertkey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDDI6d306Q8fIfCOaTXyiUeJHkrIvYISRcc73s3vF1ZT7XN8RNPwJxo8pWaJMmvyTn9N4HQ632qJBVHf8sxHi/fEsraprwCtzvzQETrNRwVxLO5jVmRGi60j8Ue1efIlzPXV9je9mkjzOmdssymZkh2QhUrCmZYI/FCEa3/cNMW0QIDAQAB";
 
     @Resource
     protected JsonConvert convert;
@@ -85,24 +68,55 @@ public class AliPayService extends AbstractPayService {
     @Override
     public void init(AnyValue conf) {
         if (this.appid == null || this.appid.isEmpty()) return;//没有启用支付宝支付
-        if (this.privatekey == null || this.privatekey.isEmpty()) return;//没有启用支付宝支付
-        if (this.publickey == null || this.publickey.isEmpty()) return;//没有启用支付宝支付
+        if (this.signcertkey == null || this.signcertkey.isEmpty()) return;//没有启用支付宝支付
+        if (this.verifycertkey == null || this.verifycertkey.isEmpty()) return;//没有启用支付宝支付
 
         if (this.convert == null) this.convert = JsonConvert.root();
         try {
             final KeyFactory factory = KeyFactory.getInstance("RSA");
-            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.privatekey));
-            this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.publickey)));
+            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.signcertkey));
+            this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.verifycertkey)));
             this.priKey = factory.generatePrivate(priPKCS8);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
+    public static void main(String[] args) throws Throwable {
+        AliPayService service = new AliPayService();
+        service.appid = "2015051100069126";
+        service.signcertkey = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAMvPGb+aJQX0RPjs"
+            + "x6iZUbcujk9GZhVT1Z7N5hky6rZWkOmO2VLwGaY1zyMwHnPkb3fYcv8lhB/+9LsG"
+            + "sPTdSl1qYOyApI1KLyXZTK/qmHHT9uiX1oz02uwNFuSZb9i7FbYth1vEuuM3qnZE"
+            + "7WmgNQkmcted9JF0f/0jK9IOqqNBAgMBAAECgYAKQmOWbIj+krxCF5E5YHZnlTVe"
+            + "sjmDS1QOiWjSzehYw2TKDQHNlf6EimLh75Mo3E/sJX4sb9QF1Ey3eW/A877BfBDg"
+            + "UBDuXJUQXzUL3MJFD0w6+Zsx/xPqQmCl9gYwiR7DMeUKtgUrMmYFQFCELzwlM3st"
+            + "uVPcjLXMaXT8M0EeDQJBAOcDRH02CpfwvodqSzJxy0TFZtaTbKX39TwxJFcSFfV3"
+            + "fNYDnSdYTYswQmUWpOLP0hoxrcMGlPbhGzPjSACULE8CQQDh2o/OkVHE1aXr4u5l"
+            + "Q8OxUIaATGQvstOQL9UA8DmNab4QLrn0Ol8T0p2J4IHeWXa1UFtm34/2amp9Vjkt"
+            + "kYNvAkARv3uEjyFTOQi6SJ1MW9e9CdlzxNHFEn7ByBi9o8MSH8L0gkSRoEQc3HFN"
+            + "aOb0EflXT9fEsv3A1dyMKPsAKGIbAkEAv9meysOah+9MMCHmi9KSSu6yMg2yFOp8"
+            + "2EApWdC1srAeKTTn9NQYq4f/Fn3FE5E/SyllWu+RJKqkpq81hsXStQJADwlOtdyi"
+            + "k8N5DvlCSt2rsBsskz4Uiv3KUCwCqq+Lt6g/uFkrTcoBR7GHKOHyyk+l+aJjtxnD"
+            + "ONuh2psnu0N1vg==";
+        service.init(null);
+        
+        PayCreatRequest creatRequest = new PayCreatRequest();
+        creatRequest.setPaytype(Pays.PAYTYPE_ALIPAY);
+        creatRequest.setTradeno("200000001");
+        creatRequest.setTrademoney(10); //1毛钱
+        creatRequest.setTradetitle("一斤红菜苔");
+        creatRequest.setTradebody("一斤红菜苔");
+        creatRequest.setClientAddr(Utility.localInetAddress().getHostAddress());
+        
+        System.out.println(service.create(creatRequest));
+
+    }
+
     @Override
-    public PayResponse create(PayCreatRequest request) {
+    public PayCreatResponse create(PayCreatRequest request) {
         request.checkVaild();
-        final PayResponse result = new PayResponse();
+        final PayCreatResponse result = new PayCreatResponse();
         try {
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", this.appid);
@@ -129,31 +143,18 @@ public class AliPayService extends AbstractPayService {
             result.setResponseText(responseText);
             final InnerCreateResponse resp = convert.convertFrom(InnerCreateResponse.class, responseText);
             resp.responseText = responseText; //原始的返回内容            
-            if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR); 
             final Map<String, String> resultmap = resp.alipay_trade_create_response;
             result.setResult(resultmap);
             if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
                 return result.retcode(RETPAY_ALIPAY_ERROR).retinfo(resultmap.get("sub_msg"));
             }
+            result.setThirdpayno(resultmap.getOrDefault("trade_no", "")); 
         } catch (Exception e) {
             result.setRetcode(RETPAY_ALIPAY_ERROR);
             logger.log(Level.WARNING, "create_pay_error", e);
         }
         return result;
-    }
-
-    public static void main(String[] args) throws Throwable {
-        AliPayService service = new AliPayService();
-        service.convert = JsonConvert.root();
-        PayCreatRequest request = new PayCreatRequest();
-        request.setPaytype(PAYTYPE_ALIPAY);
-        request.setTradetitle("外卖");
-        request.setTradebody("白菜");
-        request.setTrademoney(1);
-        request.setTradeno("200000001");
-        request.setClientAddr("192.168.0.1");
-        System.out.println(service.create(request));
-
     }
 
     @Override
@@ -201,6 +202,7 @@ public class AliPayService extends AbstractPayService {
                     break;
             }
             result.setPaystatus(paystatus);
+            result.setThirdpayno(resultmap.getOrDefault("trade_no", "")); 
             result.setPayedmoney((long) (Double.parseDouble(resultmap.get("receipt_amount")) * 100));
         } catch (Exception e) {
             result.setRetcode(RETPAY_ALIPAY_ERROR);
@@ -210,7 +212,7 @@ public class AliPayService extends AbstractPayService {
     }
 
     @Override
-    public PayResponse close(PayRequest request) {
+    public PayResponse close(PayCloseRequest request) {
         request.checkVaild();
         final PayResponse result = new PayResponse();
         try {
@@ -312,16 +314,17 @@ public class AliPayService extends AbstractPayService {
         return signature.verify(Base64.getDecoder().decode(response.sign.getBytes()));
     }
 
-    protected String createSign(Map<String, String> map) throws Exception {
+    @Override
+    protected boolean checkSign(Map<String, String> map) { //支付宝玩另类
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 
+    @Override
+    protected String createSign(Map<String, String> map) throws Exception {
         Signature signature = Signature.getInstance("SHA1WithRSA");
         signature.initSign(priKey);
         signature.update(joinMap(map).getBytes(this.charset));
         return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8");
-    }
-
-    protected String joinMap(Map<String, String> map) {
-        return map.entrySet().stream().map((e -> e.getKey() + "=" + e.getValue())).collect(Collectors.joining("&"));
     }
 
     public static class InnerCloseResponse extends InnerResponse {

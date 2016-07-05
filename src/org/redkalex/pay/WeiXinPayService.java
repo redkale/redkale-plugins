@@ -55,10 +55,10 @@ public class WeiXinPayService extends AbstractPayService {
     protected String signkey = "";
 
     @Resource(name = "property.pay.weixin.certpwd")
-    protected String wxpaycertpwd = ""; //HTTP证书的密码，默认等于MCHID
+    protected String certpwd = ""; //HTTP证书的密码，默认等于MCHID
 
     @Resource(name = "property.pay.weixin.certpath") //HTTP证书在服务器中的路径，用来加载证书用, 不是/开头且没有:字符，视为{APP_HOME}/conf相对下的路径
-    protected String wxpaycertpath = "apiclient_cert.p12";
+    protected String certpath = "apiclient_cert.p12";
 
     @Resource(name = "APP_HOME")
     protected File home;
@@ -73,16 +73,14 @@ public class WeiXinPayService extends AbstractPayService {
         if (this.convert == null) this.convert = JsonConvert.root();
         if (this.merchno != null && !this.merchno.isEmpty()) { //存在微信支付配置
             try {
-                File file = (wxpaycertpath.indexOf('/') == 0 || wxpaycertpath.indexOf(':') > 0) ? new File(this.wxpaycertpath) : new File(home, "conf/" + this.wxpaycertpath);
-
-                String path = "/" + WeiXinPayService.class.getPackage().getName().replace('.', '/') + "/" + this.wxpaycertpath;
-                InputStream in = file.isFile() ? new FileInputStream(file) : WeiXinPayService.class.getResourceAsStream(path);
+                File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
+                InputStream in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
 
                 final KeyStore keyStore = KeyStore.getInstance("PKCS12");
-                keyStore.load(in, this.wxpaycertpwd.toCharArray());
+                keyStore.load(in, this.certpwd.toCharArray());
                 in.close();
                 KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-                keyManagerFactory.init(keyStore, wxpaycertpwd.toCharArray());
+                keyManagerFactory.init(keyStore, certpwd.toCharArray());
                 TrustManagerFactory trustFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                 trustFactory.init(keyStore);
                 SSLContext ctx = SSLContext.getInstance("TLSv1");
@@ -112,9 +110,9 @@ public class WeiXinPayService extends AbstractPayService {
      * @return
      */
     @Override
-    public PayResponse create(final PayCreatRequest request) {
+    public PayCreatResponse create(final PayCreatRequest request) {
         request.checkVaild();
-        final PayResponse result = new PayResponse();
+        final PayCreatResponse result = new PayCreatResponse();
         try {
             final TreeMap<String, String> map = new TreeMap<>();
             if (request.getMap() != null) map.putAll(request.getMap());
@@ -222,6 +220,7 @@ public class WeiXinPayService extends AbstractPayService {
                     break;
             }
             result.setPaystatus(paystatus);
+            result.setThirdpayno(map.getOrDefault("transaction_id", "")); 
             result.setPayedmoney(Long.parseLong(map.get("total_fee")));
         } catch (Exception e) {
             result.setRetcode(RETPAY_WEIXIN_ERROR);
@@ -231,7 +230,7 @@ public class WeiXinPayService extends AbstractPayService {
     }
 
     @Override
-    public PayResponse close(final PayRequest request) {
+    public PayResponse close(final PayCloseRequest request) {
         request.checkVaild();
         final PayResponse result = new PayResponse();
         try {
@@ -319,14 +318,16 @@ public class WeiXinPayService extends AbstractPayService {
         return result;
     }
 
-    protected String createSign(Map<String, String> map) throws NoSuchAlgorithmException {
+    @Override
+    protected String createSign(Map<String, String> map) throws Exception { //计算签名
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> sb.append(x).append('=').append(y).append('&'));
         sb.append("key=").append(this.signkey);
         return Utility.binToHexString(MessageDigest.getInstance("MD5").digest(sb.toString().getBytes())).toUpperCase();
     }
 
-    protected boolean checkSign(Map<String, String> map) {
+    @Override
+    protected boolean checkSign(Map<String, String> map) {  //验证签名
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         String sign = map.remove("sign");
         final StringBuilder sb = new StringBuilder();

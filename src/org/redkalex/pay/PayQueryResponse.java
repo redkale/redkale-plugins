@@ -19,6 +19,8 @@ public class PayQueryResponse extends PayResponse {
 
     private long payedmoney;
 
+    private String thirdpayno = ""; //第三方的支付流水号
+
     @Override
     public PayQueryResponse retcode(int retcode) {
         this.retcode = retcode;
@@ -53,4 +55,11 @@ public class PayQueryResponse extends PayResponse {
         this.paystatus = paystatus;
     }
 
+    public String getThirdpayno() {
+        return thirdpayno;
+    }
+
+    public void setThirdpayno(String thirdpayno) {
+        this.thirdpayno = thirdpayno;
+    }
 }
