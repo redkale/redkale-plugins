@@ -62,7 +62,7 @@ public abstract class Pays {
     //退款失败
     public static final short PAYSTATUS_REFUNDNO = 80;
 
-    //已取消
+    //已关闭
     public static final short PAYSTATUS_CLOSED = 90;
 
     //已取消
