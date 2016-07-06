@@ -15,6 +15,9 @@ import org.redkale.service.*;
  */
 public abstract class PayRetCodes {
 
+    protected PayRetCodes() {
+    }
+
     //--------------------------------------------- 支付模块结果码 ----------------------------------------------
     @RetLabel("支付失败")
     public static final int RETPAY_PAY_ERROR = 20010001;
