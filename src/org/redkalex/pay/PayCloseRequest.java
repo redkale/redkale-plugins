@@ -13,12 +13,12 @@ public class PayCloseRequest extends PayRequest {
 
     protected String thirdpayno = ""; //第三方的支付流水号
     
-    protected long trademoney; //  支付金额。 单位:分 
+    protected long paymoney; //  支付金额。 单位:分 
 
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.trademoney < 1) throw new RuntimeException("trademoney is illegal");
+        if (this.paymoney < 1) throw new RuntimeException("paymoney is illegal");
         if (this.thirdpayno == null || this.thirdpayno.isEmpty()) throw new RuntimeException("thirdpayno is illegal");
     }
 
@@ -30,12 +30,12 @@ public class PayCloseRequest extends PayRequest {
         this.thirdpayno = thirdpayno;
     }
 
-    public long getTrademoney() {
-        return trademoney;
+    public long getPaymoney() {
+        return paymoney;
     }
 
-    public void setTrademoney(long trademoney) {
-        this.trademoney = trademoney;
+    public void setPaymoney(long paymoney) {
+        this.paymoney = paymoney;
     }
 
 }

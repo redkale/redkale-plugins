@@ -17,10 +17,10 @@ public class PayRequest {
 
     protected short paytype; //支付类型; 
 
-    protected String tradeno = ""; //自己的订单号
+    protected String payno = ""; //自己的订单号
 
     public void checkVaild() {
-        if (this.tradeno == null || this.tradeno.isEmpty()) throw new RuntimeException("tradeno is illegal");
+        if (this.payno == null || this.payno.isEmpty()) throw new RuntimeException("payno is illegal");
         if (this.paytype < 1) throw new RuntimeException("paytype is illegal");
     }
 
@@ -37,13 +37,13 @@ public class PayRequest {
         this.paytype = paytype;
     }
 
-    public String getTradeno() {
-        return tradeno;
+    public String getPayno() {
+        return payno;
     }
 
-    public void setTradeno(String tradeno) {
-        if (tradeno != null) {
-            this.tradeno = tradeno.trim();
+    public void setPayno(String payno) {
+        if (payno != null) {
+            this.payno = payno.trim();
         }
     }
 

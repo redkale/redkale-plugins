@@ -139,10 +139,10 @@ public class UnionPayService extends AbstractPayService {
         //支付
         final PayCreatRequest creatRequest = new PayCreatRequest();
         creatRequest.setPaytype(Pays.PAYTYPE_UNION);
-        creatRequest.setTradeno("Redkale100000001");
-        creatRequest.setTrademoney(10); //1毛钱
-        creatRequest.setTradetitle("一斤红菜苔");
-        creatRequest.setTradebody("一斤红菜苔");
+        creatRequest.setPayno("Redkale100000001");
+        creatRequest.setPaymoney(10); //1毛钱
+        creatRequest.setPaytitle("一斤红菜苔");
+        creatRequest.setPaybody("一斤红菜苔");
         creatRequest.setClientAddr(Utility.localInetAddress().getHostAddress());
         final PayCreatResponse creatResponse = service.create(creatRequest);
         System.out.println(creatResponse);
@@ -151,7 +151,7 @@ public class UnionPayService extends AbstractPayService {
         //请求不能太频繁，否则 You have been added to the blacklist. Please don't do stress testing. TPS could not be greater than 0.5 . BlackList Will be clear at time 00:00
         PayRequest queryRequest = new PayRequest();
         queryRequest.setPaytype(Pays.PAYTYPE_UNION);
-        queryRequest.setTradeno(creatRequest.getTradeno());
+        queryRequest.setPayno(creatRequest.getPayno());
         //PayQueryResponse queryResponse = service.query(queryRequest);
         //System.out.println(queryResponse);
     }
@@ -177,10 +177,10 @@ public class UnionPayService extends AbstractPayService {
             map.put("merId", merchno);   					//商户号码，请改成自己申请的商户号或者open上注册得来的777商户号测试
             map.put("certId", signcertid);                  //设置签名证书中的证书序列号（单证书） 证书的物理编号
             map.put("accessType", "0");            		 	//接入类型，商户接入填0 ，不需修改（0：直连商户， 1： 收单机构 2：平台商户）
-            map.put("orderId", request.getTradeno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
+            map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
             map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
             map.put("accType", "01");					 	//账号类型 01：银行卡; 02：存折; 03：IC卡帐号类型(卡介质)
-            map.put("txnAmt", "" + request.getTrademoney());//交易金额 单位为分，不能带小数点
+            map.put("txnAmt", "" + request.getPaymoney());//交易金额 单位为分，不能带小数点
             map.put("currencyCode", "156");                 //境内商户CNY固定 156 人民币
             //contentData.put("reqReserved", "透传字段");           //商户自定义保留域，交易应答时会原样返回
 
@@ -228,7 +228,7 @@ public class UnionPayService extends AbstractPayService {
             map.put("certId", signcertid);                  //设置签名证书中的证书序列号（单证书） 证书的物理编号
             map.put("accessType", "0");            		 	//接入类型，商户接入填0 ，不需修改（0：直连商户， 1： 收单机构 2：平台商户）
 
-            map.put("orderId", request.getTradeno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
+            map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
             map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
 
             map.put("signature", createSign(map));
@@ -282,10 +282,10 @@ public class UnionPayService extends AbstractPayService {
             map.put("merId", merchno);   					//商户号码，请改成自己申请的商户号或者open上注册得来的777商户号测试
             map.put("certId", signcertid);                  //设置签名证书中的证书序列号（单证书） 证书的物理编号
             map.put("accessType", "0");            		 	//接入类型，商户接入填0 ，不需修改（0：直连商户， 1： 收单机构 2：平台商户）
-            map.put("orderId", request.getTradeno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
+            map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
             map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
             map.put("accType", "01");					 	//账号类型 01：银行卡; 02：存折; 03：IC卡帐号类型(卡介质)
-            map.put("txnAmt", "" + request.getTrademoney());//交易金额 单位为分，不能带小数点
+            map.put("txnAmt", "" + request.getPaymoney());//交易金额 单位为分，不能带小数点
             map.put("currencyCode", "156");                 //境内商户CNY固定 156 人民币
 
             map.put("origQryId", request.getThirdpayno());  //【原始交易流水号】，原消费交易返回的的queryId，可以从消费交易后台通知接口中或者交易状态查询接口中获取
@@ -328,7 +328,7 @@ public class UnionPayService extends AbstractPayService {
             map.put("merId", merchno);   					//商户号码，请改成自己申请的商户号或者open上注册得来的777商户号测试
             map.put("certId", signcertid);                  //设置签名证书中的证书序列号（单证书） 证书的物理编号
             map.put("accessType", "0");            		 	//接入类型，商户接入填0 ，不需修改（0：直连商户， 1： 收单机构 2：平台商户）
-            map.put("orderId", request.getTradeno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
+            map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
             map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
             map.put("txnAmt", "" + request.getRefundmoney());//****退货金额，单位分，不要带小数点。退货金额小于等于原消费金额，当小于的时候可以多次退货至退货累计金额等于原消费金额		
             map.put("currencyCode", "156");                 //境内商户CNY固定 156 人民币

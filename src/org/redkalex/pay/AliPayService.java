@@ -103,10 +103,10 @@ public class AliPayService extends AbstractPayService {
         
         PayCreatRequest creatRequest = new PayCreatRequest();
         creatRequest.setPaytype(Pays.PAYTYPE_ALIPAY);
-        creatRequest.setTradeno("200000001");
-        creatRequest.setTrademoney(10); //1毛钱
-        creatRequest.setTradetitle("一斤红菜苔");
-        creatRequest.setTradebody("一斤红菜苔");
+        creatRequest.setPayno("200000001");
+        creatRequest.setPaymoney(10); //1毛钱
+        creatRequest.setPaytitle("一斤红菜苔");
+        creatRequest.setPaybody("一斤红菜苔");
         creatRequest.setClientAddr(Utility.localInetAddress().getHostAddress());
         
         System.out.println(service.create(creatRequest));
@@ -130,10 +130,10 @@ public class AliPayService extends AbstractPayService {
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
             if (request.getMap() != null) biz_content.putAll(request.getMap());
-            biz_content.put("out_trade_no", request.getTradeno());
-            biz_content.put("total_amount", "" + (request.getTrademoney() / 100.0));
-            biz_content.put("subject", "" + request.getTradetitle());
-            biz_content.put("body", request.getTradebody());
+            biz_content.put("out_trade_no", request.getPayno());
+            biz_content.put("total_amount", "" + (request.getPaymoney() / 100.0));
+            biz_content.put("subject", "" + request.getPaytitle());
+            biz_content.put("body", request.getPaybody());
             map.put("biz_content", convert.convertTo(biz_content));
 
             map.put("sign", createSign(map));
@@ -173,7 +173,7 @@ public class AliPayService extends AbstractPayService {
             map.put("method", "alipay.trade.query");
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
-            biz_content.put("out_trade_no", request.getTradeno());
+            biz_content.put("out_trade_no", request.getPayno());
             map.put("biz_content", convert.convertTo(biz_content));
 
             map.put("sign", createSign(map));
@@ -227,7 +227,7 @@ public class AliPayService extends AbstractPayService {
             map.put("method", "alipay.trade.close");
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
-            biz_content.put("out_trade_no", request.getTradeno());
+            biz_content.put("out_trade_no", request.getPayno());
             map.put("biz_content", convert.convertTo(biz_content));
 
             map.put("sign", createSign(map));
@@ -265,7 +265,7 @@ public class AliPayService extends AbstractPayService {
             map.put("method", "alipay.trade.refund");
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
-            biz_content.put("out_trade_no", request.getTradeno());
+            biz_content.put("out_trade_no", request.getPayno());
             biz_content.put("refund_amount", "" + (request.getRefundmoney() / 100.0));
             map.put("biz_content", convert.convertTo(biz_content));
 

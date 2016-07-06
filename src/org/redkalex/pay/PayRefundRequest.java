@@ -14,7 +14,7 @@ package org.redkalex.pay;
 public class PayRefundRequest extends PayRequest {
 
 
-    protected long trademoney; //  支付金额。 单位:分 
+    protected long paymoney; //  支付金额。 单位:分 
 
     protected String thirdpayno = ""; //第三方的支付流水号
     
@@ -28,7 +28,7 @@ public class PayRefundRequest extends PayRequest {
     public void checkVaild() {
         super.checkVaild();
         if (this.refundmoney < 1) throw new RuntimeException("refundmoney is illegal");
-        if (this.trademoney < 1) throw new RuntimeException("trademoney is illegal");
+        if (this.paymoney < 1) throw new RuntimeException("paymoney is illegal");
         if (this.refundno == null || this.refundno.isEmpty()) throw new RuntimeException("refundno is illegal");
         if (this.thirdpayno == null || this.thirdpayno.isEmpty()) throw new RuntimeException("thirdpayno is illegal");
     }
@@ -41,12 +41,12 @@ public class PayRefundRequest extends PayRequest {
         this.refundmoney = refundmoney;
     }
 
-    public long getTrademoney() {
-        return trademoney;
+    public long getPaymoney() {
+        return paymoney;
     }
 
-    public void setTrademoney(long trademoney) {
-        this.trademoney = trademoney;
+    public void setPaymoney(long paymoney) {
+        this.paymoney = paymoney;
     }
 
     public String getRefundno() {

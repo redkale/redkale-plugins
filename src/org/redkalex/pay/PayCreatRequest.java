@@ -18,11 +18,11 @@ public class PayCreatRequest extends PayRequest {
 
     protected short payway = PAYWAY_WEB;
 
-    protected long trademoney; //  支付金额。 单位:分 
+    protected long paymoney; //  支付金额。 单位:分 
 
-    protected String tradetitle = ""; //订单标题
+    protected String paytitle = ""; //订单标题
 
-    protected String tradebody = ""; //订单内容描述
+    protected String paybody = ""; //订单内容描述
 
     protected int paytimeout = 600; //支付超时的秒数
 
@@ -33,9 +33,9 @@ public class PayCreatRequest extends PayRequest {
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.trademoney < 1) throw new RuntimeException("trademoney is illegal");
-        if (this.tradetitle == null || this.tradetitle.isEmpty()) throw new RuntimeException("tradetitle is illegal");
-        if (this.tradebody == null || this.tradebody.isEmpty()) throw new RuntimeException("tradebody is illegal");
+        if (this.paymoney < 1) throw new RuntimeException("paymoney is illegal");
+        if (this.paytitle == null || this.paytitle.isEmpty()) throw new RuntimeException("paytitle is illegal");
+        if (this.paybody == null || this.paybody.isEmpty()) throw new RuntimeException("paybody is illegal");
         if (this.clientAddr == null || this.clientAddr.isEmpty()) throw new RuntimeException("clientAddr is illegal");
         if (this.paytimeout < 300) throw new RuntimeException("paytimeout cannot less 300 seconds");
         if (this.paytimeout > 24 * 60 * 60) throw new RuntimeException("paytimeout cannot greater 1 day");
@@ -55,28 +55,28 @@ public class PayCreatRequest extends PayRequest {
         this.payway = payway;
     }
 
-    public long getTrademoney() {
-        return trademoney;
+    public long getPaymoney() {
+        return paymoney;
     }
 
-    public void setTrademoney(long trademoney) {
-        this.trademoney = trademoney;
+    public void setPaymoney(long paymoney) {
+        this.paymoney = paymoney;
     }
 
-    public String getTradetitle() {
-        return tradetitle;
+    public String getPaytitle() {
+        return paytitle;
     }
 
-    public void setTradetitle(String tradetitle) {
-        this.tradetitle = tradetitle;
+    public void setPaytitle(String paytitle) {
+        this.paytitle = paytitle;
     }
 
-    public String getTradebody() {
-        return tradebody;
+    public String getPaybody() {
+        return paybody;
     }
 
-    public void setTradebody(String tradebody) {
-        this.tradebody = tradebody;
+    public void setPaybody(String paybody) {
+        this.paybody = paybody;
     }
 
     public int getPaytimeout() {
