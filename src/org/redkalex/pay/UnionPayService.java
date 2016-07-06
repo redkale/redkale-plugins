@@ -197,11 +197,11 @@ public class UnionPayService extends AbstractPayService {
             result.setResult(resultmap);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
-                return result.retcode(RETPAY_UNIONPAY_ERROR).retinfo(resultmap.get("respMsg"));
+                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
             }
             result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
         } catch (Exception e) {
-            result.setRetcode(RETPAY_UNIONPAY_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "create_pay_error", e);
         }
         return result;
@@ -238,7 +238,7 @@ public class UnionPayService extends AbstractPayService {
             result.setResult(resultmap);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
-                return result.retcode(RETPAY_UNIONPAY_ERROR).retinfo(resultmap.get("respMsg"));
+                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
             }
             //trade_status 交易状态：WAIT_BUYER_PAY（交易创建，等待买家付款）、TRADE_CLOSED（未付款交易超时关闭，或支付完成后全额退款）、TRADE_SUCCESS（交易支付成功）、TRADE_FINISHED（交易结束，不可退款）
             short paystatus = PAYSTATUS_PAYNO;
@@ -256,7 +256,7 @@ public class UnionPayService extends AbstractPayService {
             result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
             result.setPayedmoney((long) (Double.parseDouble(resultmap.get("receipt_amount")) * 100));
         } catch (Exception e) {
-            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error", e);
         }
         return result;
@@ -299,10 +299,10 @@ public class UnionPayService extends AbstractPayService {
             result.setResult(resultmap);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
-                return result.retcode(RETPAY_UNIONPAY_ERROR).retinfo(resultmap.get("respMsg"));
+                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
             }
         } catch (Exception e) {
-            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error", e);
         }
         return result;
@@ -344,10 +344,10 @@ public class UnionPayService extends AbstractPayService {
             result.setResult(resultmap);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
-                return result.retcode(RETPAY_UNIONPAY_ERROR).retinfo(resultmap.get("respMsg"));
+                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
             }
         } catch (Exception e) {
-            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error", e);
         }
         return result;
@@ -371,7 +371,7 @@ public class UnionPayService extends AbstractPayService {
         Map<String, String> map = new TreeMap<>();
         for (String item : responseText.split("&")) {
             int pos = item.indexOf('=');
-            if(pos < 0) return map;
+            if (pos < 0) return map;
             map.put(item.substring(0, pos), item.substring(pos + 1));
         }
         return map;

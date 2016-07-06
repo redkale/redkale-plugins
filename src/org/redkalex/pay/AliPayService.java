@@ -148,11 +148,11 @@ public class AliPayService extends AbstractPayService {
             final Map<String, String> resultmap = resp.alipay_trade_create_response;
             result.setResult(resultmap);
             if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
-                return result.retcode(RETPAY_ALIPAY_ERROR).retinfo(resultmap.get("sub_msg"));
+                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
             }
             result.setThirdpayno(resultmap.getOrDefault("trade_no", "")); 
         } catch (Exception e) {
-            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "create_pay_error", e);
         }
         return result;
@@ -188,7 +188,7 @@ public class AliPayService extends AbstractPayService {
             final Map<String, String> resultmap = resp.alipay_trade_query_response;
             result.setResult(resultmap);
             if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
-                return result.retcode(RETPAY_ALIPAY_ERROR).retinfo(resultmap.get("sub_msg"));
+                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
             }
             //trade_status 交易状态：WAIT_BUYER_PAY（交易创建，等待买家付款）、TRADE_CLOSED（未付款交易超时关闭，或支付完成后全额退款）、TRADE_SUCCESS（交易支付成功）、TRADE_FINISHED（交易结束，不可退款）
             short paystatus = PAYSTATUS_PAYNO;
@@ -206,7 +206,7 @@ public class AliPayService extends AbstractPayService {
             result.setThirdpayno(resultmap.getOrDefault("trade_no", "")); 
             result.setPayedmoney((long) (Double.parseDouble(resultmap.get("receipt_amount")) * 100));
         } catch (Exception e) {
-            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error", e);
         }
         return result;
@@ -242,10 +242,10 @@ public class AliPayService extends AbstractPayService {
             final Map<String, String> resultmap = resp.alipay_trade_close_response;
             result.setResult(resultmap);
             if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
-                return result.retcode(RETPAY_ALIPAY_ERROR).retinfo(resultmap.get("sub_msg"));
+                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
             }
         } catch (Exception e) {
-            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error", e);
         }
         return result;
@@ -281,11 +281,11 @@ public class AliPayService extends AbstractPayService {
             final Map<String, String> resultmap = resp.alipay_trade_close_response;
             result.setResult(resultmap);
             if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
-                return result.retcode(RETPAY_ALIPAY_ERROR).retinfo(resultmap.get("sub_msg"));
+                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
             }
             result.setRefundedmoney((long) (Double.parseDouble(resultmap.get("refund_fee")) * 100));
         } catch (Exception e) {
-            result.setRetcode(RETPAY_ALIPAY_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error", e);
         }
         return result;

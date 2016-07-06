@@ -132,7 +132,7 @@ public class WeiXinPayService extends AbstractPayService {
             result.setResponsetext(responseText);
 
             Map<String, String> resultmap = formatXMLToMap(responseText);
-            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_WEIXIN_ERROR);
+            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             /**
              * "appId" : "wx2421b1c4370ec43b", //公众号名称，由商户传入 "timeStamp":" 1395712654", //时间戳，自1970年以来的秒数 "nonceStr" : "e61463f8efa94090b1f366cccfbbb444", //随机串 "package" :
@@ -147,7 +147,7 @@ public class WeiXinPayService extends AbstractPayService {
             rmap.put("signType", "MD5");
             rmap.put("paySign", createSign(rmap));
         } catch (Exception e) {
-            result.setRetcode(RETPAY_WEIXIN_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "create_pay_error", e);
         }
         return result;
@@ -223,7 +223,7 @@ public class WeiXinPayService extends AbstractPayService {
             result.setThirdpayno(map.getOrDefault("transaction_id", "")); 
             result.setPayedmoney(Long.parseLong(map.get("total_fee")));
         } catch (Exception e) {
-            result.setRetcode(RETPAY_WEIXIN_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error", e);
         }
         return result;
@@ -245,12 +245,12 @@ public class WeiXinPayService extends AbstractPayService {
             result.setResponsetext(responseText);
 
             Map<String, String> resultmap = formatXMLToMap(responseText);
-            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_WEIXIN_ERROR);
+            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             result.setResult(resultmap);
 
         } catch (Exception e) {
-            result.setRetcode(RETPAY_WEIXIN_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error", e);
         }
         return result;
@@ -304,7 +304,7 @@ public class WeiXinPayService extends AbstractPayService {
             final Map<String, String> resultmap = formatXMLToMap(responseText);
             result.setResult(resultmap);
 
-            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_WEIXIN_ERROR);
+            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             //trade_state SUCCESS—退款成功 FAIL—退款失败 PROCESSING—退款处理中 NOTSURE—未确定，需要商户原退款单号重新发起 
             //CHANGE—转入代发，退款到银行发现用户的卡作废或者冻结了，导致原路退款银行卡失败，资金回流到商户的现金帐号，需要商户人工干预，通过线下或者财付通转账的方式进行退款。
@@ -312,7 +312,7 @@ public class WeiXinPayService extends AbstractPayService {
             result.setResult(resultmap);
             result.setRefundedmoney(Long.parseLong(map.get("refund_fee_$n")));
         } catch (Exception e) {
-            result.setRetcode(RETPAY_WEIXIN_ERROR);
+            result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error", e);
         }
         return result;
