@@ -140,7 +140,7 @@ public class AliPayService extends AbstractPayService {
 
             final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(this.charset), joinMap(map));
             //{"alipay_trade_create_response":{"code":"40002","msg":"Invalid Arguments","sub_code":"isv.invalid-signature","sub_msg":"无效签名"},"sign":"xxxxxxxxxxxx"}
-            result.setResponseText(responseText);
+            result.setResponsetext(responseText);
             final InnerCreateResponse resp = convert.convertFrom(InnerCreateResponse.class, responseText);
             resp.responseText = responseText; //原始的返回内容            
             if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR); 
@@ -180,7 +180,7 @@ public class AliPayService extends AbstractPayService {
 
             final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(this.charset), joinMap(map));
 
-            result.setResponseText(responseText);
+            result.setResponsetext(responseText);
             final InnerQueryResponse resp = convert.convertFrom(InnerQueryResponse.class, responseText);
             resp.responseText = responseText; //原始的返回内容            
             if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
@@ -234,7 +234,7 @@ public class AliPayService extends AbstractPayService {
 
             final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(this.charset), joinMap(map));
 
-            result.setResponseText(responseText);
+            result.setResponsetext(responseText);
             final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
             resp.responseText = responseText; //原始的返回内容            
             if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
@@ -273,7 +273,7 @@ public class AliPayService extends AbstractPayService {
 
             final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(this.charset), joinMap(map));
 
-            result.setResponseText(responseText);
+            result.setResponsetext(responseText);
             final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
             resp.responseText = responseText; //原始的返回内容            
             if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
@@ -296,7 +296,7 @@ public class AliPayService extends AbstractPayService {
         final PayRefundResponse response = new PayRefundResponse();
         response.setRetcode(queryResponse.getRetcode());
         response.setRetinfo(queryResponse.getRetinfo());
-        response.setResponseText(queryResponse.getResponseText());
+        response.setResponsetext(queryResponse.getResponsetext());
         response.setResult(queryResponse.getResult());
         if (queryResponse.isSuccess()) {
             response.setRefundedmoney((long) (Double.parseDouble(response.getResult().get("receipt_amount")) * 100));

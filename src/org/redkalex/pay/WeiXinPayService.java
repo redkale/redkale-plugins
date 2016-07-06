@@ -129,7 +129,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map));
-            result.setResponseText(responseText);
+            result.setResponsetext(responseText);
 
             Map<String, String> resultmap = formatXMLToMap(responseText);
             if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_WEIXIN_ERROR);
@@ -193,7 +193,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/orderquery", formatMapToXML(map));
-            result.setResponseText(responseText);
+            result.setResponsetext(responseText);
 
             final Map<String, String> resultmap = formatXMLToMap(responseText);
             result.setResult(resultmap);
@@ -242,7 +242,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/closeorder", formatMapToXML(map));
-            result.setResponseText(responseText);
+            result.setResponsetext(responseText);
 
             Map<String, String> resultmap = formatXMLToMap(responseText);
             if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_WEIXIN_ERROR);
@@ -273,7 +273,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent(paySSLContext, "https://api.mch.weixin.qq.com/secapi/pay/refund", formatMapToXML(map));
-            result.setResponseText(responseText);
+            result.setResponsetext(responseText);
 
             Map<String, String> resultmap = formatXMLToMap(responseText);
             if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_REFUND_ERROR);
@@ -299,7 +299,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/refundquery", formatMapToXML(map));
-            result.setResponseText(responseText);
+            result.setResponsetext(responseText);
 
             final Map<String, String> resultmap = formatXMLToMap(responseText);
             result.setResult(resultmap);

@@ -192,8 +192,8 @@ public class UnionPayService extends AbstractPayService {
             if (!notifyurl.isEmpty()) map.put("backUrl", notifyurl);
             map.put("signature", createSign(map));
 
-            result.responseText = Utility.postHttpContent(this.createurl, joinMap(map));
-            Map<String, String> resultmap = formatTextToMap(result.responseText);
+            result.responsetext = Utility.postHttpContent(this.createurl, joinMap(map));
+            Map<String, String> resultmap = formatTextToMap(result.responsetext);
             result.setResult(resultmap);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
@@ -233,8 +233,8 @@ public class UnionPayService extends AbstractPayService {
 
             map.put("signature", createSign(map));
 
-            result.responseText = Utility.postHttpContent(this.queryurl, joinMap(map));
-            Map<String, String> resultmap = formatTextToMap(result.responseText);
+            result.responsetext = Utility.postHttpContent(this.queryurl, joinMap(map));
+            Map<String, String> resultmap = formatTextToMap(result.responsetext);
             result.setResult(resultmap);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
@@ -294,8 +294,8 @@ public class UnionPayService extends AbstractPayService {
 
             map.put("signature", createSign(map));
 
-            result.responseText = Utility.postHttpContent(this.closeurl, joinMap(map));
-            Map<String, String> resultmap = formatTextToMap(result.responseText);
+            result.responsetext = Utility.postHttpContent(this.closeurl, joinMap(map));
+            Map<String, String> resultmap = formatTextToMap(result.responsetext);
             result.setResult(resultmap);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
@@ -339,8 +339,8 @@ public class UnionPayService extends AbstractPayService {
 
             map.put("signature", createSign(map));
 
-            result.responseText = Utility.postHttpContent(this.closeurl, joinMap(map));
-            Map<String, String> resultmap = formatTextToMap(result.responseText);
+            result.responsetext = Utility.postHttpContent(this.closeurl, joinMap(map));
+            Map<String, String> resultmap = formatTextToMap(result.responsetext);
             result.setResult(resultmap);
             if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
@@ -359,7 +359,7 @@ public class UnionPayService extends AbstractPayService {
         final PayRefundResponse response = new PayRefundResponse();
         response.setRetcode(queryResponse.getRetcode());
         response.setRetinfo(queryResponse.getRetinfo());
-        response.setResponseText(queryResponse.getResponseText());
+        response.setResponsetext(queryResponse.getResponsetext());
         response.setResult(queryResponse.getResult());
         if (queryResponse.isSuccess()) {
             response.setRefundedmoney(Long.parseLong(response.getResult().get("txnAmt")));
