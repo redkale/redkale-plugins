@@ -120,17 +120,18 @@ public class AliPayService extends AbstractPayService {
         try {
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", this.appid);
-            map.put("sign_type", "RSA");
+            map.put("method", "alipay.trade.create");
+            map.put("format", "JSON");
             map.put("charset", this.charset);
-            map.put("format", "json");
+            map.put("sign_type", "RSA");
+            map.put("timestamp", String.format(format, System.currentTimeMillis()));
             map.put("version", "1.0");
             if (this.notifyurl != null && !this.notifyurl.isEmpty()) map.put("notify_url", this.notifyurl);
-            map.put("timestamp", String.format(format, System.currentTimeMillis()));
-            map.put("method", "alipay.trade.create");
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
             if (request.getMap() != null) biz_content.putAll(request.getMap());
             biz_content.put("out_trade_no", request.getPayno());
+            biz_content.putIfAbsent("scene", "bar_code");
             biz_content.put("total_amount", "" + (request.getPaymoney() / 100.0));
             biz_content.put("subject", "" + request.getPaytitle());
             biz_content.put("body", request.getPaybody());
