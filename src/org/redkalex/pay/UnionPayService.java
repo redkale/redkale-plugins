@@ -11,7 +11,6 @@ import java.security.*;
 import java.security.cert.*;
 import java.util.*;
 import java.util.logging.*;
-import java.util.regex.Pattern;
 import javax.annotation.Resource;
 import javax.net.ssl.SSLContext;
 import org.redkale.convert.json.JsonConvert;
@@ -31,8 +30,6 @@ import static org.redkalex.pay.Pays.*;
 public class UnionPayService extends AbstractPayService {
 
     private static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
-
-    private static final Pattern PAYXML = Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
