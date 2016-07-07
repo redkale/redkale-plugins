@@ -65,4 +65,16 @@ public abstract class Pays extends PayRetCodes {
     //已取消
     public static final short PAYSTATUS_CANCELED = 95;
 
+    //--------------------- 支付操作 -----------------------------
+    public static final String PAYACTION_PREPAY = "prepay";
+
+    public static final String PAYACTION_CREATE = "create";
+
+    public static final String PAYACTION_QUERY = "query";
+
+    public static final String PAYACTION_CLOSE = "close";
+
+    public static final String PAYACTION_REFUND = "refund";
+
+    public static final String PAYACTION_QUERYREFUND = "queryrefund";
 }
