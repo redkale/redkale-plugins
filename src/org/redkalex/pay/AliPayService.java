@@ -100,7 +100,7 @@ public class AliPayService extends AbstractPayService {
             + "k8N5DvlCSt2rsBsskz4Uiv3KUCwCqq+Lt6g/uFkrTcoBR7GHKOHyyk+l+aJjtxnD"
             + "ONuh2psnu0N1vg==";
         service.init(null);
-        
+
         PayCreatRequest creatRequest = new PayCreatRequest();
         creatRequest.setPaytype(Pays.PAYTYPE_ALIPAY);
         creatRequest.setPayno("200000001");
@@ -108,9 +108,14 @@ public class AliPayService extends AbstractPayService {
         creatRequest.setPaytitle("一斤红菜苔");
         creatRequest.setPaybody("一斤红菜苔");
         creatRequest.setClientAddr(Utility.localInetAddress().getHostAddress());
-        
+
         System.out.println(service.create(creatRequest));
 
+    }
+
+    @Override
+    public PayPreResponse prepay(final PayPreRequest request) {
+        return null;
     }
 
     @Override
@@ -144,13 +149,13 @@ public class AliPayService extends AbstractPayService {
             result.setResponsetext(responseText);
             final InnerCreateResponse resp = convert.convertFrom(InnerCreateResponse.class, responseText);
             resp.responseText = responseText; //原始的返回内容            
-            if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR); 
+            if (!checkSign(resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
             final Map<String, String> resultmap = resp.alipay_trade_create_response;
             result.setResult(resultmap);
             if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
                 return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
             }
-            result.setThirdpayno(resultmap.getOrDefault("trade_no", "")); 
+            result.setThirdpayno(resultmap.getOrDefault("trade_no", ""));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "create_pay_error", e);
@@ -203,7 +208,7 @@ public class AliPayService extends AbstractPayService {
                     break;
             }
             result.setPaystatus(paystatus);
-            result.setThirdpayno(resultmap.getOrDefault("trade_no", "")); 
+            result.setThirdpayno(resultmap.getOrDefault("trade_no", ""));
             result.setPayedmoney((long) (Double.parseDouble(resultmap.get("receipt_amount")) * 100));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);

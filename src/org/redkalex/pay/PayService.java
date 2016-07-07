@@ -23,7 +23,7 @@ public class PayService extends AbstractPayService {
 
     @Resource
     private UnionPayService unionPayService;
-    
+
     @Resource
     private WeiXinPayService weiXinPayService;
 
@@ -32,6 +32,14 @@ public class PayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue config) {
+    }
+
+    @Override
+    public PayPreResponse prepay(PayPreRequest request) {
+        if (request.paytype == PAYTYPE_UNION) return unionPayService.prepay(request);
+        if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.prepay(request);
+        if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.prepay(request);
+        throw new RuntimeException(request + ".paytype is illegal");
     }
 
     @Override
@@ -76,12 +84,12 @@ public class PayService extends AbstractPayService {
 
     @Override
     protected String createSign(Map<String, String> map) throws Exception {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     protected boolean checkSign(Map<String, String> map) {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 }

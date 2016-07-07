@@ -13,7 +13,7 @@ import java.util.*;
  *
  * @author zhangjx
  */
-public class PayCreatRequest extends PayRequest {
+public class PayPreRequest extends PayRequest {
 
     protected short payway;  //支付途径; WEB APP NATIVE
 

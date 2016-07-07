@@ -91,7 +91,67 @@ public class WeiXinPayService extends AbstractPayService {
             }
         }
     }
+/**
+     * <xml>
+     * <return_code><![CDATA[SUCCESS]]></return_code>
+     * <return_msg><![CDATA[OK]]></return_msg>
+     * <appid><![CDATA[wx4ad12c89818dd981]]></appid>
+     * <mch_id><![CDATA[1241384602]]></mch_id>
+     * <nonce_str><![CDATA[RpGucJ6wKtPgpTJy]]></nonce_str>
+     * <sign><![CDATA[DFD99D5DA7DCA4FB5FB79ECAD49B9369]]></sign>
+     * <result_code><![CDATA[SUCCESS]]></result_code>
+     * <prepay_id><![CDATA[wx2015051518135700aaea6bc30284682518]]></prepay_id>
+     * <trade_type><![CDATA[JSAPI]]></trade_type>
+     * </xml>
+     *
+     * @param request
+     *
+     * @return
+     */
+    @Override
+    public PayPreResponse prepay(final PayPreRequest request) {
+        request.checkVaild();
+        final PayPreResponse result = new PayPreResponse();
+        try {
+            final TreeMap<String, String> map = new TreeMap<>();
+            if (request.getMap() != null) map.putAll(request.getMap());
+            map.put("appid", this.appid);
+            map.put("mch_id", this.merchno);
+            map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
+            map.put("body", request.getPaybody());
+            //map.put("attach", "" + payid);
+            map.put("out_trade_no", request.getPayno());
+            map.put("total_fee", "" + request.getPaymoney());
+            map.put("spbill_create_ip", request.getClientAddr());
+            map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getPaytimeout() * 1000));
+            map.put("notify_url", this.notifyurl);
+            map.put("sign", createSign(map));
 
+            final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map));
+            result.setResponsetext(responseText);
+
+            Map<String, String> resultmap = formatXMLToMap(responseText);
+            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
+            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            /**
+             * "appId" : "wx2421b1c4370ec43b", //公众号名称，由商户传入 "timeStamp":" 1395712654", //时间戳，自1970年以来的秒数 "nonceStr" : "e61463f8efa94090b1f366cccfbbb444", //随机串 "package" :
+             * "prepay_id=u802345jgfjsdfgsdg888", "signType" : "MD5", //微信签名方式: "paySign" : "70EA570631E4BB79628FBCA90534C63FF7FADD89" //微信签名
+             */
+            final Map<String, String> rmap = new TreeMap<>();
+            result.setResult(rmap);
+            rmap.put("appId", this.appid);
+            rmap.put("timeStamp", Long.toString(System.currentTimeMillis() / 1000));
+            rmap.put("nonceStr", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
+            rmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
+            rmap.put("signType", "MD5");
+            rmap.put("paySign", createSign(rmap));
+        } catch (Exception e) {
+            result.setRetcode(RETPAY_PAY_ERROR);
+            logger.log(Level.WARNING, "create_pay_error", e);
+        }
+        return result;
+    }
+    
     /**
      * <xml>
      * <return_code><![CDATA[SUCCESS]]></return_code>

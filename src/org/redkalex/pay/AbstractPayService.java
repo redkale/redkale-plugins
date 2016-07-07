@@ -18,6 +18,9 @@ import org.redkale.service.Service;
  */
 abstract class AbstractPayService implements Service {
 
+    //请求预支付
+    public abstract PayPreResponse prepay(PayPreRequest request);
+    
     //请求支付
     public abstract PayCreatResponse create(PayCreatRequest request);
 

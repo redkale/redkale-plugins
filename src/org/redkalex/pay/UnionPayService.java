@@ -154,6 +154,11 @@ public class UnionPayService extends AbstractPayService {
     }
 
     @Override
+    public PayPreResponse prepay(final PayPreRequest request) {
+        return null;
+    }
+
+    @Override
     public PayCreatResponse create(PayCreatRequest request) {
         request.checkVaild();
         final PayCreatResponse result = new PayCreatResponse();
