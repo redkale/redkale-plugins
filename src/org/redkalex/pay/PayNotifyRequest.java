@@ -20,6 +20,19 @@ public class PayNotifyRequest {
 
     private Map<String, String> map;
 
+    public PayNotifyRequest() {
+    }
+
+    public PayNotifyRequest(short paytype, String text) {
+        this.paytype = paytype;
+        this.text = text;
+    }
+
+    public PayNotifyRequest(short paytype, Map<String, String> map) {
+        this.paytype = paytype;
+        this.map = map;
+    }
+
     public void checkVaild() {
         if ((this.text == null || this.text.isEmpty() && (map == null || map.isEmpty()))) throw new RuntimeException("text and map both is empty");
         if (this.paytype < 1) throw new RuntimeException("paytype is illegal");
