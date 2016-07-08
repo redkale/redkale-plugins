@@ -18,6 +18,7 @@ public class PayRefundQueryResponse extends PayResponse {
     @Override
     public PayRefundQueryResponse retcode(int retcode) {
         this.retcode = retcode;
+        this.retinfo = PayRetCodes.retInfo(retcode);
         return this;
     }
 

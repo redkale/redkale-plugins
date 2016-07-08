@@ -43,6 +43,7 @@ public class PayResponse extends RetResult<Map<String, String>> {
     @Override
     public PayResponse retcode(int retcode) {
         this.retcode = retcode;
+        this.retinfo = PayRetCodes.retInfo(retcode);
         return this;
     }
 

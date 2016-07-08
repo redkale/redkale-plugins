@@ -119,6 +119,11 @@ public class AliPayService extends AbstractPayService {
     }
 
     @Override
+    public PayNotifyResponse notify(PayNotifyRequest request) {
+        return null;
+    }
+
+    @Override
     public PayCreatResponse create(PayCreatRequest request) {
         request.checkVaild();
         final PayCreatResponse result = new PayCreatResponse();

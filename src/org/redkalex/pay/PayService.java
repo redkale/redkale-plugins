@@ -43,6 +43,14 @@ public class PayService extends AbstractPayService {
     }
 
     @Override
+    public PayNotifyResponse notify(PayNotifyRequest request) {
+        if (request.paytype == PAYTYPE_UNION) return unionPayService.notify(request);
+        if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.notify(request);
+        if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.notify(request);
+        throw new RuntimeException(request + ".paytype is illegal");
+    }
+
+    @Override
     public PayCreatResponse create(PayCreatRequest request) {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.create(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.create(request);

@@ -20,6 +20,7 @@ public class PayPreResponse extends PayResponse {
     @Override
     public PayPreResponse retcode(int retcode) {
         this.retcode = retcode;
+        this.retinfo = PayRetCodes.retInfo(retcode);
         return this;
     }
 

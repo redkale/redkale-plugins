@@ -14,7 +14,7 @@ import java.util.logging.*;
 import javax.annotation.Resource;
 import javax.net.ssl.SSLContext;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.service.LocalService;
+import org.redkale.service.*;
 import org.redkale.util.*;
 import static org.redkalex.pay.Pays.*;
 
@@ -158,6 +158,11 @@ public class UnionPayService extends AbstractPayService {
         return null;
     }
 
+    @Override
+    public PayNotifyResponse notify(PayNotifyRequest request) {
+        return null;
+    }
+    
     @Override
     public PayCreatResponse create(PayCreatRequest request) {
         request.checkVaild();

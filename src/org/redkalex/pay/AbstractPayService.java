@@ -7,7 +7,7 @@ package org.redkalex.pay;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import org.redkale.service.Service;
+import org.redkale.service.*;
 
 /**
  * 支付抽象类
@@ -20,7 +20,10 @@ abstract class AbstractPayService implements Service {
 
     //请求预支付
     public abstract PayPreResponse prepay(PayPreRequest request);
-    
+
+    //回调支付
+    public abstract PayNotifyResponse notify(PayNotifyRequest request);
+
     //请求支付
     public abstract PayCreatResponse create(PayCreatRequest request);
 
