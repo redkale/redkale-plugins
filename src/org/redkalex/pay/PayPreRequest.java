@@ -23,7 +23,7 @@ public class PayPreRequest extends PayRequest {
 
     protected String paybody = ""; //订单内容描述
 
-    protected int paytimeout = 600; //支付超时的秒数
+    protected int timeoutms = 10; //支付超时的分钟数
 
     protected String clientAddr = "";  //客户端IP地址
 
@@ -33,11 +33,11 @@ public class PayPreRequest extends PayRequest {
     public void checkVaild() {
         super.checkVaild();
         if (this.paymoney < 1) throw new RuntimeException("paymoney is illegal");
-        if (this.paytitle == null || this.paytitle.isEmpty()) throw new RuntimeException("paytitle is illegal");
-        if (this.paybody == null || this.paybody.isEmpty()) throw new RuntimeException("paybody is illegal");
+        if (this.paytitle == null || this.paytitle.isEmpty() || this.paytitle.indexOf('"') >= 0) throw new RuntimeException("paytitle is illegal");
+        if (this.paybody == null || this.paybody.isEmpty() || this.paybody.indexOf('"') >= 0) throw new RuntimeException("paybody is illegal");
         if (this.clientAddr == null || this.clientAddr.isEmpty()) throw new RuntimeException("clientAddr is illegal");
-        if (this.paytimeout < 300) throw new RuntimeException("paytimeout cannot less 300 seconds");
-        if (this.paytimeout > 24 * 60 * 60) throw new RuntimeException("paytimeout cannot greater 1 day");
+        if (this.timeoutms < 5) throw new RuntimeException("timeoutms cannot less 5 minutes");
+        if (this.timeoutms > 24 * 60 ) throw new RuntimeException("timeoutms cannot greater 1 day");
     }
 
     public Map<String, String> add(String key, String value) {
@@ -78,12 +78,12 @@ public class PayPreRequest extends PayRequest {
         this.paybody = paybody;
     }
 
-    public int getPaytimeout() {
-        return paytimeout;
+    public int getTimeoutms() {
+        return timeoutms;
     }
 
-    public void setPaytimeout(int paytimeout) {
-        this.paytimeout = paytimeout;
+    public void setTimeoutms(int timeoutms) {
+        this.timeoutms = timeoutms;
     }
 
     public String getClientAddr() {

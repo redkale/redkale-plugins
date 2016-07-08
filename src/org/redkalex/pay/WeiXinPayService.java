@@ -125,7 +125,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("out_trade_no", request.getPayno());
             map.put("total_fee", "" + request.getPaymoney());
             map.put("spbill_create_ip", request.getClientAddr());
-            map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getPaytimeout() * 1000));
+            map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getTimeoutms() * 60 * 1000));
             map.put("notify_url", this.notifyurl);
             map.put("sign", createSign(map));
 
@@ -149,7 +149,7 @@ public class WeiXinPayService extends AbstractPayService {
             rmap.put("paySign", createSign(rmap));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "create_pay_error", e);
+            logger.log(Level.WARNING, "mobprepay_pay_error", e);
         }
         return result;
     }

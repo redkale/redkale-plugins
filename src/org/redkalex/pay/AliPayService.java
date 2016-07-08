@@ -5,7 +5,6 @@
  */
 package org.redkalex.pay;
 
-import java.lang.reflect.Type;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.security.*;
@@ -26,9 +25,6 @@ public class AliPayService extends AbstractPayService {
     //private static final Charset UTF8 = Charset.forName("UTF-8");
     private static final String format = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; //yyyy-MM-dd HH:mm:ss
 
-    private static final Type TYPE_REPONSE_MAP = new TypeToken<HashMap<String, HashMap<String, String>>>() {
-    }.getType();
-
     public static final int PAY_WX_ERROR = 4012101;//微信支付失败
 
     public static final int PAY_FALSIFY_ORDER = 4012017;//交易签名被篡改
@@ -43,8 +39,11 @@ public class AliPayService extends AbstractPayService {
 
     protected final boolean finest = logger.isLoggable(Level.FINEST);
 
-    @Resource(name = "property.pay.alipay.charset") //字符集 用UTF-8没调试通过
-    protected String charset = "GBK";
+    @Resource(name = "property.pay.alipay.merchno") //商户ID
+    protected String merchno = ""; //签约的支付宝账号对应的支付宝唯一用户号。以2088开头的16位纯数字组成。
+
+    @Resource(name = "property.pay.alipay.charset") //字符集 
+    protected String charset = "UTF-8";
 
     @Resource(name = "property.pay.alipay.appid") //应用ID
     protected String appid = "";
@@ -67,6 +66,7 @@ public class AliPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
+        if (this.merchno == null || this.merchno.isEmpty()) return;//没有启用支付宝支付
         if (this.appid == null || this.appid.isEmpty()) return;//没有启用支付宝支付
         if (this.signcertkey == null || this.signcertkey.isEmpty()) return;//没有启用支付宝支付
         if (this.verifycertkey == null || this.verifycertkey.isEmpty()) return;//没有启用支付宝支付
@@ -115,9 +115,56 @@ public class AliPayService extends AbstractPayService {
 
     @Override
     public PayPreResponse prepay(final PayPreRequest request) {
-        return null;
+        request.checkVaild();
+        //参数说明： https://doc.open.alipay.com/doc2/detail.htm?spm=a219a.7629140.0.0.lMJkw3&treeId=59&articleId=103663&docType=1
+        final PayPreResponse result = new PayPreResponse();
+        try {
+            // 签约合作者身份ID
+            String param = "partner=" + "\"" + this.merchno + "\"";
+            // 签约卖家支付宝账号(也可用身份ID)
+            param += "&seller_id=" + "\"" + this.merchno + "\"";
+            // 商户网站唯一订单号
+            param += "&out_trade_no=" + "\"" + request.getPayno() + "\"";
+            // 商品名称
+            param += "&subject=" + "\"" + request.getPaytitle() + "\"";
+            // 商品详情
+            param += "&body=" + "\"" + request.getPaybody() + "\"";
+            // 商品金额
+            param += "&total_fee=" + "\"" + (request.getPaymoney() / 100.0) + "\"";
+            // 服务器异步通知页面路径
+            param += "&notify_url=" + "\"" + this.notifyurl + "\"";
+            // 服务接口名称， 固定值
+            param += "&service=\"mobile.securitypay.pay\"";
+            // 支付类型， 固定值
+            param += "&payment_type=\"1\"";
+            // 参数编码， 固定值
+            param += "&_input_charset=\"UTF-8\"";
+
+            // 设置未付款交易的超时时间
+            // 默认30分钟，一旦超时，该笔交易就会自动被关闭。
+            // 取值范围：1m～15d。 m-分钟，h-小时，d-天，1c-当天（无论交易何时创建，都在0点关闭）。
+            // 该参数数值不接受小数点，如1.5h，可转换为90m。
+            param += "&it_b_pay=\"" + request.getTimeoutms() + "m\"";
+
+            Signature signature = Signature.getInstance("SHA1WithRSA");
+            signature.initSign(priKey);
+            signature.update(param.getBytes("UTF-8"));
+            param += "&sign=\"" + Base64.getEncoder().encodeToString(signature.sign()) + "\"";
+            param += "&sign_type=\"RSA\"";
+
+            final Map<String, String> rmap = new TreeMap<>();
+            rmap.put("text", param);
+            result.setResult(rmap);
+
+        } catch (Exception e) {
+            result.setRetcode(RETPAY_PAY_ERROR);
+            logger.log(Level.WARNING, "mobprepay_pay_error", e);
+        }
+        return result;
     }
 
+    //手机支付回调  
+    // https://doc.open.alipay.com/doc2/detail.htm?spm=a219a.7629140.0.0.UywIMY&treeId=59&articleId=103666&docType=1
     @Override
     public PayNotifyResponse notify(PayNotifyRequest request) {
         return null;
