@@ -156,14 +156,67 @@ public class UnionPayService extends AbstractPayService {
 
     @Override
     public PayPreResponse prepay(final PayPreRequest request) {
-        return null;
+        request.checkVaild();
+        //参数说明： https://open.unionpay.com/ajweb/help/file/techFile?productId=3
+        final PayPreResponse result = new PayPreResponse();
+        try {
+            TreeMap<String, String> map = new TreeMap<>();
+            if (request.getMap() != null) map.putAll(request.getMap());
+
+            /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
+            map.put("version", version);            //版本号 全渠道默认值
+            map.put("encoding", "UTF-8");     //字符集编码 可以使用UTF-8,GBK两种方式
+            map.put("signMethod", "01");           		 	//签名方法 目前只支持01：RSA方式证书加密
+            map.put("txnType", "01");              		 	//交易类型 01：消费
+            map.put("txnSubType", "01");           		 	//交易子类 01：消费
+            map.put("bizType", "000201");          		 	//填写000201
+            map.putIfAbsent("channelType", "08");          		 	//渠道类型，07：PC，08：手机
+            /** *商户接入参数** */
+            map.put("merId", merchno);   					//商户号码，请改成自己申请的商户号或者open上注册得来的777商户号测试
+            map.put("certId", signcertid);                  //设置签名证书中的证书序列号（单证书） 证书的物理编号
+            map.put("accessType", "0");            		 	//接入类型，商户接入填0 ，不需修改（0：直连商户， 1： 收单机构 2：平台商户）
+            map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
+            map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
+            map.put("accType", "01");					 	//账号类型 01：银行卡; 02：存折; 03：IC卡帐号类型(卡介质)
+            map.put("txnAmt", "" + request.getPaymoney());//交易金额 单位为分，不能带小数点
+            map.put("currencyCode", "156");                 //境内商户CNY固定 156 人民币
+
+            //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址
+            map.put("backUrl", notifyurl);
+            map.put("signature", createSign(map));
+
+            result.responsetext = Utility.postHttpContent(this.createurl, joinMap(map));
+            Map<String, String> resultmap = formatTextToMap(result.responsetext);
+            result.setResult(resultmap);
+            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
+                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
+            }
+
+            final Map<String, String> rmap = new TreeMap<>();
+            rmap.put("text", resultmap.getOrDefault("tn", ""));
+            result.setResult(rmap);
+        } catch (Exception e) {
+            result.setRetcode(RETPAY_PAY_ERROR);
+            logger.log(Level.WARNING, "prepay_pay_error", e);
+        }
+        return result;
     }
 
     @Override
     public PayNotifyResponse notify(PayNotifyRequest request) {
-        return null;
+        request.checkVaild();
+        final PayNotifyResponse result = new PayNotifyResponse();
+        result.setPaytype(request.getPaytype());
+        final String rstext = "success";
+        Map<String, String> map = request.getMap();
+        if (!checkSign(map)) return result.retcode(RETPAY_FALSIFY_ERROR);
+        if (!"00".equalsIgnoreCase(map.get("respCode")) || Long.parseLong(map.getOrDefault("txnAmt", "0")) < 1) {
+            return result.retcode(RETPAY_PAY_ERROR).retinfo(map.getOrDefault("respMsg", null));
+        }
+        return result.result(rstext);
     }
-    
+
     @Override
     public PayCreatResponse create(PayCreatRequest request) {
         request.checkVaild();

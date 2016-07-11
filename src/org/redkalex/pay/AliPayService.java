@@ -159,7 +159,7 @@ public class AliPayService extends AbstractPayService {
 
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "mobprepay_pay_error", e);
+            logger.log(Level.WARNING, "prepay_pay_error", e);
         }
         return result;
     }
