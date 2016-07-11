@@ -94,17 +94,7 @@ public class WeiXinPayService extends AbstractPayService {
     }
 
     /**
-     * <xml>
-     * <return_code><![CDATA[SUCCESS]]></return_code>
-     * <return_msg><![CDATA[OK]]></return_msg>
-     * <appid><![CDATA[wx4ad12c89818dd981]]></appid>
-     * <mch_id><![CDATA[1241384602]]></mch_id>
-     * <nonce_str><![CDATA[RpGucJ6wKtPgpTJy]]></nonce_str>
-     * <sign><![CDATA[DFD99D5DA7DCA4FB5FB79ECAD49B9369]]></sign>
-     * <result_code><![CDATA[SUCCESS]]></result_code>
-     * <prepay_id><![CDATA[wx2015051518135700aaea6bc30284682518]]></prepay_id>
-     * <trade_type><![CDATA[JSAPI]]></trade_type>
-     * </xml>
+     * 手机支付时调用
      *
      * @param request
      *
@@ -198,17 +188,7 @@ public class WeiXinPayService extends AbstractPayService {
     }
 
     /**
-     * <xml>
-     * <return_code><![CDATA[SUCCESS]]></return_code>
-     * <return_msg><![CDATA[OK]]></return_msg>
-     * <appid><![CDATA[wx4ad12c89818dd981]]></appid>
-     * <mch_id><![CDATA[1241384602]]></mch_id>
-     * <nonce_str><![CDATA[RpGucJ6wKtPgpTJy]]></nonce_str>
-     * <sign><![CDATA[DFD99D5DA7DCA4FB5FB79ECAD49B9369]]></sign>
-     * <result_code><![CDATA[SUCCESS]]></result_code>
-     * <prepay_id><![CDATA[wx2015051518135700aaea6bc30284682518]]></prepay_id>
-     * <trade_type><![CDATA[JSAPI]]></trade_type>
-     * </xml>
+     * 网页支付
      *
      * @param request
      *

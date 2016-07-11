@@ -168,7 +168,15 @@ public class AliPayService extends AbstractPayService {
     // https://doc.open.alipay.com/doc2/detail.htm?spm=a219a.7629140.0.0.UywIMY&treeId=59&articleId=103666&docType=1
     @Override
     public PayNotifyResponse notify(PayNotifyRequest request) {
-        return null;
+        request.checkVaild();
+        final PayNotifyResponse result = new PayNotifyResponse();
+        result.setPaytype(request.getPaytype());
+        final String rstext = "success";
+        Map<String, String> map = request.getMap();
+        if (!checkSign(map)) return result.retcode(RETPAY_FALSIFY_ERROR);
+        String state = map.getOrDefault("trade_status", "");
+        if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED);
+        return result.result(rstext);
     }
 
     @Override
@@ -375,7 +383,21 @@ public class AliPayService extends AbstractPayService {
 
     @Override
     protected boolean checkSign(Map<String, String> map) { //支付宝玩另类
-        throw new UnsupportedOperationException("Not supported yet.");
+        String sign = map.remove("sign");
+        if (sign == null) return false;
+        String sign_type = map.remove("sign_type");
+        String text = joinMap(map);
+        map.put("sign", sign);
+        if (sign_type != null) map.put("sign_type", sign_type);
+        try {
+            Signature signature = Signature.getInstance("SHA1WithRSA");
+            signature.initVerify(pubKey);
+            signature.update(text.getBytes("UTF-8"));
+            return signature.verify(Base64.getDecoder().decode(sign.getBytes()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     @Override
