@@ -11,7 +11,7 @@ package org.redkalex.pay;
  *
  * @author zhangjx
  */
-public abstract class Pays extends PayRetCodes {
+public abstract class Pays {
 
     //--------------------- 支付类型 -----------------------------
     //银联支付
