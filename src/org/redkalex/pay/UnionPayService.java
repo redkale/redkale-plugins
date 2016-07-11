@@ -210,6 +210,7 @@ public class UnionPayService extends AbstractPayService {
         result.setPaytype(request.getPaytype());
         final String rstext = "success";
         Map<String, String> map = request.getMap();
+        result.setPayno(map.getOrDefault("orderId", ""));
         if (!checkSign(map)) return result.retcode(RETPAY_FALSIFY_ERROR);
         if (!"00".equalsIgnoreCase(map.get("respCode")) || Long.parseLong(map.getOrDefault("txnAmt", "0")) < 1) {
             return result.retcode(RETPAY_PAY_ERROR).retinfo(map.getOrDefault("respMsg", null));

@@ -173,6 +173,7 @@ public class AliPayService extends AbstractPayService {
         result.setPaytype(request.getPaytype());
         final String rstext = "success";
         Map<String, String> map = request.getMap();
+        result.setPayno(map.getOrDefault("out_trade_no", ""));
         if (!checkSign(map)) return result.retcode(RETPAY_FALSIFY_ERROR);
         String state = map.getOrDefault("trade_status", "");
         if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED);
