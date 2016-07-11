@@ -68,6 +68,8 @@ public abstract class Pays {
     //--------------------- 支付操作 -----------------------------
     public static final String PAYACTION_PREPAY = "prepay";
 
+    public static final String PAYACTION_NOTIFY = "notify";
+
     public static final String PAYACTION_CREATE = "create";
 
     public static final String PAYACTION_QUERY = "query";
