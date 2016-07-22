@@ -38,7 +38,11 @@ public abstract class PayRetCodes {
     protected static final Map<Integer, String> rets = new HashMap<>();
 
     static {
-        for (Field field : Pays.class.getFields()) {
+        load(Pays.class);
+    }
+
+    protected static void load(Class clazz) {
+        for (Field field : clazz.getFields()) {
             if (!Modifier.isStatic(field.getModifiers())) continue;
             if (field.getType() != int.class) continue;
             RetLabel info = field.getAnnotation(RetLabel.class);
@@ -52,7 +56,6 @@ public abstract class PayRetCodes {
             }
             rets.put(value, info.value());
         }
-
     }
 
     public static RetResult retResult(int retcode) {
