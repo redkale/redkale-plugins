@@ -37,7 +37,7 @@ public class _DynHelloRestServlet2 extends SimpleRestServlet {
     public void delete(HttpRequest req, HttpResponse resp) throws IOException {
         int id = Integer.parseInt(req.getRequstURILastPath());
         _service.deleteHello(id);
-        sendRetResult(resp, RetResult.SUCCESS);
+        sendRetResult(resp, RetResult.success());
     }
 
     @AuthIgnore
@@ -45,7 +45,7 @@ public class _DynHelloRestServlet2 extends SimpleRestServlet {
     public void update(HttpRequest req, HttpResponse resp) throws IOException {
         HelloEntity bean = req.getJsonParameter(HelloEntity.class, "bean");
         _service.updateHello(bean);
-        sendRetResult(resp, RetResult.SUCCESS);
+        sendRetResult(resp, RetResult.success());
     }
 
     @AuthIgnore

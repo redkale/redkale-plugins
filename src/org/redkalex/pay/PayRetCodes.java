@@ -59,7 +59,7 @@ public abstract class PayRetCodes {
     }
 
     public static RetResult retResult(int retcode) {
-        if (retcode == 0) return RetResult.SUCCESS;
+        if (retcode == 0) return RetResult.success();
         return new RetResult(retcode, retInfo(retcode));
     }
 
