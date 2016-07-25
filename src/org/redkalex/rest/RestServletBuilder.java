@@ -360,7 +360,8 @@ public final class RestServletBuilder {
             if (returnType == void.class) {
                 mv.visitVarInsn(ALOAD, 0);
                 mv.visitVarInsn(ALOAD, 2);
-                mv.visitFieldInsn(GETSTATIC, "org/redkale/service/RetResult", "SUCCESS", "Lorg/redkale/service/RetResult;");
+                //mv.visitFieldInsn(GETSTATIC, "org/redkale/service/RetResult", "SUCCESS", "Lorg/redkale/service/RetResult;");
+                mv.visitMethodInsn(INVOKESTATIC, "org/redkale/service/RetResult", "success", "()Lorg/redkale/service/RetResult;", false);
                 mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendRetResult", "(Lorg/redkale/net/http/HttpResponse;Lorg/redkale/service/RetResult;)V", false);
                 mv.visitInsn(RETURN);
             } else if (returnType == boolean.class) {
