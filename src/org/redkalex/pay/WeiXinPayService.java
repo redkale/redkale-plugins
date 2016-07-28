@@ -129,14 +129,30 @@ public class WeiXinPayService extends AbstractPayService {
              * "appId" : "wx2421b1c4370ec43b", //公众号名称，由商户传入 "timeStamp":" 1395712654", //时间戳，自1970年以来的秒数 "nonceStr" : "e61463f8efa94090b1f366cccfbbb444", //随机串 "package" :
              * "prepay_id=u802345jgfjsdfgsdg888", "signType" : "MD5", //微信签名方式: "paySign" : "70EA570631E4BB79628FBCA90534C63FF7FADD89" //微信签名
              */
-            final Map<String, String> rmap = new TreeMap<>();
-            result.setResult(rmap);
-            rmap.put("appId", this.appid);
-            rmap.put("timeStamp", Long.toString(System.currentTimeMillis() / 1000));
-            rmap.put("nonceStr", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
-            rmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
-            rmap.put("signType", "MD5");
-            rmap.put("paySign", createSign(rmap));
+            final String timestamp = Long.toString(System.currentTimeMillis() / 1000);
+            final String noncestr = Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime());
+            final Map<String, String> webmap = new TreeMap<>();
+            webmap.put("appId", this.appid);
+            webmap.put("timeStamp", timestamp);
+            webmap.put("nonceStr", noncestr);
+            webmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
+            webmap.put("signType", "MD5");
+            webmap.put("paySign", createSign(webmap));
+
+            final Map<String, String> appmap = new TreeMap<>();
+            appmap.put("appid", this.appid);
+            appmap.put("partnerid", this.merchno);
+            webmap.put("prepayid", resultmap.get("prepay_id"));
+            appmap.put("timestamp", timestamp);
+            appmap.put("noncestr", noncestr);
+            appmap.put("package", "Sign=WXPay"); //固定值            
+            appmap.put("sign", createSign(appmap));
+
+            final Map<String, String> twomap = new TreeMap<>();
+            webmap.forEach((k, v) -> twomap.put("web_" + k, v));
+            appmap.forEach((k, v) -> twomap.put("app_" + k, v));
+            result.setResult(twomap);
+
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "prepay_pay_error", e);
@@ -166,6 +182,7 @@ public class WeiXinPayService extends AbstractPayService {
      * </xml>
      *
      * @param request
+     *
      * @return
      */
     @Override
