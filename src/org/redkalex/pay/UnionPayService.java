@@ -194,7 +194,7 @@ public class UnionPayService extends AbstractPayService {
             }
 
             final Map<String, String> rmap = new TreeMap<>();
-            rmap.put("text", resultmap.getOrDefault("tn", ""));
+            rmap.put("content", resultmap.getOrDefault("tn", ""));
             result.setResult(rmap);
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);

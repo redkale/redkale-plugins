@@ -154,7 +154,7 @@ public class AliPayService extends AbstractPayService {
             param += "&sign_type=\"RSA\"";
 
             final Map<String, String> rmap = new TreeMap<>();
-            rmap.put("text", param);
+            rmap.put("content", param);
             result.setResult(rmap);
 
         } catch (Exception e) {
