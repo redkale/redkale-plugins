@@ -50,7 +50,7 @@ public class HelloService2 implements Service {
 
     //查询列表
     @RestMapping(name = "query", authignore = true)
-    public Sheet<HelloEntity> queryHello(@RestParam("bean") HelloBean bean, Flipper flipper) { //通过 /hello/query/start:0/size:20?bean={...} 查询列表
+    public Sheet<HelloEntity> queryHello(@RestParam("bean") HelloBean bean, Flipper flipper) { //通过 /hello/query/offset:0/limit:20?bean={...} 查询列表
         return source.querySheet(HelloEntity.class, flipper, bean);
     }
 

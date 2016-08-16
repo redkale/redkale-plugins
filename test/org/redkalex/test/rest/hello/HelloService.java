@@ -50,7 +50,7 @@ public class HelloService implements Service {
     }
     
     //查询Sheet列表
-    public Sheet<HelloEntity> queryHello(HelloBean bean, Flipper flipper) { //通过 /hello/query/start:0/size:20?bean={...} 查询Sheet列表
+    public Sheet<HelloEntity> queryHello(HelloBean bean, Flipper flipper) { //通过 /hello/query/offset:0/limit:20?bean={...} 查询Sheet列表
         return source.querySheet(HelloEntity.class, flipper, bean);
     }
 
