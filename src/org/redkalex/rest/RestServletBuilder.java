@@ -319,9 +319,10 @@ public final class RestServletBuilder {
                     mv.visitVarInsn(ASTORE, maxLocals);
                     varInsns.add(new int[]{ALOAD, maxLocals});
                 } else if (ptype == Flipper.class) {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 1);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "findFlipper", "(Lorg/redkale/net/http/HttpRequest;)Lorg/redkale/source/Flipper;", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpRequest", "getFlipper", "()Lorg/redkale/source/Flipper;", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "findFlipper", "(Lorg/redkale/net/http/HttpRequest;)Lorg/redkale/source/Flipper;", false);
                     mv.visitVarInsn(ASTORE, maxLocals);
                     varInsns.add(new int[]{ALOAD, maxLocals});
                 } else if (ptype == userType) { //当前用户对象的类名
@@ -358,11 +359,12 @@ public final class RestServletBuilder {
             }
             mv.visitMethodInsn(INVOKEVIRTUAL, serviceTypeString, method.getName(), methodDesc, false);
             if (returnType == void.class) {
-                mv.visitVarInsn(ALOAD, 0);
+                //mv.visitVarInsn(ALOAD, 0);
                 mv.visitVarInsn(ALOAD, 2);
                 //mv.visitFieldInsn(GETSTATIC, "org/redkale/service/RetResult", "SUCCESS", "Lorg/redkale/service/RetResult;");
                 mv.visitMethodInsn(INVOKESTATIC, "org/redkale/service/RetResult", "success", "()Lorg/redkale/service/RetResult;", false);
-                mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendRetResult", "(Lorg/redkale/net/http/HttpResponse;Lorg/redkale/service/RetResult;)V", false);
+                mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJson", "(Lorg/redkale/service/RetResult;)V", false);
+                //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendRetResult", "(Lorg/redkale/net/http/HttpResponse;Lorg/redkale/service/RetResult;)V", false);
                 mv.visitInsn(RETURN);
             } else if (returnType == boolean.class) {
                 mv.visitVarInsn(ISTORE, maxLocals);
@@ -372,12 +374,13 @@ public final class RestServletBuilder {
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(Z)Ljava/lang/String;", false);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(ILOAD, maxLocals);
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
@@ -389,12 +392,13 @@ public final class RestServletBuilder {
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(I)Ljava/lang/String;", false);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(ILOAD, maxLocals);
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/Byte", "valueOf", "(B)Ljava/lang/Byte;", false);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
@@ -406,12 +410,13 @@ public final class RestServletBuilder {
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(I)Ljava/lang/String;", false);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(ILOAD, maxLocals);
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/Short", "valueOf", "(S)Ljava/lang/Short;", false);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
@@ -423,12 +428,13 @@ public final class RestServletBuilder {
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(C)Ljava/lang/String;", false);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(ILOAD, maxLocals);
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/Character", "valueOf", "(C)Ljava/lang/Character;", false);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
@@ -440,12 +446,13 @@ public final class RestServletBuilder {
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(I)Ljava/lang/String;", false);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(ILOAD, maxLocals);
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
@@ -457,12 +464,13 @@ public final class RestServletBuilder {
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(F)Ljava/lang/String;", false);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(FLOAD, maxLocals);
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/Float", "valueOf", "(F)Ljava/lang/Float;", false);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
@@ -474,12 +482,13 @@ public final class RestServletBuilder {
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(J)Ljava/lang/String;", false);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(LLOAD, maxLocals);
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals += 2;
@@ -491,12 +500,13 @@ public final class RestServletBuilder {
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(D)Ljava/lang/String;", false);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(DLOAD, maxLocals);
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals += 2;
@@ -507,11 +517,12 @@ public final class RestServletBuilder {
                     mv.visitVarInsn(ALOAD, maxLocals);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(ALOAD, maxLocals);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
@@ -529,16 +540,18 @@ public final class RestServletBuilder {
             } else if (RetResult.class.isAssignableFrom(returnType)) {
                 mv.visitVarInsn(ASTORE, maxLocals);
                 if (jsvar == null) {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2); //response
                     mv.visitVarInsn(ALOAD, maxLocals);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendRetResult", "(Lorg/redkale/net/http/HttpResponse;Lorg/redkale/service/RetResult;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJson", "(Lorg/redkale/service/RetResult;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendRetResult", "(Lorg/redkale/net/http/HttpResponse;Lorg/redkale/service/RetResult;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(ALOAD, maxLocals);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
@@ -550,11 +563,12 @@ public final class RestServletBuilder {
                     mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(Ljava/lang/Object;)Ljava/lang/String;", false);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finish", "(Ljava/lang/String;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(ALOAD, maxLocals);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
@@ -565,11 +579,12 @@ public final class RestServletBuilder {
                     mv.visitVarInsn(ALOAD, maxLocals);
                     mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJson", "(Ljava/lang/Object;)V", false);
                 } else {
-                    mv.visitVarInsn(ALOAD, 0);
+                    //mv.visitVarInsn(ALOAD, 0);
                     mv.visitVarInsn(ALOAD, 2);
                     mv.visitLdcInsn(jsvar);
                     mv.visitVarInsn(ALOAD, maxLocals);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, "org/redkale/net/http/HttpResponse", "finishJsResult", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
+                    //mv.visitMethodInsn(INVOKEVIRTUAL, newDynName, "sendJsResult", "(Lorg/redkale/net/http/HttpResponse;Ljava/lang/String;Ljava/lang/Object;)V", false);
                 }
                 mv.visitInsn(RETURN);
                 maxLocals++;
