@@ -22,7 +22,7 @@ public class _DynHelloRestServlet extends SimpleRestServlet {
         HelloEntity bean = req.getJsonParameter(HelloEntity.class, "bean");
         UserInfo user = currentUser(req);
         RetResult<HelloEntity> result = _service.createHello(user, bean);
-        sendRetResult(resp, result);
+        resp.finishJson(result);
     }
 
     @AuthIgnore
@@ -30,7 +30,7 @@ public class _DynHelloRestServlet extends SimpleRestServlet {
     public void delete(HttpRequest req, HttpResponse resp) throws IOException {
         int id = Integer.parseInt(req.getRequstURILastPath());
         _service.deleteHello(id);
-        sendRetResult(resp, RetResult.success());
+        resp.finishJson(RetResult.success());
     }
 
     @AuthIgnore
@@ -38,7 +38,7 @@ public class _DynHelloRestServlet extends SimpleRestServlet {
     public void update(HttpRequest req, HttpResponse resp) throws IOException {
         HelloEntity bean = req.getJsonParameter(HelloEntity.class, "bean");
         _service.updateHello(bean);
-        sendRetResult(resp, RetResult.success());
+        resp.finishJson(RetResult.success());
     }
 
     @AuthIgnore
@@ -47,14 +47,14 @@ public class _DynHelloRestServlet extends SimpleRestServlet {
         HelloEntity bean = req.getJsonParameter(HelloEntity.class, "bean");
         String[] cols = req.getJsonParameter(String[].class, "cols");
         _service.updateHello(bean, cols);
-        sendRetResult(resp, RetResult.success());
+        resp.finishJson(RetResult.success());
     }
 
     @AuthIgnore
     @WebAction(url = "/hello/query")
     public void query(HttpRequest req, HttpResponse resp) throws IOException {
         HelloBean bean = req.getJsonParameter(HelloBean.class, "bean");
-        Flipper flipper = findFlipper(req);
+        Flipper flipper = req.getFlipper();
         Sheet<HelloEntity> result = _service.queryHello(bean, flipper);
         resp.finishJson(result);
     }
@@ -80,6 +80,6 @@ public class _DynHelloRestServlet extends SimpleRestServlet {
     public void jsfind(HttpRequest req, HttpResponse resp) throws IOException {
         int id = Integer.parseInt(req.getRequstURILastPath());
         HelloEntity bean = _service.findHello(id);
-        sendJsResult(resp, "varhello", bean);
+        resp.finishJsResult("varhello", bean);
     }
 }
