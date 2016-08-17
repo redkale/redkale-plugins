@@ -56,7 +56,7 @@ public class WeiXinPayService extends AbstractPayService {
     protected String signkey = "";
 
     @Resource(name = "property.pay.weixin.certpwd")
-    protected String certpwd = ""; //HTTP证书的密码，默认等于MCHID
+    protected String certpwd = ""; //HTTP证书的密码，默认值等于商户ID
 
     @Resource(name = "property.pay.weixin.certpath") //HTTP证书在服务器中的路径，用来加载证书用, 不是/开头且没有:字符，视为{APP_HOME}/conf相对下的路径
     protected String certpath = "apiclient_cert.p12";
@@ -73,6 +73,7 @@ public class WeiXinPayService extends AbstractPayService {
     public void init(AnyValue conf) {
         if (this.convert == null) this.convert = JsonConvert.root();
         if (this.merchno != null && !this.merchno.isEmpty()) { //存在微信支付配置
+            if(this.certpwd == null || this.certpwd.isEmpty()) this.certpwd = this.merchno;
             try {
                 File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
                 InputStream in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
