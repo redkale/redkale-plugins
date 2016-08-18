@@ -34,6 +34,9 @@ public abstract class PayRetCodes {
     @RetLabel("退款异常")
     public static final int RETPAY_REFUND_ERROR = 20010005;
 
+    @RetLabel("用户标识缺失")
+    public static final int RETPAY_OPENID_ERROR = 20010011;
+    
     //-----------------------------------------------------------------------------------------------------------
     protected static final Map<Integer, String> rets = new HashMap<>();
 

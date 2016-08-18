@@ -119,6 +119,8 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getTimeoutms() * 60 * 1000));
             map.put("notify_url", this.notifyurl);
             map.put("trade_type", request.getPayway() == PAYWAY_WEB ? "JSAPI" : "APP");
+            //trade_type=JSAPI，openid参数必传，用户在商户appid下的唯一标识
+            if(request.getPayway() == PAYWAY_WEB && !map.containsKey("openid")) return result.retcode(RETPAY_OPENID_ERROR);
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map));
