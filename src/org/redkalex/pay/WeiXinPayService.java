@@ -426,7 +426,9 @@ public class WeiXinPayService extends AbstractPayService {
     @Override
     protected String createSign(Map<String, String> map) throws Exception { //计算签名
         final StringBuilder sb = new StringBuilder();
-        map.forEach((x, y) -> sb.append(x).append('=').append(y).append('&'));
+        map.forEach((x, y) -> {
+            if (!y.isEmpty()) sb.append(x).append('=').append(y).append('&');
+        });
         sb.append("key=").append(this.signkey);
         return Utility.binToHexString(MessageDigest.getInstance("MD5").digest(sb.toString().getBytes())).toUpperCase();
     }
@@ -436,7 +438,9 @@ public class WeiXinPayService extends AbstractPayService {
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         String sign = map.remove("sign");
         final StringBuilder sb = new StringBuilder();
-        map.forEach((x, y) -> sb.append(x).append('=').append(y).append('&'));
+        map.forEach((x, y) -> {
+            if (!y.isEmpty()) sb.append(x).append('=').append(y).append('&');
+        });
         sb.append("key=").append(signkey);
         try {
             return sign.equals(Utility.binToHexString(MessageDigest.getInstance("MD5").digest(sb.toString().getBytes())).toUpperCase());
