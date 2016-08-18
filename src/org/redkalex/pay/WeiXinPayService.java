@@ -85,10 +85,8 @@ public class WeiXinPayService extends AbstractPayService {
                 in.close();
                 KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
                 keyManagerFactory.init(keyStore, certpwd.toCharArray());
-                TrustManagerFactory trustFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                trustFactory.init(keyStore);
                 SSLContext ctx = SSLContext.getInstance("TLSv1");
-                ctx.init(keyManagerFactory.getKeyManagers(), trustFactory.getTrustManagers(), null);
+                ctx.init(keyManagerFactory.getKeyManagers(), null, null);
                 paySSLContext = ctx;
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init weixinpay sslcontext error", e);
