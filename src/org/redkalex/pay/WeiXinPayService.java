@@ -73,6 +73,7 @@ public class WeiXinPayService extends AbstractPayService {
     public void init(AnyValue conf) {
         if (this.convert == null) this.convert = JsonConvert.root();
         if (this.merchno != null && !this.merchno.isEmpty()) { //存在微信支付配置
+            if (this.signkey != null) this.signkey = this.signkey.trim();
             if (this.certpwd == null || this.certpwd.isEmpty()) this.certpwd = this.merchno;
             try {
                 File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
@@ -121,7 +122,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("notify_url", this.notifyurl);
             map.put("trade_type", request.getPayway() == PAYWAY_WEB ? "JSAPI" : "APP");
             //trade_type=JSAPI，openid参数必传，用户在商户appid下的唯一标识
-            if(request.getPayway() == PAYWAY_WEB && !map.containsKey("openid")) return result.retcode(RETPAY_OPENID_ERROR);
+            if (request.getPayway() == PAYWAY_WEB && !map.containsKey("openid")) return result.retcode(RETPAY_OPENID_ERROR);
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map));
