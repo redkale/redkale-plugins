@@ -19,6 +19,14 @@ public class PayRequest {
 
     protected String payno = ""; //自己的订单号
 
+    public PayRequest() {
+    }
+
+    public PayRequest(short paytype, String payno) {
+        this.paytype = paytype;
+        this.payno = payno;
+    }
+
     public void checkVaild() {
         if (this.payno == null || this.payno.isEmpty()) throw new RuntimeException("payno is illegal");
         if (this.paytype < 1) throw new RuntimeException("paytype is illegal");
