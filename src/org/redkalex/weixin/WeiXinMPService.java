@@ -23,6 +23,7 @@ import javax.annotation.*;
  * 微信服务号Service
  *
  * 详情见: http://redkale.org
+ *
  * @author zhangjx
  */
 @AutoLoad(false)
@@ -35,29 +36,34 @@ public class WeiXinMPService implements Service {
 
     private final boolean finer = logger.isLoggable(Level.FINER);
 
-    protected final Map<String, String> mpsecrets = new HashMap<>();
-
     @Resource
     protected JsonConvert convert;
 
-    // http://m.xxx.com/pipes/wx/verifymp
-    @Resource(name = "property.wxmp.token")
+    @Resource(name = "property.weixin.mp.appid") //公众账号ID
+    protected String appid = "";
+
+    @Resource(name = "property.weixin.mp.appsecret") // 
+    protected String appsecret = "";
+
+    @Resource(name = "property.weixin.mp.token")
     protected String mptoken = "";
 
-    @Resource(name = "property.wxmp.corpid")
-    protected String mpcorpid = "wxYYYYYYYYYYYYYY";
-
-    @Resource(name = "property.wxmp.aeskey")
-    protected String mpaeskey = "";
-
     public WeiXinMPService() {
-        // mpsecrets.put("wxYYYYYYYYYYYYYYYYYY", "xxxxxxxxxxxxxxxxxxxxxxxxxxx"); 
     }
 
     //-----------------------------------微信服务号接口----------------------------------------------------------
-    public RetResult<String> getMPWxunionidByCode(String appid, String code) {
+    //仅用于 https://open.weixin.qq.com/connect/oauth2/authorize  &scope=snsapi_base
+    public RetResult<String> getMPOpenidByCode(String code) throws IOException {
+        String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret + "&code=" + code + "&grant_type=authorization_code";
+        String json = getHttpContent(url);
+        if (finest) logger.finest(url + "--->" + json);
+        Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
+        return new RetResult<>(jsonmap.get("openid"));
+    }
+
+    public RetResult<String> getMPWxunionidByCode(String code) {
         try {
-            Map<String, String> wxmap = getMPUserTokenByCode(appid, code);
+            Map<String, String> wxmap = getMPUserTokenByCode(code);
             final String unionid = wxmap.get("unionid");
             if (unionid != null && !unionid.isEmpty()) return new RetResult<>(unionid);
             return new RetResult<>(1011002);
@@ -66,8 +72,8 @@ public class WeiXinMPService implements Service {
         }
     }
 
-    public Map<String, String> getMPUserTokenByCode(String appid, String code) throws IOException {
-        String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + mpsecrets.get(appid) + "&code=" + code + "&grant_type=authorization_code";
+    public Map<String, String> getMPUserTokenByCode(String code) throws IOException {
+        String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret + "&code=" + code + "&grant_type=authorization_code";
         String json = getHttpContent(url);
         if (finest) logger.finest(url + "--->" + json);
         Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
@@ -92,6 +98,7 @@ public class WeiXinMPService implements Service {
      * 用SHA1算法生成安全签名
      * <p>
      * @param strings
+     *
      * @return 安全签名
      */
     protected static String sha1(String... strings) {
