@@ -326,7 +326,7 @@ public class WeiXinPayService extends AbstractPayService {
             }
             result.setPaystatus(paystatus);
             result.setThirdpayno(map.getOrDefault("transaction_id", ""));
-            result.setPayedmoney(Long.parseLong(map.get("total_fee")));
+            result.setPayedmoney(Long.parseLong(map.getOrDefault("total_fee", "0")));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error", e);
