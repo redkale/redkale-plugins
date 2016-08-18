@@ -69,7 +69,8 @@ public class PayResponse extends RetResult<Map<String, String>> {
 
     @Override
     public String toString() {
-        return JsonFactory.root().getConvert().convertTo(this);
+        return jf.getConvert().convertTo(this);
     }
 
+    private static final JsonFactory jf = JsonFactory.create().skipAllIgnore(true);
 }
