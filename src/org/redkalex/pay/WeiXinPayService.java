@@ -73,7 +73,7 @@ public class WeiXinPayService extends AbstractPayService {
     public void init(AnyValue conf) {
         if (this.convert == null) this.convert = JsonConvert.root();
         if (this.merchno != null && !this.merchno.isEmpty()) { //存在微信支付配置
-            if(this.certpwd == null || this.certpwd.isEmpty()) this.certpwd = this.merchno;
+            if (this.certpwd == null || this.certpwd.isEmpty()) this.certpwd = this.merchno;
             try {
                 File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
                 InputStream in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
@@ -95,7 +95,7 @@ public class WeiXinPayService extends AbstractPayService {
     }
 
     /**
-     * 手机支付时调用
+     * 手机支付或者微信公众号支付时调用
      *
      * @param request
      *
@@ -118,6 +118,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("spbill_create_ip", request.getClientAddr());
             map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getTimeoutms() * 60 * 1000));
             map.put("notify_url", this.notifyurl);
+            map.put("trade_type", request.getPayway() == PAYWAY_WEB ? "JSAPI" : "APP");
             map.put("sign", createSign(map));
 
             final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map));
@@ -132,27 +133,24 @@ public class WeiXinPayService extends AbstractPayService {
              */
             final String timestamp = Long.toString(System.currentTimeMillis() / 1000);
             final String noncestr = Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime());
-            final Map<String, String> webmap = new TreeMap<>();
-            webmap.put("appId", this.appid);
-            webmap.put("timeStamp", timestamp);
-            webmap.put("nonceStr", noncestr);
-            webmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
-            webmap.put("signType", "MD5");
-            webmap.put("paySign", createSign(webmap));
-
-            final Map<String, String> appmap = new TreeMap<>();
-            appmap.put("appid", this.appid);
-            appmap.put("partnerid", this.merchno);
-            webmap.put("prepayid", resultmap.get("prepay_id"));
-            appmap.put("timestamp", timestamp);
-            appmap.put("noncestr", noncestr);
-            appmap.put("package", "Sign=WXPay"); //固定值            
-            appmap.put("sign", createSign(appmap));
-
-            final Map<String, String> twomap = new TreeMap<>();
-            webmap.forEach((k, v) -> twomap.put("web_" + k, v));
-            appmap.forEach((k, v) -> twomap.put("app_" + k, v));
-            result.setResult(twomap);
+            final Map<String, String> retmap = new TreeMap<>();
+            if (request.getPayway() == PAYWAY_WEB) {
+                retmap.put("appId", this.appid);
+                retmap.put("timeStamp", timestamp);
+                retmap.put("nonceStr", noncestr);
+                retmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
+                retmap.put("signType", "MD5");
+                retmap.put("paySign", createSign(retmap));
+            } else {
+                retmap.put("appid", this.appid);
+                retmap.put("partnerid", this.merchno);
+                retmap.put("prepayid", resultmap.get("prepay_id"));
+                retmap.put("timestamp", timestamp);
+                retmap.put("noncestr", noncestr);
+                retmap.put("package", "Sign=WXPay"); //固定值            
+                retmap.put("sign", createSign(retmap));
+            }
+            result.setResult(retmap);
 
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
