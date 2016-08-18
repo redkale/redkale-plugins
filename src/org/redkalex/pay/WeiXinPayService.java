@@ -77,7 +77,8 @@ public class WeiXinPayService extends AbstractPayService {
             try {
                 File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
                 InputStream in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
-
+                //需要更新%JDK_HOME%\jre\lib\security下的policy
+                //http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html 
                 final KeyStore keyStore = KeyStore.getInstance("PKCS12");
                 keyStore.load(in, this.certpwd.toCharArray());
                 in.close();
