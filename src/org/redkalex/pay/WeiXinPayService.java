@@ -196,6 +196,7 @@ public class WeiXinPayService extends AbstractPayService {
         final String rstext = "<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>";
         Map<String, String> map = formatXMLToMap(request.getText());
         result.setPayno(map.getOrDefault("out_trade_no", ""));
+        result.setThirdpayno(map.getOrDefault("transaction_id", ""));
         if (!"SUCCESS".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_FAILED).result(rstext);
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         if (!checkSign(map)) return result.retcode(RETPAY_FALSIFY_ERROR).result(rstext);
@@ -361,6 +362,7 @@ public class WeiXinPayService extends AbstractPayService {
         return result;
     }
 
+    //https://pay.weixin.qq.com/wiki/doc/api/micropay.php?chapter=9_4
     @Override
     public PayRefundResponse refund(PayRefundRequest request) {
         request.checkVaild();

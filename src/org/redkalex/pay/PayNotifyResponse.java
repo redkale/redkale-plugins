@@ -18,6 +18,8 @@ public class PayNotifyResponse extends RetResult<String> {
 
     protected String payno = ""; //自己的订单号
 
+    protected String thirdpayno = ""; //第三方的支付流水号
+
     @Override
     public PayNotifyResponse retcode(int retcode) {
         this.retcode = retcode;
@@ -56,6 +58,14 @@ public class PayNotifyResponse extends RetResult<String> {
 
     public void setPayno(String payno) {
         this.payno = payno;
+    }
+
+    public String getThirdpayno() {
+        return thirdpayno;
+    }
+
+    public void setThirdpayno(String thirdpayno) {
+        this.thirdpayno = thirdpayno;
     }
 
 }

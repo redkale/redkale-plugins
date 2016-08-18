@@ -174,6 +174,7 @@ public class AliPayService extends AbstractPayService {
         final String rstext = "success";
         Map<String, String> map = request.getMap();
         result.setPayno(map.getOrDefault("out_trade_no", ""));
+        result.setThirdpayno(map.getOrDefault("trade_no", ""));
         if (!checkSign(map)) return result.retcode(RETPAY_FALSIFY_ERROR);
         String state = map.getOrDefault("trade_status", "");
         if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED);
@@ -318,6 +319,7 @@ public class AliPayService extends AbstractPayService {
         return result;
     }
 
+    //https://doc.open.alipay.com/docs/api.htm?spm=a219a.7629065.0.0.wavZ99&apiId=759&docType=4
     @Override
     public PayRefundResponse refund(PayRefundRequest request) {
         request.checkVaild();
