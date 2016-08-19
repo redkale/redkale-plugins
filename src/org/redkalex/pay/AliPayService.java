@@ -71,8 +71,8 @@ public class AliPayService extends AbstractPayService {
         if (this.convert == null) this.convert = JsonConvert.root();
         try {
             final KeyFactory factory = KeyFactory.getInstance("RSA");
-            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.signcertkey));
             this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.verifycertkey)));
+            PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.signcertkey));
             this.priKey = factory.generatePrivate(priPKCS8);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -135,7 +135,7 @@ public class AliPayService extends AbstractPayService {
             // 支付类型， 固定值
             param += "&payment_type=\"1\"";
             // 参数编码， 固定值
-            param += "&_input_charset=\"UTF-8\"";
+            param += "&_input_charset=\"utf-8\"";
 
             // 设置未付款交易的超时时间
             // 默认30分钟，一旦超时，该笔交易就会自动被关闭。
@@ -146,7 +146,7 @@ public class AliPayService extends AbstractPayService {
             Signature signature = Signature.getInstance("SHA1WithRSA");
             signature.initSign(priKey);
             signature.update(param.getBytes("UTF-8"));
-            param += "&sign=\"" + Base64.getEncoder().encodeToString(signature.sign()) + "\"";
+            param += "&sign=\"" + URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8") + "\"";
             param += "&sign_type=\"RSA\"";
 
             final Map<String, String> rmap = new TreeMap<>();
@@ -351,7 +351,7 @@ public class AliPayService extends AbstractPayService {
             result.setRefundedmoney((long) (Double.parseDouble(resultmap.get("refund_fee")) * 100));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "close_pay_error", e);
+            logger.log(Level.WARNING, "refund_pay_error", e);
         }
         return result;
     }
