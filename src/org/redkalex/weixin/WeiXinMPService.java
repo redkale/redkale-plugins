@@ -53,6 +53,7 @@ public class WeiXinMPService implements Service {
 
     //-----------------------------------微信服务号接口----------------------------------------------------------
     //仅用于 https://open.weixin.qq.com/connect/oauth2/authorize  &scope=snsapi_base
+    //需要在 “开发 - 接口权限 - 网页服务 - 网页帐号 - 网页授权获取用户基本信息”的配置选项中，修改授权回调域名
     public RetResult<String> getMPOpenidByCode(String code) throws IOException {
         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret + "&code=" + code + "&grant_type=authorization_code";
         String json = getHttpContent(url);
