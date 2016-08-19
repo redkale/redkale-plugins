@@ -24,6 +24,7 @@ import javax.net.ssl.*;
 /**
  *
  * 详情见: http://redkale.org
+ *
  * @author zhangjx
  */
 @AutoLoad(false)
@@ -37,12 +38,17 @@ public class ApnsService implements Service {
     @Resource
     protected JsonConvert convert;
 
+    @Resource(name = "APP_HOME")
+    protected File home;
+
     @Resource(name = "property.apns.certpwd")
     protected String apnscertpwd = "1"; //证书的密码
 
     @Resource(name = "property.apns.certpath") //用来加载证书用
     protected String apnscertpath = "apnspushdev_cert.p12";
 
+    //测试环境:  gateway.sandbox.push.apple.com
+    //开发环境:  gateway.push.apple.com
     @Resource(name = "property.apns.pushaddr") //
     protected String apnspushaddr = "gateway.sandbox.push.apple.com";
 
@@ -69,9 +75,9 @@ public class ApnsService implements Service {
             @Override
             public void run() {
                 try {
-                    final String path = "/" + this.getClass().getPackage().getName().replace('.', '/') + "/" + apnscertpath;
+                    File file = (apnscertpath.indexOf('/') == 0 || apnscertpath.indexOf(':') > 0) ? new File(apnscertpath) : new File(home, "conf/" + apnscertpath);
+                    InputStream in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + apnscertpath);
                     KeyStore ks = KeyStore.getInstance("PKCS12");
-                    InputStream in = ApnsService.class.getResourceAsStream(path);
                     KeyManagerFactory kf = null;
                     if (in != null) {
                         ks.load(in, apnscertpwd.toCharArray());
@@ -161,5 +167,4 @@ public class ApnsService implements Service {
 //        System.out.println(payload);
 //        service.pushApnsMessage(new ApnsMessage(token, payload));
 //    }
-
 }
