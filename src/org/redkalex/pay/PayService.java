@@ -59,7 +59,7 @@ public class PayService extends AbstractPayService {
     }
 
     @Override
-    public PayQueryResponse query(PayQueryRequest request) {
+    public PayQueryResponse query(PayRequest request) {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.query(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.query(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.query(request);
@@ -83,7 +83,7 @@ public class PayService extends AbstractPayService {
     }
 
     @Override
-    public PayRefundResponse queryRefund(PayQueryRequest request) {
+    public PayRefundResponse queryRefund(PayRequest request) {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.queryRefund(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.queryRefund(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.queryRefund(request);

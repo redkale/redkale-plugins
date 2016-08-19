@@ -15,8 +15,6 @@ import java.util.*;
  */
 public class PayCreatRequest extends PayRequest {
 
-    protected short payway;  //支付途径; WEB APP NATIVE
-
     protected long paymoney; //  支付金额。 单位:分 
 
     protected String paytitle = ""; //订单标题
@@ -44,14 +42,6 @@ public class PayCreatRequest extends PayRequest {
         if (this.map == null) this.map = new TreeMap<>();
         this.map.put(key, value);
         return this.map;
-    }
-
-    public short getPayway() {
-        return payway;
-    }
-
-    public void setPayway(short payway) {
-        this.payway = payway;
     }
 
     public long getPaymoney() {

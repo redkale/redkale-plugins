@@ -28,7 +28,7 @@ abstract class AbstractPayService implements Service {
     public abstract PayCreatResponse create(PayCreatRequest request);
 
     //请求查询
-    public abstract PayQueryResponse query(PayQueryRequest request);
+    public abstract PayQueryResponse query(PayRequest request);
 
     //请求关闭
     public abstract PayResponse close(PayCloseRequest request);
@@ -37,7 +37,7 @@ abstract class AbstractPayService implements Service {
     public abstract PayRefundResponse refund(PayRefundRequest request);
 
     //查询退款
-    public abstract PayRefundResponse queryRefund(PayQueryRequest request);
+    public abstract PayRefundResponse queryRefund(PayRequest request);
 
     protected abstract String createSign(Map<String, String> map) throws Exception; //计算签名
 

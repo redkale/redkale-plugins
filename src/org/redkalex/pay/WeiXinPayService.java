@@ -282,7 +282,7 @@ public class WeiXinPayService extends AbstractPayService {
      * @return
      */
     @Override
-    public PayQueryResponse query(final PayQueryRequest request) {
+    public PayQueryResponse query(final PayRequest request) {
         request.checkVaild();
         final PayQueryResponse result = new PayQueryResponse();
         try {
@@ -389,7 +389,7 @@ public class WeiXinPayService extends AbstractPayService {
     }
 
     @Override
-    public PayRefundResponse queryRefund(PayQueryRequest request) {
+    public PayRefundResponse queryRefund(PayRequest request) {
         request.checkVaild();
         final PayRefundResponse result = new PayRefundResponse();
         try {

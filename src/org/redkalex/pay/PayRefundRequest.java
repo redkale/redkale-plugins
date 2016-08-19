@@ -13,8 +13,6 @@ package org.redkalex.pay;
  */
 public class PayRefundRequest extends PayRequest {
 
-    protected short payway;  //支付途径; APP WEB NATIVE
-
     protected long paymoney; //  支付金额。 单位:分 
 
     protected String thirdpayno = ""; //第三方的支付流水号
@@ -28,19 +26,10 @@ public class PayRefundRequest extends PayRequest {
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.payway < 1) throw new RuntimeException("payway is illegal");
         if (this.refundmoney < 1) throw new RuntimeException("refundmoney is illegal");
         if (this.paymoney < 1) throw new RuntimeException("paymoney is illegal");
         if (this.refundno == null || this.refundno.isEmpty()) throw new RuntimeException("refundno is illegal");
         if (this.thirdpayno == null || this.thirdpayno.isEmpty()) throw new RuntimeException("thirdpayno is illegal");
-    }
-
-    public short getPayway() {
-        return payway;
-    }
-
-    public void setPayway(short payway) {
-        this.payway = payway;
     }
 
     public long getRefundmoney() {

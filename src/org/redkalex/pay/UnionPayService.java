@@ -271,7 +271,7 @@ public class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    public PayQueryResponse query(PayQueryRequest request) {
+    public PayQueryResponse query(PayRequest request) {
         request.checkVaild();
         final PayQueryResponse result = new PayQueryResponse();
         try {
@@ -417,7 +417,7 @@ public class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    public PayRefundResponse queryRefund(PayQueryRequest request) {
+    public PayRefundResponse queryRefund(PayRequest request) {
         PayQueryResponse queryResponse = query(request);
         final PayRefundResponse response = new PayRefundResponse();
         response.setRetcode(queryResponse.getRetcode());
