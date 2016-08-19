@@ -15,7 +15,7 @@ import java.util.*;
  */
 public class PayPreRequest extends PayRequest {
 
-    protected short payway;  //支付途径; WEB APP NATIVE
+    protected short payway;  //支付途径; APP WEB NATIVE
 
     protected long paymoney; //  支付金额。 单位:分 
 

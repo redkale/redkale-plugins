@@ -223,7 +223,7 @@ public class AliPayService extends AbstractPayService {
     }
 
     @Override
-    public PayQueryResponse query(PayRequest request) {
+    public PayQueryResponse query(PayQueryRequest request) {
         request.checkVaild();
         final PayQueryResponse result = new PayQueryResponse();
         try {
@@ -357,7 +357,7 @@ public class AliPayService extends AbstractPayService {
     }
 
     @Override
-    public PayRefundResponse queryRefund(PayRequest request) {
+    public PayRefundResponse queryRefund(PayQueryRequest request) {
         PayQueryResponse queryResponse = query(request);
         final PayRefundResponse response = new PayRefundResponse();
         response.setRetcode(queryResponse.getRetcode());

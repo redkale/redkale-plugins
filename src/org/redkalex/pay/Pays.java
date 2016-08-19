@@ -24,11 +24,13 @@ public abstract class Pays {
     public static final short PAYTYPE_ALIPAY = 30;
 
     //--------------------- 支付渠道 -----------------------------
-    //网页支付
-    public static final short PAYWAY_WEB = 10;
-
+    //支付渠道: 10:APP支付; 20:网页支付; 30:机器支付;
+    
     //APP支付
-    public static final short PAYWAY_APP = 20;
+    public static final short PAYWAY_APP = 10;
+
+    //网页支付
+    public static final short PAYWAY_WEB = 20;
 
     //机器支付
     public static final short PAYWAY_NATIVE = 30;

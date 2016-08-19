@@ -34,8 +34,8 @@ public class PayNotifyRequest {
     }
 
     public void checkVaild() {
-        if ((this.text == null || this.text.isEmpty() && (map == null || map.isEmpty()))) throw new RuntimeException("text and map both is empty");
         if (this.paytype < 1) throw new RuntimeException("paytype is illegal");
+        if ((this.text == null || this.text.isEmpty() && (map == null || map.isEmpty()))) throw new RuntimeException("text and map both is empty");
     }
 
     public short getPaytype() {
