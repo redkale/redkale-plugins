@@ -24,7 +24,8 @@ public class PayRequest {
     public PayRequest() {
     }
 
-    public PayRequest(short paytype, String payno) {
+    public PayRequest(String appid, short paytype, String payno) {
+        this.appid = appid;
         this.paytype = paytype;
         this.payno = payno;
     }
