@@ -46,13 +46,10 @@ public class WeiXinPayService extends AbstractPayService {
     @Resource(name = "property.pay.weixin.submerchno") //子商户ID，受理模式必填
     protected String submerchno = "";
 
-    @Resource(name = "property.pay.weixin.appid") //公众账号ID
-    protected String appid = "";
-
     @Resource(name = "property.pay.weixin.notifyurl") //回调url
     protected String notifyurl = "";
 
-    @Resource(name = "property.pay.weixin.signkey") //签名算法需要用到的秘钥
+    @Resource(name = "property.pay.weixin.signkey") //签名算法需要用到的密钥
     protected String signkey = "";
 
     @Resource(name = "property.pay.weixin.certpwd")
@@ -108,7 +105,7 @@ public class WeiXinPayService extends AbstractPayService {
         try {
             final TreeMap<String, String> map = new TreeMap<>();
             if (request.getMap() != null) map.putAll(request.getMap());
-            map.put("appid", this.appid);
+            map.put("appid", request.getAppid());
             map.put("mch_id", this.merchno);
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("body", request.getPaybody());
@@ -137,14 +134,14 @@ public class WeiXinPayService extends AbstractPayService {
             final String noncestr = Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime());
             final Map<String, String> retmap = new TreeMap<>();
             if (request.getPayway() == PAYWAY_WEB) {
-                retmap.put("appId", this.appid);
+                retmap.put("appId", request.getAppid());
                 retmap.put("timeStamp", timestamp);
                 retmap.put("nonceStr", noncestr);
                 retmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
                 retmap.put("signType", "MD5");
                 retmap.put("paySign", createSign(retmap));
             } else {
-                retmap.put("appid", this.appid);
+                retmap.put("appid", request.getAppid());
                 retmap.put("partnerid", this.merchno);
                 retmap.put("prepayid", resultmap.get("prepay_id"));
                 retmap.put("timestamp", timestamp);
@@ -220,7 +217,7 @@ public class WeiXinPayService extends AbstractPayService {
         try {
             final TreeMap<String, String> map = new TreeMap<>();
             if (request.getMap() != null) map.putAll(request.getMap());
-            map.put("appid", this.appid);
+            map.put("appid", request.getAppid());
             map.put("mch_id", this.merchno);
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("body", request.getPaybody());
@@ -244,7 +241,7 @@ public class WeiXinPayService extends AbstractPayService {
              */
             final Map<String, String> rmap = new TreeMap<>();
             result.setResult(rmap);
-            rmap.put("appId", this.appid);
+            rmap.put("appId", request.getAppid());
             rmap.put("timeStamp", Long.toString(System.currentTimeMillis() / 1000));
             rmap.put("nonceStr", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             rmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
@@ -290,7 +287,7 @@ public class WeiXinPayService extends AbstractPayService {
         final PayQueryResponse result = new PayQueryResponse();
         try {
             final Map<String, String> map = new TreeMap<>();
-            map.put("appid", this.appid);
+            map.put("appid", request.getAppid());
             map.put("mch_id", this.merchno);
             map.put("out_trade_no", request.getPayno());
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
@@ -339,7 +336,7 @@ public class WeiXinPayService extends AbstractPayService {
         final PayResponse result = new PayResponse();
         try {
             Map<String, String> map = new TreeMap<>();
-            map.put("appid", appid);
+            map.put("appid", request.getAppid());
             map.put("mch_id", merchno);
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("out_trade_no", request.getPayno());
@@ -367,7 +364,7 @@ public class WeiXinPayService extends AbstractPayService {
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final TreeMap<String, String> map = new TreeMap<>();
-            map.put("appid", this.appid);
+            map.put("appid", request.getAppid());
             map.put("mch_id", this.merchno);
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("out_trade_no", request.getPayno());
@@ -397,7 +394,7 @@ public class WeiXinPayService extends AbstractPayService {
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final Map<String, String> map = new TreeMap<>();
-            map.put("appid", this.appid);
+            map.put("appid", request.getAppid());
             map.put("mch_id", this.merchno);
             map.put("out_trade_no", request.getPayno());
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));

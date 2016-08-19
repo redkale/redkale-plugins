@@ -46,13 +46,10 @@ public class AliPayService extends AbstractPayService {
     @Resource(name = "property.pay.alipay.charset") //字符集 
     protected String charset = "UTF-8";
 
-    @Resource(name = "property.pay.alipay.appid") //应用ID
-    protected String appid = "";
-
     @Resource(name = "property.pay.alipay.notifyurl") //回调url
     protected String notifyurl = "";
 
-    @Resource(name = "property.pay.alipay.signcertkey") //签名算法需要用到的秘钥
+    @Resource(name = "property.pay.alipay.signcertkey") //签名算法需要用到的密钥
     protected String signcertkey = "";
 
     @Resource(name = "property.pay.alipay.verifycertkey") //公钥
@@ -68,7 +65,6 @@ public class AliPayService extends AbstractPayService {
     @Override
     public void init(AnyValue conf) {
         if (this.merchno == null || this.merchno.isEmpty()) return;//没有启用支付宝支付
-        if (this.appid == null || this.appid.isEmpty()) return;//没有启用支付宝支付
         if (this.signcertkey == null || this.signcertkey.isEmpty()) return;//没有启用支付宝支付
         if (this.verifycertkey == null || this.verifycertkey.isEmpty()) return;//没有启用支付宝支付
 
@@ -85,7 +81,6 @@ public class AliPayService extends AbstractPayService {
 
     public static void main(String[] args) throws Throwable {
         AliPayService service = new AliPayService();
-        service.appid = "2015051100069126";
         service.signcertkey = "MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBAMvPGb+aJQX0RPjs"
             + "x6iZUbcujk9GZhVT1Z7N5hky6rZWkOmO2VLwGaY1zyMwHnPkb3fYcv8lhB/+9LsG"
             + "sPTdSl1qYOyApI1KLyXZTK/qmHHT9uiX1oz02uwNFuSZb9i7FbYth1vEuuM3qnZE"
@@ -103,6 +98,7 @@ public class AliPayService extends AbstractPayService {
         service.init(null);
 
         PayCreatRequest creatRequest = new PayCreatRequest();
+        creatRequest.setAppid("2015051100069126");
         creatRequest.setPaytype(Pays.PAYTYPE_ALIPAY);
         creatRequest.setPayno("200000001");
         creatRequest.setPaymoney(10); //1毛钱
@@ -187,7 +183,7 @@ public class AliPayService extends AbstractPayService {
         final PayCreatResponse result = new PayCreatResponse();
         try {
             final TreeMap<String, String> map = new TreeMap<>();
-            map.put("app_id", this.appid);
+            map.put("app_id", request.getAppid());
             map.put("method", "alipay.trade.create");
             map.put("format", "JSON");
             map.put("charset", this.charset);
@@ -232,7 +228,7 @@ public class AliPayService extends AbstractPayService {
         final PayQueryResponse result = new PayQueryResponse();
         try {
             final TreeMap<String, String> map = new TreeMap<>();
-            map.put("app_id", this.appid);
+            map.put("app_id", request.getAppid());
             map.put("sign_type", "RSA");
             map.put("charset", this.charset);
             map.put("format", "json");
@@ -286,7 +282,7 @@ public class AliPayService extends AbstractPayService {
         final PayResponse result = new PayResponse();
         try {
             final TreeMap<String, String> map = new TreeMap<>();
-            map.put("app_id", this.appid);
+            map.put("app_id", request.getAppid());
             map.put("sign_type", "RSA");
             map.put("charset", this.charset);
             map.put("format", "json");
@@ -326,7 +322,7 @@ public class AliPayService extends AbstractPayService {
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final TreeMap<String, String> map = new TreeMap<>();
-            map.put("app_id", this.appid);
+            map.put("app_id", request.getAppid());
             map.put("sign_type", "RSA");
             map.put("charset", this.charset);
             map.put("format", "json");
