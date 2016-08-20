@@ -44,7 +44,7 @@ public class WeiXinPayService extends AbstractPayService {
     protected Map<String, WeixinPayElement> elements = new HashMap<>();
 
     @Resource(name = "property.pay.weixin.conf") //支付配置文件路径
-    protected String conf = "";
+    protected String conf = "config.properties";
 
     @Resource(name = "APP_HOME")
     protected File home;
@@ -59,6 +59,7 @@ public class WeiXinPayService extends AbstractPayService {
             try {
                 File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
                 InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
+                if(in == null) return;
                 Properties properties = new Properties();
                 properties.load(in);
                 in.close();
