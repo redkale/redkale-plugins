@@ -14,11 +14,13 @@ import org.redkale.convert.json.JsonFactory;
  */
 public class PayNotifyRequest {
 
+    protected String appid = ""; //APP账号ID
+
     protected short paytype; //支付类型; 
 
-    private String text;
+    protected String text;
 
-    private Map<String, String> map;
+    protected Map<String, String> map;
 
     public PayNotifyRequest() {
     }
@@ -35,7 +37,16 @@ public class PayNotifyRequest {
 
     public void checkVaild() {
         if (this.paytype < 1) throw new RuntimeException("paytype is illegal");
+        if (this.paytype == Pays.PAYTYPE_ALIPAY && (this.appid == null || this.appid.isEmpty())) throw new RuntimeException("appid is illegal");
         if ((this.text == null || this.text.isEmpty() && (map == null || map.isEmpty()))) throw new RuntimeException("text and map both is empty");
+    }
+
+    public String getAppid() {
+        return appid;
+    }
+
+    public void setAppid(String appid) {
+        this.appid = appid;
     }
 
     public short getPaytype() {

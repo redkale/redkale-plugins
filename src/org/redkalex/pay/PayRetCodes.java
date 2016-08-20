@@ -25,18 +25,21 @@ public abstract class PayRetCodes {
     @RetLabel("第三方支付失败")
     public static final int RETPAY_PAY_FAILED = 20010002;
 
+    @RetLabel("支付配置异常")
+    public static final int RETPAY_CONF_ERROR = 20010003;
+
     @RetLabel("交易签名被篡改")
-    public static final int RETPAY_FALSIFY_ERROR = 20010003;
+    public static final int RETPAY_FALSIFY_ERROR = 20010011;
 
     @RetLabel("支付状态异常")
-    public static final int RETPAY_STATUS_ERROR = 20010004;
+    public static final int RETPAY_STATUS_ERROR = 20010012;
 
     @RetLabel("退款异常")
-    public static final int RETPAY_REFUND_ERROR = 20010005;
+    public static final int RETPAY_REFUND_ERROR = 20010013;
 
     @RetLabel("用户标识缺失")
-    public static final int RETPAY_OPENID_ERROR = 20010011;
-    
+    public static final int RETPAY_OPENID_ERROR = 20010021;
+
     //-----------------------------------------------------------------------------------------------------------
     protected static final Map<Integer, String> rets = new HashMap<>();
 

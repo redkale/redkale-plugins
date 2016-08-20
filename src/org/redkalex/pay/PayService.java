@@ -91,12 +91,12 @@ public class PayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(Map<String, String> map) throws Exception {
+    protected String createSign(final PayElement element, Map<String, String> map) throws Exception {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    protected boolean checkSign(Map<String, String> map) {
+    protected boolean checkSign(final PayElement element, Map<String, String> map) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

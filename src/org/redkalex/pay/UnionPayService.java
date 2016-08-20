@@ -82,9 +82,7 @@ public class UnionPayService extends AbstractPayService {
 
     protected String verifycertid = "";
 
-    protected PrivateKey priKey; //私钥
-
-    protected PublicKey pubKey; //公钥
+    protected UnionPayElement element;
 
     @Override
     public void init(AnyValue conf) {
@@ -103,7 +101,7 @@ public class UnionPayService extends AbstractPayService {
             signin.close();
             Enumeration<String> aliasenum = keyStore.aliases();
             final String keyAlias = aliasenum.hasMoreElements() ? aliasenum.nextElement() : null;
-            this.priKey = (PrivateKey) keyStore.getKey(keyAlias, this.signcertpwd.toCharArray());
+            PrivateKey priKey = (PrivateKey) keyStore.getKey(keyAlias, this.signcertpwd.toCharArray());
             X509Certificate cert = (X509Certificate) keyStore.getCertificate(keyAlias);
             this.signcertid = cert.getSerialNumber().toString();
 
@@ -115,7 +113,8 @@ public class UnionPayService extends AbstractPayService {
             X509Certificate verifycert = (X509Certificate) cf.generateCertificate(verifyin);
             verifyin.close();
             this.verifycertid = verifycert.getSerialNumber().toString();
-            this.pubKey = verifycert.getPublicKey();
+            PublicKey pubKey = verifycert.getPublicKey();
+            this.element = new UnionPayElement(priKey, pubKey);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -183,12 +182,12 @@ public class UnionPayService extends AbstractPayService {
 
             //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址
             map.put("backUrl", notifyurl);
-            map.put("signature", createSign(map));
+            map.put("signature", createSign(element, map));
 
             result.responsetext = Utility.postHttpContent(this.createurl, joinMap(map));
             Map<String, String> resultmap = formatTextToMap(result.responsetext);
             result.setResult(resultmap);
-            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                 return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
             }
@@ -212,7 +211,7 @@ public class UnionPayService extends AbstractPayService {
         Map<String, String> map = request.getMap();
         result.setPayno(map.getOrDefault("orderId", ""));
         result.setThirdpayno(map.getOrDefault("queryId", ""));
-        if (!checkSign(map)) return result.retcode(RETPAY_FALSIFY_ERROR);
+        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR);
         if (!"00".equalsIgnoreCase(map.get("respCode")) || Long.parseLong(map.getOrDefault("txnAmt", "0")) < 1) {
             return result.retcode(RETPAY_PAY_ERROR).retinfo(map.getOrDefault("respMsg", null));
         }
@@ -253,12 +252,12 @@ public class UnionPayService extends AbstractPayService {
             //    4.如果银联通知服务器发送通知后10秒内未收到返回状态码或者应答码非http200或302，那么银联会间隔一段时间再次发送。总共发送5次，银联后续间隔1、2、4、5 分钟后会再次通知。
             //    5.后台通知地址如果上送了带有？的参数，例如：http://abc/web?a=b&c=d 在后台通知处理程序验证签名之前需要编写逻辑将这些字段去掉再验签，否则将会验签失败
             if (!notifyurl.isEmpty()) map.put("backUrl", notifyurl);
-            map.put("signature", createSign(map));
+            map.put("signature", createSign(element, map));
 
             result.responsetext = Utility.postHttpContent(this.createurl, joinMap(map));
             Map<String, String> resultmap = formatTextToMap(result.responsetext);
             result.setResult(resultmap);
-            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                 return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
             }
@@ -294,12 +293,12 @@ public class UnionPayService extends AbstractPayService {
             map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
             map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
 
-            map.put("signature", createSign(map));
+            map.put("signature", createSign(element, map));
 
             result.responsetext = Utility.postHttpContent(this.queryurl, joinMap(map));
             Map<String, String> resultmap = formatTextToMap(result.responsetext);
             result.setResult(resultmap);
-            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                 return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
             }
@@ -355,12 +354,12 @@ public class UnionPayService extends AbstractPayService {
             //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址，【支付失败的交易银联不会发送后台通知】
             if (!notifyurl.isEmpty()) map.put("backUrl", notifyurl);
 
-            map.put("signature", createSign(map));
+            map.put("signature", createSign(element, map));
 
             result.responsetext = Utility.postHttpContent(this.closeurl, joinMap(map));
             Map<String, String> resultmap = formatTextToMap(result.responsetext);
             result.setResult(resultmap);
-            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                 return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
             }
@@ -400,12 +399,12 @@ public class UnionPayService extends AbstractPayService {
             //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址，【支付失败的交易银联不会发送后台通知】
             if (!notifyurl.isEmpty()) map.put("backUrl", notifyurl);
 
-            map.put("signature", createSign(map));
+            map.put("signature", createSign(element, map));
 
             result.responsetext = Utility.postHttpContent(this.closeurl, joinMap(map));
             Map<String, String> resultmap = formatTextToMap(result.responsetext);
             result.setResult(resultmap);
-            if (!checkSign(resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
             if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                 return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
             }
@@ -441,17 +440,17 @@ public class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(Map<String, String> map) throws Exception { //计算签名
+    protected String createSign(final PayElement element, Map<String, String> map) throws Exception { //计算签名
         byte[] digest = MessageDigest.getInstance("SHA-1").digest(joinMap(map).getBytes("UTF-8"));
 
         Signature signature = Signature.getInstance("SHA1WithRSA");
-        signature.initSign(priKey);
+        signature.initSign(((UnionPayElement) element).priKey);
         signature.update(Utility.binToHexString(digest).getBytes("UTF-8"));
         return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8");
     }
 
     @Override
-    protected boolean checkSign(Map<String, String> map) {  //验证签名
+    protected boolean checkSign(final PayElement element, Map<String, String> map) {  //验证签名
         if (!this.verifycertid.equals(map.get("certId"))) return false;
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         try {
@@ -460,7 +459,7 @@ public class UnionPayService extends AbstractPayService {
             final byte[] digest = Utility.binToHexString(sha1).getBytes("UTF-8");
 
             Signature signature = Signature.getInstance("SHA1WithRSA");
-            signature.initVerify(this.pubKey);
+            signature.initVerify(((UnionPayElement) element).pubKey);
             signature.update(digest);
             return signature.verify(sign);
         } catch (Exception e) {
@@ -468,4 +467,16 @@ public class UnionPayService extends AbstractPayService {
         }
     }
 
+    protected static class UnionPayElement extends PayElement {
+
+        protected PrivateKey priKey; //私钥
+
+        protected PublicKey pubKey; //公钥
+
+        public UnionPayElement(PrivateKey priKey, PublicKey pubKey) {
+            this.priKey = priKey;
+            this.pubKey = pubKey;
+        }
+
+    }
 }

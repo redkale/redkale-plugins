@@ -39,12 +39,16 @@ abstract class AbstractPayService implements Service {
     //查询退款
     public abstract PayRefundResponse queryRefund(PayRequest request);
 
-    protected abstract String createSign(Map<String, String> map) throws Exception; //计算签名
+    protected abstract String createSign(final PayElement element, Map<String, String> map) throws Exception; //计算签名
 
-    protected abstract boolean checkSign(Map<String, String> map); //验证签名
+    protected abstract boolean checkSign(final PayElement element, Map<String, String> map); //验证签名
 
     protected final String joinMap(Map<String, String> map) { //map对象转换成 key1=value1&key2=value2&key3=value3
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         return map.entrySet().stream().map((e -> e.getKey() + "=" + e.getValue())).collect(Collectors.joining("&"));
+    }
+    
+    protected static class PayElement {
+        
     }
 }
