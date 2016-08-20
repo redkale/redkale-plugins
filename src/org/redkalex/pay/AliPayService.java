@@ -60,7 +60,7 @@ public class AliPayService extends AbstractPayService {
             try {
                 File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
                 InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
-                if(in == null) return;
+                if (in == null) return;
                 Properties properties = new Properties();
                 properties.load(in);
                 in.close();
@@ -82,7 +82,7 @@ public class AliPayService extends AbstractPayService {
             // 签约合作者身份ID
             String param = "partner=" + "\"" + element.merchno + "\"";
             // 签约卖家支付宝账号(也可用身份ID)
-            param += "&seller_id=" + "\"" + element.merchno + "\"";
+            param += "&seller_id=" + "\"" + element.sellerid + "\"";
             // 商户网站唯一订单号
             param += "&out_trade_no=" + "\"" + request.getPayno() + "\"";
             // 商品名称
@@ -415,6 +415,9 @@ public class AliPayService extends AbstractPayService {
         // pay.alipay.[x].merchno
         public String merchno = ""; //商户ID 签约的支付宝账号对应的支付宝唯一用户号。以2088开头的16位纯数字组成。
 
+        // pay.alipay.[x].sellerid
+        public String sellerid = ""; //商户账号，为空时则使用 merchno
+
         // pay.alipay.[x].charset
         public String charset = "UTF-8"; //字符集 
 
@@ -439,6 +442,7 @@ public class AliPayService extends AbstractPayService {
         public static Map<String, AliPayElement> create(Logger logger, Properties properties) {
             String def_appid = properties.getProperty("pay.alipay.appid", "");
             String def_merchno = properties.getProperty("pay.alipay.merchno", "");
+            String def_sellerid = properties.getProperty("pay.alipay.sellerid", "");
             String def_charset = properties.getProperty("pay.alipay.charset", "UTF-8");
             String def_notifyurl = properties.getProperty("pay.alipay.notifyurl", "");
             String def_signcertkey = properties.getProperty("pay.alipay.signcertkey", "");
@@ -450,6 +454,7 @@ public class AliPayService extends AbstractPayService {
 
                 String appid = properties.getProperty(prefix + ".appid", def_appid);
                 String merchno = properties.getProperty(prefix + ".merchno", def_merchno);
+                String sellerid = properties.getProperty(prefix + ".sellerid", def_sellerid);
                 String charset = properties.getProperty(prefix + ".charset", def_charset);
                 String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl);
                 String signcertkey = properties.getProperty(prefix + ".signcertkey", def_signcertkey);
@@ -462,6 +467,7 @@ public class AliPayService extends AbstractPayService {
                 AliPayElement element = new AliPayElement();
                 element.appid = appid;
                 element.merchno = merchno;
+                element.sellerid = sellerid.isEmpty() ? merchno : sellerid;
                 element.charset = charset;
                 element.notifyurl = notifyurl;
                 element.signcertkey = signcertkey;
