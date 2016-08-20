@@ -66,6 +66,7 @@ public class ApnsService implements Service {
 
     @Override
     public void init(AnyValue conf) {
+        if(this.convert == null) this.convert = JsonConvert.root();
         new Thread() {
             {
                 setDaemon(true);
@@ -159,11 +160,13 @@ public class ApnsService implements Service {
 
 //    public static void main(String[] args) throws Exception {
 //        ApnsService service = new ApnsService();
-//        service.convert = JsonFactory.root().getConvert();
+//        service.apnspushaddr = "gateway.push.apple.com"; //正式环境
+//        service.apnscertpwd = "1";
+//        service.apnscertpath = "D:/apns.xxx.release.p12";
 //        service.init(null);
 //
-//        final String token = "01727b19 b9f8abf4 0891e31d 3446479d a43902e1 819edc44 a073d951 b8b7db90";
-//        ApnsPayload payload = new ApnsPayload("您有新的消息", "这是消息内容", 1);
+//        final String token = "3ce04256758126f0e8240bed658120b51f78824c2c63b6fb717aa26bc50b28f3";
+//        ApnsPayload payload = new ApnsPayload("您有新的消息", "这是消息内容", 0);
 //        System.out.println(payload);
 //        service.pushApnsMessage(new ApnsMessage(token, payload));
 //    }
