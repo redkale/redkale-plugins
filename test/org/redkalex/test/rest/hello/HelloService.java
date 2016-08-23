@@ -43,7 +43,7 @@ public class HelloService implements Service {
     }
 
     //修改记录
-    @RestMapping(name = "partupdate")  //不能使用updatepart，因为存在update，是updatepart的开头部分，不符合BasedHttpServlet的WebAction规则
+    @RestMapping(name = "partupdate")  
     public void updateHello(HelloEntity entity, @RestParam("cols") String[] columns) { //通过 /hello/update?bean={...} 修改对象
         entity.setUpdatetime(System.currentTimeMillis());
         source.updateColumns(entity, columns);
