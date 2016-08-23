@@ -24,4 +24,10 @@ public @interface RestParam {
 
     String value(); //参数名
 
+    /**
+     * 参数是否从header取， 默认使用 request.getJsonParameter， 设置为true则使用 request.getJsonHeader 取值
+     *
+     * @return 是否从header取
+     */
+    boolean header() default false;
 }
