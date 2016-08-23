@@ -44,7 +44,7 @@ public class HelloService implements Service {
 
     //修改记录
     @RestMapping(name = "partupdate")  
-    public void updateHello(HelloEntity entity, @RestParam("cols") String[] columns) { //通过 /hello/update?bean={...} 修改对象
+    public void updateHello(HelloEntity entity, @RestParam("cols") String[] columns) { //通过 /hello/partupdate?bean={...} 修改对象
         entity.setUpdatetime(System.currentTimeMillis());
         source.updateColumns(entity, columns);
     }
