@@ -21,11 +21,8 @@ import org.redkale.service.*;
  */
 public abstract class RestHttpServlet<T> extends BasedHttpServlet {
 
-    @RetLabel("Method Error")
-    public static final int RET_REST_METHOD_ERROR = 21010001;
-
     @RetLabel("Server Error")
-    public static final int RET_REST_SERVER_ERROR = 21010002;
+    public static final int RET_REST_SERVER_ERROR = 21010001;
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -39,24 +36,6 @@ public abstract class RestHttpServlet<T> extends BasedHttpServlet {
     protected JsonConvert convert;
 
     protected abstract T currentUser(HttpRequest req) throws IOException;
-
-    /**
-     * 检测Method是否合法，返回true表示合法
-     *
-     * @param req     HTTP请求对象
-     * @param resp    HTTP响应对象
-     * @param methods 有效方法名数组
-     *
-     * @return
-     */
-    protected boolean checkMethod(HttpRequest req, HttpResponse resp, String[] methods) {
-        if (methods == null || methods.length == 0) return true;
-        for (String m : methods) {
-            if (req.getMethod().equalsIgnoreCase(m)) return true;
-        }
-        resp.finishJson(new RetResult(RET_REST_METHOD_ERROR, "Method Error"));
-        return false;
-    }
 
     /**
      * 异常输出

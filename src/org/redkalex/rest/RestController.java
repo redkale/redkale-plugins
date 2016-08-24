@@ -29,6 +29,6 @@ public @interface RestController {
 
     boolean repair() default true; //同&#64;WebServlet的repair属性
 
-    int module() default 0; //模块ID值，鉴权时用到
+    int module() default 0; //模块ID值，鉴权时用到, 对应&#64;WebServlet.ignore
 
 }

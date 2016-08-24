@@ -188,6 +188,13 @@ public final class RestServletBuilder {
                     av0 = mv.visitAnnotation("Lorg/redkale/net/http/BasedHttpServlet$WebAction;", true);
                     av0.visit("url", "/" + defmodulename.toLowerCase() + "/" + entry.name + ("#".equals(n) ? "/" : ""));
                     av0.visit("actionid", entry.actionid);
+
+                    AnnotationVisitor av1 = av0.visitArray("methods");
+                    for (String m : entry.methods) {
+                        av1.visit(null, m);
+                    }
+                    av1.visitEnd();
+
                     av0.visitEnd();
                 }
                 final String pname = n;
@@ -640,6 +647,7 @@ public final class RestServletBuilder {
             if (n.isEmpty()) n = method.getName().toLowerCase().replace(defmodulename.toLowerCase(), "");
             this.name = n;
             this.mappingMethod = method;
+            this.methods = mapping.methods();
             this.authignore = mapping.authignore();
             this.actionid = mapping.actionid();
             this.contentType = mapping.contentType();
@@ -651,6 +659,8 @@ public final class RestServletBuilder {
         public final boolean ignore;
 
         public final String name;
+
+        public final String[] methods;
 
         public final boolean authignore;
 

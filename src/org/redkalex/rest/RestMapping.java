@@ -33,7 +33,9 @@ public @interface RestMapping {
 
     boolean authignore() default true; //是否跳过鉴权，默认跳过 
 
-    int actionid() default 0; //操作ID值，鉴权时用到
+    int actionid() default 0; //操作ID值，鉴权时用到, 对应&#64;WebAction.actionid
+
+    String[] methods() default {};//允许方法(不区分大小写),如:GET/POST/PUT,为空表示允许所有方法, 对应&#64;WebAction.methods
 
     String contentType() default "";  //设置Response的ContentType 默认值为 text/plain; charset=utf-8
 
