@@ -15,6 +15,7 @@ import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redkale.util.*;
 import org.redkale.convert.json.*;
+import org.redkale.service.LocalService;
 import static org.redkalex.pay.Pays.*;
 import static org.redkalex.pay.PayRetCodes.*;
 
@@ -22,6 +23,8 @@ import static org.redkalex.pay.PayRetCodes.*;
  *
  * @author zhangjx
  */
+@AutoLoad(false)
+@LocalService
 public class AliPayService extends AbstractPayService {
 
     //private static final Charset UTF8 = Charset.forName("UTF-8");
