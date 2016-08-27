@@ -25,7 +25,8 @@ import org.redkale.watch.WatchFactory;
  *
  * @param <K>
  * @param <V>
- * 详情见: http://redkale.org
+ *            详情见: http://redkale.org
+ *
  * @author zhangjx
  */
 @LocalService
@@ -61,11 +62,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
         final int bufferPoolSize = conf.getIntValue("bufferPoolSize", Runtime.getRuntime().availableProcessors() * 8);
         final int threads = conf.getIntValue("threads", Runtime.getRuntime().availableProcessors() * 8);
         final ObjectPool<ByteBuffer> transportPool = new ObjectPool<>(new AtomicLong(), new AtomicLong(), bufferPoolSize,
-                (Object... params) -> ByteBuffer.allocateDirect(bufferCapacity), null, (e) -> {
-                    if (e == null || e.isReadOnly() || e.capacity() != bufferCapacity) return false;
-                    e.clear();
-                    return true;
-                });
+            (Object... params) -> ByteBuffer.allocateDirect(bufferCapacity), null, (e) -> {
+                if (e == null || e.isReadOnly() || e.capacity() != bufferCapacity) return false;
+                e.clear();
+                return true;
+            });
         final List<InetSocketAddress> addresses = new ArrayList<>();
         for (AnyValue node : conf.getAnyValues("node")) {
             addresses.add(new InetSocketAddress(node.getValue("addr"), node.getIntValue("port")));
@@ -85,67 +86,66 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
         }
         this.transport = new Transport("Redis-Transport", "TCP", null, "", transportPool, transportGroup, null, addresses);
     }
-    
+
     /*
-    public static void main(String[] args) throws Exception {
-        DefaultAnyValue conf = new DefaultAnyValue();
-        conf.addValue("node", new DefaultAnyValue().addValue("addr", "10.28.10.11").addValue("port", "5050"));
-
-        RedisCacheSource<String, String> source = new RedisCacheSource();
-        source.init(conf);
-        source.convert = BsonFactory.root().getConvert();
-        source.set("key1", "value1");
-        source.getAndRefresh("key1", 3500);
-        System.out.println("key1 GET : " + source.get("key1"));
-        System.out.println("key2 GET : " + source.get("key2"));
-        System.out.println("key1 EXISTS : " + source.exists("key1"));
-        System.out.println("key2 EXISTS : " + source.exists("key2"));
-        source.remove("keys3");
-        source.appendListItem("keys3", "vals1");
-        source.appendListItem("keys3", "vals2");
-        System.out.println("keys3 VALUES : " + source.getCollection("keys3"));
-        System.out.println("keys3 EXISTS : " + source.exists("keys3"));
-        source.removeListItem("keys3", "vals1");
-        System.out.println("keys3 VALUES : " + source.getCollection("keys3"));
-        source.getCollectionAndRefresh("keys3", 30);
-
-        source.remove("sets3");
-        source.appendSetItem("sets3", "setvals1");
-        source.appendSetItem("sets3", "setvals2");
-        System.out.println("sets3 VALUES : " + source.getCollection("sets3"));
-        System.out.println("sets3 EXISTS : " + source.exists("sets3"));
-        source.removeSetItem("sets3", "setvals1");
-        System.out.println("sets3 VALUES : " + source.getCollection("sets3"));
-
-        System.out.println("---------------------------------");
-        source.exists(new CompletionHandler<Boolean, String>() {
-            @Override
-            public void completed(Boolean result, String attachment) {
-                System.out.println("key1 EXISTS : " + result);
-            }
-
-            @Override
-            public void failed(Throwable exc, String attachment) {
-                exc.printStackTrace();
-            }
-        }, "key1");
-        Thread.sleep(500L);
-        //
-        source.set(new CompletionHandler<Void, String>() {
-            @Override
-            public void completed(Void result, String attachment) {
-                System.out.println("key2 GET : " + source.get("key2"));
-            }
-
-            @Override
-            public void failed(Throwable exc, String attachment) {
-                exc.printStackTrace();
-            }
-        }, "key2", "keyvalue2");
-        Thread.sleep(500L);
-    }
-    */
-    
+     * public static void main(String[] args) throws Exception {
+     * DefaultAnyValue conf = new DefaultAnyValue();
+     * conf.addValue("node", new DefaultAnyValue().addValue("addr", "10.28.10.11").addValue("port", "5050"));
+     *
+     * RedisCacheSource<String, String> source = new RedisCacheSource();
+     * source.init(conf);
+     * source.convert = BsonFactory.root().getConvert();
+     * source.set("key1", "value1");
+     * source.getAndRefresh("key1", 3500);
+     * System.out.println("key1 GET : " + source.get("key1"));
+     * System.out.println("key2 GET : " + source.get("key2"));
+     * System.out.println("key1 EXISTS : " + source.exists("key1"));
+     * System.out.println("key2 EXISTS : " + source.exists("key2"));
+     * source.remove("keys3");
+     * source.appendListItem("keys3", "vals1");
+     * source.appendListItem("keys3", "vals2");
+     * System.out.println("keys3 VALUES : " + source.getCollection("keys3"));
+     * System.out.println("keys3 EXISTS : " + source.exists("keys3"));
+     * source.removeListItem("keys3", "vals1");
+     * System.out.println("keys3 VALUES : " + source.getCollection("keys3"));
+     * source.getCollectionAndRefresh("keys3", 30);
+     *
+     * source.remove("sets3");
+     * source.appendSetItem("sets3", "setvals1");
+     * source.appendSetItem("sets3", "setvals2");
+     * System.out.println("sets3 VALUES : " + source.getCollection("sets3"));
+     * System.out.println("sets3 EXISTS : " + source.exists("sets3"));
+     * source.removeSetItem("sets3", "setvals1");
+     * System.out.println("sets3 VALUES : " + source.getCollection("sets3"));
+     *
+     * System.out.println("---------------------------------");
+     * source.exists(new CompletionHandler<Boolean, String>() {
+     * @Override
+     * public void completed(Boolean result, String attachment) {
+     * System.out.println("key1 EXISTS : " + result);
+     * }
+     *
+     * @Override
+     * public void failed(Throwable exc, String attachment) {
+     * exc.printStackTrace();
+     * }
+     * }, "key1");
+     * Thread.sleep(500L);
+     * //
+     * source.set(new CompletionHandler<Void, String>() {
+     * @Override
+     * public void completed(Void result, String attachment) {
+     * System.out.println("key2 GET : " + source.get("key2"));
+     * }
+     *
+     * @Override
+     * public void failed(Throwable exc, String attachment) {
+     * exc.printStackTrace();
+     * }
+     * }, "key2", "keyvalue2");
+     * Thread.sleep(500L);
+     * }
+     */
     private SimpleFuture<byte[]> send(final String command, final K key, final byte[]... args) {
         return send(command, false, key, args);
     }
@@ -417,93 +417,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     @Override
     public void removeSetItem(K key, V value) {
         send("SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void exists(CompletionHandler<Boolean, K> handler, K key) {
-        send("EXISTS", handler, key, convert.convertTo(key));
-    }
-
-    @Override
-    public void get(CompletionHandler<V, K> handler, K key) {
-        send("GET", handler, key, convert.convertTo(key));
-    }
-
-    @Override
-    public void getAndRefresh(CompletionHandler<V, K> handler, K key, final int expireSeconds) {
-        refresh(key, expireSeconds);
-        get(handler, key);
-    }
-
-    @Override
-    public void refresh(CompletionHandler<Void, K> handler, K key, final int expireSeconds) {
-        setExpireSeconds(handler, key, expireSeconds);
-    }
-
-    @Override
-    public void set(CompletionHandler<Void, K> handler, K key, V value) {
-        send("SET", handler, key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void set(CompletionHandler<Void, K> handler, int expireSeconds, K key, V value) {
-        set(key, value);
-        setExpireSeconds(handler, key, expireSeconds);
-    }
-
-    @Override
-    public void setExpireSeconds(CompletionHandler<Void, K> handler, K key, int expireSeconds) {
-        send("EXPIRE", handler, key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8));
-    }
-
-    @Override
-    public void remove(CompletionHandler<Void, K> handler, K key) {
-        send("DEL", handler, key, convert.convertTo(key));
-    }
-
-    @Override
-    public void getCollection(CompletionHandler<Collection<V>, K> handler, K key) {
-        SimpleFuture<byte[]> future = send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key));
-        try {
-            final byte[] typeDesc = future.get();
-            if (typeDesc == null) {
-                if (handler != null) handler.completed(null, key);
-                return;
-            }
-            if (new String(typeDesc).contains("list")) { //list
-                send("LRANGE", false, handler, key, convert.convertTo(key), new byte[]{'0'}, new byte[]{'-', '1'});
-            } else {
-                send("SMEMBERS", true, handler, key, convert.convertTo(key));
-            }
-        } catch (Exception e) {
-            if (handler != null) handler.failed(e, key);
-        }
-    }
-
-    @Override
-    public void getCollectionAndRefresh(CompletionHandler<Collection<V>, K> handler, K key, final int expireSeconds) {
-        refresh(key, expireSeconds);
-        getCollection(handler, key);
-    }
-
-    @Override
-    public void appendListItem(CompletionHandler<Void, K> handler, K key, V value) {
-        send("RPUSH", handler, key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void removeListItem(CompletionHandler<Void, K> handler, K key, V value) {
-        send("LREM", handler, key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void appendSetItem(CompletionHandler<Void, K> handler, K key, V value) {
-        send("SADD", handler, key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void removeSetItem(CompletionHandler<Void, K> handler, K key, V value) {
-        send("SREM", handler, key, convert.convertTo(key), convert.convertTo(Object.class, value));
     }
 
 }
