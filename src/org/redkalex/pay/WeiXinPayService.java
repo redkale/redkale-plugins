@@ -407,7 +407,7 @@ public class WeiXinPayService extends AbstractPayService {
             //CHANGE—转入代发，退款到银行发现用户的卡作废或者冻结了，导致原路退款银行卡失败，资金回流到商户的现金帐号，需要商户人工干预，通过线下或者财付通转账的方式进行退款。
 
             result.setResult(resultmap);
-            result.setRefundedmoney(Long.parseLong(map.get("refund_fee_$n")));
+            result.setRefundedmoney(Long.parseLong(resultmap.get("refund_fee_$n")));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error", e);
