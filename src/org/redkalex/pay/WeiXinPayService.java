@@ -59,7 +59,7 @@ public class WeiXinPayService extends AbstractPayService {
             try {
                 File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
                 InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
-                if(in == null) return;
+                if (in == null) return;
                 Properties properties = new Properties();
                 properties.load(in);
                 in.close();
@@ -289,10 +289,12 @@ public class WeiXinPayService extends AbstractPayService {
             result.setResult(resultmap);
 
             String state = resultmap.getOrDefault("trade_state", "");
-            if (state == null && "SUCCESS".equals(resultmap.get("result_code")) && Long.parseLong(resultmap.get("total_fee")) > 0) {
+            if (state.isEmpty() && "SUCCESS".equals(resultmap.get("result_code")) && Long.parseLong(resultmap.get("total_fee")) > 0) {
                 state = "SUCCESS";
             }
             if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+            if (state.isEmpty()) logger.warning("weixin.pay.query = " + resultmap);
+
             //trade_state 支付状态: SUCCESS—支付成功 REFUND—转入退款 NOTPAY—未支付 CLOSED—已关闭 REVOKED—已撤销（刷卡支付） USERPAYING--用户支付中 PAYERROR--支付失败(其他原因，如银行返回失败)
             short paystatus = PAYSTATUS_PAYNO;
             switch (state) {
