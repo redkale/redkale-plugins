@@ -288,8 +288,8 @@ public class WeiXinPayService extends AbstractPayService {
             final Map<String, String> resultmap = formatXMLToMap(responseText);
             result.setResult(resultmap);
 
-            String state = map.getOrDefault("trade_state", "");
-            if (state == null && "SUCCESS".equals(map.get("result_code")) && Long.parseLong(map.get("total_fee")) > 0) {
+            String state = resultmap.getOrDefault("trade_state", "");
+            if (state == null && "SUCCESS".equals(resultmap.get("result_code")) && Long.parseLong(resultmap.get("total_fee")) > 0) {
                 state = "SUCCESS";
             }
             if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
@@ -310,8 +310,8 @@ public class WeiXinPayService extends AbstractPayService {
                     break;
             }
             result.setPaystatus(paystatus);
-            result.setThirdpayno(map.getOrDefault("transaction_id", ""));
-            result.setPayedmoney(Long.parseLong(map.getOrDefault("total_fee", "0")));
+            result.setThirdpayno(resultmap.getOrDefault("transaction_id", ""));
+            result.setPayedmoney(Long.parseLong(resultmap.getOrDefault("total_fee", "0")));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error", e);
