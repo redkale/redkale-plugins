@@ -6,6 +6,7 @@
 package org.redkalex.pay;
 
 import java.lang.reflect.*;
+import java.text.MessageFormat;
 import java.util.*;
 import org.redkale.service.*;
 
@@ -64,9 +65,11 @@ public abstract class PayRetCodes {
         }
     }
 
-    public static RetResult retResult(int retcode) {
+    public static RetResult retResult(int retcode, Object... args) {
         if (retcode == 0) return RetResult.success();
-        return new RetResult(retcode, retInfo(retcode));
+        if (args == null || args.length < 1) return new RetResult(retcode, retInfo(retcode));
+        String info = MessageFormat.format(retInfo(retcode), args);
+        return new RetResult(retcode, info);
     }
 
     public static String retInfo(int retcode) {
