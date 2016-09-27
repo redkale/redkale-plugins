@@ -15,30 +15,30 @@ public abstract class Pays {
 
     //--------------------- 支付类型 -----------------------------
     //信用/虚拟支付
-    public static final short PAYTYPE_CREDIT = 10;
+    public static final short PAYTYPE_CREDIT = 5;
 
     //银联支付
-    public static final short PAYTYPE_UNION = 30;
+    public static final short PAYTYPE_UNION = 10;
 
     //微信支付
-    public static final short PAYTYPE_WEIXIN = 40;
+    public static final short PAYTYPE_WEIXIN = 20;
 
     //支付宝支付
-    public static final short PAYTYPE_ALIPAY = 50;
+    public static final short PAYTYPE_ALIPAY = 30;
 
     //--------------------- 支付渠道 -----------------------------
-    //支付渠道: 10:信用/虚拟支付;30:APP支付; 40:网页支付; 50:机器支付;
+    //支付渠道:  5: 信用/虚拟支付; 10:APP支付; 20:网页支付; 30:机器支付;
     //信用/虚拟支付
-    public static final short PAYWAY_CREDIT = 10;
+    public static final short PAYWAY_CREDIT = 5;
 
     //APP支付
-    public static final short PAYWAY_APP = 30;
+    public static final short PAYWAY_APP = 10;
 
     //网页支付
-    public static final short PAYWAY_WEB = 40;
+    public static final short PAYWAY_WEB = 20;
 
     //机器支付
-    public static final short PAYWAY_NATIVE = 50;
+    public static final short PAYWAY_NATIVE = 30;
 
     //--------------------- 支付状态 -----------------------------
     //10:待支付;20:支付中;30:已支付;40:支付失败;50:带退款;60退款中;70:已退款;80:退款失败;90:已关闭;95:已取消;
