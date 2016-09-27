@@ -14,18 +14,20 @@ package org.redkalex.pay;
 public abstract class Pays {
 
     //--------------------- 支付类型 -----------------------------
+    //信用/虚拟支付
+    public static final short PAYTYPE_CREDIT = 10;
+
     //银联支付
-    public static final short PAYTYPE_UNION = 10;
+    public static final short PAYTYPE_UNION = 30;
 
     //微信支付
-    public static final short PAYTYPE_WEIXIN = 20;
+    public static final short PAYTYPE_WEIXIN = 40;
 
     //支付宝支付
-    public static final short PAYTYPE_ALIPAY = 30;
+    public static final short PAYTYPE_ALIPAY = 50;
 
     //--------------------- 支付渠道 -----------------------------
     //支付渠道: 10:信用/虚拟支付;30:APP支付; 40:网页支付; 50:机器支付;
-    
     //信用/虚拟支付
     public static final short PAYWAY_CREDIT = 10;
 
