@@ -22,7 +22,7 @@ import static org.redkalex.pay.PayRetCodes.*;
 /**
  * 银联支付官网文档： https://open.unionpay.com/ajweb/help/file/techFile?productId=1
  *
- * 详情见: http://redkale.org
+ * 详情见: https://redkale.org
  *
  * @author zhangjx
  */

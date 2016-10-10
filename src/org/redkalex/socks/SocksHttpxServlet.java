@@ -17,7 +17,7 @@ import org.redkale.util.*;
 /**
  * 正向代理
  *
- * 详情见: http://redkale.org
+ * 详情见: https://redkale.org
  * @author zhangjx
  */
 @AutoLoad(false)

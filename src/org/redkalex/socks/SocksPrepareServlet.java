@@ -11,7 +11,7 @@ import java.io.*;
 
 /**
  *
- * 详情见: http://redkale.org
+ * 详情见: https://redkale.org
  * @author zhangjx
  */
 public final class SocksPrepareServlet extends PrepareServlet<Serializable, SocksContext, SocksRequest, SocksResponse, SocksServlet> {

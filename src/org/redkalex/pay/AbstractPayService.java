@@ -12,7 +12,7 @@ import org.redkale.service.*;
 /**
  * 支付抽象类
  *
- * 详情见: http://redkale.org
+ * 详情见: https://redkale.org
  *
  * @author zhangjx
  */

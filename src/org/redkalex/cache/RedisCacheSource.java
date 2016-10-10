@@ -22,11 +22,11 @@ import org.redkale.util.*;
 import org.redkale.watch.WatchFactory;
 
 /**
+ * 详情见: https://redkale.org
  *
  * @param <K>
  * @param <V>
- *            详情见: http://redkale.org
- *
+ * 
  * @author zhangjx
  */
 @LocalService

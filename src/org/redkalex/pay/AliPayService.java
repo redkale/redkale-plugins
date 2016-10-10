@@ -20,6 +20,8 @@ import static org.redkalex.pay.Pays.*;
 import static org.redkalex.pay.PayRetCodes.*;
 
 /**
+ * 
+ * 详情见: https://redkale.org
  *
  * @author zhangjx
  */

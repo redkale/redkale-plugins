@@ -15,7 +15,7 @@ import org.redkale.net.http.*;
 
 /**
  *
- * 详情见: http://redkale.org
+ * 详情见: https://redkale.org
  * @author zhangjx
  */
 public class SocksResponse extends Response<SocksContext, SocksRequest> {

@@ -11,6 +11,7 @@ import org.redkale.service.*;
 import org.redkalex.pay.Pays;
 
 /**
+ * 详情见: https://redkale.org
  *
  * @author zhangjx
  */

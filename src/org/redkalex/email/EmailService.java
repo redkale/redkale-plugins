@@ -19,7 +19,7 @@ import static org.redkalex.email.EmailCodes.*;
 
 /**
  *
- * 详情见: http://redkale.org
+ * 详情见: https://redkale.org
  * @author zhangjx
  */
 @AutoLoad(false)

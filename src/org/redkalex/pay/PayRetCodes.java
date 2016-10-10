@@ -11,6 +11,8 @@ import java.util.*;
 import org.redkale.service.*;
 
 /**
+ * 
+ * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
