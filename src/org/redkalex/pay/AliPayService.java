@@ -85,31 +85,32 @@ public class AliPayService extends AbstractPayService {
             final AliPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
 
-            // 参数编码， 固定值
-            String param = "_input_charset=\"utf-8\"";
+            // 签约合作者身份ID
+            String param = "partner=" + "\"" + element.merchno + "\"";
+            // 签约卖家支付宝账号(也可用身份ID)
+            param += "&seller_id=" + "\"" + element.sellerid + "\"";
+            // 商户网站唯一订单号
+            param += "&out_trade_no=" + "\"" + request.getPayno() + "\"";
+            // 商品名称
+            param += "&subject=" + "\"" + request.getPaytitle() + "\"";
             // 商品详情
             param += "&body=" + "\"" + request.getPaybody() + "\"";
+            // 商品金额
+            param += "&total_fee=" + "\"" + (request.getPaymoney() / 100.0) + "\"";
+            // 服务器异步通知页面路径
+            param += "&notify_url=" + "\"" + element.notifyurl + "\"";
+            // 服务接口名称， 固定值
+            param += "&service=\"mobile.securitypay.pay\"";
+            // 支付类型， 固定值
+            param += "&payment_type=\"1\"";
+            // 参数编码， 固定值
+            param += "&_input_charset=\"utf-8\"";
+
             // 设置未付款交易的超时时间
             // 默认30分钟，一旦超时，该笔交易就会自动被关闭。
             // 取值范围：1m～15d。 m-分钟，h-小时，d-天，1c-当天（无论交易何时创建，都在0点关闭）。
             // 该参数数值不接受小数点，如1.5h，可转换为90m。
             param += "&it_b_pay=\"" + request.getTimeoutms() + "m\"";
-            // 服务器异步通知页面路径
-            param += "&notify_url=" + "\"" + element.notifyurl + "\"";
-            // 商户网站唯一订单号
-            param += "&out_trade_no=" + "\"" + request.getPayno() + "\"";
-            // 签约合作者身份ID
-            param += "&partner=" + "\"" + element.merchno + "\"";
-            // 支付类型， 固定值
-            param += "&payment_type=\"1\"";
-            // 签约卖家支付宝账号(也可用身份ID)
-            param += "&seller_id=" + "\"" + element.sellerid + "\"";
-            // 服务接口名称， 固定值
-            param += "&service=\"mobile.securitypay.pay\"";
-            // 商品名称
-            param += "&subject=" + "\"" + request.getPaytitle() + "\"";
-            // 商品金额
-            param += "&total_fee=" + "\"" + (request.getPaymoney() / 100.0) + "\"";
 
             Signature signature = Signature.getInstance("SHA1WithRSA");
             signature.initSign(element.priKey);
