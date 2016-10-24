@@ -451,7 +451,7 @@ public class WeiXinPayService extends AbstractPayService {
         return sb.toString();
     }
 
-    protected static Map<String, String> formatXMLToMap(final String xml) {
+    public static Map<String, String> formatXMLToMap(final String xml) {
         Map<String, String> map = new TreeMap<>();
         Matcher m = PAYXML.matcher(xml.substring(xml.indexOf('>') + 1));
         while (m.find()) {
