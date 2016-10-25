@@ -11,7 +11,7 @@ import java.util.*;
 import org.redkale.service.*;
 
 /**
- * 
+ *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -30,6 +30,9 @@ public abstract class PayRetCodes {
 
     @RetLabel("支付配置异常")
     public static final int RETPAY_CONF_ERROR = 20010003;
+
+    @RetLabel("重复支付")
+    public static final int RETPAY_PAY_REPEAT = 20010004;
 
     @RetLabel("交易签名被篡改")
     public static final int RETPAY_FALSIFY_ERROR = 20010011;
