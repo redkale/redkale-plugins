@@ -5,7 +5,6 @@
  */
 package org.redkalex.pay;
 
-import java.lang.reflect.*;
 import java.text.MessageFormat;
 import java.util.*;
 import org.redkale.service.*;
@@ -47,28 +46,7 @@ public abstract class PayRetCodes {
     public static final int RETPAY_OPENID_ERROR = 20010021;
 
     //-----------------------------------------------------------------------------------------------------------
-    protected static final Map<Integer, String> rets = new HashMap<>();
-
-    static {
-        load(Pays.class);
-    }
-
-    protected static void load(Class clazz) {
-        for (Field field : clazz.getFields()) {
-            if (!Modifier.isStatic(field.getModifiers())) continue;
-            if (field.getType() != int.class) continue;
-            RetLabel info = field.getAnnotation(RetLabel.class);
-            if (info == null) continue;
-            int value;
-            try {
-                value = field.getInt(null);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                continue;
-            }
-            rets.put(value, info.value());
-        }
-    }
+    protected static final Map<Integer, String> rets = RetLabel.RetLoader.load(PayRetCodes.class);
 
     public static RetResult retResult(int retcode, Object... args) {
         if (retcode == 0) return RetResult.success();
