@@ -70,6 +70,10 @@ public class WeiXinPayService extends AbstractPayService {
         }
     }
 
+    public void setPayElements(Map<String, WeixinPayElement> elements) {
+        this.elements = elements;
+    }
+
     /**
      * 手机支付或者微信公众号支付时调用
      *
@@ -462,7 +466,7 @@ public class WeiXinPayService extends AbstractPayService {
         return map;
     }
 
-    protected static class WeixinPayElement extends PayElement {
+    public static class WeixinPayElement extends PayElement {
 
         // pay.weixin.[x].merchno
         public String merchno = ""; //商户ID
@@ -532,19 +536,23 @@ public class WeiXinPayService extends AbstractPayService {
                 InputStream in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
                 //需要更新%JDK_HOME%\jre\lib\security下的policy
                 //http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html 
-                final KeyStore keyStore = KeyStore.getInstance("PKCS12");
-                keyStore.load(in, this.certpwd.toCharArray());
-                in.close();
-                KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-                keyManagerFactory.init(keyStore, certpwd.toCharArray());
-                SSLContext ctx = SSLContext.getInstance("TLSv1");
-                ctx.init(keyManagerFactory.getKeyManagers(), null, null);
-                this.paySSLContext = ctx;
+                setPaySSLContext(in);
                 return true;
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init weixinpay sslcontext error", e);
                 return false;
             }
+        }
+
+        public void setPaySSLContext(InputStream in) throws Exception {
+            final KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            keyStore.load(in, this.certpwd.toCharArray());
+            in.close();
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keyStore, certpwd.toCharArray());
+            SSLContext ctx = SSLContext.getInstance("TLSv1");
+            ctx.init(keyManagerFactory.getKeyManagers(), null, null);
+            this.paySSLContext = ctx;
         }
 
         @Override

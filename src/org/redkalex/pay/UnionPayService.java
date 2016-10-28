@@ -12,7 +12,6 @@ import java.security.cert.*;
 import java.util.*;
 import java.util.logging.*;
 import javax.annotation.Resource;
-import javax.net.ssl.SSLContext;
 import org.redkale.util.*;
 import org.redkale.service.*;
 import org.redkale.convert.json.*;
@@ -73,8 +72,6 @@ public class UnionPayService extends AbstractPayService {
     @Resource(name = "APP_HOME")
     protected File home;
 
-    protected SSLContext paySSLContext;
-
     @Resource
     protected JsonConvert convert;
 
@@ -95,29 +92,34 @@ public class UnionPayService extends AbstractPayService {
             //读取签名证书私钥
             File signfile = (signcertpath.indexOf('/') == 0 || signcertpath.indexOf(':') > 0) ? new File(this.signcertpath) : new File(home, "conf/" + this.signcertpath);
             InputStream signin = signfile.isFile() ? new FileInputStream(signfile) : getClass().getResourceAsStream("/META-INF/" + this.signcertpath);
-
-            final KeyStore keyStore = KeyStore.getInstance("PKCS12");
-            keyStore.load(signin, this.signcertpwd.toCharArray());
-            signin.close();
-            Enumeration<String> aliasenum = keyStore.aliases();
-            final String keyAlias = aliasenum.hasMoreElements() ? aliasenum.nextElement() : null;
-            PrivateKey priKey = (PrivateKey) keyStore.getKey(keyAlias, this.signcertpwd.toCharArray());
-            X509Certificate cert = (X509Certificate) keyStore.getCertificate(keyAlias);
-            this.signcertid = cert.getSerialNumber().toString();
-
             //读取验证证书公钥
             File verifyfile = (verifycertpath.indexOf('/') == 0 || verifycertpath.indexOf(':') > 0) ? new File(this.verifycertpath) : new File(home, "conf/" + this.verifycertpath);
             InputStream verifyin = verifyfile.isFile() ? new FileInputStream(verifyfile) : getClass().getResourceAsStream("/META-INF/" + this.verifycertpath);
 
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            X509Certificate verifycert = (X509Certificate) cf.generateCertificate(verifyin);
-            verifyin.close();
-            this.verifycertid = verifycert.getSerialNumber().toString();
-            PublicKey pubKey = verifycert.getPublicKey();
-            this.element = new UnionPayElement(priKey, pubKey);
+            this.setUnionPayElement(signin, verifyin);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void setUnionPayElement(InputStream signin, InputStream verifyin) throws Exception {
+        //读取签名证书私钥
+        final KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(signin, this.signcertpwd.toCharArray());
+        signin.close();
+        Enumeration<String> aliasenum = keyStore.aliases();
+        final String keyAlias = aliasenum.hasMoreElements() ? aliasenum.nextElement() : null;
+        PrivateKey priKey = (PrivateKey) keyStore.getKey(keyAlias, this.signcertpwd.toCharArray());
+        X509Certificate cert = (X509Certificate) keyStore.getCertificate(keyAlias);
+        this.signcertid = cert.getSerialNumber().toString();
+
+        //读取验证证书公钥
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        X509Certificate verifycert = (X509Certificate) cf.generateCertificate(verifyin);
+        verifyin.close();
+        this.verifycertid = verifycert.getSerialNumber().toString();
+        PublicKey pubKey = verifycert.getPublicKey();
+        this.element = new UnionPayElement(priKey, pubKey);
     }
 
     public static void main(String[] args) throws Throwable {
@@ -467,7 +469,59 @@ public class UnionPayService extends AbstractPayService {
         }
     }
 
-    protected static class UnionPayElement extends PayElement {
+    public void setMerchno(String merchno) {
+        this.merchno = merchno;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public void setNotifyurl(String notifyurl) {
+        this.notifyurl = notifyurl;
+    }
+
+    public void setCreateurl(String createurl) {
+        this.createurl = createurl;
+    }
+
+    public void setQueryurl(String queryurl) {
+        this.queryurl = queryurl;
+    }
+
+    public void setRefundurl(String refundurl) {
+        this.refundurl = refundurl;
+    }
+
+    public void setCloseurl(String closeurl) {
+        this.closeurl = closeurl;
+    }
+
+    public void setSigncertpwd(String signcertpwd) {
+        this.signcertpwd = signcertpwd;
+    }
+
+    public void setSigncertpath(String signcertpath) {
+        this.signcertpath = signcertpath;
+    }
+
+    public void setVerifycertpath(String verifycertpath) {
+        this.verifycertpath = verifycertpath;
+    }
+
+    public void setSigncertid(String signcertid) {
+        this.signcertid = signcertid;
+    }
+
+    public void setVerifycertid(String verifycertid) {
+        this.verifycertid = verifycertid;
+    }
+
+    public void setUnionPayElement(UnionPayElement element) {
+        this.element = element;
+    }
+
+    public static class UnionPayElement extends PayElement {
 
         protected PrivateKey priKey; //私钥
 

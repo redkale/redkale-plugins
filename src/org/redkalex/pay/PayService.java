@@ -100,4 +100,16 @@ public class PayService extends AbstractPayService {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public UnionPayService getUnionPayService() {
+        return unionPayService;
+    }
+
+    public WeiXinPayService getWeiXinPayService() {
+        return weiXinPayService;
+    }
+
+    public AliPayService getAliPayService() {
+        return aliPayService;
+    }
+
 }

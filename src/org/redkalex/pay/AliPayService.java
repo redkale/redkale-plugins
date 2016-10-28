@@ -76,6 +76,10 @@ public class AliPayService extends AbstractPayService {
         }
     }
 
+    public void setPayElements(Map<String, AliPayElement> elements) {
+        this.elements = elements;
+    }
+
     @Override
     public PayPreResponse prepay(final PayPreRequest request) {
         request.checkVaild();
@@ -416,7 +420,7 @@ public class AliPayService extends AbstractPayService {
         }
     }
 
-    protected static class AliPayElement extends PayElement {
+    public static class AliPayElement extends PayElement {
 
         // pay.alipay.[x].merchno
         public String merchno = ""; //商户ID 签约的支付宝账号对应的支付宝唯一用户号。以2088开头的16位纯数字组成。
