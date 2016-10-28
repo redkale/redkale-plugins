@@ -181,7 +181,7 @@ public class UnionPayService extends AbstractPayService {
             map.put("currencyCode", "156");                 //境内商户CNY固定 156 人民币
 
             //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址
-            map.put("backUrl", notifyurl);
+            map.put("backUrl", ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : notifyurl));
             map.put("signature", createSign(element, map));
 
             result.responsetext = Utility.postHttpContent(this.createurl, joinMap(map));

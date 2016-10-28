@@ -98,7 +98,7 @@ public class AliPayService extends AbstractPayService {
             // 商品金额
             param += "&total_fee=" + "\"" + (request.getPaymoney() / 100.0) + "\"";
             // 服务器异步通知页面路径
-            param += "&notify_url=" + "\"" + element.notifyurl + "\"";
+            param += "&notify_url=" + "\"" + ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl) + "\"";
             // 服务接口名称， 固定值
             param += "&service=\"mobile.securitypay.pay\"";
             // 支付类型， 固定值

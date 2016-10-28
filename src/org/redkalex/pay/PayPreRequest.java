@@ -23,6 +23,8 @@ public class PayPreRequest extends PayRequest {
 
     protected String paybody = ""; //订单内容描述
 
+    protected String notifyurl = ""; //回调url 不为空时会替换默认的回调url
+
     protected int timeoutms = 10; //支付超时的分钟数
 
     protected String clientAddr = "";  //客户端IP地址
@@ -37,7 +39,7 @@ public class PayPreRequest extends PayRequest {
         if (this.paybody == null || this.paybody.isEmpty() || this.paybody.indexOf('"') >= 0) throw new RuntimeException("paybody is illegal");
         if (this.clientAddr == null || this.clientAddr.isEmpty()) throw new RuntimeException("clientAddr is illegal");
         if (this.timeoutms < 5) throw new RuntimeException("timeoutms cannot less 5 minutes");
-        if (this.timeoutms > 24 * 60 ) throw new RuntimeException("timeoutms cannot greater 1 day");
+        if (this.timeoutms > 24 * 60) throw new RuntimeException("timeoutms cannot greater 1 day");
     }
 
     public Map<String, String> add(String key, String value) {
@@ -76,6 +78,14 @@ public class PayPreRequest extends PayRequest {
 
     public void setPaybody(String paybody) {
         this.paybody = paybody;
+    }
+
+    public String getNotifyurl() {
+        return notifyurl;
+    }
+
+    public void setNotifyurl(String notifyurl) {
+        this.notifyurl = notifyurl;
     }
 
     public int getTimeoutms() {

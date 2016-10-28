@@ -95,7 +95,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("total_fee", "" + request.getPaymoney());
             map.put("spbill_create_ip", request.getClientAddr());
             map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getTimeoutms() * 60 * 1000));
-            map.put("notify_url", element.notifyurl);
+            map.put("notify_url", ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl));
             map.put("trade_type", request.getPayway() == PAYWAY_WEB ? "JSAPI" : "APP");
             //trade_type=JSAPI，openid参数必传，用户在商户appid下的唯一标识
             if (request.getPayway() == PAYWAY_WEB && !map.containsKey("openid")) return result.retcode(RETPAY_OPENID_ERROR);
