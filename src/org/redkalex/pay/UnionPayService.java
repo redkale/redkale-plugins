@@ -114,7 +114,7 @@ public class UnionPayService extends AbstractPayService {
 
     public void setUnionPayElement(InputStream signin, InputStream verifyin) throws Exception {
         //读取签名证书私钥
-        final KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        final KeyStore keyStore = (Security.getProvider("BC") == null) ? KeyStore.getInstance("PKCS12") : KeyStore.getInstance("PKCS12", "BC");
         keyStore.load(signin, this.signcertpwd.toCharArray());
         signin.close();
         Enumeration<String> aliasenum = keyStore.aliases();
@@ -124,7 +124,7 @@ public class UnionPayService extends AbstractPayService {
         this.signcertid = cert.getSerialNumber().toString();
 
         //读取验证证书公钥
-        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        CertificateFactory cf = (Security.getProvider("BC") == null) ? CertificateFactory.getInstance("X.509") : CertificateFactory.getInstance("X.509", "BC");
         X509Certificate verifycert = (X509Certificate) cf.generateCertificate(verifyin);
         verifyin.close();
         this.verifycertid = verifycert.getSerialNumber().toString();
