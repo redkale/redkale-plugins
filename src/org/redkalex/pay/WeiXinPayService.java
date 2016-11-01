@@ -525,7 +525,10 @@ public class WeiXinPayService extends AbstractPayService {
                 element.signkey = signkey;
                 element.certpwd = certpwd;
                 element.certpath = certpath;
-                if (element.initSSLContext(logger, home)) map.put(appid, element);
+                if (element.initSSLContext(logger, home)) {
+                    map.put(appid, element);
+                    if (def_appid.equals(appid)) map.put("", element);
+                }
             });
             return map;
         }

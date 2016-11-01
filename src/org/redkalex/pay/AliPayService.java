@@ -482,7 +482,10 @@ public class AliPayService extends AbstractPayService {
                 element.notifyurl = notifyurl;
                 element.signcertkey = signcertkey;
                 element.verifycertkey = verifycertkey;
-                if (element.initSSLKey(logger)) map.put(appid, element);
+                if (element.initSSLKey(logger)) {
+                    map.put(appid, element);
+                    if (def_appid.equals(appid)) map.put("", element);
+                }
             });
             return map;
         }
