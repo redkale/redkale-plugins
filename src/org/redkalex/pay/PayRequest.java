@@ -32,7 +32,8 @@ public class PayRequest {
 
     public void checkVaild() {
         if (this.paytype < 1) throw new RuntimeException("paytype is illegal");
-        if (this.paytype != Pays.PAYTYPE_UNION && (this.appid == null || this.appid.isEmpty())) throw new RuntimeException("appid is illegal");
+        //只有一个支付配置时无需提供appid
+        //if (this.paytype != Pays.PAYTYPE_UNION && (this.appid == null || this.appid.isEmpty())) throw new RuntimeException("appid is illegal");
         if (this.payno == null || this.payno.isEmpty()) throw new RuntimeException("payno is illegal");
     }
 
