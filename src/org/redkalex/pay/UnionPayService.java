@@ -81,6 +81,16 @@ public class UnionPayService extends AbstractPayService {
 
     protected UnionPayElement element;
 
+    static {
+        try {
+            Class clazz = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
+            Class<? extends java.security.Provider> providerClazz = (Class<? extends java.security.Provider>) clazz;
+            if (Security.getProvider("BC") != null) Security.removeProvider("BC");
+            Security.addProvider(providerClazz.newInstance());
+        } catch (Exception ex) {
+        }
+    }
+
     @Override
     public void init(AnyValue conf) {
         if (this.merchno == null || this.merchno.isEmpty()) return;//没有启用银联支付
