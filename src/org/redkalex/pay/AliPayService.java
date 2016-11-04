@@ -80,6 +80,14 @@ public class AliPayService extends AbstractPayService {
         this.elements = elements;
     }
 
+    public AliPayElement getPayElement(String appid) {
+        return this.elements.get(appid);
+    }
+
+    public void setPayElement(String appid, AliPayElement element) {
+        this.elements.put(appid, element);
+    }
+
     @Override
     public PayPreResponse prepay(final PayPreRequest request) {
         request.checkVaild();
@@ -450,25 +458,25 @@ public class AliPayService extends AbstractPayService {
         protected PublicKey pubKey; //公钥
 
         public static Map<String, AliPayElement> create(Logger logger, Properties properties) {
-            String def_appid = properties.getProperty("pay.alipay.appid", "");
-            String def_merchno = properties.getProperty("pay.alipay.merchno", "");
-            String def_sellerid = properties.getProperty("pay.alipay.sellerid", "");
-            String def_charset = properties.getProperty("pay.alipay.charset", "UTF-8");
-            String def_notifyurl = properties.getProperty("pay.alipay.notifyurl", "");
-            String def_signcertkey = properties.getProperty("pay.alipay.signcertkey", "");
-            String def_verifycertkey = properties.getProperty("pay.alipay.verifycertkey", "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDDI6d306Q8fIfCOaTXyiUeJHkrIvYISRcc73s3vF1ZT7XN8RNPwJxo8pWaJMmvyTn9N4HQ632qJBVHf8sxHi/fEsraprwCtzvzQETrNRwVxLO5jVmRGi60j8Ue1efIlzPXV9je9mkjzOmdssymZkh2QhUrCmZYI/FCEa3/cNMW0QIDAQAB");
+            String def_appid = properties.getProperty("pay.alipay.appid", "").trim();
+            String def_merchno = properties.getProperty("pay.alipay.merchno", "").trim();
+            String def_sellerid = properties.getProperty("pay.alipay.sellerid", "").trim();
+            String def_charset = properties.getProperty("pay.alipay.charset", "UTF-8").trim();
+            String def_notifyurl = properties.getProperty("pay.alipay.notifyurl", "").trim();
+            String def_signcertkey = properties.getProperty("pay.alipay.signcertkey", "").trim();
+            String def_verifycertkey = properties.getProperty("pay.alipay.verifycertkey", "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDDI6d306Q8fIfCOaTXyiUeJHkrIvYISRcc73s3vF1ZT7XN8RNPwJxo8pWaJMmvyTn9N4HQ632qJBVHf8sxHi/fEsraprwCtzvzQETrNRwVxLO5jVmRGi60j8Ue1efIlzPXV9je9mkjzOmdssymZkh2QhUrCmZYI/FCEa3/cNMW0QIDAQAB").trim();
 
             final Map<String, AliPayElement> map = new HashMap<>();
             properties.keySet().stream().filter(x -> x.toString().startsWith("pay.alipay.") && x.toString().endsWith(".appid")).forEach(appid_key -> {
                 final String prefix = appid_key.toString().substring(0, appid_key.toString().length() - ".appid".length());
 
-                String appid = properties.getProperty(prefix + ".appid", def_appid);
-                String merchno = properties.getProperty(prefix + ".merchno", def_merchno);
-                String sellerid = properties.getProperty(prefix + ".sellerid", def_sellerid);
-                String charset = properties.getProperty(prefix + ".charset", def_charset);
-                String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl);
-                String signcertkey = properties.getProperty(prefix + ".signcertkey", def_signcertkey);
-                String verifycertkey = properties.getProperty(prefix + ".verifycertkey", def_verifycertkey);
+                String appid = properties.getProperty(prefix + ".appid", def_appid).trim();
+                String merchno = properties.getProperty(prefix + ".merchno", def_merchno).trim();
+                String sellerid = properties.getProperty(prefix + ".sellerid", def_sellerid).trim();
+                String charset = properties.getProperty(prefix + ".charset", def_charset).trim();
+                String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl).trim();
+                String signcertkey = properties.getProperty(prefix + ".signcertkey", def_signcertkey).trim();
+                String verifycertkey = properties.getProperty(prefix + ".verifycertkey", def_verifycertkey).trim();
 
                 if (appid.isEmpty() || merchno.isEmpty() || notifyurl.isEmpty() || signcertkey.isEmpty() || verifycertkey.isEmpty()) {
                     logger.log(Level.WARNING, properties + "; has illegal alipay conf by prefix" + prefix);

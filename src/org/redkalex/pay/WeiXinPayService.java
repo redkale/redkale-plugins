@@ -74,6 +74,14 @@ public class WeiXinPayService extends AbstractPayService {
         this.elements = elements;
     }
 
+    public WeixinPayElement getPayElement(String appid) {
+        return this.elements.get(appid);
+    }
+
+    public void setPayElement(String appid, WeixinPayElement element) {
+        this.elements.put(appid, element);
+    }
+
     /**
      * 手机支付或者微信公众号支付时调用
      *
@@ -489,31 +497,36 @@ public class WeiXinPayService extends AbstractPayService {
         // pay.weixin.[x].certpath
         public String certpath = "";  //apiclient_cert.p12 HTTP证书在服务器中的路径，用来加载证书用, 不是/开头且没有:字符，视为{APP_HOME}/conf相对下的路径
 
+        // pay.weixin.[x].certbase64
+        public String certbase64 = "";  //证书内容，存在的话则不取certpath文件中的内容
+
         //
         protected SSLContext paySSLContext;
 
         public static Map<String, WeixinPayElement> create(Logger logger, Properties properties, File home) {
-            String def_appid = properties.getProperty("pay.weixin.appid", "");
-            String def_merchno = properties.getProperty("pay.weixin.merchno", "");
-            String def_submerchno = properties.getProperty("pay.weixin.submerchno", "");
-            String def_notifyurl = properties.getProperty("pay.weixin.notifyurl", "");
-            String def_signkey = properties.getProperty("pay.weixin.signkey", "");
-            String def_certpwd = properties.getProperty("pay.weixin.certpwd", "");
-            String def_certpath = properties.getProperty("pay.weixin.certpath", "");
+            String def_appid = properties.getProperty("pay.weixin.appid", "").trim();
+            String def_merchno = properties.getProperty("pay.weixin.merchno", "").trim();
+            String def_submerchno = properties.getProperty("pay.weixin.submerchno", "").trim();
+            String def_notifyurl = properties.getProperty("pay.weixin.notifyurl", "").trim();
+            String def_signkey = properties.getProperty("pay.weixin.signkey", "").trim();
+            String def_certpwd = properties.getProperty("pay.weixin.certpwd", "").trim();
+            String def_certpath = properties.getProperty("pay.weixin.certpath", "").trim();
+            String def_certbase64 = properties.getProperty("pay.weixin.certbase64", "").trim();
 
             final Map<String, WeixinPayElement> map = new HashMap<>();
             properties.keySet().stream().filter(x -> x.toString().startsWith("pay.weixin.") && x.toString().endsWith(".appid")).forEach(appid_key -> {
                 final String prefix = appid_key.toString().substring(0, appid_key.toString().length() - ".appid".length());
 
-                String appid = properties.getProperty(prefix + ".appid", def_appid);
-                String merchno = properties.getProperty(prefix + ".merchno", def_merchno);
-                String submerchno = properties.getProperty(prefix + ".submerchno", def_submerchno);
-                String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl);
-                String signkey = properties.getProperty(prefix + ".signkey", def_signkey);
-                String certpwd = properties.getProperty(prefix + ".certpwd", def_certpwd);
-                String certpath = properties.getProperty(prefix + ".certpath", def_certpath);
+                String appid = properties.getProperty(prefix + ".appid", def_appid).trim();
+                String merchno = properties.getProperty(prefix + ".merchno", def_merchno).trim();
+                String submerchno = properties.getProperty(prefix + ".submerchno", def_submerchno).trim();
+                String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl).trim();
+                String signkey = properties.getProperty(prefix + ".signkey", def_signkey).trim();
+                String certpwd = properties.getProperty(prefix + ".certpwd", def_certpwd).trim();
+                String certpath = properties.getProperty(prefix + ".certpath", def_certpath).trim();
+                String certbase64 = properties.getProperty(prefix + ".certbase64", def_certbase64).trim();
 
-                if (appid.isEmpty() || merchno.isEmpty() || notifyurl.isEmpty() || signkey.isEmpty() || certpath.isEmpty()) {
+                if (appid.isEmpty() || merchno.isEmpty() || notifyurl.isEmpty() || signkey.isEmpty() || (certpath.isEmpty() && certbase64.isEmpty())) {
                     logger.log(Level.WARNING, properties + "; has illegal weixinpay conf by prefix" + prefix);
                     return;
                 }
@@ -525,6 +538,7 @@ public class WeiXinPayService extends AbstractPayService {
                 element.signkey = signkey;
                 element.certpwd = certpwd;
                 element.certpath = certpath;
+                element.certbase64 = certbase64;
                 if (element.initSSLContext(logger, home)) {
                     map.put(appid, element);
                     if (def_appid.equals(appid)) map.put("", element);
@@ -535,8 +549,13 @@ public class WeiXinPayService extends AbstractPayService {
 
         private boolean initSSLContext(Logger logger, File home) {
             try {
-                File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
-                InputStream in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
+                InputStream in;
+                if (this.certbase64 != null && !this.certbase64.isEmpty()) {
+                    in = new ByteArrayInputStream(Base64.getDecoder().decode(this.certbase64));
+                } else {
+                    File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
+                    in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
+                }
                 //需要更新%JDK_HOME%\jre\lib\security下的policy
                 //http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html 
                 setPaySSLContext(in);
