@@ -168,7 +168,7 @@ public class AliPayService extends AbstractPayService {
             final AliPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
             final TreeMap<String, String> map = new TreeMap<>();
-            map.put("app_id", request.getAppid());
+            map.put("app_id", element.appid);
             map.put("method", "alipay.trade.create");
             map.put("format", "JSON");
             map.put("charset", element.charset);
@@ -215,7 +215,7 @@ public class AliPayService extends AbstractPayService {
             final AliPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
             final TreeMap<String, String> map = new TreeMap<>();
-            map.put("app_id", request.getAppid());
+            map.put("app_id", element.appid);
             map.put("sign_type", "RSA");
             map.put("charset", element.charset);
             map.put("format", "json");
@@ -271,7 +271,7 @@ public class AliPayService extends AbstractPayService {
             final AliPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
             final TreeMap<String, String> map = new TreeMap<>();
-            map.put("app_id", request.getAppid());
+            map.put("app_id", element.appid);
             map.put("sign_type", "RSA");
             map.put("charset", element.charset);
             map.put("format", "json");
@@ -313,7 +313,7 @@ public class AliPayService extends AbstractPayService {
             final AliPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
             final TreeMap<String, String> map = new TreeMap<>();
-            map.put("app_id", request.getAppid());
+            map.put("app_id", element.appid);
             map.put("sign_type", "RSA");
             map.put("charset", element.charset);
             map.put("format", "json");
