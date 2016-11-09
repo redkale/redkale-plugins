@@ -7,6 +7,7 @@ package org.redkalex.pay;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
 
 /**
@@ -47,8 +48,12 @@ abstract class AbstractPayService implements Service {
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         return map.entrySet().stream().map((e -> e.getKey() + "=" + e.getValue())).collect(Collectors.joining("&"));
     }
-    
+
     protected static class PayElement {
-        
+
+        @Override
+        public String toString() {
+            return JsonConvert.root().convertTo(this);
+        }
     }
 }
