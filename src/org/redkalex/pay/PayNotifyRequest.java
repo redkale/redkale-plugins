@@ -9,7 +9,7 @@ import java.util.*;
 import org.redkale.convert.json.JsonFactory;
 
 /**
- * 
+ *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -40,7 +40,7 @@ public class PayNotifyRequest {
     public void checkVaild() {
         if (this.paytype < 1) throw new RuntimeException("paytype is illegal");
         if (this.paytype == Pays.PAYTYPE_ALIPAY && (this.appid == null || this.appid.isEmpty())) throw new RuntimeException("appid is illegal");
-        if ((this.text == null || this.text.isEmpty() && (map == null || map.isEmpty()))) throw new RuntimeException("text and map both is empty");
+        if ((this.text == null || this.text.isEmpty()) && (map == null || map.isEmpty())) throw new RuntimeException("text and map both is empty");
     }
 
     public String getAppid() {
