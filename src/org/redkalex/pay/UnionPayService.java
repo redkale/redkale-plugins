@@ -600,7 +600,7 @@ public class UnionPayService extends AbstractPayService {
                     if (def_appid.equals(appid)) map.put("", element);
                 }
             });
-            if (logger.isLoggable(Level.FINEST)) logger.finest("" + map);
+            //if (logger.isLoggable(Level.FINEST)) logger.finest("" + map);
             return map;
         }
     }
