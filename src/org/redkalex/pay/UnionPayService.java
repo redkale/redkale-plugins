@@ -170,7 +170,7 @@ public class UnionPayService extends AbstractPayService {
             result.setResult(rmap);
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "prepay_pay_error", e);
+            logger.log(Level.WARNING, "prepay_pay_error req = " + request, e);
         }
         return result;
     }

@@ -134,7 +134,7 @@ public class WeiXinPayService extends AbstractPayService {
                 retmap.put("signType", "MD5");
                 retmap.put("paySign", createSign(element, retmap));
             } else {
-                retmap.put("appid", request.getAppid());
+                retmap.put("appid", element.appid);
                 retmap.put("partnerid", element.merchno);
                 retmap.put("prepayid", resultmap.get("prepay_id"));
                 retmap.put("timestamp", timestamp);
@@ -146,7 +146,7 @@ public class WeiXinPayService extends AbstractPayService {
 
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "prepay_pay_error", e);
+            logger.log(Level.WARNING, "prepay_pay_error req = " + request, e);
         }
         return result;
     }
