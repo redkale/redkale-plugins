@@ -136,7 +136,7 @@ public class AliPayService extends AbstractPayService {
 
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "prepay_pay_error req = " + request, e);
+            logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -202,7 +202,7 @@ public class AliPayService extends AbstractPayService {
             result.setThirdpayno(resultmap.getOrDefault("trade_no", ""));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "create_pay_error", e);
+            logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -258,7 +258,7 @@ public class AliPayService extends AbstractPayService {
             result.setPayedmoney((long) (Double.parseDouble(resultmap.get("receipt_amount")) * 100));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "query_pay_error", e);
+            logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -299,7 +299,7 @@ public class AliPayService extends AbstractPayService {
             }
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "close_pay_error", e);
+            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -342,7 +342,7 @@ public class AliPayService extends AbstractPayService {
             result.setRefundedmoney((long) (Double.parseDouble(resultmap.get("refund_fee")) * 100));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "refund_pay_error", e);
+            logger.log(Level.WARNING, "refund_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }

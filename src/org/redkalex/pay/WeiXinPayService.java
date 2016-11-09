@@ -146,7 +146,7 @@ public class WeiXinPayService extends AbstractPayService {
 
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "prepay_pay_error req = " + request, e);
+            logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -248,7 +248,7 @@ public class WeiXinPayService extends AbstractPayService {
             rmap.put("paySign", createSign(element, rmap));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "create_pay_error", e);
+            logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -328,7 +328,7 @@ public class WeiXinPayService extends AbstractPayService {
             result.setPayedmoney(Long.parseLong(resultmap.getOrDefault("total_fee", "0")));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "query_pay_error", e);
+            logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -357,7 +357,7 @@ public class WeiXinPayService extends AbstractPayService {
 
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "close_pay_error", e);
+            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -390,7 +390,7 @@ public class WeiXinPayService extends AbstractPayService {
             result.setRefundedmoney(Long.parseLong(resultmap.get("refund_fee")));
         } catch (Exception e) {
             result.setRetcode(RETPAY_REFUND_ERROR);
-            logger.log(Level.WARNING, "refund_pay_error", e);
+            logger.log(Level.WARNING, "refund_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -424,7 +424,7 @@ public class WeiXinPayService extends AbstractPayService {
             result.setRefundedmoney(Long.parseLong(resultmap.get("refund_fee_$n")));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "query_pay_error", e);
+            logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }

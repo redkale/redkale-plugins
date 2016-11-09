@@ -170,7 +170,7 @@ public class UnionPayService extends AbstractPayService {
             result.setResult(rmap);
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "prepay_pay_error req = " + request, e);
+            logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -241,7 +241,7 @@ public class UnionPayService extends AbstractPayService {
             result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "create_pay_error", e);
+            logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -346,7 +346,7 @@ public class UnionPayService extends AbstractPayService {
             }
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "close_pay_error", e);
+            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
@@ -393,7 +393,7 @@ public class UnionPayService extends AbstractPayService {
             }
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "close_pay_error", e);
+            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
         return result;
     }
