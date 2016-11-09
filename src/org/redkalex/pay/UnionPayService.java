@@ -295,7 +295,7 @@ public class UnionPayService extends AbstractPayService {
             }
             result.setPaystatus(paystatus);
             result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
-            result.setPayedmoney((long) (Double.parseDouble(resultmap.getOrDefault("receipt_amount", "0.0")) * 100));
+            result.setPayedmoney((long) (Double.parseDouble(resultmap.getOrDefault("txnAmt", "0.0")) * 100));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
