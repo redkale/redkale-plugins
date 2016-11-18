@@ -372,7 +372,7 @@ public class AliPayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, String> map) throws Exception {
+    protected String createSign(final PayElement element, Map<String, ?> map) throws Exception {
         Signature signature = Signature.getInstance("SHA1WithRSA");
         signature.initSign(((AliPayElement) element).priKey);
         signature.update(joinMap(map).getBytes(((AliPayElement) element).charset));
@@ -380,10 +380,11 @@ public class AliPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, String> map) { //支付宝玩另类
-        String sign = map.remove("sign");
+    protected boolean checkSign(final PayElement element, Map<String, ?> map0) { //支付宝玩另类
+        Map<String, String> map = (Map<String, String>) map0;
+        String sign = (String) map.remove("sign");
         if (sign == null) return false;
-        String sign_type = map.remove("sign_type");
+        String sign_type = (String) map.remove("sign_type");
         String text = joinMap(map);
         map.put("sign", sign);
         if (sign_type != null) map.put("sign_type", sign_type);
@@ -490,7 +491,7 @@ public class AliPayService extends AbstractPayService {
                 element.notifyurl = notifyurl;
                 element.signcertkey = signcertkey;
                 element.verifycertkey = verifycertkey;
-                if (element.initSSLKey(logger)) {
+                if (element.initElement(logger, null)) {
                     map.put(appid, element);
                     if (def_appid.equals(appid)) map.put("", element);
                 }
@@ -498,7 +499,8 @@ public class AliPayService extends AbstractPayService {
             return map;
         }
 
-        private boolean initSSLKey(Logger logger) {
+        @Override
+        public boolean initElement(Logger logger, File home) {
             try {
                 final KeyFactory factory = KeyFactory.getInstance("RSA");
                 this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.verifycertkey)));

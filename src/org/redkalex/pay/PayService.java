@@ -30,6 +30,9 @@ public class PayService extends AbstractPayService {
     @Resource
     private AliPayService aliPayService;
 
+    @Resource
+    private EhkingPayService ehkingPayService;
+
     @Override
     public void init(AnyValue config) {
     }
@@ -39,6 +42,7 @@ public class PayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.prepay(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.prepay(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.prepay(request);
+        if (request.paytype == PAYTYPE_EHKING) return ehkingPayService.prepay(request);
         throw new RuntimeException(request + ".paytype is illegal");
     }
 
@@ -47,6 +51,7 @@ public class PayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.notify(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.notify(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.notify(request);
+        if (request.paytype == PAYTYPE_EHKING) return ehkingPayService.notify(request);
         throw new RuntimeException(request + ".paytype is illegal");
     }
 
@@ -55,6 +60,7 @@ public class PayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.create(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.create(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.create(request);
+        if (request.paytype == PAYTYPE_EHKING) return ehkingPayService.create(request);
         throw new RuntimeException(request + ".paytype is illegal");
     }
 
@@ -63,6 +69,7 @@ public class PayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.query(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.query(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.query(request);
+        if (request.paytype == PAYTYPE_EHKING) return ehkingPayService.query(request);
         throw new RuntimeException(request + ".paytype is illegal");
     }
 
@@ -71,6 +78,7 @@ public class PayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.close(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.close(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.close(request);
+        if (request.paytype == PAYTYPE_EHKING) return ehkingPayService.close(request);
         throw new RuntimeException(request + ".paytype is illegal");
     }
 
@@ -79,6 +87,7 @@ public class PayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.refund(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.refund(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.refund(request);
+        if (request.paytype == PAYTYPE_EHKING) return ehkingPayService.refund(request);
         throw new RuntimeException(request + ".paytype is illegal");
     }
 
@@ -87,16 +96,17 @@ public class PayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.queryRefund(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.queryRefund(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.queryRefund(request);
+        if (request.paytype == PAYTYPE_EHKING) return ehkingPayService.queryRefund(request);
         throw new RuntimeException(request + ".paytype is illegal");
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, String> map) throws Exception {
+    protected String createSign(final PayElement element, Map<String, ?> map) throws Exception {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, String> map) {
+    protected boolean checkSign(final PayElement element, Map<String, ?> map) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -112,4 +122,7 @@ public class PayService extends AbstractPayService {
         return aliPayService;
     }
 
+    public EhkingPayService getEhkingPayService() {
+        return ehkingPayService;
+    }
 }

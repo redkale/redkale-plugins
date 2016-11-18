@@ -430,22 +430,22 @@ public class WeiXinPayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, String> map) throws Exception { //计算签名
+    protected String createSign(final PayElement element, Map<String, ?> map) throws Exception { //计算签名
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> {
-            if (!y.isEmpty()) sb.append(x).append('=').append(y).append('&');
+            if (!((String) y).isEmpty()) sb.append(x).append('=').append(y).append('&');
         });
         sb.append("key=").append(((WeixinPayElement) element).signkey);
         return Utility.binToHexString(MessageDigest.getInstance("MD5").digest(sb.toString().getBytes())).toUpperCase();
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, String> map) {  //验证签名
+    protected boolean checkSign(final PayElement element, Map<String, ?> map) {  //验证签名
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
-        String sign = map.remove("sign");
+        String sign = (String) map.remove("sign");
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> {
-            if (!y.isEmpty()) sb.append(x).append('=').append(y).append('&');
+            if (!((String) y).isEmpty()) sb.append(x).append('=').append(y).append('&');
         });
         sb.append("key=").append(((WeixinPayElement) element).signkey);
         try {
@@ -539,7 +539,7 @@ public class WeiXinPayService extends AbstractPayService {
                 element.certpwd = certpwd;
                 element.certpath = certpath;
                 element.certbase64 = certbase64;
-                if (element.initSSLContext(logger, home)) {
+                if (element.initElement(logger, home)) {
                     map.put(appid, element);
                     if (def_appid.equals(appid)) map.put("", element);
                 }
@@ -547,7 +547,8 @@ public class WeiXinPayService extends AbstractPayService {
             return map;
         }
 
-        private boolean initSSLContext(Logger logger, File home) {
+        @Override
+        public boolean initElement(Logger logger, File home) {
             try {
                 InputStream in;
                 if (this.certbase64 != null && !this.certbase64.isEmpty()) {

@@ -26,6 +26,9 @@ public abstract class Pays {
     //支付宝支付
     public static final short PAYTYPE_ALIPAY = 30;
 
+    //易宝支付
+    public static final short PAYTYPE_EHKING = 40;
+
     //--------------------- 支付渠道 -----------------------------
     //支付渠道:  5: 信用/虚拟支付; 10:APP支付; 20:网页支付; 30:机器支付;
     //信用/虚拟支付

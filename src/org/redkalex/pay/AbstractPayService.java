@@ -5,7 +5,9 @@
  */
 package org.redkalex.pay;
 
+import java.io.File;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
@@ -40,16 +42,18 @@ abstract class AbstractPayService implements Service {
     //查询退款
     public abstract PayRefundResponse queryRefund(PayRequest request);
 
-    protected abstract String createSign(final PayElement element, Map<String, String> map) throws Exception; //计算签名
+    protected abstract String createSign(final PayElement element, Map<String, ?> map) throws Exception; //计算签名
 
-    protected abstract boolean checkSign(final PayElement element, Map<String, String> map); //验证签名
+    protected abstract boolean checkSign(final PayElement element, Map<String, ?> map); //验证签名
 
-    protected final String joinMap(Map<String, String> map) { //map对象转换成 key1=value1&key2=value2&key3=value3
+    protected final String joinMap(Map<String, ?> map) { //map对象转换成 key1=value1&key2=value2&key3=value3
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         return map.entrySet().stream().map((e -> e.getKey() + "=" + e.getValue())).collect(Collectors.joining("&"));
     }
 
-    protected static class PayElement {
+    protected static abstract class PayElement {
+
+        public abstract boolean initElement(Logger logger, File home);
 
         @Override
         public String toString() {

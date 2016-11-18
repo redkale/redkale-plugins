@@ -423,7 +423,7 @@ public class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, String> map) throws Exception { //计算签名
+    protected String createSign(final PayElement element, Map<String, ?> map) throws Exception { //计算签名
         byte[] digest = MessageDigest.getInstance("SHA-1").digest(joinMap(map).getBytes("UTF-8"));
 
         Signature signature = Signature.getInstance("SHA1WithRSA");
@@ -433,11 +433,11 @@ public class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, String> map) {  //验证签名
+    protected boolean checkSign(final PayElement element, Map<String, ?> map) {  //验证签名
         if (!((UnionPayElement) element).verifycertid.equals(map.get("certId"))) return false;
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         try {
-            final byte[] sign = Base64.getDecoder().decode(map.remove("signature").getBytes("UTF-8"));
+            final byte[] sign = Base64.getDecoder().decode(((String) map.remove("signature")).getBytes("UTF-8"));
             final byte[] sha1 = MessageDigest.getInstance("SHA-1").digest(joinMap(map).getBytes("UTF-8"));
             final byte[] digest = Utility.binToHexString(sha1).getBytes("UTF-8");
 
@@ -499,7 +499,8 @@ public class UnionPayService extends AbstractPayService {
 
         protected PublicKey pubKey; //公钥
 
-        public boolean initCert(Logger logger, File home) {
+        @Override
+        public boolean initElement(Logger logger, File home) {
             try {
                 //读取签名证书私钥
                 InputStream signin;
@@ -595,7 +596,7 @@ public class UnionPayService extends AbstractPayService {
                 element.verifycertpath = verifycertpath;
                 element.verifycertbase64 = verifycertbase64;
 
-                if (element.initCert(logger, home)) {
+                if (element.initElement(logger, home)) {
                     map.put(appid, element);
                     if (def_appid.equals(appid)) map.put("", element);
                 }
