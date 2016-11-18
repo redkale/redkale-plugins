@@ -135,6 +135,7 @@ public class EhkingPayService extends AbstractPayService {
 
             final Map<String, String> rmap = new TreeMap<>();
             rmap.put("redirect", resultmap.getOrDefault("redirectUrl", ""));
+            rmap.put("requestid", resultmap.getOrDefault("requestId", ""));
             result.setResult(rmap);
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
@@ -173,6 +174,24 @@ public class EhkingPayService extends AbstractPayService {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
+    protected String createSign(PayElement element, String aValue) {
+        byte value[] = aValue.getBytes(UTF8);
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            return null;
+        }
+        md.update(((EhkingPayElement) element).inpad);
+        md.update(value);
+        byte dg[] = md.digest();
+        md.reset();
+        md.update(((EhkingPayElement) element).outpad);
+        md.update(dg, 0, 16);
+        dg = md.digest();
+        return Utility.binToHexString(dg);
+    }
+
     @Override
     protected String createSign(PayElement element, Map<String, ?> map0) {
         Map<String, Object> map = (Map<String, Object>) map0;
@@ -186,26 +205,9 @@ public class EhkingPayService extends AbstractPayService {
                 sb.append(en.getValue());
             }
         }
-        String aValue = sb.toString();
-
-        byte value[] = aValue.getBytes(UTF8);
-
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance("MD5");
-        } catch (NoSuchAlgorithmException e) {
-            if (hmac != null) map.put("hmac", hmac);
-            return null;
-        }
-        md.update(((EhkingPayElement) element).inpad);
-        md.update(value);
-        byte dg[] = md.digest();
-        md.reset();
-        md.update(((EhkingPayElement) element).outpad);
-        md.update(dg, 0, 16);
-        dg = md.digest();
+        String rs = createSign(element, sb.toString());
         if (hmac != null) map.put("hmac", hmac);
-        return Utility.binToHexString(dg);
+        return rs;
     }
 
     @Override
