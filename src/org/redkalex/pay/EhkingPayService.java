@@ -136,6 +136,7 @@ public class EhkingPayService extends AbstractPayService {
             final Map<String, String> rmap = new TreeMap<>();
             rmap.put("redirect", resultmap.getOrDefault("redirectUrl", ""));
             rmap.put("requestid", resultmap.getOrDefault("requestId", ""));
+            result.setThirdpayno(rmap.get("requestid"));
             result.setResult(rmap);
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
