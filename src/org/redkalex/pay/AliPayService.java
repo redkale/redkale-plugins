@@ -362,6 +362,7 @@ public class AliPayService extends AbstractPayService {
     }
 
     protected boolean checkSign(final PayElement element, InnerResponse response) throws Exception {
+        if (((AliPayElement) element).pubKey == null) return true;
         String text = response.responseText;
         text = text.substring(text.indexOf(':') + 1, text.indexOf(",\"sign\""));
 
@@ -381,6 +382,7 @@ public class AliPayService extends AbstractPayService {
 
     @Override
     protected boolean checkSign(final PayElement element, Map<String, ?> map0) { //支付宝玩另类
+        if (((AliPayElement) element).pubKey == null) return true;
         Map<String, String> map = (Map<String, String>) map0;
         String sign = (String) map.remove("sign");
         if (sign == null) return false;
@@ -465,7 +467,7 @@ public class AliPayService extends AbstractPayService {
             String def_charset = properties.getProperty("pay.alipay.charset", "UTF-8").trim();
             String def_notifyurl = properties.getProperty("pay.alipay.notifyurl", "").trim();
             String def_signcertkey = properties.getProperty("pay.alipay.signcertkey", "").trim();
-            String def_verifycertkey = properties.getProperty("pay.alipay.verifycertkey", "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDDI6d306Q8fIfCOaTXyiUeJHkrIvYISRcc73s3vF1ZT7XN8RNPwJxo8pWaJMmvyTn9N4HQ632qJBVHf8sxHi/fEsraprwCtzvzQETrNRwVxLO5jVmRGi60j8Ue1efIlzPXV9je9mkjzOmdssymZkh2QhUrCmZYI/FCEa3/cNMW0QIDAQAB").trim();
+            String def_verifycertkey = properties.getProperty("pay.alipay.verifycertkey", "").trim();
 
             final Map<String, AliPayElement> map = new HashMap<>();
             properties.keySet().stream().filter(x -> x.toString().startsWith("pay.alipay.") && x.toString().endsWith(".appid")).forEach(appid_key -> {
@@ -503,8 +505,11 @@ public class AliPayService extends AbstractPayService {
         public boolean initElement(Logger logger, File home) {
             try {
                 final KeyFactory factory = KeyFactory.getInstance("RSA");
-                this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.verifycertkey)));
-
+                if (this.verifycertkey != null && !this.verifycertkey.isEmpty()) {
+                    this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.verifycertkey)));
+                } else {
+                    this.pubKey = null;
+                }
                 PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.signcertkey));
                 this.priKey = factory.generatePrivate(priPKCS8);
                 return true;
