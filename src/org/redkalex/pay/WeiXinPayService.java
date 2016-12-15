@@ -189,6 +189,7 @@ public class WeiXinPayService extends AbstractPayService {
         if (element == null) return result.retcode(RETPAY_CONF_ERROR);
         result.setPayno(map.getOrDefault("out_trade_no", ""));
         result.setThirdpayno(map.getOrDefault("transaction_id", ""));
+        if ("NOTPAY".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_WAITING).result(rstext);
         if (!"SUCCESS".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_FAILED).result(rstext);
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR).result(rstext);

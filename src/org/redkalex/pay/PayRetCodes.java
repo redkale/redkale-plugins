@@ -33,6 +33,9 @@ public abstract class PayRetCodes {
     @RetLabel("重复支付")
     public static final int RETPAY_PAY_REPEAT = 20010004;
 
+    @RetLabel("等待用户支付")
+    public static final int RETPAY_PAY_WAITING = 20010005;
+
     @RetLabel("交易签名被篡改")
     public static final int RETPAY_FALSIFY_ERROR = 20010011;
 

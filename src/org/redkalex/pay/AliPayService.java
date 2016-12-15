@@ -156,6 +156,7 @@ public class AliPayService extends AbstractPayService {
         result.setThirdpayno(map.getOrDefault("trade_no", ""));
         if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR);
         String state = map.getOrDefault("trade_status", "");
+        if ("WAIT_BUYER_PAY".equals(state)) return result.retcode(RETPAY_PAY_WAITING);
         if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED);
         return result.result(rstext);
     }
