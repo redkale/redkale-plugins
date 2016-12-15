@@ -82,6 +82,10 @@ public class WeiXinPayService extends AbstractPayService {
         this.elements.put(appid, element);
     }
 
+    public boolean existsPayElement(String appid) {
+        return this.elements != null && this.elements.containsKey(appid);
+    }
+
     /**
      * 手机支付或者微信公众号支付时调用
      *

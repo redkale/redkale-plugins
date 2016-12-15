@@ -86,6 +86,10 @@ public class EhkingPayService extends AbstractPayService {
         this.elements.put(appid, element);
     }
 
+    public boolean existsPayElement(String appid) {
+        return this.elements != null && this.elements.containsKey(appid);
+    }
+    
     @Override
     public PayPreResponse prepay(PayPreRequest request) {
         request.checkVaild();

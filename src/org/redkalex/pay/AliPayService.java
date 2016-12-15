@@ -88,6 +88,10 @@ public class AliPayService extends AbstractPayService {
         this.elements.put(appid, element);
     }
 
+    public boolean existsPayElement(String appid) {
+        return this.elements != null && this.elements.containsKey(appid);
+    }
+    
     @Override
     public PayPreResponse prepay(final PayPreRequest request) {
         request.checkVaild();
