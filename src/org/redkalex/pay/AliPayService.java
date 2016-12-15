@@ -481,7 +481,7 @@ public class AliPayService extends AbstractPayService {
                 String signcertkey = properties.getProperty(prefix + ".signcertkey", def_signcertkey).trim();
                 String verifycertkey = properties.getProperty(prefix + ".verifycertkey", def_verifycertkey).trim();
 
-                if (appid.isEmpty() || merchno.isEmpty() || notifyurl.isEmpty() || signcertkey.isEmpty() || verifycertkey.isEmpty()) {
+                if (appid.isEmpty() || merchno.isEmpty() || notifyurl.isEmpty() || signcertkey.isEmpty()) {
                     logger.log(Level.WARNING, properties + "; has illegal alipay conf by prefix" + prefix);
                     return;
                 }
