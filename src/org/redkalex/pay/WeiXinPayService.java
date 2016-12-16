@@ -74,6 +74,10 @@ public class WeiXinPayService extends AbstractPayService {
         this.elements = elements;
     }
 
+    public void putPayElements(Map<String, WeixinPayElement> elements) {
+        this.elements.putAll(elements);
+    }
+
     public WeixinPayElement getPayElement(String appid) {
         return this.elements.get(appid);
     }

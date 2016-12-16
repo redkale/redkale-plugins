@@ -78,6 +78,10 @@ public class EhkingPayService extends AbstractPayService {
         this.elements = elements;
     }
 
+    public void putPayElements(Map<String, EhkingPayElement> elements) {
+        this.elements.putAll(elements);
+    }
+
     public EhkingPayElement getPayElement(String appid) {
         return this.elements.get(appid);
     }
@@ -89,7 +93,7 @@ public class EhkingPayService extends AbstractPayService {
     public boolean existsPayElement(String appid) {
         return this.elements != null && this.elements.containsKey(appid);
     }
-    
+
     @Override
     public PayPreResponse prepay(PayPreRequest request) {
         request.checkVaild();

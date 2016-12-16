@@ -80,6 +80,10 @@ public class AliPayService extends AbstractPayService {
         this.elements = elements;
     }
 
+    public void putPayElements(Map<String, AliPayElement> elements) {
+        this.elements.putAll(elements);
+    }
+
     public AliPayElement getPayElement(String appid) {
         return this.elements.get(appid);
     }

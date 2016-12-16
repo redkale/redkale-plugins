@@ -83,6 +83,10 @@ public class UnionPayService extends AbstractPayService {
         this.elements = elements;
     }
 
+    public void putPayElements(Map<String, UnionPayElement> elements) {
+        this.elements.putAll(elements);
+    }
+
     public UnionPayElement getPayElement(String appid) {
         return this.elements.get(appid);
     }
@@ -94,7 +98,7 @@ public class UnionPayService extends AbstractPayService {
     public boolean existsPayElement(String appid) {
         return this.elements != null && this.elements.containsKey(appid);
     }
-    
+
     public static void main(String[] args) throws Throwable {
         UnionPayService service = new UnionPayService();
 //        service.createurl = "https://101.231.204.80:5000/gateway/api/appTransReq.do"; //请求支付url
