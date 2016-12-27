@@ -95,7 +95,7 @@ public class AliPayService extends AbstractPayService {
     public boolean existsPayElement(String appid) {
         return this.elements != null && this.elements.containsKey(appid);
     }
-    
+
     @Override
     public PayPreResponse prepay(final PayPreRequest request) {
         request.checkVaild();
@@ -104,7 +104,7 @@ public class AliPayService extends AbstractPayService {
         try {
             final AliPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
-
+            result.setAppid(element.appid);
             // 签约合作者身份ID
             String param = "partner=" + "\"" + element.merchno + "\"";
             // 签约卖家支付宝账号(也可用身份ID)

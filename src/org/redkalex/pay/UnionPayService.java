@@ -140,6 +140,7 @@ public class UnionPayService extends AbstractPayService {
         try {
             final UnionPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            result.setAppid(element.appid);
             TreeMap<String, String> map = new TreeMap<>();
             if (request.getMap() != null) map.putAll(request.getMap());
 

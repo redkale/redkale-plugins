@@ -104,6 +104,7 @@ public class WeiXinPayService extends AbstractPayService {
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            result.setAppid(element.appid);
             final TreeMap<String, String> map = new TreeMap<>();
             if (request.getMap() != null) map.putAll(request.getMap());
             map.put("appid", element.appid);

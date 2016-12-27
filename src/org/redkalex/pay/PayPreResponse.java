@@ -6,6 +6,7 @@
 package org.redkalex.pay;
 
 import java.util.Map;
+import org.redkale.convert.*;
 
 /**
  *
@@ -14,6 +15,9 @@ import java.util.Map;
  * @author zhangjx
  */
 public class PayPreResponse extends PayResponse {
+
+    @ConvertColumn(ignore = true, type = ConvertType.JSON)
+    private String appid = "";
 
     private String thirdpayno = ""; //第三方的支付流水号
 
@@ -42,6 +46,14 @@ public class PayPreResponse extends PayResponse {
 
     public void setThirdpayno(String thirdpayno) {
         this.thirdpayno = thirdpayno;
+    }
+
+    public String getAppid() {
+        return appid == null ? "" : appid;
+    }
+
+    public void setAppid(String appid) {
+        this.appid = appid;
     }
 
 }

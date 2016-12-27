@@ -101,6 +101,7 @@ public class EhkingPayService extends AbstractPayService {
         try {
             final EhkingPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            result.setAppid(element.appid);
             LinkedHashMap<String, Object> map = new LinkedHashMap<>();
 
             final Map<String, String> pd = new LinkedHashMap<>();
