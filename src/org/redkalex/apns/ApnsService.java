@@ -16,6 +16,7 @@ import java.net.*;
 import java.nio.*;
 import java.nio.charset.*;
 import java.security.*;
+import java.util.Base64;
 import java.util.concurrent.*;
 import java.util.logging.*;
 import javax.annotation.*;
@@ -47,10 +48,13 @@ public class ApnsService implements Service {
     @Resource(name = "property.apns.certpath") //用来加载证书用
     protected String apnscertpath = "apnspushdev_cert.p12";
 
+    @Resource(name = "property.apns.certbase64") //证书内容的64位编码
+    protected String apnscertbase64 = "";
+
     //测试环境:  gateway.sandbox.push.apple.com
-    //开发环境:  gateway.push.apple.com
+    //正式环境:  gateway.push.apple.com
     @Resource(name = "property.apns.pushaddr") //
-    protected String apnspushaddr = "gateway.sandbox.push.apple.com";
+    protected String apnspushaddr = "gateway.push.apple.com";
 
     @Resource(name = "property.apns.pushport") //
     protected int apnspushport = 2195;
@@ -66,7 +70,7 @@ public class ApnsService implements Service {
 
     @Override
     public void init(AnyValue conf) {
-        if(this.convert == null) this.convert = JsonConvert.root();
+        if (this.convert == null) this.convert = JsonConvert.root();
         new Thread() {
             {
                 setDaemon(true);
@@ -77,7 +81,12 @@ public class ApnsService implements Service {
             public void run() {
                 try {
                     File file = (apnscertpath.indexOf('/') == 0 || apnscertpath.indexOf(':') > 0) ? new File(apnscertpath) : new File(home, "conf/" + apnscertpath);
-                    InputStream in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + apnscertpath);
+                    InputStream in;
+                    if (apnscertbase64 != null && !apnscertbase64.isEmpty()) {
+                        in = new ByteArrayInputStream(Base64.getDecoder().decode(apnscertbase64));
+                    } else {
+                        in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + apnscertpath);
+                    }
                     KeyStore ks = KeyStore.getInstance("PKCS12");
                     KeyManagerFactory kf = null;
                     if (in != null) {
