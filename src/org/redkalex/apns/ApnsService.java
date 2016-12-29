@@ -21,6 +21,7 @@ import java.util.concurrent.*;
 import java.util.logging.*;
 import javax.annotation.*;
 import javax.net.ssl.*;
+import org.redkale.util.*;
 
 /**
  *
@@ -64,9 +65,17 @@ public class ApnsService implements Service {
 
     private boolean inited = false;
 
-    private final CountDownLatch cdl = new CountDownLatch(1);
+    private CountDownLatch cdl = new CountDownLatch(1);
 
     private SSLSocketFactory sslFactory;
+
+    @ResourceListener
+    void changeResource(String name, Object newVal, Object oldVal) {
+        logger.info("@Resource = " + name + " resource changed:  newVal = " + newVal + ", oldVal = " + oldVal);
+        inited = false;
+        cdl = new CountDownLatch(1);
+        init(null);
+    }
 
     @Override
     public void init(AnyValue conf) {

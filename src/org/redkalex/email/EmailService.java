@@ -20,6 +20,7 @@ import static org.redkalex.email.EmailCodes.*;
 /**
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 @AutoLoad(false)
@@ -49,6 +50,12 @@ public class EmailService implements org.redkale.service.Service {
 
     @Resource(name = "property.mail.smtp.host")
     private Authenticator mailauth;
+
+    @ResourceListener
+    void changeResource(String name, Object newVal, Object oldVal) {
+        logger.info("@Resource = " + name + " resource changed:  newVal = " + newVal + ", oldVal = " + oldVal);
+        init(null);
+    }
 
     @Override
     public void init(AnyValue conf) {
