@@ -567,6 +567,7 @@ public class WeiXinPayService extends AbstractPayService {
                     File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
                     in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
                 }
+                if (in == null) return false;
                 //需要更新%JDK_HOME%\jre\lib\security下的policy
                 //http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html 
                 setPaySSLContext(in);

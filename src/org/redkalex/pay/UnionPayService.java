@@ -521,6 +521,7 @@ public class UnionPayService extends AbstractPayService {
                     File signfile = (signcertpath.indexOf('/') == 0 || signcertpath.indexOf(':') > 0) ? new File(signcertpath) : new File(home, "conf/" + signcertpath);
                     signin = signfile.isFile() ? new FileInputStream(signfile) : UnionPayService.class.getResourceAsStream("/META-INF/" + signcertpath);
                 }
+                if (signin == null) return false;
                 //读取验证证书公钥
                 InputStream verifyin;
                 if (this.verifycertbase64 != null && !this.verifycertbase64.isEmpty()) {
@@ -529,6 +530,7 @@ public class UnionPayService extends AbstractPayService {
                     File verifyfile = (verifycertpath.indexOf('/') == 0 || verifycertpath.indexOf(':') > 0) ? new File(verifycertpath) : new File(home, "conf/" + verifycertpath);
                     verifyin = verifyfile.isFile() ? new FileInputStream(verifyfile) : UnionPayService.class.getResourceAsStream("/META-INF/" + verifycertpath);
                 }
+                if (verifyin == null) return false;
                 //读取签名证书私钥
                 final KeyStore keyStore = (Security.getProvider("BC") == null) ? KeyStore.getInstance("PKCS12") : KeyStore.getInstance("PKCS12", "BC");
                 keyStore.load(signin, this.signcertpwd.toCharArray());
