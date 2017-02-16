@@ -14,6 +14,7 @@ import java.util.logging.*;
 /**
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 public class SocksRunner implements Runnable {
@@ -86,6 +87,10 @@ public class SocksRunner implements Runnable {
             @Override
             public void completed(Integer result, Void attachment) {
                 buffer.flip();
+                if (!buffer.hasRemaining()) {
+                    closeRunner(null);
+                    return;
+                }
                 if (buffer.getChar() != 0x0501) {
                     if (finest) logger.finest("connect header not 0x0501");
                     closeRunner(null);
