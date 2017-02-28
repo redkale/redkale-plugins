@@ -27,24 +27,10 @@ import static org.redkalex.pay.PayRetCodes.*;
  */
 @AutoLoad(false)
 @LocalService
+@Comment("支付宝支付服务")
 public class AliPayService extends AbstractPayService {
 
-    //private static final Charset UTF8 = Charset.forName("UTF-8");
-    private static final String format = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; //yyyy-MM-dd HH:mm:ss
-
-    public static final int PAY_WX_ERROR = 4012101;//微信支付失败
-
-    public static final int PAY_FALSIFY_ORDER = 4012017;//交易签名被篡改
-
-    public static final int PAY_STATUS_ERROR = 4012018;//订单或者支付状态不正确
-
-    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-
-    protected final boolean fine = logger.isLoggable(Level.FINE);
-
-    protected final boolean finer = logger.isLoggable(Level.FINER);
-
-    protected final boolean finest = logger.isLoggable(Level.FINEST);
+    protected static final String format = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; //yyyy-MM-dd HH:mm:ss
 
     //配置集合
     protected Map<String, AliPayElement> elements = new HashMap<>();

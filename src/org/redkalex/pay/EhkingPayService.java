@@ -6,7 +6,6 @@
 package org.redkalex.pay;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.security.*;
 import java.util.*;
 import java.util.logging.*;
@@ -26,23 +25,13 @@ import static org.redkalex.pay.PayRetCodes.*;
 @LocalService
 public class EhkingPayService extends AbstractPayService {
 
-    private static final Charset UTF8 = Charset.forName("UTF-8");
-
     private static final Map<String, String> header = new HashMap<>();
 
     static {
         header.put("Content-Type", "application/vnd.ehking-v1.0+json");
     }
 
-    private static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
-
-    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-
-    protected final boolean fine = logger.isLoggable(Level.FINE);
-
-    protected final boolean finer = logger.isLoggable(Level.FINER);
-
-    protected final boolean finest = logger.isLoggable(Level.FINEST);
+    protected static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
 
     //配置集合
     protected Map<String, EhkingPayElement> elements = new HashMap<>();

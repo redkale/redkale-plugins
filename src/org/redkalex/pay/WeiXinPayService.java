@@ -28,17 +28,9 @@ import static org.redkalex.pay.Pays.*;
 @LocalService
 public class WeiXinPayService extends AbstractPayService {
 
-    private static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
+    protected static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
 
-    private static final Pattern PAYXML = Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
-
-    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-
-    protected final boolean fine = logger.isLoggable(Level.FINE);
-
-    protected final boolean finer = logger.isLoggable(Level.FINER);
-
-    protected final boolean finest = logger.isLoggable(Level.FINEST);
+    protected static final Pattern PAYXML = Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
 
     //配置集合
     protected Map<String, WeixinPayElement> elements = new HashMap<>();

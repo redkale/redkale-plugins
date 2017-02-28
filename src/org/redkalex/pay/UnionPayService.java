@@ -29,15 +29,7 @@ import static org.redkalex.pay.PayRetCodes.*;
 @LocalService
 public class UnionPayService extends AbstractPayService {
 
-    private static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
-
-    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-
-    protected final boolean fine = logger.isLoggable(Level.FINE);
-
-    protected final boolean finer = logger.isLoggable(Level.FINER);
-
-    protected final boolean finest = logger.isLoggable(Level.FINEST);
+    protected static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
 
     //配置集合
     protected Map<String, UnionPayElement> elements = new HashMap<>();

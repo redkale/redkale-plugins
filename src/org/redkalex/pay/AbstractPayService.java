@@ -6,11 +6,13 @@
 package org.redkalex.pay;
 
 import java.io.File;
+import java.nio.charset.Charset;
 import java.util.*;
-import java.util.logging.Logger;
+import java.util.logging.*;
 import java.util.stream.Collectors;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
+import org.redkale.util.Comment;
 
 /**
  * 支付抽象类
@@ -19,38 +21,53 @@ import org.redkale.service.*;
  *
  * @author zhangjx
  */
+@Comment("支付服务抽象类")
 abstract class AbstractPayService implements Service {
 
-    //手机预支付
+    protected static final Charset UTF8 = Charset.forName("UTF-8");
+
+    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+
+    protected final boolean fine = logger.isLoggable(Level.FINE);
+
+    protected final boolean finer = logger.isLoggable(Level.FINER);
+
+    protected final boolean finest = logger.isLoggable(Level.FINEST);
+
+    @Comment("手机预支付")
     public abstract PayPreResponse prepay(PayPreRequest request);
 
-    //手机支付回调
+    @Comment("手机支付回调")
     public abstract PayNotifyResponse notify(PayNotifyRequest request);
 
-    //请求支付
+    @Comment("请求支付")
     public abstract PayCreatResponse create(PayCreatRequest request);
 
-    //请求查询
+    @Comment("请求查询")
     public abstract PayQueryResponse query(PayRequest request);
 
-    //请求关闭
+    @Comment("请求关闭")
     public abstract PayResponse close(PayCloseRequest request);
 
-    //请求退款
+    @Comment("请求退款")
     public abstract PayRefundResponse refund(PayRefundRequest request);
 
-    //查询退款
+    @Comment("查询退款")
     public abstract PayRefundResponse queryRefund(PayRequest request);
 
-    protected abstract String createSign(final PayElement element, Map<String, ?> map) throws Exception; //计算签名
+    @Comment("计算签名")
+    protected abstract String createSign(final PayElement element, Map<String, ?> map) throws Exception;
 
-    protected abstract boolean checkSign(final PayElement element, Map<String, ?> map); //验证签名
+    @Comment("验证签名")
+    protected abstract boolean checkSign(final PayElement element, Map<String, ?> map);
 
-    protected final String joinMap(Map<String, ?> map) { //map对象转换成 key1=value1&key2=value2&key3=value3
+    @Comment("map对象转换成 key1=value1&key2=value2&key3=value3")
+    protected final String joinMap(Map<String, ?> map) {
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         return map.entrySet().stream().map((e -> e.getKey() + "=" + e.getValue())).collect(Collectors.joining("&"));
     }
 
+    @Comment("支付配置信息抽象类")
     protected static abstract class PayElement {
 
         public abstract boolean initElement(Logger logger, File home);
