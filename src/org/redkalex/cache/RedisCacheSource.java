@@ -26,7 +26,7 @@ import org.redkale.watch.WatchFactory;
  *
  * @param <K>
  * @param <V>
- * 
+ *
  * @author zhangjx
  */
 @LocalService
@@ -151,14 +151,14 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     private SimpleFuture<byte[]> send(final String command, final boolean set, final K key, final byte[]... args) {
-        return send(command, set, null, key, args);
+        return send(null, command, set, key, args);
     }
 
-    private SimpleFuture<byte[]> send(final String command, final CompletionHandler callback, final K key, final byte[]... args) {
-        return send(command, false, callback, key, args);
+    private SimpleFuture<byte[]> send(final CompletionHandler callback, final String command, final K key, final byte[]... args) {
+        return send(callback, command, false, key, args);
     }
 
-    private SimpleFuture<byte[]> send(final String command, final boolean set, final CompletionHandler callback, final K key, final byte[]... args) {
+    private SimpleFuture<byte[]> send(final CompletionHandler callback, final String command, final boolean set, final K key, final byte[]... args) {
         final BsonByteBufferWriter writer = new BsonByteBufferWriter(transport.getBufferSupplier());
         writer.writeTo(ASTERISK_BYTE);
         writer.writeTo(String.valueOf(args.length + 1).getBytes(UTF8));
@@ -331,6 +331,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
+    public void exists(final AsyncHandler<Boolean, K> handler, @RpcAttachment final K key) {
+        send(handler, "EXISTS", key, convert.convertTo(key));
+    }
+
+    @Override
     public V get(K key) {
         SimpleFuture<byte[]> future = send("GET", key, convert.convertTo(key));
         try {
@@ -343,9 +348,31 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
+    public void get(final AsyncHandler<V, K> handler, @RpcAttachment final K key) {
+        send(handler, "GET", key, convert.convertTo(key));
+    }
+
+    @Override
     public V getAndRefresh(K key, final int expireSeconds) {
         refresh(key, expireSeconds);
         return get(key);
+    }
+
+    @Override
+    public void getAndRefresh(final AsyncHandler<V, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        refresh(new AsyncVoidHandler< K>() {
+            @Override
+            public void completed(Void result, K attachment) {
+                get(handler, key);
+            }
+
+            @Override
+            public void failed(Throwable exc, K attachment) {
+                if (handler != null) handler.failed(exc, key);
+            }
+
+        }, key, expireSeconds);
+
     }
 
     @Override
@@ -354,8 +381,18 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
+    public void refresh(final AsyncVoidHandler<K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        setExpireSeconds(handler, key, expireSeconds);
+    }
+
+    @Override
     public void set(K key, V value) {
         send("SET", key, convert.convertTo(key), convert.convertTo(Object.class, value)).waitDone();
+    }
+
+    @Override
+    public void set(final AsyncVoidHandler<K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "SET", key, convert.convertTo(key), convert.convertTo(Object.class, value));
     }
 
     @Override
@@ -365,13 +402,39 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
+    public void set(final AsyncVoidHandler<K> handler, final int expireSeconds, @RpcAttachment final K key, final V value) {
+        set(new AsyncVoidHandler< K>() {
+            @Override
+            public void completed(Void result, K attachment) {
+                setExpireSeconds(handler, key, expireSeconds);
+            }
+
+            @Override
+            public void failed(Throwable exc, K attachment) {
+                if (handler != null) handler.failed(exc, key);
+            }
+
+        }, key, value);
+    }
+
+    @Override
     public void setExpireSeconds(K key, int expireSeconds) {
         send("EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8)).waitDone();
     }
 
     @Override
+    public void setExpireSeconds(final AsyncVoidHandler<K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        send(handler, "EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8));
+    }
+
+    @Override
     public void remove(K key) {
         send("DEL", key, convert.convertTo(key)).waitDone();
+    }
+
+    @Override
+    public void remove(final AsyncVoidHandler<K> handler, @RpcAttachment final K key) {
+        send(handler, "DEL", key, convert.convertTo(key));
     }
 
     @Override
@@ -394,9 +457,45 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
+    public void getCollection(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key) {
+        send(new AsyncHandler<byte[], K>() {
+            @Override
+            public void completed(byte[] result, K attachment) {
+                if (result == null) {
+                    if (handler != null) handler.completed(null, attachment);
+                } else if (new String(result).contains("list")) { //list
+                    send(handler, "LRANGE", false, key, convert.convertTo(key), new byte[]{'0'}, new byte[]{'-', '1'});
+                } else {
+                    send(handler, "SMEMBERS", true, key, convert.convertTo(key));
+                }
+            }
+
+            @Override
+            public void failed(Throwable exc, K attachment) {
+                if (handler != null) handler.failed(exc, attachment);
+            }
+        }, "OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key));
+    }
+
+    @Override
     public Collection<V> getCollectionAndRefresh(K key, final int expireSeconds) {
         refresh(key, expireSeconds);
         return getCollection(key);
+    }
+
+    @Override
+    public void getCollectionAndRefresh(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        refresh(new AsyncVoidHandler<K>() {
+            @Override
+            public void completed(Void result, K attachment) {
+                getCollection(handler, key);
+            }
+
+            @Override
+            public void failed(Throwable exc, K attachment) {
+                if (handler != null) handler.failed(exc, attachment);
+            }
+        }, key, expireSeconds);
     }
 
     @Override
@@ -405,8 +504,18 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
+    public void appendListItem(final AsyncVoidHandler<K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    @Override
     public void removeListItem(K key, V value) {
         send("LREM", key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
+    }
+
+    @Override
+    public void removeListItem(final AsyncVoidHandler<K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "LREM", key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
     }
 
     @Override
@@ -415,10 +524,19 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
+    public void appendSetItem(final AsyncVoidHandler<K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "SADD", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    @Override
     public void removeSetItem(K key, V value) {
         send("SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
     }
 
+    @Override
+    public void removeSetItem(final AsyncVoidHandler<K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
 }
 
 final class SimpleFuture<T> implements Future<T> {
