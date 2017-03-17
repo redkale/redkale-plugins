@@ -94,7 +94,7 @@ public final class SocksHttpxServlet extends SocksServlet {
         final ByteBuffer buffer0 = response.getContext().pollBuffer();
         buffer0.put("HTTP/1.1 200 Connection established\r\nConnection: close\r\n\r\n".getBytes());
         buffer0.flip();
-        response.sendBody(buffer0, null, new CompletionHandler<Integer, Void>() {
+        response.sendBody(buffer0, null, new AsyncHandler<Integer, Void>() {
 
             @Override
             public void completed(Integer result, Void attachment) {
@@ -140,7 +140,7 @@ public final class SocksHttpxServlet extends SocksServlet {
                     }
                     rbuffer.flip();
                     CompletionHandler parent = this;
-                    response.sendBody(rbuffer.duplicate().asReadOnlyBuffer(), null, new CompletionHandler<Integer, Void>() {
+                    response.sendBody(rbuffer.duplicate().asReadOnlyBuffer(), null, new AsyncHandler<Integer, Void>() {
 
                         @Override
                         public void completed(Integer result, Void attachment) {
