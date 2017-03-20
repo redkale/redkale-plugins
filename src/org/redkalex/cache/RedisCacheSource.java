@@ -331,9 +331,8 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public boolean exists(final AsyncHandler<Boolean, K> handler, @RpcAttachment final K key) {
+    public void exists(final AsyncHandler<Boolean, K> handler, @RpcAttachment final K key) {
         send(handler, "EXISTS", key, convert.convertTo(key));
-        return false; //异步接口不支持远程模式
     }
 
     @Override
@@ -349,9 +348,8 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public V get(final AsyncHandler<V, K> handler, @RpcAttachment final K key) {
+    public void get(final AsyncHandler<V, K> handler, @RpcAttachment final K key) {
         send(handler, "GET", key, convert.convertTo(key));
-        return null; //异步接口不支持远程模式
     }
 
     @Override
@@ -361,7 +359,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public V getAndRefresh(final AsyncHandler<V, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+    public void getAndRefresh(final AsyncHandler<V, K> handler, @RpcAttachment final K key, final int expireSeconds) {
         refresh(new AsyncHandler<Void, K>() {
             @Override
             public void completed(Void result, K attachment) {
@@ -374,7 +372,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
             }
 
         }, key, expireSeconds);
-        return null; //异步接口不支持远程模式
     }
 
     @Override
@@ -459,7 +456,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public Collection<V> getCollection(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key) {
+    public void getCollection(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key) {
         send(new AsyncHandler<byte[], K>() {
             @Override
             public void completed(byte[] result, K attachment) {
@@ -477,7 +474,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
                 if (handler != null) handler.failed(exc, attachment);
             }
         }, "OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key));
-        return null; //异步接口不支持远程模式
     }
 
     @Override
@@ -487,7 +483,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public Collection<V> getCollectionAndRefresh(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+    public void getCollectionAndRefresh(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key, final int expireSeconds) {
         refresh(new AsyncHandler<Void, K>() {
             @Override
             public void completed(Void result, K attachment) {
@@ -499,7 +495,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
                 if (handler != null) handler.failed(exc, attachment);
             }
         }, key, expireSeconds);
-        return null; //异步接口不支持远程模式
     }
 
     @Override
