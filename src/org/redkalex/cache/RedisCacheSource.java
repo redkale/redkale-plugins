@@ -32,7 +32,7 @@ import org.redkale.watch.WatchFactory;
 @LocalService
 @AutoLoad(false)
 @ResourceType({CacheSource.class})
-public class RedisCacheSource<K extends Serializable, V extends Object> implements CacheSource<K, V>, Service, AutoCloseable {
+public class RedisCacheSource<K extends Serializable, V extends Object> implements CacheSource<K, V>, Service, AutoCloseable, Resourcable {
 
     static final String UTF8_NAME = "UTF-8";
 
@@ -311,6 +311,12 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     @Override
     public void close() throws Exception {  //在 Application 关闭时调用
         destroy(null);
+    }
+
+    @Override
+    public String resourceName() {
+        Resource res = this.getClass().getAnnotation(Resource.class);
+        return res == null ? null : res.name();
     }
 
     @Override
