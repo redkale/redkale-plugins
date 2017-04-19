@@ -95,31 +95,31 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
      * RedisCacheSource<String, String> source = new RedisCacheSource();
      * source.init(conf);
      * source.convert = BsonFactory.root().getConvert();
-     * source.set("key1", "value1");
-     * source.getAndRefresh("key1", 3500);
-     * System.out.println("key1 GET : " + source.get("key1"));
-     * System.out.println("key2 GET : " + source.get("key2"));
-     * System.out.println("key1 EXISTS : " + source.exists("key1"));
-     * System.out.println("key2 EXISTS : " + source.exists("key2"));
-     * source.remove("keys3");
-     * source.appendListItem("keys3", "vals1");
-     * source.appendListItem("keys3", "vals2");
-     * System.out.println("keys3 VALUES : " + source.getCollection("keys3"));
-     * System.out.println("keys3 EXISTS : " + source.exists("keys3"));
-     * source.removeListItem("keys3", "vals1");
-     * System.out.println("keys3 VALUES : " + source.getCollection("keys3"));
-     * source.getCollectionAndRefresh("keys3", 30);
+     * source.setAsync("key1", "value1");
+     * source.getAndRefreshAsync("key1", 3500);
+     * System.out.println("key1 GET : " + source.getAsync("key1"));
+     * System.out.println("key2 GET : " + source.getAsync("key2"));
+     * System.out.println("key1 EXISTS : " + source.existsAsync("key1"));
+     * System.out.println("key2 EXISTS : " + source.existsAsync("key2"));
+     * source.removeAsync("keys3");
+     * source.appendListItemAsync("keys3", "vals1");
+     * source.appendListItemAsync("keys3", "vals2");
+     * System.out.println("keys3 VALUES : " + source.getCollectionAsync("keys3"));
+     * System.out.println("keys3 EXISTS : " + source.existsAsync("keys3"));
+     * source.removeListItemAsync("keys3", "vals1");
+     * System.out.println("keys3 VALUES : " + source.getCollectionAsync("keys3"));
+     * source.getCollectionAndRefreshAsync("keys3", 30);
      *
-     * source.remove("sets3");
-     * source.appendSetItem("sets3", "setvals1");
-     * source.appendSetItem("sets3", "setvals2");
-     * System.out.println("sets3 VALUES : " + source.getCollection("sets3"));
-     * System.out.println("sets3 EXISTS : " + source.exists("sets3"));
-     * source.removeSetItem("sets3", "setvals1");
-     * System.out.println("sets3 VALUES : " + source.getCollection("sets3"));
+     * source.removeAsync("sets3");
+     * source.appendSetItemAsync("sets3", "setvals1");
+     * source.appendSetItemAsync("sets3", "setvals2");
+     * System.out.println("sets3 VALUES : " + source.getCollectionAsync("sets3"));
+     * System.out.println("sets3 EXISTS : " + source.existsAsync("sets3"));
+     * source.removeSetItemAsync("sets3", "setvals1");
+     * System.out.println("sets3 VALUES : " + source.getCollectionAsync("sets3"));
      *
      * System.out.println("---------------------------------");
-     * source.exists(new CompletionHandler<Boolean, String>() {
+     * source.existsAsync(new CompletionHandler<Boolean, String>() {
      * @Override
      * public void completed(Boolean result, String attachment) {
      * System.out.println("key1 EXISTS : " + result);
@@ -132,10 +132,10 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
      * }, "key1");
      * Thread.sleep(500L);
      * //
-     * source.set(new CompletionHandler<Void, String>() {
+     * source.setAsync(new CompletionHandler<Void, String>() {
      * @Override
      * public void completed(Void result, String attachment) {
-     * System.out.println("key2 GET : " + source.get("key2"));
+     * System.out.println("key2 GET : " + source.getAsync("key2"));
      * }
      *
      * @Override
@@ -337,7 +337,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void exists(final AsyncHandler<Boolean, K> handler, @RpcAttachment final K key) {
+    public void existsAsync(final AsyncHandler<Boolean, K> handler, @RpcAttachment final K key) {
         send(handler, "EXISTS", key, convert.convertTo(key));
     }
 
@@ -354,7 +354,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void get(final AsyncHandler<V, K> handler, @RpcAttachment final K key) {
+    public void getAsync(final AsyncHandler<V, K> handler, @RpcAttachment final K key) {
         send(handler, "GET", key, convert.convertTo(key));
     }
 
@@ -365,11 +365,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void getAndRefresh(final AsyncHandler<V, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        refresh(new AsyncHandler<Void, K>() {
+    public void getAndRefreshAsync(final AsyncHandler<V, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        refreshAsync(new AsyncHandler<Void, K>() {
             @Override
             public void completed(Void result, K attachment) {
-                get(handler, key);
+                getAsync(handler, key);
             }
 
             @Override
@@ -386,8 +386,8 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void refresh(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        setExpireSeconds(handler, key, expireSeconds);
+    public void refreshAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        setExpireSecondsAsync(handler, key, expireSeconds);
     }
 
     @Override
@@ -396,7 +396,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void set(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+    public void setAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
         send(handler, "SET", key, convert.convertTo(key), convert.convertTo(Object.class, value));
     }
 
@@ -407,11 +407,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void set(final AsyncHandler<Void, K> handler, final int expireSeconds, @RpcAttachment final K key, final V value) {
-        set(new AsyncHandler<Void, K>() {
+    public void setAsync(final AsyncHandler<Void, K> handler, final int expireSeconds, @RpcAttachment final K key, final V value) {
+        setAsync(new AsyncHandler<Void, K>() {
             @Override
             public void completed(Void result, K attachment) {
-                setExpireSeconds(handler, key, expireSeconds);
+                setExpireSecondsAsync(handler, key, expireSeconds);
             }
 
             @Override
@@ -428,7 +428,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void setExpireSeconds(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+    public void setExpireSecondsAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
         send(handler, "EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8));
     }
 
@@ -438,7 +438,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void remove(final AsyncHandler<Void, K> handler, @RpcAttachment final K key) {
+    public void removeAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key) {
         send(handler, "DEL", key, convert.convertTo(key));
     }
 
@@ -462,7 +462,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void getCollection(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key) {
+    public void getCollectionAsync(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key) {
         send(new AsyncHandler<byte[], K>() {
             @Override
             public void completed(byte[] result, K attachment) {
@@ -489,11 +489,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void getCollectionAndRefresh(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        refresh(new AsyncHandler<Void, K>() {
+    public void getCollectionAndRefreshAsync(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        refreshAsync(new AsyncHandler<Void, K>() {
             @Override
             public void completed(Void result, K attachment) {
-                getCollection(handler, key);
+                getCollectionAsync(handler, key);
             }
 
             @Override
@@ -509,7 +509,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void appendListItem(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+    public void appendListItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
         send(handler, "RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value));
     }
 
@@ -519,7 +519,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void removeListItem(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+    public void removeListItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
         send(handler, "LREM", key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
     }
 
@@ -529,7 +529,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void appendSetItem(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+    public void appendSetItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
         send(handler, "SADD", key, convert.convertTo(key), convert.convertTo(Object.class, value));
     }
 
@@ -539,7 +539,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     }
 
     @Override
-    public void removeSetItem(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+    public void removeSetItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
         send(handler, "SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
     }
 }
