@@ -51,7 +51,7 @@ public class Socks5Servlet extends SocksServlet {
 
     @Override
     public void execute(SocksRequest request, SocksResponse response) throws IOException {
-        response.getContext().submit(new SocksRunner(response.getContext(), response.removeChannel(), bindAddressBytes));
+        response.getContext().submitAsync(new SocksRunner(response.getContext(), response.removeChannel(), bindAddressBytes));
         response.finish(true);
     }
 

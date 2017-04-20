@@ -110,7 +110,7 @@ public class WeiXinQYService implements Service {
     }
 
     public void sendQYMessage(WeiXinQYMessage message) {
-        submit(() -> {
+        runAsync(() -> {
             String result = null;
             try {
                 message.supplyContent();
@@ -252,10 +252,10 @@ public class WeiXinQYService implements Service {
         return cipher;
     }
 
-    protected void submit(Runnable runner) {
+    protected void runAsync(Runnable runner) {
         Thread thread = Thread.currentThread();
         if (thread instanceof WorkThread) {
-            ((WorkThread) thread).submit(runner);
+            ((WorkThread) thread).runAsync(runner);
             return;
         }
         runner.run();
