@@ -32,7 +32,7 @@ import org.redkale.watch.WatchFactory;
 @LocalService
 @AutoLoad(false)
 @ResourceType({CacheSource.class})
-public class RedisCacheSource<K extends Serializable, V extends Object> implements CacheSource<K, V>, Service, AutoCloseable, Resourcable {
+public class RedisCacheSource<K extends Serializable, V extends Object> extends AbstractService implements CacheSource<K, V>, Service, AutoCloseable, Resourcable {
 
     static final String UTF8_NAME = "UTF-8";
 
@@ -146,19 +146,19 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
      * Thread.sleep(500L);
      * }
      */
-    private SimpleFuture<byte[]> send(final String command, final K key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final String command, final K key, final byte[]... args) {
         return send(command, false, key, args);
     }
 
-    private SimpleFuture<byte[]> send(final String command, final boolean set, final K key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final String command, final boolean set, final K key, final byte[]... args) {
         return send(null, command, set, key, args);
     }
 
-    private SimpleFuture<byte[]> send(final CompletionHandler callback, final String command, final K key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final K key, final byte[]... args) {
         return send(callback, command, false, key, args);
     }
 
-    private SimpleFuture<byte[]> send(final CompletionHandler callback, final String command, final boolean set, final K key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final boolean set, final K key, final byte[]... args) {
         final BsonByteBufferWriter writer = new BsonByteBufferWriter(transport.getBufferSupplier());
         writer.writeTo(ASTERISK_BYTE);
         writer.writeTo(String.valueOf(args.length + 1).getBytes(UTF8));
@@ -180,7 +180,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
         final ByteBuffer[] buffers = writer.toBuffers();
         AsyncConnection conn0 = null;
         try {
-            final SimpleFuture<byte[]> future = callback == null ? new SimpleFuture<>() : null;
+            final CompletableFuture<Serializable> future = callback == null ? new CompletableFuture<>() : null;
             conn0 = this.transport.pollConnection(null);
             final AsyncConnection conn = conn0;
             conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
@@ -217,21 +217,21 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
                                     if (future == null) {
                                         callback.completed(null, key);
                                     } else {
-                                        future.set(bs);
+                                        future.complete(bs);
                                     }
                                 } else if (sign == MINUS_BYTE) { // -
                                     String bs = readString();
                                     if (future == null) {
                                         callback.failed(new RuntimeException(bs), key);
                                     } else {
-                                        future.set(new RuntimeException(bs));
+                                        future.completeExceptionally(new RuntimeException(bs));
                                     }
                                 } else if (sign == COLON_BYTE) { // :
                                     long rs = readLong();
                                     if (future == null) {
                                         callback.completed("EXISTS".equals(command) ? (rs > 0) : null, key);
                                     } else {
-                                        future.set(rs);
+                                        future.complete(rs);
                                     }
                                 } else if (sign == DOLLAR_BYTE) { // $
                                     long val = readLong();
@@ -239,7 +239,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
                                     if (future == null) {
                                         callback.completed("GET".equals(command) ? convert.convertFrom(Object.class, rs) : null, key);
                                     } else {
-                                        future.set(rs);
+                                        future.complete(rs);
                                     }
                                 } else if (sign == ASTERISK_BYTE) { // *
                                     final int len = readInt();
@@ -247,7 +247,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
                                         if (future == null) {
                                             callback.completed(null, key);
                                         } else {
-                                            future.set((byte[]) null);
+                                            future.complete((byte[]) null);
                                         }
                                     } else {
                                         Collection rs = set ? new HashSet() : new ArrayList();
@@ -257,7 +257,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
                                         if (future == null) {
                                             callback.completed(rs, key);
                                         } else {
-                                            future.set(rs);
+                                            future.complete((Serializable) rs);
                                         }
                                     }
                                 } else {
@@ -265,7 +265,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
                                     if (future == null) {
                                         callback.failed(new RuntimeException(exstr), key);
                                     } else {
-                                        future.set(new RuntimeException(exstr));
+                                        future.completeExceptionally(new RuntimeException(exstr));
                                     }
                                 }
                                 transport.offerConnection(false, conn);
@@ -280,7 +280,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
                             if (future == null) {
                                 callback.failed(exc, attachments);
                             } else {
-                                future.set(exc instanceof RuntimeException ? (RuntimeException) exc : new RuntimeException(exc));
+                                future.completeExceptionally(exc);
                             }
                         }
 
@@ -289,17 +289,14 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
 
                 @Override
                 public void failed(Throwable exc, ByteBuffer[] attachments) {
+                    transport.offerConnection(false, conn);
                     if (future == null) {
                         callback.failed(exc, attachments);
                     } else {
-                        future.set(exc instanceof RuntimeException ? (RuntimeException) exc : new RuntimeException(exc));
+                        future.completeExceptionally(exc);
                     }
                 }
             });
-            if (future != null) {
-                future.get(10, TimeUnit.SECONDS);
-                this.transport.offerConnection(false, conn);
-            }
             return future;
         } catch (Exception e) {
             transport.offerBuffer(buffers);
@@ -326,9 +323,9 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
 
     @Override
     public boolean exists(K key) {
-        SimpleFuture<byte[]> future = send("EXISTS", key, convert.convertTo(key));
+        CompletableFuture<Serializable> future = send("EXISTS", key, convert.convertTo(key));
         try {
-            return future.getNumberResult() > 0;
+            return ((Number) future.get()).longValue() > 0;
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception e) {
@@ -343,9 +340,9 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
 
     @Override
     public V get(K key) {
-        SimpleFuture<byte[]> future = send("GET", key, convert.convertTo(key));
+        CompletableFuture<Serializable> future = send("GET", key, convert.convertTo(key));
         try {
-            return (V) convert.convertFrom(Object.class, future.get());
+            return (V) convert.convertFrom(Object.class, (byte[]) future.get());
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception e) {
@@ -392,7 +389,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
 
     @Override
     public void set(K key, V value) {
-        send("SET", key, convert.convertTo(key), convert.convertTo(Object.class, value)).waitDone();
+        try {
+            send("SET", key, convert.convertTo(key), convert.convertTo(Object.class, value)).get();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     @Override
@@ -424,7 +425,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
 
     @Override
     public void setExpireSeconds(K key, int expireSeconds) {
-        send("EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8)).waitDone();
+        try {
+            send("EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8)).get();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     @Override
@@ -434,7 +439,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
 
     @Override
     public void remove(K key) {
-        send("DEL", key, convert.convertTo(key)).waitDone();
+        try {
+            send("DEL", key, convert.convertTo(key)).get();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     @Override
@@ -444,16 +453,18 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
 
     @Override
     public Collection<V> getCollection(K key) {
-        SimpleFuture<byte[]> future = send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key));
+        CompletableFuture<Serializable> future = send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key));
         try {
-            final byte[] typeDesc = future.get();
+            Serializable rs = future.get();
+            if (rs instanceof Collection) return (Collection<V>) rs;
+            final byte[] typeDesc = (byte[]) future.get();
             if (typeDesc == null) return null;
             if (new String(typeDesc).contains("list")) { //list
                 future = send("LRANGE", false, key, convert.convertTo(key), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
                 future = send("SMEMBERS", true, key, convert.convertTo(key));
             }
-            return future.getCollectionResult();
+            return (Collection<V>) future.get();
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception e) {
@@ -505,7 +516,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
 
     @Override
     public void appendListItem(K key, V value) {
-        send("RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value)).waitDone();
+        try {
+            send("RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value)).get(5, TimeUnit.SECONDS);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     @Override
@@ -542,155 +557,76 @@ public class RedisCacheSource<K extends Serializable, V extends Object> implemen
     public void removeSetItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
         send(handler, "SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
     }
-}
 
-final class SimpleFuture<T> implements Future<T> {
-
-    private volatile boolean done;
-
-    private long numberResult = -1;
-
-    private Collection collectionResult;
-
-    private T result;
-
-    private RuntimeException ex;
-
-    public SimpleFuture() {
-    }
-
-    public SimpleFuture(T result) {
-        this.result = result;
-        this.done = true;
-    }
-
-    public void set(T result) {
-        this.result = result;
-        this.done = true;
-        synchronized (this) {
-            notifyAll();
-        }
-    }
-
-    public void set(Collection val) {
-        this.collectionResult = val;
-        this.done = true;
-        synchronized (this) {
-            notifyAll();
-        }
-    }
-
-    public void set(int val) {
-        this.numberResult = val;
-        this.done = true;
-        synchronized (this) {
-            notifyAll();
-        }
-    }
-
-    public void set(long val) {
-        this.numberResult = val;
-        this.done = true;
-        synchronized (this) {
-            notifyAll();
-        }
-    }
-
-    public void set(RuntimeException ex) {
-        this.ex = ex;
-        this.done = true;
-        synchronized (this) {
-            notifyAll();
-        }
-    }
-
-    public void waitDone() {
-        try {
-            get();
-        } catch (RuntimeException rex) {
-            throw rex;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    @Override
+    public CompletableFuture<Boolean> existsAsync(K key) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-        return false;
+    public CompletableFuture<V> getAsync(K key) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean isCancelled() {
-        return false;
+    public CompletableFuture<V> getAndRefreshAsync(K key, int expireSeconds) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean isDone() {
-        return done;
-    }
-
-    public Collection getCollectionResult() throws InterruptedException, ExecutionException {
-        if (done) {
-            if (ex != null) throw ex;
-            return collectionResult;
-        }
-        synchronized (this) {
-            if (!done) wait(10_000);
-        }
-        if (done) {
-            if (ex != null) throw ex;
-            return collectionResult;
-        }
-        throw new InterruptedException();
-    }
-
-    public long getNumberResult() throws InterruptedException, ExecutionException {
-        if (done) {
-            if (ex != null) throw ex;
-            return numberResult;
-        }
-        synchronized (this) {
-            if (!done) wait(10_000);
-        }
-        if (done) {
-            if (ex != null) throw ex;
-            return numberResult;
-        }
-        throw new InterruptedException();
+    public CompletableFuture<Void> refreshAsync(K key, int expireSeconds) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public T get() throws InterruptedException, ExecutionException {
-        if (done) {
-            if (ex != null) throw ex;
-            return result;
-        }
-        synchronized (this) {
-            if (!done) wait(10_000);
-        }
-        if (done) {
-            if (ex != null) throw ex;
-            return result;
-        }
-        throw new InterruptedException();
+    public CompletableFuture<Void> setAsync(K key, V value) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        if (done) {
-            if (ex != null) throw ex;
-            return result;
-        }
-        synchronized (this) {
-            if (!done) wait(unit.toMillis(timeout));
-        }
-        if (done) {
-            if (ex != null) throw ex;
-            return result;
-        }
-        throw new TimeoutException();
+    public CompletableFuture<Void> setAsync(int expireSeconds, K key, V value) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
+    @Override
+    public CompletableFuture<Void> setExpireSecondsAsync(K key, int expireSeconds) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public CompletableFuture<Void> removeAsync(K key) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public CompletableFuture<Collection<V>> getCollectionAsync(K key) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public CompletableFuture<Collection<V>> getCollectionAndRefreshAsync(K key, int expireSeconds) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public CompletableFuture<Void> appendListItemAsync(K key, V value) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public CompletableFuture<Void> removeListItemAsync(K key, V value) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public CompletableFuture<Void> appendSetItemAsync(K key, V value) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public CompletableFuture<Void> removeSetItemAsync(K key, V value) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }
 
 abstract class ReplyCompletionHandler<T> implements CompletionHandler<Integer, T> {
