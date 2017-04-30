@@ -19,6 +19,7 @@ import org.redkale.net.*;
 import org.redkale.service.*;
 import org.redkale.source.CacheSource;
 import org.redkale.util.*;
+import org.redkale.util.AnyValue.DefaultAnyValue;
 import org.redkale.watch.WatchFactory;
 
 /**
@@ -87,65 +88,355 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         this.transport = new Transport("Redis-Transport", "TCP", null, "", transportPool, transportGroup, null, addresses);
     }
 
-    /*
-     * public static void main(String[] args) throws Exception {
-     * DefaultAnyValue conf = new DefaultAnyValue();
-     * conf.addValue("node", new DefaultAnyValue().addValue("addr", "10.28.10.11").addValue("port", "5050"));
-     *
-     * RedisCacheSource<String, String> source = new RedisCacheSource();
-     * source.init(conf);
-     * source.convert = BsonFactory.root().getConvert();
-     * source.setAsync("key1", "value1");
-     * source.getAndRefreshAsync("key1", 3500);
-     * System.out.println("key1 GET : " + source.getAsync("key1"));
-     * System.out.println("key2 GET : " + source.getAsync("key2"));
-     * System.out.println("key1 EXISTS : " + source.existsAsync("key1"));
-     * System.out.println("key2 EXISTS : " + source.existsAsync("key2"));
-     * source.removeAsync("keys3");
-     * source.appendListItemAsync("keys3", "vals1");
-     * source.appendListItemAsync("keys3", "vals2");
-     * System.out.println("keys3 VALUES : " + source.getCollectionAsync("keys3"));
-     * System.out.println("keys3 EXISTS : " + source.existsAsync("keys3"));
-     * source.removeListItemAsync("keys3", "vals1");
-     * System.out.println("keys3 VALUES : " + source.getCollectionAsync("keys3"));
-     * source.getCollectionAndRefreshAsync("keys3", 30);
-     *
-     * source.removeAsync("sets3");
-     * source.appendSetItemAsync("sets3", "setvals1");
-     * source.appendSetItemAsync("sets3", "setvals2");
-     * System.out.println("sets3 VALUES : " + source.getCollectionAsync("sets3"));
-     * System.out.println("sets3 EXISTS : " + source.existsAsync("sets3"));
-     * source.removeSetItemAsync("sets3", "setvals1");
-     * System.out.println("sets3 VALUES : " + source.getCollectionAsync("sets3"));
-     *
-     * System.out.println("---------------------------------");
-     * source.existsAsync(new CompletionHandler<Boolean, String>() {
-     * @Override
-     * public void completed(Boolean result, String attachment) {
-     * System.out.println("key1 EXISTS : " + result);
-     * }
-     *
-     * @Override
-     * public void failed(Throwable exc, String attachment) {
-     * exc.printStackTrace();
-     * }
-     * }, "key1");
-     * Thread.sleep(500L);
-     * //
-     * source.setAsync(new CompletionHandler<Void, String>() {
-     * @Override
-     * public void completed(Void result, String attachment) {
-     * System.out.println("key2 GET : " + source.getAsync("key2"));
-     * }
-     *
-     * @Override
-     * public void failed(Throwable exc, String attachment) {
-     * exc.printStackTrace();
-     * }
-     * }, "key2", "keyvalue2");
-     * Thread.sleep(500L);
-     * }
-     */
+    public static void main(String[] args) throws Exception {
+        DefaultAnyValue conf = new DefaultAnyValue();
+        conf.addValue("node", new DefaultAnyValue().addValue("addr", "127.0.0.1").addValue("port", "6379"));
+
+        RedisCacheSource<String, String> source = new RedisCacheSource();
+        source.init(conf);
+        source.convert = BsonFactory.root().getConvert();
+
+        System.out.println("------------------------------------");
+        source.remove("key1");
+        source.remove("key2");
+        source.set("key1", "value1");
+        source.getAndRefresh("key1", 3500);
+        System.out.println("[有值] key1 GET : " + source.get("key1"));
+        System.out.println("[无值] key2 GET : " + source.get("key2"));
+        System.out.println("[有值] key1 EXISTS : " + source.exists("key1"));
+        System.out.println("[无值] key2 EXISTS : " + source.exists("key2"));
+
+        source.remove("keys3");
+        source.appendListItem("keys3", "vals1");
+        source.appendListItem("keys3", "vals2");
+        System.out.println("-------- keys3 追加了两个值 --------");
+        System.out.println("[两值] keys3 VALUES : " + source.getCollection("keys3"));
+        System.out.println("[有值] keys3 EXISTS : " + source.exists("keys3"));
+        source.removeListItem("keys3", "vals1");
+        System.out.println("[一值] keys3 VALUES : " + source.getCollection("keys3"));
+        source.getCollectionAndRefresh("keys3", 30);
+
+        source.remove("sets3");
+        source.appendSetItem("sets3", "setvals1");
+        source.appendSetItem("sets3", "setvals2");
+        source.appendSetItem("sets3", "setvals1");
+        System.out.println("[两值] sets3 VALUES : " + source.getCollection("sets3"));
+        System.out.println("[有值] sets3 EXISTS : " + source.exists("sets3"));
+        source.removeSetItem("sets3", "setvals1");
+        System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3"));
+        System.out.println("------------------------------------");
+    }
+
+    @Override
+    public void close() throws Exception {  //在 Application 关闭时调用
+        destroy(null);
+    }
+
+    @Override
+    public String resourceName() {
+        Resource res = this.getClass().getAnnotation(Resource.class);
+        return res == null ? null : res.name();
+    }
+
+    @Override
+    public void destroy(AnyValue conf) {
+        if (transport != null) transport.close();
+    }
+
+    //--------------------- exists ------------------------------
+    @Override
+    public CompletableFuture<Boolean> existsAsync(K key) {
+        return (CompletableFuture) send("EXISTS", key, convert.convertTo(key));
+    }
+
+    @Override
+    public boolean exists(K key) {
+        return existsAsync(key).join();
+    }
+
+    @Override
+    @Deprecated
+    public void existsAsync(final AsyncHandler<Boolean, K> handler, @RpcAttachment final K key) {
+        send(handler, "EXISTS", key, convert.convertTo(key));
+    }
+
+    //--------------------- get ------------------------------
+    @Override
+    public CompletableFuture<V> getAsync(K key) {
+        return (CompletableFuture) send("GET", key, convert.convertTo(key));
+    }
+
+    @Override
+    public V get(K key) {
+        return getAsync(key).join();
+    }
+
+    @Override
+    @Deprecated
+    public void getAsync(final AsyncHandler<V, K> handler, @RpcAttachment final K key) {
+        send(handler, "GET", key, convert.convertTo(key));
+    }
+
+    //--------------------- getAndRefresh ------------------------------
+    @Override
+    public CompletableFuture<V> getAndRefreshAsync(K key, int expireSeconds) {
+        return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getAsync(key));
+    }
+
+    @Override
+    public V getAndRefresh(K key, final int expireSeconds) {
+        return getAndRefreshAsync(key, expireSeconds).join();
+    }
+
+    @Override
+    @Deprecated
+    public void getAndRefreshAsync(final AsyncHandler<V, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        refreshAsync(new AsyncHandler<Void, K>() {
+            @Override
+            public void completed(Void result, K attachment) {
+                getAsync(handler, key);
+            }
+
+            @Override
+            public void failed(Throwable exc, K attachment) {
+                if (handler != null) handler.failed(exc, key);
+            }
+
+        }, key, expireSeconds);
+    }
+
+    //--------------------- refresh ------------------------------
+    @Override
+    public CompletableFuture<Void> refreshAsync(K key, int expireSeconds) {
+        return setExpireSecondsAsync(key, expireSeconds);
+    }
+
+    @Override
+    public void refresh(K key, final int expireSeconds) {
+        setExpireSeconds(key, expireSeconds);
+    }
+
+    @Override
+    @Deprecated
+    public void refreshAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        setExpireSecondsAsync(handler, key, expireSeconds);
+    }
+
+    //--------------------- set ------------------------------
+    @Override
+    public CompletableFuture<Void> setAsync(K key, V value) {
+        return (CompletableFuture) send("SET", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    @Override
+    public void set(K key, V value) {
+        setAsync(key, value).join();
+    }
+
+    @Override
+    @Deprecated
+    public void setAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "SET", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    //--------------------- set ------------------------------    
+    @Override
+    public CompletableFuture<Void> setAsync(int expireSeconds, K key, V value) {
+        return (CompletableFuture) setAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+    }
+
+    @Override
+    public void set(int expireSeconds, K key, V value) {
+        setAsync(expireSeconds, key, value).join();
+    }
+
+    @Override
+    @Deprecated
+    public void setAsync(final AsyncHandler<Void, K> handler, final int expireSeconds, @RpcAttachment final K key, final V value) {
+        setAsync(new AsyncHandler<Void, K>() {
+            @Override
+            public void completed(Void result, K attachment) {
+                setExpireSecondsAsync(handler, key, expireSeconds);
+            }
+
+            @Override
+            public void failed(Throwable exc, K attachment) {
+                if (handler != null) handler.failed(exc, key);
+            }
+
+        }, key, value);
+    }
+
+    //--------------------- setExpireSeconds ------------------------------    
+    @Override
+    public CompletableFuture<Void> setExpireSecondsAsync(K key, int expireSeconds) {
+        return (CompletableFuture) send("EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8));
+    }
+
+    @Override
+    public void setExpireSeconds(K key, int expireSeconds) {
+        setExpireSecondsAsync(key, expireSeconds).join();
+    }
+
+    @Override
+    @Deprecated
+    public void setExpireSecondsAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        send(handler, "EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8));
+    }
+
+    //--------------------- remove ------------------------------    
+    @Override
+    public CompletableFuture<Void> removeAsync(K key) {
+        return (CompletableFuture) send("DEL", key, convert.convertTo(key));
+    }
+
+    @Override
+    public void remove(K key) {
+        removeAsync(key).join();
+    }
+
+    @Override
+    @Deprecated
+    public void removeAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key) {
+        send(handler, "DEL", key, convert.convertTo(key));
+    }
+
+    //--------------------- remove ------------------------------   
+    @Override
+    public CompletableFuture<Collection<V>> getCollectionAsync(K key) {
+        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key)).thenCompose(t -> {
+            if (t == null) return CompletableFuture.completedFuture(null);
+            if (new String((byte[]) t).contains("list")) { //list
+                return send("LRANGE", false, key, convert.convertTo(key), new byte[]{'0'}, new byte[]{'-', '1'});
+            } else {
+                return send("SMEMBERS", true, key, convert.convertTo(key));
+            }
+        });
+    }
+
+    @Override
+    public Collection<V> getCollection(K key) {
+        return getCollectionAsync(key).join();
+    }
+
+    @Override
+    @Deprecated
+    public void getCollectionAsync(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key) {
+        send(new AsyncHandler<byte[], K>() {
+            @Override
+            public void completed(byte[] result, K attachment) {
+                if (result == null) {
+                    if (handler != null) handler.completed(null, attachment);
+                } else if (new String(result).contains("list")) { //list
+                    send(handler, "LRANGE", false, key, convert.convertTo(key), new byte[]{'0'}, new byte[]{'-', '1'});
+                } else {
+                    send(handler, "SMEMBERS", true, key, convert.convertTo(key));
+                }
+            }
+
+            @Override
+            public void failed(Throwable exc, K attachment) {
+                if (handler != null) handler.failed(exc, attachment);
+            }
+        }, "OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key));
+    }
+
+    //--------------------- getCollectionAndRefresh ------------------------------  
+    @Override
+    public CompletableFuture<Collection<V>> getCollectionAndRefreshAsync(K key, int expireSeconds) {
+        return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key));
+    }
+
+    @Override
+    public Collection<V> getCollectionAndRefresh(K key, final int expireSeconds) {
+        return getCollectionAndRefreshAsync(key, expireSeconds).join();
+    }
+
+    @Override
+    @Deprecated
+    public void getCollectionAndRefreshAsync(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key, final int expireSeconds) {
+        refreshAsync(new AsyncHandler<Void, K>() {
+            @Override
+            public void completed(Void result, K attachment) {
+                getCollectionAsync(handler, key);
+            }
+
+            @Override
+            public void failed(Throwable exc, K attachment) {
+                if (handler != null) handler.failed(exc, attachment);
+            }
+        }, key, expireSeconds);
+    }
+
+    //--------------------- appendListItem ------------------------------  
+    @Override
+    public CompletableFuture<Void> appendListItemAsync(K key, V value) {
+        return (CompletableFuture) send("RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    @Override
+    public void appendListItem(K key, V value) {
+        appendListItemAsync(key, value).join();
+    }
+
+    @Override
+    @Deprecated
+    public void appendListItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    //--------------------- removeListItem ------------------------------  
+    @Override
+    public CompletableFuture<Void> removeListItemAsync(K key, V value) {
+        return (CompletableFuture) send("LREM", key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
+    }
+
+    @Override
+    public void removeListItem(K key, V value) {
+        removeListItemAsync(key, value).join();
+    }
+
+    @Override
+    @Deprecated
+    public void removeListItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "LREM", key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
+    }
+
+    //--------------------- appendSetItem ------------------------------  
+    @Override
+    public CompletableFuture<Void> appendSetItemAsync(K key, V value) {
+        return (CompletableFuture) send("SADD", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    @Override
+    public void appendSetItem(K key, V value) {
+        appendSetItemAsync(key, value).join();
+    }
+
+    @Override
+    @Deprecated
+    public void appendSetItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "SADD", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    //--------------------- removeSetItem ------------------------------  
+    @Override
+    public CompletableFuture<Void> removeSetItemAsync(K key, V value) {
+        return (CompletableFuture) send("SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    @Override
+    public void removeSetItem(K key, V value) {
+        removeSetItemAsync(key, value).join();
+    }
+
+    @Override
+    @Deprecated
+    public void removeSetItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
+        send(handler, "SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+    }
+
+    //--------------------- send ------------------------------  
     private CompletableFuture<Serializable> send(final String command, final K key, final byte[]... args) {
         return send(command, false, key, args);
     }
@@ -224,14 +515,14 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
                                     if (future == null) {
                                         callback.failed(new RuntimeException(bs), key);
                                     } else {
-                                        future.completeExceptionally(new RuntimeException(bs));
+                                        future.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
                                     }
                                 } else if (sign == COLON_BYTE) { // :
                                     long rs = readLong();
                                     if (future == null) {
                                         callback.completed("EXISTS".equals(command) ? (rs > 0) : null, key);
                                     } else {
-                                        future.complete(rs);
+                                        future.complete("EXISTS".equals(command) ? (rs > 0) : null);
                                     }
                                 } else if (sign == DOLLAR_BYTE) { // $
                                     long val = readLong();
@@ -239,7 +530,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
                                     if (future == null) {
                                         callback.completed("GET".equals(command) ? convert.convertFrom(Object.class, rs) : null, key);
                                     } else {
-                                        future.complete(rs);
+                                        future.complete("GET".equals(command) ? convert.convertFrom(Object.class, rs) : rs);
                                     }
                                 } else if (sign == ASTERISK_BYTE) { // *
                                     final int len = readInt();
@@ -305,328 +596,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         }
     }
 
-    @Override
-    public void close() throws Exception {  //在 Application 关闭时调用
-        destroy(null);
-    }
-
-    @Override
-    public String resourceName() {
-        Resource res = this.getClass().getAnnotation(Resource.class);
-        return res == null ? null : res.name();
-    }
-
-    @Override
-    public void destroy(AnyValue conf) {
-        if (transport != null) transport.close();
-    }
-
-    @Override
-    public boolean exists(K key) {
-        CompletableFuture<Serializable> future = send("EXISTS", key, convert.convertTo(key));
-        try {
-            return ((Number) future.get()).longValue() > 0;
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public void existsAsync(final AsyncHandler<Boolean, K> handler, @RpcAttachment final K key) {
-        send(handler, "EXISTS", key, convert.convertTo(key));
-    }
-
-    @Override
-    public V get(K key) {
-        CompletableFuture<Serializable> future = send("GET", key, convert.convertTo(key));
-        try {
-            return (V) convert.convertFrom(Object.class, (byte[]) future.get());
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public void getAsync(final AsyncHandler<V, K> handler, @RpcAttachment final K key) {
-        send(handler, "GET", key, convert.convertTo(key));
-    }
-
-    @Override
-    public V getAndRefresh(K key, final int expireSeconds) {
-        refresh(key, expireSeconds);
-        return get(key);
-    }
-
-    @Override
-    public void getAndRefreshAsync(final AsyncHandler<V, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        refreshAsync(new AsyncHandler<Void, K>() {
-            @Override
-            public void completed(Void result, K attachment) {
-                getAsync(handler, key);
-            }
-
-            @Override
-            public void failed(Throwable exc, K attachment) {
-                if (handler != null) handler.failed(exc, key);
-            }
-
-        }, key, expireSeconds);
-    }
-
-    @Override
-    public void refresh(K key, final int expireSeconds) {
-        setExpireSeconds(key, expireSeconds);
-    }
-
-    @Override
-    public void refreshAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        setExpireSecondsAsync(handler, key, expireSeconds);
-    }
-
-    @Override
-    public void set(K key, V value) {
-        try {
-            send("SET", key, convert.convertTo(key), convert.convertTo(Object.class, value)).get();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    @Override
-    public void setAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "SET", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void set(int expireSeconds, K key, V value) {
-        set(key, value);
-        setExpireSeconds(key, expireSeconds);
-    }
-
-    @Override
-    public void setAsync(final AsyncHandler<Void, K> handler, final int expireSeconds, @RpcAttachment final K key, final V value) {
-        setAsync(new AsyncHandler<Void, K>() {
-            @Override
-            public void completed(Void result, K attachment) {
-                setExpireSecondsAsync(handler, key, expireSeconds);
-            }
-
-            @Override
-            public void failed(Throwable exc, K attachment) {
-                if (handler != null) handler.failed(exc, key);
-            }
-
-        }, key, value);
-    }
-
-    @Override
-    public void setExpireSeconds(K key, int expireSeconds) {
-        try {
-            send("EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8)).get();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    @Override
-    public void setExpireSecondsAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        send(handler, "EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8));
-    }
-
-    @Override
-    public void remove(K key) {
-        try {
-            send("DEL", key, convert.convertTo(key)).get();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    @Override
-    public void removeAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key) {
-        send(handler, "DEL", key, convert.convertTo(key));
-    }
-
-    @Override
-    public Collection<V> getCollection(K key) {
-        CompletableFuture<Serializable> future = send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key));
-        try {
-            Serializable rs = future.get();
-            if (rs instanceof Collection) return (Collection<V>) rs;
-            final byte[] typeDesc = (byte[]) future.get();
-            if (typeDesc == null) return null;
-            if (new String(typeDesc).contains("list")) { //list
-                future = send("LRANGE", false, key, convert.convertTo(key), new byte[]{'0'}, new byte[]{'-', '1'});
-            } else {
-                future = send("SMEMBERS", true, key, convert.convertTo(key));
-            }
-            return (Collection<V>) future.get();
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public void getCollectionAsync(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key) {
-        send(new AsyncHandler<byte[], K>() {
-            @Override
-            public void completed(byte[] result, K attachment) {
-                if (result == null) {
-                    if (handler != null) handler.completed(null, attachment);
-                } else if (new String(result).contains("list")) { //list
-                    send(handler, "LRANGE", false, key, convert.convertTo(key), new byte[]{'0'}, new byte[]{'-', '1'});
-                } else {
-                    send(handler, "SMEMBERS", true, key, convert.convertTo(key));
-                }
-            }
-
-            @Override
-            public void failed(Throwable exc, K attachment) {
-                if (handler != null) handler.failed(exc, attachment);
-            }
-        }, "OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key));
-    }
-
-    @Override
-    public Collection<V> getCollectionAndRefresh(K key, final int expireSeconds) {
-        refresh(key, expireSeconds);
-        return getCollection(key);
-    }
-
-    @Override
-    public void getCollectionAndRefreshAsync(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        refreshAsync(new AsyncHandler<Void, K>() {
-            @Override
-            public void completed(Void result, K attachment) {
-                getCollectionAsync(handler, key);
-            }
-
-            @Override
-            public void failed(Throwable exc, K attachment) {
-                if (handler != null) handler.failed(exc, attachment);
-            }
-        }, key, expireSeconds);
-    }
-
-    @Override
-    public void appendListItem(K key, V value) {
-        try {
-            send("RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value)).get(5, TimeUnit.SECONDS);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    @Override
-    public void appendListItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void removeListItem(K key, V value) {
-        send("LREM", key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void removeListItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "LREM", key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void appendSetItem(K key, V value) {
-        send("SADD", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void appendSetItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "SADD", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void removeSetItem(K key, V value) {
-        send("SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public void removeSetItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> existsAsync(K key) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<V> getAsync(K key) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<V> getAndRefreshAsync(K key, int expireSeconds) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Void> refreshAsync(K key, int expireSeconds) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Void> setAsync(K key, V value) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Void> setAsync(int expireSeconds, K key, V value) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Void> setExpireSecondsAsync(K key, int expireSeconds) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Void> removeAsync(K key) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Collection<V>> getCollectionAsync(K key) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Collection<V>> getCollectionAndRefreshAsync(K key, int expireSeconds) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Void> appendListItemAsync(K key, V value) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Void> removeListItemAsync(K key, V value) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Void> appendSetItemAsync(K key, V value) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Void> removeSetItemAsync(K key, V value) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
 }
 
 abstract class ReplyCompletionHandler<T> implements CompletionHandler<Integer, T> {
