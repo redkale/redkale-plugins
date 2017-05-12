@@ -154,12 +154,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         return existsAsync(key).join();
     }
 
-    @Override
-
-    public void existsAsync(final AsyncHandler<Boolean, K> handler, @RpcAttachment final K key) {
-        send(handler, "EXISTS", key, convert.convertTo(key));
-    }
-
     //--------------------- get ------------------------------
     @Override
     public CompletableFuture<V> getAsync(K key) {
@@ -169,12 +163,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     @Override
     public V get(K key) {
         return getAsync(key).join();
-    }
-
-    @Override
-
-    public void getAsync(final AsyncHandler<V, K> handler, @RpcAttachment final K key) {
-        send(handler, "GET", key, convert.convertTo(key));
     }
 
     //--------------------- getAndRefresh ------------------------------
@@ -188,23 +176,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         return getAndRefreshAsync(key, expireSeconds).join();
     }
 
-    @Override
-
-    public void getAndRefreshAsync(final AsyncHandler<V, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        refreshAsync(new AsyncHandler<Void, K>() {
-            @Override
-            public void completed(Void result, K attachment) {
-                getAsync(handler, key);
-            }
-
-            @Override
-            public void failed(Throwable exc, K attachment) {
-                if (handler != null) handler.failed(exc, key);
-            }
-
-        }, key, expireSeconds);
-    }
-
     //--------------------- refresh ------------------------------
     @Override
     public CompletableFuture<Void> refreshAsync(K key, int expireSeconds) {
@@ -214,12 +185,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     @Override
     public void refresh(K key, final int expireSeconds) {
         setExpireSeconds(key, expireSeconds);
-    }
-
-    @Override
-
-    public void refreshAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        setExpireSecondsAsync(handler, key, expireSeconds);
     }
 
     //--------------------- set ------------------------------
@@ -233,12 +198,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         setAsync(key, value).join();
     }
 
-    @Override
-
-    public void setAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "SET", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
     //--------------------- set ------------------------------    
     @Override
     public CompletableFuture<Void> setAsync(int expireSeconds, K key, V value) {
@@ -248,23 +207,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     @Override
     public void set(int expireSeconds, K key, V value) {
         setAsync(expireSeconds, key, value).join();
-    }
-
-    @Override
-
-    public void setAsync(final AsyncHandler<Void, K> handler, final int expireSeconds, @RpcAttachment final K key, final V value) {
-        setAsync(new AsyncHandler<Void, K>() {
-            @Override
-            public void completed(Void result, K attachment) {
-                setExpireSecondsAsync(handler, key, expireSeconds);
-            }
-
-            @Override
-            public void failed(Throwable exc, K attachment) {
-                if (handler != null) handler.failed(exc, key);
-            }
-
-        }, key, value);
     }
 
     //--------------------- setExpireSeconds ------------------------------    
@@ -278,12 +220,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         setExpireSecondsAsync(key, expireSeconds).join();
     }
 
-    @Override
-
-    public void setExpireSecondsAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        send(handler, "EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8));
-    }
-
     //--------------------- remove ------------------------------    
     @Override
     public CompletableFuture<Void> removeAsync(K key) {
@@ -293,12 +229,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     @Override
     public void remove(K key) {
         removeAsync(key).join();
-    }
-
-    @Override
-
-    public void removeAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key) {
-        send(handler, "DEL", key, convert.convertTo(key));
     }
 
     //--------------------- remove ------------------------------   
@@ -319,28 +249,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         return getCollectionAsync(key).join();
     }
 
-    @Override
-
-    public void getCollectionAsync(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key) {
-        send(new AsyncHandler<byte[], K>() {
-            @Override
-            public void completed(byte[] result, K attachment) {
-                if (result == null) {
-                    if (handler != null) handler.completed(null, attachment);
-                } else if (new String(result).contains("list")) { //list
-                    send(handler, "LRANGE", false, key, convert.convertTo(key), new byte[]{'0'}, new byte[]{'-', '1'});
-                } else {
-                    send(handler, "SMEMBERS", true, key, convert.convertTo(key));
-                }
-            }
-
-            @Override
-            public void failed(Throwable exc, K attachment) {
-                if (handler != null) handler.failed(exc, attachment);
-            }
-        }, "OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key));
-    }
-
     //--------------------- getCollectionAndRefresh ------------------------------  
     @Override
     public CompletableFuture<Collection<V>> getCollectionAndRefreshAsync(K key, int expireSeconds) {
@@ -350,22 +258,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     @Override
     public Collection<V> getCollectionAndRefresh(K key, final int expireSeconds) {
         return getCollectionAndRefreshAsync(key, expireSeconds).join();
-    }
-
-    @Override
-
-    public void getCollectionAndRefreshAsync(final AsyncHandler<Collection<V>, K> handler, @RpcAttachment final K key, final int expireSeconds) {
-        refreshAsync(new AsyncHandler<Void, K>() {
-            @Override
-            public void completed(Void result, K attachment) {
-                getCollectionAsync(handler, key);
-            }
-
-            @Override
-            public void failed(Throwable exc, K attachment) {
-                if (handler != null) handler.failed(exc, attachment);
-            }
-        }, key, expireSeconds);
     }
 
     //--------------------- appendListItem ------------------------------  
@@ -379,12 +271,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         appendListItemAsync(key, value).join();
     }
 
-    @Override
-
-    public void appendListItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
     //--------------------- removeListItem ------------------------------  
     @Override
     public CompletableFuture<Void> removeListItemAsync(K key, V value) {
@@ -394,12 +280,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     @Override
     public void removeListItem(K key, V value) {
         removeListItemAsync(key, value).join();
-    }
-
-    @Override
-
-    public void removeListItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "LREM", key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
     }
 
     //--------------------- appendSetItem ------------------------------  
@@ -413,12 +293,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         appendSetItemAsync(key, value).join();
     }
 
-    @Override
-
-    public void appendSetItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "SADD", key, convert.convertTo(key), convert.convertTo(Object.class, value));
-    }
-
     //--------------------- removeSetItem ------------------------------  
     @Override
     public CompletableFuture<Void> removeSetItemAsync(K key, V value) {
@@ -428,12 +302,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     @Override
     public void removeSetItem(K key, V value) {
         removeSetItemAsync(key, value).join();
-    }
-
-    @Override
-
-    public void removeSetItemAsync(final AsyncHandler<Void, K> handler, @RpcAttachment final K key, final V value) {
-        send(handler, "SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
     }
 
     //--------------------- send ------------------------------  
