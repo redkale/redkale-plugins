@@ -23,8 +23,8 @@ import static org.redkalex.email.EmailCodes.*;
  *
  * @author zhangjx
  */
+@Local
 @AutoLoad(false)
-@LocalService
 public class EmailService implements org.redkale.service.Service {
 
     private final Logger logger = Logger.getLogger(getClass().getSimpleName());

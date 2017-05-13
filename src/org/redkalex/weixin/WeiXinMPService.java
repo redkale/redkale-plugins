@@ -9,15 +9,15 @@ import org.redkale.util.Utility;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.RetResult;
 import org.redkale.util.AutoLoad;
-import org.redkale.service.LocalService;
 import org.redkale.service.Service;
 import static org.redkale.convert.json.JsonConvert.TYPE_MAP_STRING_STRING;
-import static org.redkale.util.Utility.getHttpContent;
 import java.io.*;
 import java.security.*;
 import java.util.*;
 import java.util.logging.*;
 import javax.annotation.*;
+import org.redkale.service.Local;
+import static org.redkale.util.Utility.getHttpContent;
 
 /**
  * 微信服务号Service
@@ -26,8 +26,8 @@ import javax.annotation.*;
  *
  * @author zhangjx
  */
+@Local
 @AutoLoad(false)
-@LocalService
 public class WeiXinMPService implements Service {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());

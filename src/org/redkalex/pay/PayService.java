@@ -17,8 +17,8 @@ import static org.redkalex.pay.Pays.*;
  *
  * @author zhangjx
  */
+@Local
 @AutoLoad(false)
-@LocalService
 public class PayService extends AbstractPayService {
 
     @Resource

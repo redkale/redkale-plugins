@@ -9,7 +9,6 @@ import org.redkale.util.AnyValue;
 import org.redkale.util.Utility;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.AutoLoad;
-import org.redkale.service.LocalService;
 import org.redkale.service.Service;
 import java.io.*;
 import java.net.*;
@@ -22,6 +21,7 @@ import java.util.logging.*;
 import javax.annotation.*;
 import javax.net.ssl.*;
 import org.redkale.util.*;
+import org.redkale.service.Local;
 
 /**
  *
@@ -29,8 +29,8 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
+@Local
 @AutoLoad(false)
-@LocalService
 public class ApnsService implements Service {
 
     private static final Charset UTF8 = Charset.forName("UTF-8");

@@ -25,8 +25,8 @@ import static org.redkalex.pay.PayRetCodes.*;
  *
  * @author zhangjx
  */
+@Local
 @AutoLoad(false)
-@LocalService
 public class UnionPayService extends AbstractPayService {
 
     protected static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss

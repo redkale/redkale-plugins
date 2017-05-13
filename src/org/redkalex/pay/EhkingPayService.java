@@ -12,8 +12,8 @@ import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.*;
-import org.redkale.service.LocalService;
 import static org.redkalex.pay.PayRetCodes.*;
+import org.redkale.service.Local;
 
 /**
  *
@@ -21,8 +21,8 @@ import static org.redkalex.pay.PayRetCodes.*;
  *
  * @author zhangjx
  */
+@Local
 @AutoLoad(false)
-@LocalService
 public class EhkingPayService extends AbstractPayService {
 
     private static final Map<String, String> header = new HashMap<>();

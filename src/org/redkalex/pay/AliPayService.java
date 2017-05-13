@@ -15,9 +15,9 @@ import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redkale.util.*;
 import org.redkale.convert.json.*;
-import org.redkale.service.LocalService;
 import static org.redkalex.pay.Pays.*;
 import static org.redkalex.pay.PayRetCodes.*;
+import org.redkale.service.Local;
 
 /**
  *
@@ -25,8 +25,8 @@ import static org.redkalex.pay.PayRetCodes.*;
  *
  * @author zhangjx
  */
+@Local
 @AutoLoad(false)
-@LocalService
 @Comment("支付宝支付服务")
 public class AliPayService extends AbstractPayService {
 

@@ -10,7 +10,6 @@ import org.redkale.util.TypeToken;
 import org.redkale.util.Utility;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.AutoLoad;
-import org.redkale.service.LocalService;
 import org.redkale.service.Service;
 import org.redkale.net.WorkThread;
 import static org.redkale.util.Utility.*;
@@ -24,14 +23,16 @@ import java.util.logging.*;
 import javax.annotation.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
+import org.redkale.service.Local;
 
 /**
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
+@Local
 @AutoLoad(false)
-@LocalService
 public class WeiXinQYService implements Service {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
@@ -170,9 +171,9 @@ public class WeiXinQYService implements Service {
         // System.out.println("发送给平台的签名是: " + signature[1].toString());
         // 生成发送的xml
         return "<xml>\n<Encrypt><![CDATA[" + encrypt + "]]></Encrypt>\n"
-                + "<MsgSignature><![CDATA[" + signature + "]]></MsgSignature>\n"
-                + "<TimeStamp>" + timeStamp + "</TimeStamp>\n"
-                + "<Nonce><![CDATA[" + nonce + "]]></Nonce>\n</xml>";
+            + "<MsgSignature><![CDATA[" + signature + "]]></MsgSignature>\n"
+            + "<TimeStamp>" + timeStamp + "</TimeStamp>\n"
+            + "<Nonce><![CDATA[" + nonce + "]]></Nonce>\n</xml>";
     }
 
     protected String decryptQYMessage(String msgSignature, String timeStamp, String nonce, String postData) {
@@ -189,6 +190,7 @@ public class WeiXinQYService implements Service {
      * <p>
      * @param randomStr
      * @param text      需要加密的明文
+     *
      * @return 加密后base64编码的字符串
      */
     protected String encryptQY(String randomStr, String text) {
@@ -275,6 +277,7 @@ public class WeiXinQYService implements Service {
      * 用SHA1算法生成安全签名
      * <p>
      * @param strings
+     *
      * @return 安全签名
      */
     protected static String sha1(String... strings) {
@@ -292,6 +295,7 @@ public class WeiXinQYService implements Service {
      * 获得对明文进行补位填充的字节.
      * <p>
      * @param count 需要进行填充补位操作的明文字节个数
+     *
      * @return 补齐用的字节数组
      */
     private static byte[] encodePKCS7(int count) {
@@ -311,6 +315,7 @@ public class WeiXinQYService implements Service {
      * 删除解密后明文的补位字符
      * <p>
      * @param decrypted 解密后的明文
+     *
      * @return 删除补位字符后的明文
      */
     private static byte[] decodePKCS7(byte[] decrypted) {

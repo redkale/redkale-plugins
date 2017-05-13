@@ -24,8 +24,8 @@ import static org.redkalex.pay.Pays.*;
  *
  * @author zhangjx
  */
+@Local
 @AutoLoad(false)
-@LocalService
 public class WeiXinPayService extends AbstractPayService {
 
     protected static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
