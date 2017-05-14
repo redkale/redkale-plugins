@@ -23,6 +23,7 @@ import java.util.logging.*;
  * < server protocol="SOCKS" host="0.0.0.0" port="1080" bindaddr="外网IP"> < /server>
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 @NodeProtocol({"SOCKS"})
@@ -46,7 +47,7 @@ public class NodeSocksServer extends NodeServer {
 
     @Override
     protected ClassFilter<Servlet> createServletClassFilter() {
-        return createClassFilter(null, null, SocksServlet.class, null, "servlets", "servlet");
+        return createClassFilter(null, null, SocksServlet.class, null, null, "servlets", "servlet");
     }
 
     @Override
