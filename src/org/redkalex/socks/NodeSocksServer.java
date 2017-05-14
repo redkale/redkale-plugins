@@ -70,4 +70,13 @@ public class NodeSocksServer extends NodeServer {
         if (sb != null && sb.length() > 0) logger.log(Level.FINE, sb.toString());
     }
 
+    @Override
+    protected void loadFilter(ClassFilter<? extends org.redkale.net.Filter> filterFilter) throws Exception {
+    }
+
+    @Override
+    protected ClassFilter<org.redkale.net.Filter> createFilterClassFilter() {
+        return null;
+    }
+
 }

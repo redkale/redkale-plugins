@@ -12,6 +12,7 @@ import java.io.*;
 /**
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 public final class SocksPrepareServlet extends PrepareServlet<Serializable, SocksContext, SocksRequest, SocksResponse, SocksServlet> {
@@ -25,6 +26,7 @@ public final class SocksPrepareServlet extends PrepareServlet<Serializable, Sock
 
     @Override
     public void init(SocksContext context, AnyValue config) {
+        super.init(context, config); //必须要执行
         if (socks5Servlet != null) socks5Servlet.init(context, getServletConf(socks5Servlet) == null ? config : getServletConf(socks5Servlet));
     }
 
