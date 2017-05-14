@@ -14,11 +14,11 @@ import java.util.logging.*;
 import org.redkale.net.*;
 import org.redkale.net.http.*;
 import org.redkale.util.*;
-import org.redkale.watch.*;
 
 /**
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 public class SocksContext extends HttpContext {
@@ -26,10 +26,10 @@ public class SocksContext extends HttpContext {
     protected final AsynchronousChannelGroup group;
 
     public SocksContext(long serverStartTime, Logger logger, ExecutorService executor, int bufferCapacity, ObjectPool<ByteBuffer> bufferPool,
-            ObjectPool<Response> responsePool, int maxbody, Charset charset, InetSocketAddress address, PrepareServlet prepare,
-            WatchFactory watch, int readTimeoutSecond, int writeTimeoutSecond) {
+        ObjectPool<Response> responsePool, int maxbody, Charset charset, InetSocketAddress address, PrepareServlet prepare,
+        int readTimeoutSecond, int writeTimeoutSecond) {
         super(serverStartTime, logger, executor, bufferCapacity, bufferPool, responsePool, maxbody, charset,
-                address, prepare, watch, readTimeoutSecond, writeTimeoutSecond);
+            address, prepare, readTimeoutSecond, writeTimeoutSecond);
         AsynchronousChannelGroup g = null;
         try {
             g = AsynchronousChannelGroup.withThreadPool(executor);
