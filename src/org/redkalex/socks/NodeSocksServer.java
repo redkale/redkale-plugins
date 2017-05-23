@@ -51,7 +51,7 @@ public class NodeSocksServer extends NodeServer {
     }
 
     @Override
-    protected void loadServlet(ClassFilter<? extends Servlet> servletFilter) throws Exception {
+    protected void loadServlet(ClassFilter<? extends Servlet> servletFilter, ClassFilter otherFilter) throws Exception {
         if (socksServer != null) loadSocksServlet(this.serverConf.getAnyValue("servlets"), servletFilter);
     }
 
