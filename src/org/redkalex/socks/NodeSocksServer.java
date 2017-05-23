@@ -71,7 +71,7 @@ public class NodeSocksServer extends NodeServer {
     }
 
     @Override
-    protected void loadFilter(ClassFilter<? extends org.redkale.net.Filter> filterFilter) throws Exception {
+    protected void loadFilter(ClassFilter<? extends org.redkale.net.Filter> filterFilter, ClassFilter otherFilter) throws Exception {
     }
 
     @Override
