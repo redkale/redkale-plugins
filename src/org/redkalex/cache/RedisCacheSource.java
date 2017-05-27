@@ -121,6 +121,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         System.out.println("[有值] sets3 EXISTS : " + source.exists("sets3"));
         source.removeSetItem("sets3", "setvals1");
         System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3"));
+        System.out.println("sets3 大小 : " + source.getCollectionSize("sets3"));
         System.out.println("------------------------------------");
     }
 
@@ -228,7 +229,19 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         removeAsync(key).join();
     }
 
-    //--------------------- remove ------------------------------   
+    //--------------------- collection ------------------------------  
+    @Override
+    public CompletableFuture<Long> getCollectionSizeAsync(K key) {
+        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key)).thenCompose(t -> {
+            if (t == null) return CompletableFuture.completedFuture(null);
+            if (new String((byte[]) t).contains("list")) { //list
+                return send("LLEN", key, convert.convertTo(key));
+            } else {
+                return send("SCARD", key, convert.convertTo(key));
+            }
+        });
+    }
+
     @Override
     public CompletableFuture<Collection<V>> getCollectionAsync(K key) {
         return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key)).thenCompose(t -> {
@@ -244,6 +257,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     @Override
     public Collection<V> getCollection(K key) {
         return getCollectionAsync(key).join();
+    }
+
+    @Override
+    public long getCollectionSize(K key) {
+        return getCollectionSizeAsync(key).join();
     }
 
     //--------------------- getCollectionAndRefresh ------------------------------  
@@ -385,9 +403,9 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
                                 } else if (sign == COLON_BYTE) { // :
                                     long rs = readLong();
                                     if (future == null) {
-                                        callback.completed("EXISTS".equals(command) ? (rs > 0) : null, key);
+                                        callback.completed("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command)) ? rs : null), key);
                                     } else {
-                                        future.complete("EXISTS".equals(command) ? (rs > 0) : null);
+                                        future.complete("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command)) ? rs : null));
                                     }
                                 } else if (sign == DOLLAR_BYTE) { // $
                                     long val = readLong();
