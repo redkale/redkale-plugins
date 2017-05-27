@@ -20,7 +20,6 @@ import org.redkale.service.*;
 import org.redkale.source.CacheSource;
 import org.redkale.util.*;
 import org.redkale.util.AnyValue.DefaultAnyValue;
-import org.redkale.watch.WatchFactory;
 
 /**
  * 详情见: https://redkale.org
@@ -32,7 +31,7 @@ import org.redkale.watch.WatchFactory;
  */
 @Local
 @AutoLoad(false)
-@ResourceType({CacheSource.class})
+@ResourceType(CacheSource.class)
 public class RedisCacheSource<K extends Serializable, V extends Object> extends AbstractService implements CacheSource<K, V>, Service, AutoCloseable, Resourcable {
 
     static final String UTF8_NAME = "UTF-8";
@@ -51,8 +50,6 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
 
     @Resource
     private BsonConvert convert;
-
-    private WatchFactory watchFactory;
 
     private Transport transport;
 
