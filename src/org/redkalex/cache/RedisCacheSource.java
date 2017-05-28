@@ -89,15 +89,18 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         DefaultAnyValue conf = new DefaultAnyValue();
         conf.addValue("node", new DefaultAnyValue().addValue("addr", "127.0.0.1").addValue("port", "6379"));
 
-        RedisCacheSource<String, String> source = new RedisCacheSource();
+        RedisCacheSource source = new RedisCacheSource();
         source.init(conf);
         source.convert = BsonFactory.root().getConvert();
 
         System.out.println("------------------------------------");
         source.remove("key1");
         source.remove("key2");
+        source.remove(300);
         source.set("key1", "value1");
+        source.set(300, 4000);
         source.getAndRefresh("key1", 3500);
+        System.out.println("[有值] 300 GET : " + source.get(300));
         System.out.println("[有值] key1 GET : " + source.get("key1"));
         System.out.println("[无值] key2 GET : " + source.get("key2"));
         System.out.println("[有值] key1 EXISTS : " + source.exists("key1"));
@@ -122,7 +125,9 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         source.removeSetItem("sets3", "setvals1");
         System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3"));
         System.out.println("sets3 大小 : " + source.getCollectionSize("sets3"));
+        System.out.println("all keys: " + source.queryKeys());
         System.out.println("------------------------------------");
+
     }
 
     @Override
@@ -144,7 +149,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- exists ------------------------------
     @Override
     public CompletableFuture<Boolean> existsAsync(K key) {
-        return (CompletableFuture) send("EXISTS", key, convert.convertTo(key));
+        return (CompletableFuture) send("EXISTS", key, convert.convertTo(Serializable.class, key));
     }
 
     @Override
@@ -155,7 +160,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- get ------------------------------
     @Override
     public CompletableFuture<V> getAsync(K key) {
-        return (CompletableFuture) send("GET", key, convert.convertTo(key));
+        return (CompletableFuture) send("GET", key, convert.convertTo(Serializable.class, key));
     }
 
     @Override
@@ -188,7 +193,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- set ------------------------------
     @Override
     public CompletableFuture<Void> setAsync(K key, V value) {
-        return (CompletableFuture) send("SET", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("SET", key, convert.convertTo(Serializable.class, key), convert.convertTo(Object.class, value));
     }
 
     @Override
@@ -210,7 +215,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- setExpireSeconds ------------------------------    
     @Override
     public CompletableFuture<Void> setExpireSecondsAsync(K key, int expireSeconds) {
-        return (CompletableFuture) send("EXPIRE", key, convert.convertTo(key), String.valueOf(expireSeconds).getBytes(UTF8));
+        return (CompletableFuture) send("EXPIRE", key, convert.convertTo(Serializable.class, key), String.valueOf(expireSeconds).getBytes(UTF8));
     }
 
     @Override
@@ -221,7 +226,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- remove ------------------------------    
     @Override
     public CompletableFuture<Void> removeAsync(K key) {
-        return (CompletableFuture) send("DEL", key, convert.convertTo(key));
+        return (CompletableFuture) send("DEL", key, convert.convertTo(Serializable.class, key));
     }
 
     @Override
@@ -232,24 +237,24 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- collection ------------------------------  
     @Override
     public CompletableFuture<Long> getCollectionSizeAsync(K key) {
-        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key)).thenCompose(t -> {
+        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(Serializable.class, key)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LLEN", key, convert.convertTo(key));
+                return send("LLEN", key, convert.convertTo(Serializable.class, key));
             } else {
-                return send("SCARD", key, convert.convertTo(key));
+                return send("SCARD", key, convert.convertTo(Serializable.class, key));
             }
         });
     }
 
     @Override
     public CompletableFuture<Collection<V>> getCollectionAsync(K key) {
-        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(key)).thenCompose(t -> {
+        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(Serializable.class, key)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", false, key, convert.convertTo(key), new byte[]{'0'}, new byte[]{'-', '1'});
+                return send("LRANGE", false, key, convert.convertTo(Serializable.class, key), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
-                return send("SMEMBERS", true, key, convert.convertTo(key));
+                return send("SMEMBERS", true, key, convert.convertTo(Serializable.class, key));
             }
         });
     }
@@ -278,7 +283,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- appendListItem ------------------------------  
     @Override
     public CompletableFuture<Void> appendListItemAsync(K key, V value) {
-        return (CompletableFuture) send("RPUSH", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("RPUSH", key, convert.convertTo(Serializable.class, key), convert.convertTo(Object.class, value));
     }
 
     @Override
@@ -289,7 +294,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- removeListItem ------------------------------  
     @Override
     public CompletableFuture<Void> removeListItemAsync(K key, V value) {
-        return (CompletableFuture) send("LREM", key, convert.convertTo(key), new byte[]{'0'}, convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("LREM", key, convert.convertTo(Serializable.class, key), new byte[]{'0'}, convert.convertTo(Object.class, value));
     }
 
     @Override
@@ -300,7 +305,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- appendSetItem ------------------------------  
     @Override
     public CompletableFuture<Void> appendSetItemAsync(K key, V value) {
-        return (CompletableFuture) send("SADD", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("SADD", key, convert.convertTo(Serializable.class, key), convert.convertTo(Object.class, value));
     }
 
     @Override
@@ -311,7 +316,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
     //--------------------- removeSetItem ------------------------------  
     @Override
     public CompletableFuture<Void> removeSetItemAsync(K key, V value) {
-        return (CompletableFuture) send("SREM", key, convert.convertTo(key), convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("SREM", key, convert.convertTo(Serializable.class, key), convert.convertTo(Object.class, value));
     }
 
     @Override
@@ -319,20 +324,43 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         removeSetItemAsync(key, value).join();
     }
 
+    //--------------------- queryKeys ------------------------------  
+    @Override
+    public List<K> queryKeys() {
+        return queryKeysAsync().join();
+    }
+
+    @Override
+    public CompletableFuture<List<K>> queryKeysAsync() {
+        return (CompletableFuture) send("KEYS", "*", new byte[]{(byte) '*'});
+    }
+
+    //--------------------- queryList ------------------------------  
+    @Override
+    public List<CacheEntry<K, Object>> queryList() {
+        return queryListAsync().join();
+    }
+
+    @Override
+    public CompletableFuture<List<CacheEntry<K, Object>>> queryListAsync() {
+        //待实现
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
     //--------------------- send ------------------------------  
-    private CompletableFuture<Serializable> send(final String command, final K key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final String command, final Serializable key, final byte[]... args) {
         return send(command, false, key, args);
     }
 
-    private CompletableFuture<Serializable> send(final String command, final boolean set, final K key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final String command, final boolean set, final Serializable key, final byte[]... args) {
         return send(null, command, set, key, args);
     }
 
-    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final K key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final Serializable key, final byte[]... args) {
         return send(callback, command, false, key, args);
     }
 
-    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final boolean set, final K key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final boolean set, final Serializable key, final byte[]... args) {
         final BsonByteBufferWriter writer = new BsonByteBufferWriter(transport.getBufferSupplier());
         writer.writeTo(ASTERISK_BYTE);
         writer.writeTo(String.valueOf(args.length + 1).getBytes(UTF8));
@@ -426,7 +454,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
                                     } else {
                                         Collection rs = set ? new HashSet() : new ArrayList();
                                         for (int i = 0; i < len; i++) {
-                                            if (readInt() > 0) rs.add(convert.convertFrom(Object.class, readBytes()));
+                                            if (readInt() > 0) rs.add(convert.convertFrom(Serializable.class, readBytes()));
                                         }
                                         if (future == null) {
                                             callback.completed(rs, key);
