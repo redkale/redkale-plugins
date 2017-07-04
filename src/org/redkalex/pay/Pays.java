@@ -28,6 +28,9 @@ public abstract class Pays {
 
     //易宝支付
     public static final short PAYTYPE_EHKING = 40;
+    
+    //人工支付
+    public static final short PAYTYPE_HUMAN = 90;
 
     //--------------------- 支付渠道 -----------------------------
     //支付渠道:  5: 信用/虚拟支付; 10:APP支付; 20:网页支付; 30:机器支付;
@@ -42,6 +45,9 @@ public abstract class Pays {
 
     //机器支付
     public static final short PAYWAY_NATIVE = 30;
+    
+    //人工支付
+    public static final short PAYWAY_HUMAN = 80;
 
     //--------------------- 支付状态 -----------------------------
     //10:待支付;20:支付中;30:已支付;40:支付失败;50:带退款;60退款中;70:已退款;80:退款失败;90:已关闭;95:已取消;
