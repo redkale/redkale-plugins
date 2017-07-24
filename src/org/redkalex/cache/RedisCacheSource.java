@@ -82,7 +82,7 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        this.transport = new Transport("Redis-Transport", "TCP", "", transportPool, transportGroup, null, addresses);
+        this.transport = new Transport("Redis-Transport", "TCP", "", transportPool, transportGroup, null, addresses, null);
     }
 
     public static void main(String[] args) throws Exception {
@@ -431,9 +431,9 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
                                 } else if (sign == COLON_BYTE) { // :
                                     long rs = readLong();
                                     if (future == null) {
-                                        callback.completed("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command)) ? (int)rs : null), key);
+                                        callback.completed("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command)) ? (int) rs : null), key);
                                     } else {
-                                        future.complete("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command)) ? (int)rs : null));
+                                        future.complete("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command)) ? (int) rs : null));
                                     }
                                 } else if (sign == DOLLAR_BYTE) { // $
                                     long val = readLong();
