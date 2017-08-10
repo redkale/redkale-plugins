@@ -16,6 +16,7 @@ import org.redkale.net.http.*;
 /**
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 public class SocksResponse extends Response<SocksContext, SocksRequest> {
@@ -24,7 +25,7 @@ public class SocksResponse extends Response<SocksContext, SocksRequest> {
 
     protected SocksResponse(SocksContext context, SocksRequest request) {
         super(context, request);
-        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), null, null, null, this);
+        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), null, null, null, false, this);
     }
 
     public static ObjectPool<Response> createPool(AtomicLong creatCounter, AtomicLong cycleCounter, int max, Creator<Response> creator) {
@@ -57,8 +58,9 @@ class HttpxResponse extends HttpResponse {
 
     private final SocksResponse socksResponse;
 
-    public HttpxResponse(HttpContext context, HttpRequest request, String[][] defaultAddHeaders, String[][] defaultSetHeaders, HttpCookie defcookie, SocksResponse socksResponse) {
-        super(context, request, defaultAddHeaders, defaultSetHeaders, defcookie);
+    public HttpxResponse(HttpContext context, HttpRequest request, String[][] defaultAddHeaders, String[][] defaultSetHeaders, HttpCookie defcookie,
+        boolean autoOptions, SocksResponse socksResponse) {
+        super(context, request, defaultAddHeaders, defaultSetHeaders, defcookie, autoOptions);
         this.socksResponse = socksResponse;
     }
 
