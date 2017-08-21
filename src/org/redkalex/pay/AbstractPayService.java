@@ -5,14 +5,14 @@
  */
 package org.redkalex.pay;
 
-import java.io.File;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.logging.*;
 import java.util.stream.Collectors;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
-import org.redkale.util.Comment;
+import org.redkale.util.*;
 
 /**
  * 支付抽象类
@@ -76,5 +76,10 @@ abstract class AbstractPayService implements Service {
         public String toString() {
             return JsonConvert.root().convertTo(this);
         }
+    }
+
+    public static void main(String[] args) throws Throwable {
+        File file = new File("apiclient_cert.p12");
+        System.out.println(Base64.getEncoder().encodeToString(Utility.readBytesThenClose(new FileInputStream(file))));
     }
 }
