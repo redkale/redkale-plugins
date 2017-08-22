@@ -488,7 +488,7 @@ public class WeiXinPayService extends AbstractPayService {
         public String appid = "";  //APP应用ID
 
         // pay.weixin.[x].notifyurl
-        public String notifyurl = ""; //回调url
+        //public String notifyurl = ""; //回调url
 
         // pay.weixin.[x].signkey
         public String signkey = ""; //签名算法需要用到的密钥

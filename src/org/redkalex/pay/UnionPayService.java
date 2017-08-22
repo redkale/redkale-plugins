@@ -465,7 +465,7 @@ public class UnionPayService extends AbstractPayService {
         public String version = "5.0.0";
 
         //"pay.union.notifyurl" //回调url
-        public String notifyurl = "";
+        //public String notifyurl = "";
 
         //"pay.union.createurl" //请求付款url
         public String createurl = "https://gateway.95516.com/gateway/api/appTransReq.do";

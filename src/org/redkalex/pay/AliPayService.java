@@ -441,7 +441,7 @@ public class AliPayService extends AbstractPayService {
         public String appid = "";  //APP应用ID
 
         // pay.alipay.[x].notifyurl
-        public String notifyurl = ""; //回调url
+        //public String notifyurl = ""; //回调url
 
         // pay.alipay.[x].signcertkey
         public String signcertkey = ""; //签名算法需要用到的密钥

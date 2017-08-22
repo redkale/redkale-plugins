@@ -110,6 +110,22 @@ public class PayService extends AbstractPayService {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    public String getNotifyurl(short paytype, String appid) {
+        PayElement element = null;
+        if (paytype == PAYTYPE_UNION) {
+            element = unionPayService.getPayElement(appid);
+        } else if (paytype == PAYTYPE_WEIXIN) {
+            element = weiXinPayService.getPayElement(appid);
+        } else if (paytype == PAYTYPE_ALIPAY) {
+            element = aliPayService.getPayElement(appid);
+        } else if (paytype == PAYTYPE_EHKING) {
+            element = ehkingPayService.getPayElement(appid);
+        } else {
+            throw new RuntimeException("paytype = " + paytype + " is illegal");
+        }
+        return element == null ? "" : element.notifyurl;
+    }
+
     public UnionPayService getUnionPayService() {
         return unionPayService;
     }

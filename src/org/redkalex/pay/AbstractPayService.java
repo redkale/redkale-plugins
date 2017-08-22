@@ -70,6 +70,8 @@ abstract class AbstractPayService implements Service {
     @Comment("支付配置信息抽象类")
     protected static abstract class PayElement {
 
+        public String notifyurl = ""; //回调url
+
         public abstract boolean initElement(Logger logger, File home);
 
         @Override
