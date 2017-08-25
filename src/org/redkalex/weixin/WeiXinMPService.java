@@ -55,6 +55,7 @@ public class WeiXinMPService implements Service {
     //仅用于 https://open.weixin.qq.com/connect/oauth2/authorize  &scope=snsapi_base
     //需要在 “开发 - 接口权限 - 网页服务 - 网页帐号 - 网页授权获取用户基本信息”的配置选项中，修改授权回调域名
     public RetResult<String> getMPOpenidByCode(String code) throws IOException {
+        if(code != null) code = code.replace("\"", "").replace("'", "");
         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret + "&code=" + code + "&grant_type=authorization_code";
         String json = getHttpContent(url);
         if (finest) logger.finest(url + "--->" + json);
@@ -74,6 +75,7 @@ public class WeiXinMPService implements Service {
     }
 
     public Map<String, String> getMPUserTokenByCode(String code) throws IOException {
+        if(code != null) code = code.replace("\"", "").replace("'", "");
         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret + "&code=" + code + "&grant_type=authorization_code";
         String json = getHttpContent(url);
         if (finest) logger.finest(url + "--->" + json);
