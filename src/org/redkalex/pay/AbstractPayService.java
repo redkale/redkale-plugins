@@ -22,7 +22,7 @@ import org.redkale.util.*;
  * @author zhangjx
  */
 @Comment("支付服务抽象类")
-abstract class AbstractPayService implements Service {
+public abstract class AbstractPayService implements Service {
 
     protected static final Charset UTF8 = Charset.forName("UTF-8");
 
@@ -68,7 +68,7 @@ abstract class AbstractPayService implements Service {
     }
 
     @Comment("支付配置信息抽象类")
-    protected static abstract class PayElement {
+    public static abstract class PayElement {
 
         public String notifyurl = ""; //回调url
 
