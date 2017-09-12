@@ -15,39 +15,42 @@ public abstract class Pays {
 
     //--------------------- 支付类型 -----------------------------
     //信用/虚拟支付
-    public static final short PAYTYPE_CREDIT = 5;
+    public static final short PAYTYPE_CREDIT = 10;
+
+    //人工支付
+    public static final short PAYTYPE_HUMAN = 11;
 
     //银联支付
-    public static final short PAYTYPE_UNION = 10;
+    public static final short PAYTYPE_UNION = 12;
 
     //微信支付
-    public static final short PAYTYPE_WEIXIN = 20;
+    public static final short PAYTYPE_WEIXIN = 13;
 
     //支付宝支付
-    public static final short PAYTYPE_ALIPAY = 30;
+    public static final short PAYTYPE_ALIPAY = 14;
 
     //易宝支付
-    public static final short PAYTYPE_EHKING = 40;
-    
-    //人工支付
-    public static final short PAYTYPE_HUMAN = 90;
+    public static final short PAYTYPE_EHKING = 15;
+
+    //自定义的支付服务的paytype最小值, 50以下被框架占用
+    public static final short MIN_DIY_PAYTYPE = 50;
 
     //--------------------- 支付渠道 -----------------------------
-    //支付渠道:  5: 信用/虚拟支付; 10:APP支付; 20:网页支付; 30:机器支付;
+    //支付渠道:  10: 信用/虚拟支付; 20:人工支付; 30:APP支付; 40:网页支付; 50:机器支付;
     //信用/虚拟支付
-    public static final short PAYWAY_CREDIT = 5;
+    public static final short PAYWAY_CREDIT = 10;
+
+    //人工支付
+    public static final short PAYWAY_HUMAN = 20;
 
     //APP支付
-    public static final short PAYWAY_APP = 10;
+    public static final short PAYWAY_APP = 30;
 
     //网页支付
-    public static final short PAYWAY_WEB = 20;
+    public static final short PAYWAY_WEB = 40;
 
     //机器支付
-    public static final short PAYWAY_NATIVE = 30;
-    
-    //人工支付
-    public static final short PAYWAY_HUMAN = 80;
+    public static final short PAYWAY_NATIVE = 50;
 
     //--------------------- 支付状态 -----------------------------
     //10:待支付;20:支付中;30:已支付;40:支付失败;50:带退款;60退款中;70:已退款;80:退款失败;90:已关闭;95:已取消;
