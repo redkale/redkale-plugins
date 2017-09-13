@@ -140,6 +140,11 @@ public class PayService extends AbstractPayService {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public PayElement getPayElement(String appid) {
+        throw new UnsupportedOperationException("Not supported yet."); 
+    }
+
     public String getNotifyurl(short paytype, String appid) {
         PayElement element = null;
         if (paytype == PAYTYPE_UNION) {
@@ -151,9 +156,15 @@ public class PayService extends AbstractPayService {
         } else if (paytype == PAYTYPE_EHKING) {
             element = ehkingPayService.getPayElement(appid);
         } else {
-            throw new RuntimeException("paytype = " + paytype + " is illegal");
+            AbstractPayService diyPayService = diyPayServiceMap.get(paytype);
+            if (diyPayService == null) throw new RuntimeException("paytype = " + paytype + " is illegal");
+            element = diyPayService.getPayElement(appid);
         }
         return element == null ? "" : element.notifyurl;
+    }
+
+    public AbstractPayService getDIYPayService(short paytype) {
+        return diyPayServiceMap.get(paytype);
     }
 
     public UnionPayService getUnionPayService() {
@@ -171,4 +182,5 @@ public class PayService extends AbstractPayService {
     public EhkingPayService getEhkingPayService() {
         return ehkingPayService;
     }
+
 }

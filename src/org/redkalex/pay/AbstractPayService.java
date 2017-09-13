@@ -61,6 +61,9 @@ public abstract class AbstractPayService implements Service {
     @Comment("验证签名")
     protected abstract boolean checkSign(final PayElement element, Map<String, ?> map);
 
+    @Comment("获取配置项")
+    public abstract PayElement getPayElement(String appid);
+
     @Comment("map对象转换成 key1=value1&key2=value2&key3=value3")
     protected final String joinMap(Map<String, ?> map) {
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);

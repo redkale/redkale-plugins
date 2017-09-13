@@ -27,6 +27,8 @@ public class PayPreRequest extends PayRequest {
 
     protected int timeoutms = 10; //支付超时的分钟数
 
+    protected String clienthost = ""; //HTTP请求的Host
+
     protected String clientAddr = "";  //客户端IP地址
 
     protected Map<String, String> map; //扩展信息
@@ -96,12 +98,28 @@ public class PayPreRequest extends PayRequest {
         this.timeoutms = timeoutms;
     }
 
+    public String getClienthost() {
+        return clienthost;
+    }
+
+    public void setClienthost(String clienthost) {
+        this.clienthost = clienthost;
+    }
+
     public String getClientAddr() {
         return clientAddr;
     }
 
     public void setClientAddr(String clientAddr) {
         this.clientAddr = clientAddr;
+    }
+
+    public String getMapValue(String name) {
+        return map == null ? null : map.get(name);
+    }
+
+    public String getMapValue(String name, String defValue) {
+        return map == null ? defValue : map.getOrDefault(name, defValue);
     }
 
     public Map<String, String> getMap() {
