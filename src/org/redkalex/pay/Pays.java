@@ -14,6 +14,7 @@ package org.redkalex.pay;
 public abstract class Pays {
 
     //--------------------- 支付类型 -----------------------------
+    //支付类型:  10: 信用/虚拟支付; 11:人工支付; 12:银联支付; 13:微信支付; 14:支付宝支付;15:易宝支付;
     //信用/虚拟支付
     public static final short PAYTYPE_CREDIT = 10;
 
