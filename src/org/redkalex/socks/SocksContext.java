@@ -25,7 +25,7 @@ public class SocksContext extends HttpContext {
 
     protected final AsynchronousChannelGroup group;
 
-    public SocksContext(long serverStartTime, Logger logger, ExecutorService executor, int bufferCapacity, ObjectPool<ByteBuffer> bufferPool,
+    public SocksContext(long serverStartTime, Logger logger, ThreadPoolExecutor executor, int bufferCapacity, ObjectPool<ByteBuffer> bufferPool,
         ObjectPool<Response> responsePool, int maxbody, Charset charset, InetSocketAddress address, PrepareServlet prepare,
         int readTimeoutSecond, int writeTimeoutSecond) {
         super(serverStartTime, logger, executor, bufferCapacity, bufferPool, responsePool, maxbody, charset,
