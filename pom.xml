@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.redkalex</groupId>
+    <artifactId>redkale-plugins</artifactId>
+    <packaging>jar</packaging>
+    <url>http://redkale.org</url>
+    <description>Redkale-Plugins -- java framework</description>
+    <version>1.5.0</version>
+    <licenses>     
+        <license>      
+            <name>Apache 2</name>       
+            <url>http://www.apache.org/licenses/</url>     
+            <distribution>repo</distribution>    
+            <comments>Apache License</comments>     
+        </license>     
+    </licenses>
+    
+    <developers>     
+        <developer>      
+            <id>Redkale-Plugins</id>     
+            <name>redkale-plugins</name>       
+            <email>redkale@qq.com</email>  
+            <url>http://redkale.org</url>    
+            <roles>     
+                <role>Project Manager</role>     
+                <role>Architect</role>     
+            </roles>    
+            <organization>redkale</organization>     
+            <organizationUrl>http://redkale.org</organizationUrl>       
+            <properties>     
+                <dept>No</dept>     
+            </properties>     
+            <timezone>8</timezone>     
+        </developer>     
+    </developers>  
+    
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+    <name>Redkale-Plugins</name>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+    <scm>
+        <url>https://github.com/redkale/redkale-plugins</url>
+        <connection>scm:git:git@github.com/redkale/redkale-plugins.git</connection>
+        <developerConnection>scm:git:git@github.com:redkale/redkale-plugins.git</developerConnection>
+    </scm>
+
+	<dependencies>
+		<dependency>  
+			<groupId>org.redkale</groupId>  
+			<artifactId>redkale</artifactId>  
+			<version>1.8.4</version>  
+			<scope>system</scope>  
+			<systemPath>${project.basedir}/lib/redkale.jar</systemPath>  
+		</dependency>
+	</dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5.1</version>                                
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <compilerArguments>
+                        <verbose />
+                        <bootclasspath>${java.home}/lib/jce.jar:${java.home}/lib/rt.jar</bootclasspath>
+                    </compilerArguments>
+                </configuration>   
+            </plugin>
+           
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.6</version>
+            </plugin>
+           
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.3</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>  
+                   
+        </plugins>
+    </build>
+    
+</project>
