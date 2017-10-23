@@ -85,9 +85,9 @@ public class WeiXinPayService extends AbstractPayService {
     /**
      * 手机支付或者微信公众号支付时调用
      *
-     * @param request
+     * @param request PayPreRequest
      *
-     * @return
+     * @return PayPreResponse
      */
     @Override
     public PayPreResponse prepay(final PayPreRequest request) {
@@ -153,29 +153,29 @@ public class WeiXinPayService extends AbstractPayService {
     }
 
     /**
-     * <xml>
-     * <appid><![CDATA[wx2421b1c4370ec43b]]></appid>
-     * <attach><![CDATA[支付测试]]></attach>
-     * <bank_type><![CDATA[CFT]]></bank_type>
-     * <fee_type><![CDATA[CNY]]></fee_type>
-     * <is_subscribe><![CDATA[Y]]></is_subscribe>
-     * <mch_id><![CDATA[10000100]]></mch_id>
-     * <nonce_str><![CDATA[5d2b6c2a8db53831f7eda20af46e531c]]></nonce_str>
-     * <openid><![CDATA[oUpF8uMEb4qRXf22hE3X68TekukE]]></openid>
-     * <out_trade_no><![CDATA[1409811653]]></out_trade_no>
-     * <result_code><![CDATA[SUCCESS]]></result_code>
-     * <return_code><![CDATA[SUCCESS]]></return_code>
-     * <sign><![CDATA[B552ED6B279343CB493C5DD0D78AB241]]></sign>
-     * <sub_mch_id><![CDATA[10000100]]></sub_mch_id>
-     * <time_end><![CDATA[20140903131540]]></time_end>
-     * <total_fee>1</total_fee>
-     * <trade_type><![CDATA[JSAPI]]></trade_type>
-     * <transaction_id><![CDATA[1004400740201409030005092168]]></transaction_id>
-     * </xml>
+     * &lt;xml&gt;
+     * &lt;appid&gt;&lt;![CDATA[wx2421b1c4370ec43b]]&gt;&lt;/appid&gt;
+     * &lt;attach&gt;&lt;![CDATA[支付测试]]&gt;&lt;/attach&gt;
+     * &lt;bank_type&gt;&lt;![CDATA[CFT]]&gt;&lt;/bank_type&gt;
+     * &lt;fee_type&gt;&lt;![CDATA[CNY]]&gt;&lt;/fee_type&gt;
+     * &lt;is_subscribe&gt;&lt;![CDATA[Y]]&gt;&lt;/is_subscribe&gt;
+     * &lt;mch_id&gt;&lt;![CDATA[10000100]]&gt;&lt;/mch_id&gt;
+     * &lt;nonce_str&gt;&lt;![CDATA[5d2b6c2a8db53831f7eda20af46e531c]]&gt;&lt;/nonce_str&gt;
+     * &lt;openid&gt;&lt;![CDATA[oUpF8uMEb4qRXf22hE3X68TekukE]]&gt;&lt;/openid&gt;
+     * &lt;out_trade_no&gt;&lt;![CDATA[1409811653]]&gt;&lt;/out_trade_no&gt;
+     * &lt;result_code&gt;&lt;![CDATA[SUCCESS]]&gt;&lt;/result_code&gt;
+     * &lt;return_code&gt;&lt;![CDATA[SUCCESS]]&gt;&lt;/return_code&gt;
+     * &lt;sign&gt;&lt;![CDATA[B552ED6B279343CB493C5DD0D78AB241]]&gt;&lt;/sign&gt;
+     * &lt;sub_mch_id&gt;&lt;![CDATA[10000100]]&gt;&lt;/sub_mch_id&gt;
+     * &lt;time_end&gt;&lt;![CDATA[20140903131540]]&gt;&lt;/time_end&gt;
+     * &lt;total_fee&gt;1&lt;/total_fee&gt;
+     * &lt;trade_type&gt;&lt;![CDATA[JSAPI]]&gt;&lt;/trade_type&gt;
+     * &lt;transaction_id&gt;&lt;![CDATA[1004400740201409030005092168]]&gt;&lt;/transaction_id&gt;
+     * &lt;/xml&gt;
      *
-     * @param request
+     * @param request PayNotifyRequest
      *
-     * @return
+     * @return PayNotifyResponse
      */
     @Override
     public PayNotifyResponse notify(PayNotifyRequest request) {
@@ -205,9 +205,9 @@ public class WeiXinPayService extends AbstractPayService {
     /**
      * 网页支付
      *
-     * @param request
+     * @param request PayCreatRequest
      *
-     * @return
+     * @return PayCreatResponse
      */
     @Override
     public PayCreatResponse create(final PayCreatRequest request) {
@@ -257,30 +257,30 @@ public class WeiXinPayService extends AbstractPayService {
 
     /**
      * 回调支付接口返回的结果
-     * <p>
-     * <xml>
-     * <appid><![CDATA[wx4ad12c89818dd981]]></appid>
-     * <attach><![CDATA[10000070334]]></attach>
-     * <bank_type><![CDATA[ICBC_DEBIT]]></bank_type>
-     * <cash_fee><![CDATA[10]]></cash_fee>
-     * <fee_type><![CDATA[CNY]]></fee_type>
-     * <is_subscribe><![CDATA[Y]]></is_subscribe>
-     * <mch_id><![CDATA[1241384602]]></mch_id>
-     * <nonce_str><![CDATA[14d69ac6d6525f27dc9bcbebc]]></nonce_str>
-     * <openid><![CDATA[ojEVbsyDUzGqlgX3eDgmAMaUDucA]]></openid>
-     * <out_trade_no><![CDATA[1000072334]]></out_trade_no>
-     * <result_code><![CDATA[SUCCESS]]></result_code>
-     * <return_code><![CDATA[SUCCESS]]></return_code>
-     * <sign><![CDATA[60D95E25EA9C4F54BD1020952303C4E2]]></sign>
-     * <time_end><![CDATA[20150519085546]]></time_end>
-     * <total_fee>10</total_fee>
-     * <trade_type><![CDATA[JSAPI]]></trade_type>
-     * <transaction_id><![CDATA[1009630061201505190139511926]]></transaction_id>
-     * </xml>
+     * &lt; p &gt;
+     * &lt; xml &gt;
+     * &lt; appid &gt;&lt; ![CDATA[wx4ad12c89818dd981]] &gt;&lt; /appid &gt;
+     * &lt; attach &gt;&lt; ![CDATA[10000070334]] &gt;&lt; /attach &gt;
+     * &lt; bank_type &gt;&lt; ![CDATA[ICBC_DEBIT]] &gt;&lt; /bank_type &gt;
+     * &lt; cash_fee &gt;&lt; ![CDATA[10]] &gt;&lt; /cash_fee &gt;
+     * &lt; fee_type &gt;&lt; ![CDATA[CNY]] &gt;&lt; /fee_type &gt;
+     * &lt; is_subscribe &gt;&lt; ![CDATA[Y]] &gt;&lt; /is_subscribe &gt;
+     * &lt; mch_id &gt;&lt; ![CDATA[1241384602]] &gt;&lt; /mch_id &gt;
+     * &lt; nonce_str &gt;&lt; ![CDATA[14d69ac6d6525f27dc9bcbebc]] &gt;&lt; /nonce_str &gt;
+     * &lt; openid &gt;&lt; ![CDATA[ojEVbsyDUzGqlgX3eDgmAMaUDucA]] &gt;&lt; /openid &gt;
+     * &lt; out_trade_no &gt;&lt; ![CDATA[1000072334]] &gt;&lt; /out_trade_no &gt;
+     * &lt; result_code &gt;&lt; ![CDATA[SUCCESS]] &gt;&lt; /result_code &gt;
+     * &lt; return_code &gt;&lt; ![CDATA[SUCCESS]] &gt;&lt; /return_code &gt;
+     * &lt; sign &gt;&lt; ![CDATA[60D95E25EA9C4F54BD1020952303C4E2]] &gt;&lt; /sign &gt;
+     * &lt; time_end &gt;&lt; ![CDATA[20150519085546]] &gt;&lt; /time_end &gt;
+     * &lt; total_fee &gt;10&lt; /total_fee &gt;
+     * &lt; trade_type &gt;&lt; ![CDATA[JSAPI]] &gt;&lt; /trade_type &gt;
+     * &lt; transaction_id &gt;&lt; ![CDATA[1009630061201505190139511926]] &gt;&lt; /transaction_id &gt;
+     * &lt; /xml &gt;
      *
-     * @param request
+     * @param request PayRequest
      *
-     * @return
+     * @return PayQueryResponse
      */
     @Override
     public PayQueryResponse query(final PayRequest request) {
@@ -489,7 +489,6 @@ public class WeiXinPayService extends AbstractPayService {
 
         // pay.weixin.[x].notifyurl
         //public String notifyurl = ""; //回调url
-
         // pay.weixin.[x].signkey
         public String signkey = ""; //签名算法需要用到的密钥
 

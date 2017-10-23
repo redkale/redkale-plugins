@@ -24,8 +24,8 @@ import org.redkale.util.AnyValue.DefaultAnyValue;
 /**
  * 详情见: https://redkale.org
  *
- * @param <K>
- * @param <V>
+ * @param <K> Key
+ * @param <V> Value
  *
  * @author zhangjx
  */

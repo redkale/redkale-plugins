@@ -20,7 +20,7 @@ import java.net.*;
 import java.util.logging.*;
 
 /**
- * < server protocol="SOCKS" host="0.0.0.0" port="1080" bindaddr="外网IP"> < /server>
+ * &lt; server protocol="SOCKS" host="0.0.0.0" port="1080" bindaddr="外网IP"&gt; &lt; /server&gt;
  *
  * 详情见: https://redkale.org
  *

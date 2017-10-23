@@ -100,7 +100,7 @@ public class WeiXinMPService implements Service {
     /**
      * 用SHA1算法生成安全签名
      * <p>
-     * @param strings
+     * @param strings String[]
      *
      * @return 安全签名
      */

@@ -188,7 +188,7 @@ public class WeiXinQYService implements Service {
     /**
      * 对明文进行加密.
      * <p>
-     * @param randomStr
+     * @param randomStr String
      * @param text      需要加密的明文
      *
      * @return 加密后base64编码的字符串
@@ -276,7 +276,7 @@ public class WeiXinQYService implements Service {
     /**
      * 用SHA1算法生成安全签名
      * <p>
-     * @param strings
+     * @param strings String[]
      *
      * @return 安全签名
      */
