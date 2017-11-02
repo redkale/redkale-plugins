@@ -82,7 +82,8 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        this.transport = new Transport("Redis-Transport", "TCP", "", transportPool, transportGroup, null, addresses, null);
+        TransportFactory transportFactory = TransportFactory.create(transportExec, transportPool, transportGroup);
+        this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
     }
 
     public static void main(String[] args) throws Exception {
