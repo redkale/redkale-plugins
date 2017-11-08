@@ -32,7 +32,7 @@ import org.redkale.util.AnyValue.DefaultAnyValue;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public class RedisCacheSource<K extends Serializable, V extends Object> extends AbstractService implements CacheSource<K, V>, Service, AutoCloseable, Resourcable {
+public class RedisCacheSource<V extends Object> extends AbstractService implements CacheSource<V>, Service, AutoCloseable, Resourcable {
 
     static final String UTF8_NAME = "UTF-8";
 
@@ -97,11 +97,11 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
         System.out.println("------------------------------------");
         source.remove("key1");
         source.remove("key2");
-        source.remove(300);
+        source.remove("300");
         source.set("key1", "value1");
-        source.set(300, 4000);
+        source.set("300", 4000);
         source.getAndRefresh("key1", 3500);
-        System.out.println("[有值] 300 GET : " + source.get(300));
+        System.out.println("[有值] 300 GET : " + source.get("300"));
         System.out.println("[有值] key1 GET : " + source.get("key1"));
         System.out.println("[无值] key2 GET : " + source.get("key2"));
         System.out.println("[有值] key1 EXISTS : " + source.exists("key1"));
@@ -149,219 +149,219 @@ public class RedisCacheSource<K extends Serializable, V extends Object> extends 
 
     //--------------------- exists ------------------------------
     @Override
-    public CompletableFuture<Boolean> existsAsync(K key) {
-        return (CompletableFuture) send("EXISTS", key, convert.convertTo(Serializable.class, key));
-    }
+    public CompletableFuture<Boolean> existsAsync(String key) {
+        return (CompletableFuture) send("EXISTS", key, key.getBytes(UTF8));
+    } 
 
     @Override
-    public boolean exists(K key) {
+    public boolean exists(String key) {
         return existsAsync(key).join();
     }
 
     //--------------------- get ------------------------------
     @Override
-    public CompletableFuture<V> getAsync(K key) {
-        return (CompletableFuture) send("GET", key, convert.convertTo(Serializable.class, key));
+    public CompletableFuture<V> getAsync(String key) {
+        return (CompletableFuture) send("GET", key, key.getBytes(UTF8));
     }
 
     @Override
-    public V get(K key) {
+    public V get(String key) {
         return getAsync(key).join();
     }
 
     //--------------------- getAndRefresh ------------------------------
     @Override
-    public CompletableFuture<V> getAndRefreshAsync(K key, int expireSeconds) {
+    public CompletableFuture<V> getAndRefreshAsync(String key, int expireSeconds) {
         return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getAsync(key));
     }
 
     @Override
-    public V getAndRefresh(K key, final int expireSeconds) {
+    public V getAndRefresh(String key, final int expireSeconds) {
         return getAndRefreshAsync(key, expireSeconds).join();
     }
 
     //--------------------- refresh ------------------------------
     @Override
-    public CompletableFuture<Void> refreshAsync(K key, int expireSeconds) {
+    public CompletableFuture<Void> refreshAsync(String key, int expireSeconds) {
         return setExpireSecondsAsync(key, expireSeconds);
     }
 
     @Override
-    public void refresh(K key, final int expireSeconds) {
+    public void refresh(String key, final int expireSeconds) {
         setExpireSeconds(key, expireSeconds);
     }
 
     //--------------------- set ------------------------------
     @Override
-    public CompletableFuture<Void> setAsync(K key, V value) {
-        return (CompletableFuture) send("SET", key, convert.convertTo(Serializable.class, key), convert.convertTo(Object.class, value));
+    public CompletableFuture<Void> setAsync(String key, V value) {
+        return (CompletableFuture) send("SET", key, key.getBytes(UTF8), convert.convertTo(Object.class, value));
     }
 
     @Override
-    public void set(K key, V value) {
+    public void set(String key, V value) {
         setAsync(key, value).join();
     }
 
     //--------------------- set ------------------------------    
     @Override
-    public CompletableFuture<Void> setAsync(int expireSeconds, K key, V value) {
+    public CompletableFuture<Void> setAsync(int expireSeconds, String key, V value) {
         return (CompletableFuture) setAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
     }
 
     @Override
-    public void set(int expireSeconds, K key, V value) {
+    public void set(int expireSeconds, String key, V value) {
         setAsync(expireSeconds, key, value).join();
     }
 
     //--------------------- setExpireSeconds ------------------------------    
     @Override
-    public CompletableFuture<Void> setExpireSecondsAsync(K key, int expireSeconds) {
-        return (CompletableFuture) send("EXPIRE", key, convert.convertTo(Serializable.class, key), String.valueOf(expireSeconds).getBytes(UTF8));
+    public CompletableFuture<Void> setExpireSecondsAsync(String key, int expireSeconds) {
+        return (CompletableFuture) send("EXPIRE", key, key.getBytes(UTF8), String.valueOf(expireSeconds).getBytes(UTF8));
     }
 
     @Override
-    public void setExpireSeconds(K key, int expireSeconds) {
+    public void setExpireSeconds(String key, int expireSeconds) {
         setExpireSecondsAsync(key, expireSeconds).join();
     }
 
     //--------------------- remove ------------------------------    
     @Override
-    public CompletableFuture<Void> removeAsync(K key) {
-        return (CompletableFuture) send("DEL", key, convert.convertTo(Serializable.class, key));
+    public CompletableFuture<Void> removeAsync(String key) {
+        return (CompletableFuture) send("DEL", key, key.getBytes(UTF8));
     }
 
     @Override
-    public void remove(K key) {
+    public void remove(String key) {
         removeAsync(key).join();
     }
 
     //--------------------- collection ------------------------------  
     @Override
-    public CompletableFuture<Integer> getCollectionSizeAsync(K key) {
-        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(Serializable.class, key)).thenCompose(t -> {
+    public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
+        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LLEN", key, convert.convertTo(Serializable.class, key));
+                return send("LLEN", key, key.getBytes(UTF8));
             } else {
-                return send("SCARD", key, convert.convertTo(Serializable.class, key));
+                return send("SCARD", key, key.getBytes(UTF8));
             }
         });
     }
 
     @Override
-    public CompletableFuture<Collection<V>> getCollectionAsync(K key) {
-        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), convert.convertTo(Serializable.class, key)).thenCompose(t -> {
+    public CompletableFuture<Collection<V>> getCollectionAsync(String key) {
+        return (CompletableFuture) send("OBJECT", key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", false, key, convert.convertTo(Serializable.class, key), new byte[]{'0'}, new byte[]{'-', '1'});
+                return send("LRANGE", false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
-                return send("SMEMBERS", true, key, convert.convertTo(Serializable.class, key));
+                return send("SMEMBERS", true, key, key.getBytes(UTF8));
             }
         });
     }
 
     @Override
-    public Collection<V> getCollection(K key) {
+    public Collection<V> getCollection(String key) {
         return getCollectionAsync(key).join();
     }
 
     @Override
-    public int getCollectionSize(K key) {
+    public int getCollectionSize(String key) {
         return getCollectionSizeAsync(key).join();
     }
 
     //--------------------- getCollectionAndRefresh ------------------------------  
     @Override
-    public CompletableFuture<Collection<V>> getCollectionAndRefreshAsync(K key, int expireSeconds) {
+    public CompletableFuture<Collection<V>> getCollectionAndRefreshAsync(String key, int expireSeconds) {
         return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key));
     }
 
     @Override
-    public Collection<V> getCollectionAndRefresh(K key, final int expireSeconds) {
+    public Collection<V> getCollectionAndRefresh(String key, final int expireSeconds) {
         return getCollectionAndRefreshAsync(key, expireSeconds).join();
     }
 
     //--------------------- appendListItem ------------------------------  
     @Override
-    public CompletableFuture<Void> appendListItemAsync(K key, V value) {
-        return (CompletableFuture) send("RPUSH", key, convert.convertTo(Serializable.class, key), convert.convertTo(Object.class, value));
+    public CompletableFuture<Void> appendListItemAsync(String key, V value) {
+        return (CompletableFuture) send("RPUSH", key, key.getBytes(UTF8), convert.convertTo(Object.class, value));
     }
 
     @Override
-    public void appendListItem(K key, V value) {
+    public void appendListItem(String key, V value) {
         appendListItemAsync(key, value).join();
     }
 
     //--------------------- removeListItem ------------------------------  
     @Override
-    public CompletableFuture<Void> removeListItemAsync(K key, V value) {
-        return (CompletableFuture) send("LREM", key, convert.convertTo(Serializable.class, key), new byte[]{'0'}, convert.convertTo(Object.class, value));
+    public CompletableFuture<Void> removeListItemAsync(String key, V value) {
+        return (CompletableFuture) send("LREM", key, key.getBytes(UTF8), new byte[]{'0'}, convert.convertTo(Object.class, value));
     }
 
     @Override
-    public void removeListItem(K key, V value) {
+    public void removeListItem(String key, V value) {
         removeListItemAsync(key, value).join();
     }
 
     //--------------------- appendSetItem ------------------------------  
     @Override
-    public CompletableFuture<Void> appendSetItemAsync(K key, V value) {
-        return (CompletableFuture) send("SADD", key, convert.convertTo(Serializable.class, key), convert.convertTo(Object.class, value));
+    public CompletableFuture<Void> appendSetItemAsync(String key, V value) {
+        return (CompletableFuture) send("SADD", key, key.getBytes(UTF8), convert.convertTo(Object.class, value));
     }
 
     @Override
-    public void appendSetItem(K key, V value) {
+    public void appendSetItem(String key, V value) {
         appendSetItemAsync(key, value).join();
     }
 
     //--------------------- removeSetItem ------------------------------  
     @Override
-    public CompletableFuture<Void> removeSetItemAsync(K key, V value) {
-        return (CompletableFuture) send("SREM", key, convert.convertTo(Serializable.class, key), convert.convertTo(Object.class, value));
+    public CompletableFuture<Void> removeSetItemAsync(String key, V value) {
+        return (CompletableFuture) send("SREM", key, key.getBytes(UTF8), convert.convertTo(Object.class, value));
     }
 
     @Override
-    public void removeSetItem(K key, V value) {
+    public void removeSetItem(String key, V value) {
         removeSetItemAsync(key, value).join();
     }
 
     //--------------------- queryKeys ------------------------------  
     @Override
-    public List<K> queryKeys() {
+    public List<String> queryKeys() {
         return queryKeysAsync().join();
     }
 
     @Override
-    public CompletableFuture<List<K>> queryKeysAsync() {
+    public CompletableFuture<List<String>> queryKeysAsync() {
         return (CompletableFuture) send("KEYS", "*", new byte[]{(byte) '*'});
     }
 
     //--------------------- queryList ------------------------------  
     @Override
-    public List<CacheEntry<K, Object>> queryList() {
+    public List<CacheEntry<Object>> queryList() {
         return queryListAsync().join();
     }
 
     @Override
-    public CompletableFuture<List<CacheEntry<K, Object>>> queryListAsync() {
+    public CompletableFuture<List<CacheEntry<Object>>> queryListAsync() {
         //待实现
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     //--------------------- send ------------------------------  
-    private CompletableFuture<Serializable> send(final String command, final Serializable key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final String command, final String key, final byte[]... args) {
         return send(command, false, key, args);
     }
 
-    private CompletableFuture<Serializable> send(final String command, final boolean set, final Serializable key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final String command, final boolean set, final String key, final byte[]... args) {
         return send(null, command, set, key, args);
     }
 
-    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final Serializable key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final String key, final byte[]... args) {
         return send(callback, command, false, key, args);
     }
 
-    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final boolean set, final Serializable key, final byte[]... args) {
+    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final boolean set, final String key, final byte[]... args) {
         final BsonByteBufferWriter writer = new BsonByteBufferWriter(transport.getBufferSupplier());
         writer.writeTo(ASTERISK_BYTE);
         writer.writeTo(String.valueOf(args.length + 1).getBytes(UTF8));
