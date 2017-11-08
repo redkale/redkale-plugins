@@ -6,15 +6,17 @@
 package org.redkalex.cache;
 
 import java.io.*;
+import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
 import javax.annotation.Resource;
-import org.redkale.convert.bson.*;
+import org.redkale.convert.bson.BsonByteBufferWriter;
+import org.redkale.convert.json.*;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.*;
 import org.redkale.service.*;
 import org.redkale.source.CacheSource;
@@ -49,41 +51,37 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     private static final byte COLON_BYTE = ':';
 
     @Resource
-    private BsonConvert convert;
+    private JsonConvert defaultConvert;
+
+    @Resource(name = "$_convert")
+    private JsonConvert convert;
+
+    private Type objValueType = String.class;
 
     private Transport transport;
 
     @Override
     public void init(AnyValue conf) {
+        if (this.convert == null) this.convert = this.defaultConvert;
         if (conf == null) conf = new AnyValue.DefaultAnyValue();
         final int bufferCapacity = conf.getIntValue("bufferCapacity", 8 * 1024);
         final int bufferPoolSize = conf.getIntValue("bufferPoolSize", Runtime.getRuntime().availableProcessors() * 8);
         final int threads = conf.getIntValue("threads", Runtime.getRuntime().availableProcessors() * 8);
-        final ObjectPool<ByteBuffer> transportPool = new ObjectPool<>(new AtomicLong(), new AtomicLong(), bufferPoolSize,
-            (Object... params) -> ByteBuffer.allocateDirect(bufferCapacity), null, (e) -> {
-                if (e == null || e.isReadOnly() || e.capacity() != bufferCapacity) return false;
-                e.clear();
-                return true;
-            });
         final List<InetSocketAddress> addresses = new ArrayList<>();
         for (AnyValue node : conf.getAnyValues("node")) {
             addresses.add(new InetSocketAddress(node.getValue("addr"), node.getIntValue("port")));
         }
-        final AtomicInteger counter = new AtomicInteger();
-        ExecutorService transportExec = Executors.newFixedThreadPool(threads, (Runnable r) -> {
-            Thread t = new Thread(r);
-            t.setDaemon(true);
-            t.setName("Transport-Thread-" + counter.incrementAndGet());
-            return t;
-        });
-        AsynchronousChannelGroup transportGroup = null;
-        try {
-            transportGroup = AsynchronousChannelGroup.withCachedThreadPool(transportExec, 1);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        TransportFactory transportFactory = TransportFactory.create(transportExec, transportPool, transportGroup);
+        TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity);
         this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
+    }
+
+    @Override
+    public final void initValueType(Type valueType) {
+        this.objValueType = valueType == null ? String.class : valueType;
+    }
+
+    @Override
+    public final void initTransient(boolean flag) {
     }
 
     public static void main(String[] args) throws Exception {
@@ -91,15 +89,16 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         conf.addValue("node", new DefaultAnyValue().addValue("addr", "127.0.0.1").addValue("port", "6379"));
 
         RedisCacheSource source = new RedisCacheSource();
+        source.defaultConvert = JsonFactory.root().getConvert();
+        source.initValueType(String.class); //value用String类型
         source.init(conf);
-        source.convert = BsonFactory.root().getConvert();
 
         System.out.println("------------------------------------");
         source.remove("key1");
         source.remove("key2");
         source.remove("300");
         source.set("key1", "value1");
-        source.set("300", 4000);
+        source.set("300", "4000");
         source.getAndRefresh("key1", 3500);
         System.out.println("[有值] 300 GET : " + source.get("300"));
         System.out.println("[有值] key1 GET : " + source.get("key1"));
@@ -115,7 +114,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         System.out.println("[有值] keys3 EXISTS : " + source.exists("keys3"));
         source.removeListItem("keys3", "vals1");
         System.out.println("[一值] keys3 VALUES : " + source.getCollection("keys3"));
-        source.getCollectionAndRefresh("keys3", 30);
+        source.getCollectionAndRefresh("keys3", 3000);
 
         source.remove("sets3");
         source.appendSetItem("sets3", "setvals1");
@@ -194,7 +193,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     //--------------------- set ------------------------------
     @Override
     public CompletableFuture<Void> setAsync(String key, V value) {
-        return (CompletableFuture) send("SET", key, key.getBytes(UTF8), convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("SET", key, key.getBytes(UTF8), formatValue(value));
     }
 
     @Override
@@ -284,7 +283,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     //--------------------- appendListItem ------------------------------  
     @Override
     public CompletableFuture<Void> appendListItemAsync(String key, V value) {
-        return (CompletableFuture) send("RPUSH", key, key.getBytes(UTF8), convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("RPUSH", key, key.getBytes(UTF8), formatValue(value));
     }
 
     @Override
@@ -295,7 +294,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     //--------------------- removeListItem ------------------------------  
     @Override
     public CompletableFuture<Void> removeListItemAsync(String key, V value) {
-        return (CompletableFuture) send("LREM", key, key.getBytes(UTF8), new byte[]{'0'}, convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("LREM", key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(value));
     }
 
     @Override
@@ -306,7 +305,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     //--------------------- appendSetItem ------------------------------  
     @Override
     public CompletableFuture<Void> appendSetItemAsync(String key, V value) {
-        return (CompletableFuture) send("SADD", key, key.getBytes(UTF8), convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("SADD", key, key.getBytes(UTF8), formatValue(value));
     }
 
     @Override
@@ -317,7 +316,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     //--------------------- removeSetItem ------------------------------  
     @Override
     public CompletableFuture<Void> removeSetItemAsync(String key, V value) {
-        return (CompletableFuture) send("SREM", key, key.getBytes(UTF8), convert.convertTo(Object.class, value));
+        return (CompletableFuture) send("SREM", key, key.getBytes(UTF8), formatValue(value));
     }
 
     @Override
@@ -360,6 +359,10 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     //--------------------- send ------------------------------  
+    private byte[] formatValue(V value) {
+        return convert.convertTo(objValueType, value).getBytes(UTF8);
+    }
+
     private CompletableFuture<Serializable> send(final String command, final String key, final byte[]... args) {
         return send(command, false, key, args);
     }
@@ -451,9 +454,9 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                     long val = readLong();
                                     byte[] rs = val <= 0 ? null : readBytes();
                                     if (future == null) {
-                                        callback.completed("GET".equals(command) ? convert.convertFrom(Object.class, rs) : null, key);
+                                        callback.completed(("GET".equals(command) || rs == null) ? convert.convertFrom(objValueType, new String(rs, UTF8)) : null, key);
                                     } else {
-                                        future.complete("GET".equals(command) ? convert.convertFrom(Object.class, rs) : rs);
+                                        future.complete("GET".equals(command) ? convert.convertFrom(objValueType, rs == null ? null : new String(rs, UTF8)) : rs);
                                     }
                                 } else if (sign == ASTERISK_BYTE) { // *
                                     final int len = readInt();
@@ -466,7 +469,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                     } else {
                                         Collection rs = set ? new HashSet() : new ArrayList();
                                         for (int i = 0; i < len; i++) {
-                                            if (readInt() > 0) rs.add(convert.convertFrom(Serializable.class, readBytes()));
+                                            if (readInt() > 0) rs.add(convert.convertFrom(objValueType, new String(readBytes(), UTF8)));
                                         }
                                         if (future == null) {
                                             callback.completed(rs, key);
