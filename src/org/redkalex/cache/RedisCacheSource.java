@@ -151,7 +151,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     @Override
     public CompletableFuture<Boolean> existsAsync(String key) {
         return (CompletableFuture) send("EXISTS", key, key.getBytes(UTF8));
-    } 
+    }
 
     @Override
     public boolean exists(String key) {
@@ -336,6 +336,17 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         return (CompletableFuture) send("KEYS", "*", new byte[]{(byte) '*'});
     }
 
+    //--------------------- getKeySize ------------------------------  
+    @Override
+    public int getKeySize() {
+        return getKeySizeAsync().join();
+    }
+
+    @Override
+    public CompletableFuture<Integer> getKeySizeAsync() {
+        return (CompletableFuture) send("DBSIZE", null);
+    }
+
     //--------------------- queryList ------------------------------  
     @Override
     public List<CacheEntry<Object>> queryList() {
@@ -432,9 +443,9 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                 } else if (sign == COLON_BYTE) { // :
                                     long rs = readLong();
                                     if (future == null) {
-                                        callback.completed("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command)) ? (int) rs : null), key);
+                                        callback.completed("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
                                     } else {
-                                        future.complete("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command)) ? (int) rs : null));
+                                        future.complete("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
                                     }
                                 } else if (sign == DOLLAR_BYTE) { // $
                                     long val = readLong();
@@ -506,16 +517,6 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
             if (conn0 != null) this.transport.offerConnection(true, conn0);
             throw new RuntimeException(e);
         }
-    }
-
-    @Override
-    public int getKeySize() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public CompletableFuture<Integer> getKeySizeAsync() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
 }
