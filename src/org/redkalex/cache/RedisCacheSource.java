@@ -26,7 +26,6 @@ import org.redkale.util.AnyValue.DefaultAnyValue;
 /**
  * 详情见: https://redkale.org
  *
- * @param <K> Key
  * @param <V> Value
  *
  * @author zhangjx
@@ -354,8 +353,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
 
     @Override
     public CompletableFuture<List<CacheEntry<Object>>> queryListAsync() {
-        //待实现
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     //--------------------- send ------------------------------  
