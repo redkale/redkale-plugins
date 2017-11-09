@@ -83,6 +83,11 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     public final void initTransient(boolean flag) {
     }
 
+    @Override
+    public final String getType() {
+        return "redis";
+    }
+
     public static void main(String[] args) throws Exception {
         DefaultAnyValue conf = new DefaultAnyValue();
         conf.addValue("node", new DefaultAnyValue().addValue("addr", "127.0.0.1").addValue("port", "6379"));
