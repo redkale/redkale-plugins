@@ -130,6 +130,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3"));
         System.out.println("sets3 大小 : " + source.getCollectionSize("sets3"));
         System.out.println("all keys: " + source.queryKeys());
+        System.out.println("newnum 值 : " + source.incr("newnum"));
+        System.out.println("newnum 值 : " + source.decr("newnum"));
         System.out.println("------------------------------------");
 
     }
@@ -236,6 +238,48 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     @Override
     public void remove(String key) {
         removeAsync(key).join();
+    }
+
+    //--------------------- incr ------------------------------    
+    @Override
+    public long incr(final String key) {
+        return incrAsync(key).join();
+    }
+
+    @Override
+    public CompletableFuture<Long> incrAsync(final String key) {
+        return (CompletableFuture) send("INCR", key, key.getBytes(UTF8));
+    }
+
+    @Override
+    public long incr(final String key, long num) {
+        return incrAsync(key, num).join();
+    }
+
+    @Override
+    public CompletableFuture<Long> incrAsync(final String key, long num) {
+        return (CompletableFuture) send("INCRBY", key, key.getBytes(UTF8), String.valueOf(num).getBytes(UTF8));
+    }
+
+    //--------------------- decr ------------------------------    
+    @Override
+    public long decr(final String key) {
+        return decrAsync(key).join();
+    }
+
+    @Override
+    public CompletableFuture<Long> decrAsync(final String key) {
+        return (CompletableFuture) send("DECR", key, key.getBytes(UTF8));
+    }
+
+    @Override
+    public long decr(final String key, long num) {
+        return decrAsync(key, num).join();
+    }
+
+    @Override
+    public CompletableFuture<Long> decrAsync(final String key, long num) {
+        return (CompletableFuture) send("DECRBY", key, key.getBytes(UTF8), String.valueOf(num).getBytes(UTF8));
     }
 
     //--------------------- collection ------------------------------  
@@ -449,9 +493,17 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                 } else if (sign == COLON_BYTE) { // :
                                     long rs = readLong();
                                     if (future == null) {
-                                        callback.completed("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
+                                        if (command.startsWith("INCR") || command.startsWith("DECR")) {
+                                            callback.completed(rs, key);
+                                        } else {
+                                            callback.completed("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
+                                        }
                                     } else {
-                                        future.complete("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
+                                        if (command.startsWith("INCR") || command.startsWith("DECR")) {
+                                            future.complete(rs);
+                                        } else {
+                                            future.complete("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
+                                        }
                                     }
                                 } else if (sign == DOLLAR_BYTE) { // $
                                     long val = readLong();
