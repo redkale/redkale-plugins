@@ -523,8 +523,9 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                         }
                                     } else {
                                         Collection rs = set ? new HashSet() : new ArrayList();
+                                        boolean keys = "KEYS".equals(command);
                                         for (int i = 0; i < len; i++) {
-                                            if (readInt() > 0) rs.add(convert.convertFrom(objValueType, new String(readBytes(), UTF8)));
+                                            if (readInt() > 0) rs.add(keys ? new String(readBytes(), UTF8) : convert.convertFrom(objValueType, new String(readBytes(), UTF8)));
                                         }
                                         if (future == null) {
                                             callback.completed(rs, key);
