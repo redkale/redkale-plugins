@@ -18,6 +18,7 @@ import org.redkale.util.*;
  * 正向代理
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 @AutoLoad(false)
@@ -54,15 +55,15 @@ public final class SocksHttpxServlet extends SocksServlet {
         if (request.getContentType() != null) {
             buffer.put(("Content-Type: " + request.getContentType() + "\r\n").getBytes());
         }
-        if (request.getContentLength() > 0) {  
-                buffer.put(("Content-Length: " + request.getContentLength() + "\r\n").getBytes());
+        if (request.getContentLength() > 0) {
+            buffer.put(("Content-Length: " + request.getContentLength() + "\r\n").getBytes());
         }
         buffer.put(LINE);
         ByteArray body = request.getDirectBody();
         if (!body.isEmpty()) buffer.put(body.directBytes(), 0, body.size());
         buffer.put(LINE);
         buffer.flip();
-        final AsyncConnection remote = AsyncConnection.create("TCP", group, request.getHostSocketAddress(), 6, 6);
+        final AsyncConnection remote = AsyncConnection.createTCP(group, request.getHostSocketAddress(), 6, 6).join();
         remote.write(buffer, null, new CompletionHandler<Integer, Void>() {
 
             @Override
@@ -90,7 +91,7 @@ public final class SocksHttpxServlet extends SocksServlet {
     private void connect(HttpxRequest request, HttpxResponse response, final AsynchronousChannelGroup group) throws IOException {
         final InetSocketAddress remoteAddress = request.getURLSocketAddress();
         final AsyncConnection remote = remoteAddress.getPort() == 443
-            ? AsyncConnection.create(Utility.createDefaultSSLSocket(remoteAddress)) : AsyncConnection.create("TCP", group, remoteAddress, 6, 6);
+            ? AsyncConnection.create(Utility.createDefaultSSLSocket(remoteAddress)) : AsyncConnection.createTCP(group, remoteAddress, 6, 6).join();
         final ByteBuffer buffer0 = response.getContext().pollBuffer();
         buffer0.put("HTTP/1.1 200 Connection established\r\nConnection: close\r\n\r\n".getBytes());
         buffer0.flip();

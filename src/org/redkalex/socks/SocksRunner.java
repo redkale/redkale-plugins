@@ -106,7 +106,7 @@ public class SocksRunner implements Runnable {
                     return;
                 }
                 try {
-                    remoteChannel = AsyncConnection.create("TCP", context.getAsynchronousChannelGroup(), remoteAddress, 6, 6);
+                    remoteChannel = AsyncConnection.createTCP(context.getAsynchronousChannelGroup(), remoteAddress, 6, 6).join();
                     buffer.clear();
                     buffer.putChar((char) 0x0500);
                     buffer.put((byte) 0x00);  //rsv
