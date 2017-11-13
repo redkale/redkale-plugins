@@ -407,6 +407,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
 
     //--------------------- send ------------------------------  
     private byte[] formatValue(V value) {
+        if(value == null) return "null".getBytes(UTF8);
         return convert.convertTo(objValueType, value).getBytes(UTF8);
     }
 
