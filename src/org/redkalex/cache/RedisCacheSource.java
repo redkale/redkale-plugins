@@ -407,7 +407,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
 
     //--------------------- send ------------------------------  
     private byte[] formatValue(V value) {
-        if(value == null) return "null".getBytes(UTF8);
+        if (value == null) return "null".getBytes(UTF8);
         return convert.convertTo(objValueType, value).getBytes(UTF8);
     }
 
@@ -443,11 +443,14 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         }
 
         final ByteBuffer[] buffers = writer.toBuffers();
-        AsyncConnection conn0 = null;
-        try {
-            final CompletableFuture<Serializable> future = callback == null ? new CompletableFuture<>() : null;
-            conn0 = this.transport.pollConnection(null);
-            final AsyncConnection conn = conn0;
+
+        final CompletableFuture<Serializable> future = callback == null ? new CompletableFuture<>() : null;
+        this.transport.pollConnection(null).whenComplete((conn, ex) -> {
+            if (ex != null) {
+                transport.offerBuffer(buffers);
+                future.completeExceptionally(ex);
+                return;
+            }
             conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
                 @Override
                 public void completed(Integer result, ByteBuffer[] attachments) {
@@ -571,12 +574,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                     }
                 }
             });
-            return future;
-        } catch (Exception e) {
-            transport.offerBuffer(buffers);
-            if (conn0 != null) this.transport.offerConnection(true, conn0);
-            throw new RuntimeException(e);
-        }
+        });
+        return future;
     }
 
 }
