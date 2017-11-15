@@ -389,9 +389,9 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         return (CompletableFuture) send("OBJECT", null, key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.OBJECT_LIST, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
+                return send("LRANGE", CacheEntryType.OBJECT, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
-                return send("SMEMBERS", CacheEntryType.OBJECT_SET, true, key, key.getBytes(UTF8));
+                return send("SMEMBERS", CacheEntryType.OBJECT, true, key, key.getBytes(UTF8));
             }
         });
     }
@@ -406,9 +406,9 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         return (CompletableFuture) send("OBJECT", null, key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.STRING_LIST, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
+                return send("LRANGE", CacheEntryType.STRING, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
-                return send("SMEMBERS", CacheEntryType.STRING_SET, true, key, key.getBytes(UTF8));
+                return send("SMEMBERS", CacheEntryType.STRING, true, key, key.getBytes(UTF8));
             }
         });
     }
@@ -423,9 +423,9 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         return (CompletableFuture) send("OBJECT", null, key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.LONG_LIST, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
+                return send("LRANGE", CacheEntryType.LONG, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
-                return send("SMEMBERS", CacheEntryType.LONG_SET, true, key, key.getBytes(UTF8));
+                return send("SMEMBERS", CacheEntryType.LONG, true, key, key.getBytes(UTF8));
             }
         });
     }
