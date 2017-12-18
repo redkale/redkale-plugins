@@ -74,6 +74,10 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
     }
 
+    public void updateRemoteAddresses(final Collection<InetSocketAddress> addresses) {
+        this.transport.updateRemoteAddresses(addresses);
+    }
+
     @Override
     public final void initValueType(Type valueType) {
         this.objValueType = valueType == null ? String.class : valueType;
