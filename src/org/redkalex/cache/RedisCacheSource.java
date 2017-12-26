@@ -134,6 +134,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         source.appendSetItem("sets3", "setvals1");
         System.out.println("[两值] sets3 VALUES : " + source.getCollection("sets3"));
         System.out.println("[有值] sets3 EXISTS : " + source.exists("sets3"));
+        System.out.println("[有值] sets3-setvals2 EXISTSITEM : " + source.existsSetItem("sets3", "setvals2"));
+        System.out.println("[有值] sets3-setvals3 EXISTSITEM : " + source.existsSetItem("sets3", "setvals3"));
         source.removeSetItem("sets3", "setvals1");
         System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3"));
         System.out.println("sets3 大小 : " + source.getCollectionSize("sets3"));
@@ -470,6 +472,31 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         return getLongCollectionAndRefreshAsync(key, expireSeconds).join();
     }
 
+    //--------------------- existsItem ------------------------------  
+    public boolean existsSetItem(String key, V value) {
+        return existsSetItemAsync(key, value).join();
+    }
+
+    public CompletableFuture<Boolean> existsSetItemAsync(String key, V value) {
+        return (CompletableFuture) send("SISMEMBER", null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, value));
+    }
+
+    public boolean existsStringSetItem(String key, String value) {
+        return existsStringSetItemAsync(key, value).join();
+    }
+
+    public CompletableFuture<Boolean> existsStringSetItemAsync(String key, String value) {
+        return (CompletableFuture) send("SISMEMBER", null, key, key.getBytes(UTF8), formatValue(CacheEntryType.STRING, value));
+    }
+
+    public boolean existsLongSetItem(String key, long value) {
+        return existsLongSetItemAsync(key, value).join();
+    }
+
+    public CompletableFuture<Boolean> existsLongSetItemAsync(String key, long value) {
+        return (CompletableFuture) send("SISMEMBER", null, key, key.getBytes(UTF8), formatValue(CacheEntryType.LONG, value));
+    }
+
     //--------------------- appendListItem ------------------------------  
     @Override
     public CompletableFuture<Void> appendListItemAsync(String key, V value) {
@@ -724,13 +751,13 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                         if (command.startsWith("INCR") || command.startsWith("DECR")) {
                                             callback.completed(rs, key);
                                         } else {
-                                            callback.completed("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
+                                            callback.completed(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
                                         }
                                     } else {
                                         if (command.startsWith("INCR") || command.startsWith("DECR")) {
                                             future.complete(rs);
                                         } else {
-                                            future.complete("EXISTS".equals(command) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
+                                            future.complete(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
                                         }
                                     }
                                 } else if (sign == DOLLAR_BYTE) { // $
