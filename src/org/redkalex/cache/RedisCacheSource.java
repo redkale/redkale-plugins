@@ -66,11 +66,13 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         final int bufferCapacity = conf.getIntValue("bufferCapacity", 8 * 1024);
         final int bufferPoolSize = conf.getIntValue("bufferPoolSize", Runtime.getRuntime().availableProcessors() * 8);
         final int threads = conf.getIntValue("threads", Runtime.getRuntime().availableProcessors() * 8);
+        final int readTimeoutSecond = conf.getIntValue("readTimeoutSecond", TransportFactory.DEFAULT_READTIMEOUTSECOND);
+        final int writeTimeoutSecond = conf.getIntValue("writeTimeoutSecond", TransportFactory.DEFAULT_WRITETIMEOUTSECOND);
         final List<InetSocketAddress> addresses = new ArrayList<>();
         for (AnyValue node : conf.getAnyValues("node")) {
             addresses.add(new InetSocketAddress(node.getValue("addr"), node.getIntValue("port")));
         }
-        TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity);
+        TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity, readTimeoutSecond, writeTimeoutSecond);
         this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
     }
 
