@@ -66,7 +66,7 @@ public class WeiXinMPService implements Service {
 
     @Override
     public void init(AnyValue conf) {
-        if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置
+        if (this.conf != null && !this.conf.isEmpty()) { //存在微信公众号配置
             try {
                 File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
                 InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
@@ -83,7 +83,7 @@ public class WeiXinMPService implements Service {
                     this.mptoken = defElement.mptoken;
                 }
                 this.appidElements.values().forEach(element -> clientidElements.put(element.clientid, element));
-
+                if (logger.isLoggable(Level.FINEST)) logger.finest("weixinmp.config: " + this.clientidElements);
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init weixinmp conf error", e);
             }
@@ -216,12 +216,16 @@ public class WeiXinMPService implements Service {
                 element.appid = appid;
                 element.appsecret = appsecret;
                 element.mptoken = mptoken;
-
                 map.put(appid, element);
                 if (def_appid.equals(appid)) map.put("", element);
 
             });
             return map;
+        }
+
+        @Override
+        public String toString() {
+            return JsonConvert.root().convertTo(this);
         }
     }
 }
