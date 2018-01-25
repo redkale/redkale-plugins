@@ -83,7 +83,7 @@ public class WeiXinMPService implements Service {
                     this.mptoken = defElement.mptoken;
                 }
                 this.appidElements.values().forEach(element -> clientidElements.put(element.clientid, element));
-                if (logger.isLoggable(Level.FINEST)) logger.finest("weixinmp.config: " + this.clientidElements);
+                
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init weixinmp conf error", e);
             }
