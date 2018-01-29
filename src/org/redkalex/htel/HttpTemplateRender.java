@@ -13,7 +13,7 @@ import org.redkale.util.AnyValue;
  *
  * @author zhangjx
  */
-public class HttpTemplateEngine implements org.redkale.net.http.HttpRender<HttpScope> {
+public class HttpTemplateRender implements org.redkale.net.http.HttpRender<HttpScope> {
 
     @Override
     public void init(HttpContext context, AnyValue config) {
