@@ -19,7 +19,7 @@ public class HttpTemplateEngine implements org.redkale.net.http.HttpTemplateEngi
     }
 
     @Override
-    public void renderTo(HttpResponse response, HttpScope scope) {
+    public void renderTo(HttpRequest request, HttpResponse response, HttpScope scope) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
