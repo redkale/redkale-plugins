@@ -6,6 +6,7 @@
 package org.redkalex.socks;
 
 import java.net.*;
+import java.util.List;
 import org.redkale.net.AsyncConnection;
 import org.redkale.util.ObjectPool;
 import org.redkale.util.Creator;
@@ -25,7 +26,7 @@ public class SocksResponse extends Response<SocksContext, SocksRequest> {
 
     protected SocksResponse(SocksContext context, SocksRequest request) {
         super(context, request);
-        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), null, null, null, false, this);
+        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), null, null, null, false, this, null);
     }
 
     public static ObjectPool<Response> createPool(AtomicLong creatCounter, AtomicLong cycleCounter, int max, Creator<Response> creator) {
@@ -59,8 +60,8 @@ class HttpxResponse extends HttpResponse {
     private final SocksResponse socksResponse;
 
     public HttpxResponse(HttpContext context, HttpRequest request, String[][] defaultAddHeaders, String[][] defaultSetHeaders, HttpCookie defcookie,
-        boolean autoOptions, SocksResponse socksResponse) {
-        super(context, request, defaultAddHeaders, defaultSetHeaders, defcookie, autoOptions);
+        boolean autoOptions, SocksResponse socksResponse, List< HttpRender> renders) {
+        super(context, request, defaultAddHeaders, defaultSetHeaders, defcookie, autoOptions, renders);
         this.socksResponse = socksResponse;
     }
 
