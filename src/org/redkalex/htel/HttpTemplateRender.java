@@ -5,6 +5,7 @@
  */
 package org.redkalex.htel;
 
+import org.redkale.convert.Convert;
 import org.redkale.net.http.*;
 import org.redkale.util.AnyValue;
 
@@ -20,7 +21,7 @@ public class HttpTemplateRender implements org.redkale.net.http.HttpRender<HttpS
     }
 
     @Override
-    public void renderTo(HttpRequest request, HttpResponse response, HttpScope scope) {
+    public void renderTo(HttpRequest request, HttpResponse response, Convert convert, HttpScope scope) {
         response.setContentType("text/html; charset=utf-8");
         throw new UnsupportedOperationException("Not supported yet.");
     }
