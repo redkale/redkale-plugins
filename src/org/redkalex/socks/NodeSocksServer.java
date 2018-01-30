@@ -37,7 +37,7 @@ public class NodeSocksServer extends NodeServer {
     }
 
     private static Server createServer(Application application, AnyValue serconf) {
-        return new SocksServer(application.getStartTime());
+        return new SocksServer(application.getStartTime(), application.getResourceFactory().createChild());
     }
 
     @Override

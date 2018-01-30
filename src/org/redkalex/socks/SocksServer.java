@@ -12,6 +12,7 @@ import org.redkale.util.ObjectPool;
 import org.redkale.net.Response;
 import java.nio.*;
 import java.util.concurrent.atomic.*;
+import org.redkale.util.*;
 
 /**
  *
@@ -22,11 +23,11 @@ import java.util.concurrent.atomic.*;
 public final class SocksServer extends Server<Serializable, SocksContext, SocksRequest, SocksResponse, SocksServlet> {
 
     public SocksServer() {
-        this(System.currentTimeMillis());
+        this(System.currentTimeMillis(), ResourceFactory.root());
     }
 
-    public SocksServer(long serverStartTime) {
-        super(serverStartTime, "TCP", new SocksPrepareServlet());
+    public SocksServer(long serverStartTime, ResourceFactory resourceFactory) {
+        super(serverStartTime, "TCP", resourceFactory, new SocksPrepareServlet());
     }
 
     @Override
@@ -39,7 +40,6 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
     protected SocksContext createContext() {
         if (this.readTimeoutSecond < 1) this.readTimeoutSecond = 6;
         if (this.writeTimeoutSecond < 1) this.writeTimeoutSecond = 6;
-        final int port = this.address.getPort();
         AtomicLong createBufferCounter = new AtomicLong();
         AtomicLong cycleBufferCounter = new AtomicLong();
         int rcapacity = Math.max(this.bufferCapacity, 8 * 1024);
@@ -53,7 +53,7 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
         AtomicLong cycleResponseCounter = new AtomicLong();
         ObjectPool<Response> responsePool = SocksResponse.createPool(createResponseCounter, cycleResponseCounter, this.responsePoolSize, null);
         SocksContext localcontext = new SocksContext(this.serverStartTime, this.logger, executor, rcapacity, bufferPool, responsePool,
-            this.maxbody, this.charset, this.address, this.prepare, this.readTimeoutSecond, this.writeTimeoutSecond);
+            this.maxbody, this.charset, this.address, this.resourceFactory, this.prepare, this.readTimeoutSecond, this.writeTimeoutSecond);
         responsePool.setCreator((Object... params) -> new SocksResponse(localcontext, new SocksRequest(localcontext)));
         return localcontext;
     }
