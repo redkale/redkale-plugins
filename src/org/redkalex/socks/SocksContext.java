@@ -11,6 +11,7 @@ import java.nio.channels.*;
 import java.nio.charset.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
+import javax.net.ssl.SSLContext;
 import org.redkale.net.*;
 import org.redkale.net.http.*;
 import org.redkale.util.*;
@@ -25,11 +26,12 @@ public class SocksContext extends HttpContext {
 
     protected final AsynchronousChannelGroup group;
 
-    public SocksContext(long serverStartTime, Logger logger, ThreadPoolExecutor executor, int bufferCapacity, ObjectPool<ByteBuffer> bufferPool,
-        ObjectPool<Response> responsePool, int maxbody, Charset charset, InetSocketAddress address, ResourceFactory resourceFactory, PrepareServlet prepare,
-        int readTimeoutSecond, int writeTimeoutSecond) {
-        super(serverStartTime, logger, executor, bufferCapacity, bufferPool, responsePool, maxbody, charset,
-            address, resourceFactory, prepare, readTimeoutSecond, writeTimeoutSecond);
+    public SocksContext(long serverStartTime, Logger logger, ThreadPoolExecutor executor, SSLContext sslContext,
+        int bufferCapacity, ObjectPool<ByteBuffer> bufferPool, ObjectPool<Response> responsePool,
+        int maxbody, Charset charset, InetSocketAddress address, ResourceFactory resourceFactory,
+        PrepareServlet prepare, int readTimeoutSecond, int writeTimeoutSecond) {
+        super(serverStartTime, logger, executor, sslContext, bufferCapacity, bufferPool, responsePool,
+            maxbody, charset, address, resourceFactory, prepare, readTimeoutSecond, writeTimeoutSecond);
         AsynchronousChannelGroup g = null;
         try {
             g = AsynchronousChannelGroup.withThreadPool(executor);
