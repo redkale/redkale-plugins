@@ -105,6 +105,7 @@ public class PgPoolSource extends PoolTcpSource {
                             conn.write(buffer, attachment1, this);
                             return;
                         }
+                        buffer.clear();
                         conn.read(buffer, null, new CompletionHandler<Integer, Void>() {
                             @Override
                             public void completed(Integer result, Void attachment2) {

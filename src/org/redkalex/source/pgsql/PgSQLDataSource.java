@@ -37,13 +37,15 @@ public class PgSQLDataSource {
         });
 
         Properties prop = new Properties();
-        prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://tfb-database:5432/hello_world"); //192.168.175.1  127.0.0.1
+        prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://192.168.175.1:5432/hello_world"); //192.168.175.1  127.0.0.1
         prop.setProperty(DataSources.JDBC_USER, "benchmarkdbuser");
         prop.setProperty(DataSources.JDBC_PWD, "benchmarkdbpass");
         PgPoolSource poolSource = new PgPoolSource("", prop, logger, bufferPool, executor);
         System.out.println("user:" + poolSource.getUser() + ", pass: " + poolSource.getPassword() + ", db: " + poolSource.getDefdb());
 
+        long s = System.currentTimeMillis();
         AsyncConnection conn = poolSource.pollAsync().join();
-
+        long e = System.currentTimeMillis() - s;
+        System.out.println("连接耗时: " + e + "ms");
     }
 }
