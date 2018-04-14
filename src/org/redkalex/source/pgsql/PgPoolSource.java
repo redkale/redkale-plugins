@@ -60,7 +60,7 @@ public class PgPoolSource extends PoolTcpSource {
                 System.out.println("---------------通过认证了----------");
 
             } else if (type == 3 || type == 5) {//3:需要密码; 5:需要salt密码
-                System.out.println("---------------需要密码认证----------");
+                System.out.println("---------------需要密码认证----------" + type);
                 byte[] salt = null;
                 if (type == 5) {
                     salt = new byte[4];
@@ -85,10 +85,10 @@ public class PgPoolSource extends PoolTcpSource {
                         md5.update(user.getBytes(StandardCharsets.UTF_8));
                         md5.update(Utility.binToHexString(md5.digest()).getBytes(StandardCharsets.UTF_8));
                         md5.update(salt);
-                        buffer.put(Utility.binToHexString(md5.digest()).getBytes(StandardCharsets.UTF_8));
                         buffer.put((byte) 'm');
                         buffer.put((byte) 'd');
                         buffer.put((byte) '5');
+                        buffer.put(Utility.binToHexString(md5.digest()).getBytes(StandardCharsets.UTF_8));
                     }
                     buffer.put((byte) 0);
                     buffer.putInt(1, buffer.position() - 1);
