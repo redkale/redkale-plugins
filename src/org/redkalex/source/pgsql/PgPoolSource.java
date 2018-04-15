@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 import org.redkale.net.AsyncConnection;
 import org.redkale.source.*;
 import org.redkale.util.*;
+import static org.redkalex.source.pgsql.Pgs.*;
 
 /**
  *
@@ -38,8 +39,8 @@ public class PgPoolSource extends PoolTcpSource {
             buffer.putInt(0);
             buffer.putInt(196608); //benchmarkdbuser  benchmarkdbpass hello_world
 
-            putCString(putCString(buffer, "user"), user);
-            putCString(putCString(buffer, "database"), defdb);
+            putCString(putCString(buffer, "user"), username);
+            putCString(putCString(buffer, "database"), database);
             putCString(putCString(buffer, "client_encoding"), "UTF8");
 
             buffer.put((byte) 0);
@@ -49,18 +50,19 @@ public class PgPoolSource extends PoolTcpSource {
         return buffer;
     }
 
+    public static void main(String[] args) throws Throwable {
+        PgSQLDataSource.main(args);
+    }
+
     @Override
     protected void respConnectBuffer(final ByteBuffer buffer, CompletableFuture<AsyncConnection> future, AsyncConnection conn) {
         char cmd = (char) buffer.get();
         int length = buffer.getInt();
-        System.out.println("---------------cmd----------" + cmd);
         if (cmd == 'R') {
             int type = buffer.getInt();
-            if (type == 0) { //认证通过     
-                System.out.println("---------------通过认证了----------");
-
+            if (type == 0) {
+                //认证通过     
             } else if (type == 3 || type == 5) {//3:需要密码; 5:需要salt密码
-                System.out.println("---------------需要密码认证----------" + type);
                 byte[] salt = null;
                 if (type == 5) {
                     salt = new byte[4];
@@ -82,7 +84,7 @@ public class PgPoolSource extends PoolTcpSource {
                             return;
                         }
                         md5.update(password.getBytes(StandardCharsets.UTF_8));
-                        md5.update(user.getBytes(StandardCharsets.UTF_8));
+                        md5.update(username.getBytes(StandardCharsets.UTF_8));
                         md5.update(Utility.binToHexString(md5.digest()).getBytes(StandardCharsets.UTF_8));
                         md5.update(salt);
                         buffer.put((byte) 'm');
@@ -142,11 +144,9 @@ public class PgPoolSource extends PoolTcpSource {
         }
         cmd = (char) buffer.get();
         length = buffer.getInt();
-        System.out.println("xxxxxx55555xxxxxxxxxx " + cmd);
         while (cmd != 'E' && cmd != 'Z') {
             buffer.position(buffer.position() + length - 4);
             cmd = (char) buffer.get();
-            System.out.println("xxxxxxxxxxxxxxxx " + cmd);
             length = buffer.getInt();
         }
         if (cmd == 'E') { //异常了
@@ -168,7 +168,6 @@ public class PgPoolSource extends PoolTcpSource {
             return;
         }
         if (cmd == 'Z') { //ReadyForQuery
-            System.out.println("---------------可以进行查询了----------");
             bufferPool.accept(buffer);
             future.complete(conn);
             return;
@@ -176,20 +175,6 @@ public class PgPoolSource extends PoolTcpSource {
         bufferPool.accept(buffer);
         future.completeExceptionally(new SQLException("postgres connect resp error"));
         conn.dispose();
-    }
-
-    protected static String getCString(ByteBuffer buffer, byte[] store) {
-        int i = 0;
-        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
-        }
-        return new String(store, 0, i, StandardCharsets.UTF_8);
-    }
-
-    protected static ByteBuffer putCString(ByteBuffer buffer, String string) {
-        buffer.put(string.getBytes(StandardCharsets.UTF_8));
-        buffer.put((byte) 0);
-        return buffer;
     }
 
     @Override
