@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 import org.redkale.net.AsyncConnection;
 import org.redkale.source.DataSources;
 import org.redkale.util.ObjectPool;
+import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTESBAME;
 import static org.redkalex.source.pgsql.Pgs.*;
 
 /**
@@ -42,9 +43,9 @@ public class PgSQLDataSource {
         });
 
         Properties prop = new Properties();
-        prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://192.168.1.103:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.setProperty(DataSources.JDBC_USER, "benchmarkdbuser");
-        prop.setProperty(DataSources.JDBC_PWD, "benchmarkdbpass");
+        prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty(DataSources.JDBC_USER, "postgres");
+        prop.setProperty(DataSources.JDBC_PWD, "1234");
         PgPoolSource poolSource = new PgPoolSource("", prop, logger, bufferPool, executor);
         System.out.println("user:" + poolSource.getUsername() + ", pass: " + poolSource.getPassword() + ", db: " + poolSource.getDatabase());
         long s, e;
@@ -71,6 +72,7 @@ public class PgSQLDataSource {
 
     private static void prepareQuery(final ObjectPool<ByteBuffer> bufferPool, final PgPoolSource poolSource) {
         final AsyncConnection conn = poolSource.pollAsync().join();
+        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         ByteBuffer buffer = bufferPool.get();
         {
             buffer.put((byte) 'P');
@@ -153,7 +155,7 @@ public class PgSQLDataSource {
                         int length = buffer.getInt();
                         System.out.println("---------cmd:" + cmd + "-----length:" + length);
                         if (cmd == 'T') {
-                            System.out.println(new RespRowDescDecoder().read(buffer));
+                            System.out.println(new RespRowDescDecoder().read(buffer, bytes));
                             cmd = (char) buffer.get();
                             length = buffer.getInt();
                             System.out.println("---------cmd:" + cmd + "-----length:" + length);
@@ -212,6 +214,7 @@ public class PgSQLDataSource {
 
     private static void singleUpdate(final ObjectPool<ByteBuffer> bufferPool, final PgPoolSource poolSource) {
         final AsyncConnection conn = poolSource.pollAsync().join();
+        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         ByteBuffer buffer = bufferPool.get();
         {
             buffer.put((byte) 'P');
@@ -281,7 +284,7 @@ public class PgSQLDataSource {
                         int length = buffer.getInt();
                         System.out.println("---------cmd:" + cmd + "-----length:" + length);
                         if (cmd == 'T') {
-                            System.out.println(new RespRowDescDecoder().read(buffer));
+                            System.out.println(new RespRowDescDecoder().read(buffer, bytes));
                             cmd = (char) buffer.get();
                             length = buffer.getInt();
                             System.out.println("---------cmd:" + cmd + "-----length:" + length);
@@ -340,6 +343,7 @@ public class PgSQLDataSource {
 
     private static void singleQuery(final ObjectPool<ByteBuffer> bufferPool, final PgPoolSource poolSource) {
         final AsyncConnection conn = poolSource.pollAsync().join();
+        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         ByteBuffer buffer = bufferPool.get();
         {
             buffer.put((byte) 'Q');
@@ -374,7 +378,7 @@ public class PgSQLDataSource {
                         int length = buffer.getInt();
                         System.out.println("---------cmd:" + cmd + "-----length:" + length);
                         if (cmd == 'T') {
-                            System.out.println(new RespRowDescDecoder().read(buffer));
+                            System.out.println(new RespRowDescDecoder().read(buffer, bytes));
                             cmd = (char) buffer.get();
                             length = buffer.getInt();
                             System.out.println("---------cmd:" + cmd + "-----length:" + length);

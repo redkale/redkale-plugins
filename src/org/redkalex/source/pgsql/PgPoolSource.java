@@ -24,6 +24,8 @@ import static org.redkalex.source.pgsql.Pgs.*;
  */
 public class PgPoolSource extends PoolTcpSource {
 
+    protected static final String CONN_ATTR_BYTESBAME = "bufbytes";
+
     public PgPoolSource(String rwtype, Properties prop, Logger logger, ObjectPool<ByteBuffer> bufferPool, ThreadPoolExecutor executor) {
         super(rwtype, prop, logger, bufferPool, executor);
     }
@@ -33,7 +35,8 @@ public class PgPoolSource extends PoolTcpSource {
     }
 
     @Override
-    protected ByteBuffer reqConnectBuffer() {
+    protected ByteBuffer reqConnectBuffer(AsyncConnection conn) {
+        if (conn.getAttribute(CONN_ATTR_BYTESBAME) == null) conn.setAttribute(CONN_ATTR_BYTESBAME, new byte[255]);
         final ByteBuffer buffer = bufferPool.get();
         { //StartupMessage
             buffer.putInt(0);

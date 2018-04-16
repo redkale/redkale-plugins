@@ -20,10 +20,8 @@ public class RespRowDescDecoder implements RespDecoder<RowDesc> {
     }
 
     @Override
-    public RowDesc read(ByteBuffer buffer) {
-        byte[] bytes = new byte[255];
+    public RowDesc read(ByteBuffer buffer, final byte[] bytes) {
         ColumnDesc[] columns = new ColumnDesc[buffer.getShort()];
-
         for (int i = 0; i < columns.length; i++) {
             String name = getCString(buffer, bytes);
             buffer.position(buffer.position() + 6);
