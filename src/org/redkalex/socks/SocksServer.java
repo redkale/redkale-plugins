@@ -38,8 +38,8 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
     @Override
     @SuppressWarnings("unchecked")
     protected SocksContext createContext() {
-        if (this.readTimeoutSecond < 1) this.readTimeoutSecond = 6;
-        if (this.writeTimeoutSecond < 1) this.writeTimeoutSecond = 6;
+        if (this.readTimeoutSeconds < 1) this.readTimeoutSeconds = 6;
+        if (this.writeTimeoutSeconds < 1) this.writeTimeoutSeconds = 6;
         AtomicLong createBufferCounter = new AtomicLong();
         AtomicLong cycleBufferCounter = new AtomicLong();
         int rcapacity = Math.max(this.bufferCapacity, 8 * 1024);
@@ -54,7 +54,7 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
         ObjectPool<Response> responsePool = SocksResponse.createPool(createResponseCounter, cycleResponseCounter, this.responsePoolSize, null);
         SocksContext localcontext = new SocksContext(this.serverStartTime, this.logger, executor, this.sslContext, rcapacity,
             bufferPool, responsePool, this.maxbody, this.charset, this.address, this.resourceFactory,
-            this.prepare, this.aliveTimeoutSecond, this.readTimeoutSecond, this.writeTimeoutSecond);
+            this.prepare, this.aliveTimeoutSeconds, this.readTimeoutSeconds, this.writeTimeoutSeconds);
         responsePool.setCreator((Object... params) -> new SocksResponse(localcontext, new SocksRequest(localcontext)));
         return localcontext;
     }
