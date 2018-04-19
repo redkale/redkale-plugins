@@ -26,7 +26,7 @@ public class SocksResponse extends Response<SocksContext, SocksRequest> {
 
     protected SocksResponse(SocksContext context, SocksRequest request) {
         super(context, request);
-        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), null, null, null, null, null, false, this, null);
+        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), null, null, null, null, null, false, false, this, null);
     }
 
     public static ObjectPool<Response> createPool(AtomicLong creatCounter, AtomicLong cycleCounter, int max, Creator<Response> creator) {
@@ -61,8 +61,8 @@ class HttpxResponse extends HttpResponse {
 
     public HttpxResponse(HttpContext context, HttpRequest request, String plainContentType, String jsonContentType,
         String[][] defaultAddHeaders, String[][] defaultSetHeaders, HttpCookie defcookie,
-        boolean autoOptions, SocksResponse socksResponse, List< HttpRender> renders) {
-        super(context, request, plainContentType, jsonContentType, defaultAddHeaders, defaultSetHeaders, defcookie, autoOptions, renders);
+        boolean autoOptions, boolean autoDate, SocksResponse socksResponse, List< HttpRender> renders) {
+        super(context, request, plainContentType, jsonContentType, defaultAddHeaders, defaultSetHeaders, defcookie, autoOptions, autoDate, renders);
         this.socksResponse = socksResponse;
     }
 
