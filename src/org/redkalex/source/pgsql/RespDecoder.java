@@ -16,5 +16,5 @@ public interface RespDecoder<T> {
 
     public byte messageid();
 
-    public T read(ByteBuffer buffer, byte[] bytes);
+    public T read(final ByteBuffer buffer, final int length, final byte[] bytes);
 }
