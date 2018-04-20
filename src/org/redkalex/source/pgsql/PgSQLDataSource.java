@@ -349,7 +349,7 @@ public class PgSQLDataSource {
             buffer.put((byte) 'Q');
             int start = buffer.position();
             buffer.putInt(0);
-            putCString(buffer, "SELECT * FROM fortune");
+            putCString(buffer, "SELECT * FROM fortune2");
             buffer.putInt(start, buffer.position() - start);
         }
         buffer.flip();
@@ -396,6 +396,25 @@ public class PgSQLDataSource {
                             cmd = (char) buffer.get();
                             length = buffer.getInt();
                             System.out.println("---------cmd:" + cmd + "-----length:" + length);
+                        }                        
+                        if (cmd == 'E') { //异常了
+                            byte[] field = new byte[255];
+                            String level = null, code = null, message = null;
+                            for (byte type = buffer.get(); type != 0; type = buffer.get()) {
+                                String value = getCString(buffer, field);
+                                if (type == (byte) 'S') {
+                                    level = value;
+                                } else if (type == 'C') {
+                                    code = value;
+                                } else if (type == 'M') {
+                                    message = value;
+                                }
+                            }
+                            bufferPool.accept(buffer);
+                            System.out.println("---------Exception------level:" + level + "-----code:" + code + "-----message:" + message);
+                            future.completeExceptionally(new SQLException(message, code, 0));
+                            conn.dispose();
+                            return;
                         }
                         future.complete(conn);
                     }
