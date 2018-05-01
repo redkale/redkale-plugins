@@ -143,10 +143,11 @@ public class PgPoolSource extends PoolTcpSource {
                 bufferPool.accept(buffer);
                 future.completeExceptionally(new SQLException("postgres connect error"));
                 conn.dispose();
+                return;
             }
+            cmd = (char) buffer.get();
+            length = buffer.getInt();
         }
-        cmd = (char) buffer.get();
-        length = buffer.getInt();
         while (cmd != 'E' && cmd != 'Z') {
             buffer.position(buffer.position() + length - 4);
             cmd = (char) buffer.get();

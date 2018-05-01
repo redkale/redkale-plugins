@@ -29,7 +29,6 @@ public class RespRowDescDecoder implements RespDecoder<RowDesc> {
             buffer.position(buffer.position() + 8);
             columns[i] = new ColumnDesc(name, type);
         }
-
         return new RowDesc(columns);
     }
 

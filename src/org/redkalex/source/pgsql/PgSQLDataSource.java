@@ -50,9 +50,10 @@ public class PgSQLDataSource {
         System.out.println("user:" + poolSource.getUsername() + ", pass: " + poolSource.getPassword() + ", db: " + poolSource.getDatabase());
         long s, e;
         s = System.currentTimeMillis();
-        poolSource.pollAsync().join().dispose();
+        AsyncConnection conn = poolSource.pollAsync().join();
+        poolSource.closeConnection(conn);
         e = System.currentTimeMillis() - s;
-        System.out.println("第一次连接耗时: " + e + "ms");
+        System.out.println("第一次连接("+conn+")耗时: " + e + "ms");
         System.out.println("--------------------------------------------开始简单查询连接--------------------------------------------");
         s = System.currentTimeMillis();
         singleQuery(bufferPool, poolSource);
@@ -343,13 +344,14 @@ public class PgSQLDataSource {
 
     private static void singleQuery(final ObjectPool<ByteBuffer> bufferPool, final PgPoolSource poolSource) {
         final AsyncConnection conn = poolSource.pollAsync().join();
+        System.out.println("连接: " + conn);
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         ByteBuffer buffer = bufferPool.get();
         {
             buffer.put((byte) 'Q');
             int start = buffer.position();
             buffer.putInt(0);
-            putCString(buffer, "SELECT * FROM fortune2");
+            putCString(buffer, "SELECT * FROM fortune");
             buffer.putInt(start, buffer.position() - start);
         }
         buffer.flip();
