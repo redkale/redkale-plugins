@@ -31,17 +31,12 @@ public class PgPoolSource extends PoolTcpSource {
     }
 
     @Override
-    public void change(Properties property) {
-    }
-
-    @Override
     protected ByteBuffer reqConnectBuffer(AsyncConnection conn) {
         if (conn.getAttribute(CONN_ATTR_BYTESBAME) == null) conn.setAttribute(CONN_ATTR_BYTESBAME, new byte[255]);
         final ByteBuffer buffer = bufferPool.get();
-        { //StartupMessage
+        {
             buffer.putInt(0);
-            buffer.putInt(196608); //benchmarkdbuser  benchmarkdbpass hello_world
-
+            buffer.putInt(196608);  
             putCString(putCString(buffer, "user"), username);
             putCString(putCString(buffer, "database"), database);
             putCString(putCString(buffer, "client_encoding"), "UTF8");
@@ -182,13 +177,8 @@ public class PgPoolSource extends PoolTcpSource {
     }
 
     @Override
-    public void close() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
     protected int getDefaultPort() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return 5432;
     }
 
 }
