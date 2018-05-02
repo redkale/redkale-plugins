@@ -5,6 +5,7 @@
  */
 package org.redkalex.source.pgsql;
 
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 import java.nio.charset.StandardCharsets;
@@ -14,8 +15,9 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import org.redkale.net.AsyncConnection;
-import org.redkale.source.DataSources;
-import org.redkale.util.ObjectPool;
+import org.redkale.service.Local;
+import org.redkale.source.*;
+import org.redkale.util.*;
 import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTESBAME;
 import static org.redkalex.source.pgsql.Pgs.*;
 
@@ -23,11 +25,34 @@ import static org.redkalex.source.pgsql.Pgs.*;
  *
  * @author zhangjx
  */
-public class PgSQLDataSource {
+@Local
+@AutoLoad(false)
+@SuppressWarnings("unchecked")
+@ResourceType(DataSource.class)
+public abstract class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
-    protected static final Logger logger = Logger.getLogger(PgSQLDataSource.class.getSimpleName());
+    public PgSQLDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
+        super(unitName, persistxml, readprop, writeprop);
+    }
+
+    @Override
+    protected String getPrepareParamSign(int index) {
+        return "$" + index;
+    }
+
+    @Override
+    protected final boolean isAysnc() {
+        return true;
+    }
+
+    @Override
+    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, String rwtype, Properties prop) {
+        return new PgPoolSource(rwtype, prop, logger, bufferPool, executor);
+    }
+
 
     public static void main(String[] args) throws Throwable {
+        final Logger logger = Logger.getLogger(PgSQLDataSource.class.getSimpleName());
         final int capacity = 16 * 1024;
         final ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(new AtomicLong(), new AtomicLong(), 16,
             (Object... params) -> ByteBuffer.allocateDirect(capacity), null, (e) -> {
@@ -53,7 +78,7 @@ public class PgSQLDataSource {
         AsyncConnection conn = poolSource.pollAsync().join();
         poolSource.closeConnection(conn);
         e = System.currentTimeMillis() - s;
-        System.out.println("第一次连接("+conn+")耗时: " + e + "ms");
+        System.out.println("第一次连接(" + conn + ")耗时: " + e + "ms");
         System.out.println("--------------------------------------------开始简单查询连接--------------------------------------------");
         s = System.currentTimeMillis();
         singleQuery(bufferPool, poolSource);
