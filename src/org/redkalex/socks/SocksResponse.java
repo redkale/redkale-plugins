@@ -12,6 +12,7 @@ import org.redkale.util.ObjectPool;
 import org.redkale.util.Creator;
 import org.redkale.net.Response;
 import java.util.concurrent.atomic.*;
+import java.util.function.Supplier;
 import org.redkale.net.http.*;
 
 /**
@@ -26,7 +27,7 @@ public class SocksResponse extends Response<SocksContext, SocksRequest> {
 
     protected SocksResponse(SocksContext context, SocksRequest request) {
         super(context, request);
-        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), null, null, null, null, null, false, false, this, null);
+        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), null, null, null, null, null, false, null, this, null);
     }
 
     public static ObjectPool<Response> createPool(AtomicLong creatCounter, AtomicLong cycleCounter, int max, Creator<Response> creator) {
@@ -61,8 +62,8 @@ class HttpxResponse extends HttpResponse {
 
     public HttpxResponse(HttpContext context, HttpRequest request, String plainContentType, String jsonContentType,
         String[][] defaultAddHeaders, String[][] defaultSetHeaders, HttpCookie defcookie,
-        boolean autoOptions, boolean autoDate, SocksResponse socksResponse, List< HttpRender> renders) {
-        super(context, request, plainContentType, jsonContentType, defaultAddHeaders, defaultSetHeaders, defcookie, autoOptions, autoDate, renders);
+        boolean autoOptions, Supplier<String> dateSupplier, SocksResponse socksResponse, List< HttpRender> renders) {
+        super(context, request, plainContentType, jsonContentType, defaultAddHeaders, defaultSetHeaders, defcookie, autoOptions, dateSupplier, renders);
         this.socksResponse = socksResponse;
     }
 
