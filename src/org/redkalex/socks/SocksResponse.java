@@ -62,7 +62,7 @@ class HttpxResponse extends HttpResponse {
 
     public HttpxResponse(HttpContext context, HttpRequest request, String plainContentType, String jsonContentType,
         String[][] defaultAddHeaders, String[][] defaultSetHeaders, HttpCookie defcookie,
-        boolean autoOptions, Supplier<String> dateSupplier, SocksResponse socksResponse, List< HttpRender> renders) {
+        boolean autoOptions, Supplier<byte[]> dateSupplier, SocksResponse socksResponse, List< HttpRender> renders) {
         super(context, request, plainContentType, jsonContentType, defaultAddHeaders, defaultSetHeaders, defcookie, autoOptions, dateSupplier, renders);
         this.socksResponse = socksResponse;
     }
