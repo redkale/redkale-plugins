@@ -7,6 +7,8 @@ package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import org.redkale.net.AsyncConnection;
@@ -26,6 +28,20 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
     public PgSQLDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
         super(unitName, persistxml, readprop, writeprop);
+    }
+
+    protected static String getCString(ByteBuffer buffer, byte[] store) {
+        int i = 0;
+        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
+            store[i++] = c;
+        }
+        return new String(store, 0, i, StandardCharsets.UTF_8);
+    }
+
+    protected static ByteBuffer putCString(ByteBuffer buffer, String string) {
+        buffer.put(string.getBytes(StandardCharsets.UTF_8));
+        buffer.put((byte) 0);
+        return buffer;
     }
 
     @Override
@@ -98,5 +114,4 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-    
 }

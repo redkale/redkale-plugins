@@ -7,7 +7,7 @@ package org.redkalex.source.pgsql;
 
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
-import static org.redkalex.source.pgsql.Pgs.getCString;
+import static org.redkalex.source.pgsql.PgSQLDataSource.getCString;
 
 /**
  *

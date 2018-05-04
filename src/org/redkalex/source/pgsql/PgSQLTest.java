@@ -17,8 +17,7 @@ import org.redkale.net.AsyncConnection;
 import org.redkale.source.DataSources;
 import org.redkale.util.ObjectPool;
 import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTESBAME;
-import static org.redkalex.source.pgsql.Pgs.getCString;
-import static org.redkalex.source.pgsql.Pgs.putCString;
+import static org.redkalex.source.pgsql.PgSQLDataSource.*;
 
 /**
  *
@@ -163,7 +162,7 @@ public class PgSQLTest {
                         }
                         while (cmd != 'E') {
                             if (cmd == 'C') {
-                                System.out.println(Pgs.getCString(buffer, new byte[255]));
+                                System.out.println(getCString(buffer, new byte[255]));
                             } else if (cmd == 'Z') {
                                 System.out.println("连接待命中");
                                 buffer.position(buffer.position() + length - 4);
@@ -292,7 +291,7 @@ public class PgSQLTest {
                         }
                         while (cmd != 'E') {
                             if (cmd == 'C') {
-                                System.out.println(Pgs.getCString(buffer, new byte[255]));
+                                System.out.println(getCString(buffer, new byte[255]));
                             } else if (cmd == 'Z') {
                                 System.out.println("连接待命中");
                                 buffer.position(buffer.position() + length - 4);
@@ -387,7 +386,7 @@ public class PgSQLTest {
                         }
                         while (cmd != 'E') {
                             if (cmd == 'C') {
-                                System.out.println(Pgs.getCString(buffer, new byte[255]));
+                                System.out.println(getCString(buffer, new byte[255]));
                             } else if (cmd == 'Z') {
                                 System.out.println("连接待命中");
                                 buffer.position(buffer.position() + length - 4);
