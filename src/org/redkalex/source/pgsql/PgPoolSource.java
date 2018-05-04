@@ -36,7 +36,7 @@ public class PgPoolSource extends PoolTcpSource {
         final ByteBuffer buffer = bufferPool.get();
         {
             buffer.putInt(0);
-            buffer.putInt(196608);  
+            buffer.putInt(196608);
             putCString(putCString(buffer, "user"), username);
             putCString(putCString(buffer, "database"), database);
             putCString(putCString(buffer, "client_encoding"), "UTF8");
@@ -46,10 +46,6 @@ public class PgPoolSource extends PoolTcpSource {
         }
         buffer.flip();
         return buffer;
-    }
-
-    public static void main(String[] args) throws Throwable {
-        PgSQLDataSource.main(args);
     }
 
     @Override
