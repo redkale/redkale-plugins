@@ -29,7 +29,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected String getPrepareParamSign(int index) {
+    protected String prepareParamSign(int index) {
         return "$" + index;
     }
 
