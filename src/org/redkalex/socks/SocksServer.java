@@ -12,6 +12,7 @@ import org.redkale.util.ObjectPool;
 import org.redkale.net.Response;
 import java.nio.*;
 import java.util.concurrent.atomic.*;
+import org.redkale.net.http.HttpContext;
 import org.redkale.util.*;
 
 /**
@@ -52,9 +53,25 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
         AtomicLong createResponseCounter = new AtomicLong();
         AtomicLong cycleResponseCounter = new AtomicLong();
         ObjectPool<Response> responsePool = SocksResponse.createPool(createResponseCounter, cycleResponseCounter, this.responsePoolSize, null);
-        SocksContext localcontext = new SocksContext(this.serverStartTime, this.logger, executor, this.sslContext, rcapacity,
-            bufferPool, responsePool, this.maxbody, this.charset, this.address, this.resourceFactory,
-            this.prepare, this.aliveTimeoutSeconds, this.readTimeoutSeconds, this.writeTimeoutSeconds);
+
+        final HttpContext.HttpContextConfig contextConfig = new HttpContext.HttpContextConfig();
+        contextConfig.serverStartTime = this.serverStartTime;
+        contextConfig.logger = this.logger;
+        contextConfig.executor = this.executor;
+        contextConfig.sslContext = this.sslContext;
+        contextConfig.bufferCapacity = rcapacity;
+        contextConfig.bufferPool = bufferPool;
+        contextConfig.responsePool = responsePool;
+        contextConfig.maxbody = this.maxbody;
+        contextConfig.charset = this.charset;
+        contextConfig.address = this.address;
+        contextConfig.prepare = this.prepare;
+        contextConfig.resourceFactory = this.resourceFactory;
+        contextConfig.aliveTimeoutSeconds = this.aliveTimeoutSeconds;
+        contextConfig.readTimeoutSeconds = this.readTimeoutSeconds;
+        contextConfig.writeTimeoutSeconds = this.writeTimeoutSeconds;
+
+        SocksContext localcontext = new SocksContext(contextConfig);
         responsePool.setCreator((Object... params) -> new SocksResponse(localcontext, new SocksRequest(localcontext)));
         return localcontext;
     }
