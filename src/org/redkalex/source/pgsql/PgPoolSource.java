@@ -177,4 +177,14 @@ public class PgPoolSource extends PoolTcpSource {
         return 5432;
     }
 
+    @Override
+    protected void sendCloseCommand(AsyncConnection conn) {
+//        { // CLOSE
+//            buffer.put((byte) 'C');
+//            buffer.putInt(4 + 1 + 1);
+//            buffer.put((byte) 'S');
+//            buffer.put((byte) 0);
+//        }
+    }
+
 }

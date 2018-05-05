@@ -131,8 +131,10 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String sql) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String sql0) {
+        final String sql = flipper == null || flipper.getLimit() <= 0 ? sql0 : (sql0 + " LIMIT " + flipper.getLimit());
+        if (info.isLoggable(logger, Level.FINEST)) logger.finest(info.getType().getSimpleName() + " delete sql=" + sql);
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, sql));
     }
 
     @Override
@@ -153,7 +155,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Integer> updateDB(EntityInfo<T> info, Flipper flipper, String sql0, boolean prepared, Object... params) {
-        String sql = flipper == null || flipper.getLimit() <= 0 ? sql0 : (sql0 + " LIMIT " + flipper.getLimit());
+        final String sql = flipper == null || flipper.getLimit() <= 0 ? sql0 : (sql0 + " LIMIT " + flipper.getLimit());
         if (info.isLoggable(logger, Level.FINEST)) logger.finest(info.getType().getSimpleName() + " update sql=" + sql);
         Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
         return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, sql, objs));
@@ -204,7 +206,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         return String.valueOf(param).getBytes(UTF_8);
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final AsyncConnection conn, final String sql, final Object[][] parameters) {
+    protected <T> CompletableFuture<Integer> executeUpdate(final AsyncConnection conn, final String sql, final Object[]... parameters) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
@@ -274,12 +276,6 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                 writer.putInt(0);
             }
         }
-        if (false) { // CLOSE
-            writer.put((byte) 'C');
-            writer.putInt(4 + 1 + 1);
-            writer.put((byte) 'S');
-            writer.put((byte) 0);
-        }
         { // SYNC
             writer.put((byte) 'S');
             writer.putInt(4);
@@ -333,7 +329,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                 }
                             } else if (cmd == 'Z') {
                                 bufferPool.accept(buffer);
-                                writePool.closeConnection(conn);
+                                writePool.offerConnection(conn);
                                 return;
                             } else {
                                 buffer.position(buffer.position() + length - 4);

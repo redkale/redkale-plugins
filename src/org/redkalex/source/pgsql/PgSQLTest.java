@@ -7,7 +7,6 @@ package org.redkalex.source.pgsql;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.concurrent.*;
@@ -54,7 +53,7 @@ public class PgSQLTest {
         s = System.currentTimeMillis();
         AsyncConnection conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
-        poolSource.closeConnection(conn);
+        poolSource.offerConnection(conn);
         e = System.currentTimeMillis() - s;
         System.out.println("第一次连接(" + conn + ")耗时: " + e + "ms");
         System.out.println("--------------------------------------------开始singleQuery查询连接--------------------------------------------");
@@ -62,16 +61,6 @@ public class PgSQLTest {
         singleQuery(bufferPool, poolSource);
         e = System.currentTimeMillis() - s;
         System.out.println("SELECT * FROM fortune  查询耗时: " + e + "ms");
-        System.out.println("--------------------------------------------开始singleUpdate更新连接--------------------------------------------");
-        s = System.currentTimeMillis();
-        singleUpdate(bufferPool, poolSource);
-        e = System.currentTimeMillis() - s;
-        System.out.println("UPDATE fortune SET id=1 WHERE id=100  更新耗时: " + e + "ms");
-        System.out.println("--------------------------------------------开始prepareQuery复杂连接--------------------------------------------");
-        s = System.currentTimeMillis();
-        prepareQuery(bufferPool, poolSource);
-        e = System.currentTimeMillis() - s;
-        System.out.println("SELECT * FROM fortune WHERE id = $1  复杂查询耗时: " + e + "ms");
 
         System.out.println("--------------------------------------------PgSQLDataSource更新操作--------------------------------------------");
         s = System.currentTimeMillis();
@@ -89,284 +78,9 @@ public class PgSQLTest {
         source.update(bean);
         e = System.currentTimeMillis() - s;
         System.out.println(sql + " 更新结果:(" + rows + ") 耗时: " + e + "ms");
-        
+
         conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
-    }
-
-    private static void prepareQuery(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
-        final AsyncConnection conn = poolSource.pollAsync().join();
-        System.out.println("真实连接: " + conn);
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
-        ByteBuffer buffer = bufferPool.get();
-        {
-            buffer.put((byte) 'P');
-            int start = buffer.position();
-            buffer.putInt(0);
-            buffer.put((byte) 0); // unnamed prepared statement
-            putCString(buffer, "SELECT * FROM fortune WHERE id = $1");
-            buffer.putShort((short) 0); // no parameter types
-            buffer.putInt(start, buffer.position() - start);
-        }
-        { // BIND
-            buffer.put((byte) 'B');
-            int start = buffer.position();
-            buffer.putInt(0);
-            buffer.put((byte) 0); // portal
-            buffer.put((byte) 0); // prepared statement
-            buffer.putShort((short) 0); // number of format codes
-            byte[][] params = new byte[][]{"1".getBytes(StandardCharsets.UTF_8)};
-            if (params == null) {
-                buffer.putShort((short) 0); // number of parameters
-            } else {
-                buffer.putShort((short) params.length); // number of parameters
-                for (byte[] param : params) {
-                    if (param == null) {
-                        buffer.putInt(-1);
-                    } else {
-                        buffer.putInt(param.length);
-                        buffer.put(param);
-                    }
-                }
-            }
-            buffer.putShort((short) 0);
-            buffer.putInt(start, buffer.position() - start);
-        }
-        { // DESCRIBE
-            buffer.put((byte) 'D');
-            buffer.putInt(4 + 1 + 1);
-            buffer.put((byte) 'S');
-            buffer.put((byte) 0);
-        }
-        { // EXECUTE
-            buffer.put((byte) 'E');
-            buffer.putInt(4 + 1 + 4);
-            buffer.put((byte) 0);
-            buffer.putInt(0);
-        }
-        if (false) { // CLOSE
-            buffer.put((byte) 'C');
-            buffer.putInt(4 + 1 + 1);
-            buffer.put((byte) 'S');
-            buffer.put((byte) 0);
-        }
-        { // SYNC
-            buffer.put((byte) 'S');
-            buffer.putInt(4);
-        }
-        buffer.flip();
-        final CompletableFuture<AsyncConnection> future = new CompletableFuture();
-        conn.write(buffer, null, new CompletionHandler<Integer, Void>() {
-            @Override
-            public void completed(Integer result, Void attachment1) {
-                if (result < 0) {
-                    failed(new SQLException("Write Buffer Error"), attachment1);
-                    return;
-                }
-                if (buffer.hasRemaining()) {
-                    conn.write(buffer, attachment1, this);
-                    return;
-                }
-                buffer.clear();
-                conn.read(buffer, null, new CompletionHandler<Integer, Void>() {
-                    @Override
-                    public void completed(Integer result, Void attachment2) {
-                        if (result < 0) {
-                            failed(new SQLException("Read Buffer Error"), attachment2);
-                            return;
-                        }
-                        buffer.flip();
-                        char cmd = (char) buffer.get();
-                        int length = buffer.getInt();
-                        System.out.println("---------cmd:" + cmd + "-----length:" + length);
-                        if (cmd == 'T') {
-                            System.out.println(new RespRowDescDecoder().read(buffer, length, bytes));
-                            cmd = (char) buffer.get();
-                            length = buffer.getInt();
-                            System.out.println("---------cmd:" + cmd + "-----length:" + length);
-                        }
-                        while (cmd != 'E') {
-                            if (cmd == 'C') {
-                                System.out.println(getCString(buffer, new byte[255]));
-                            } else if (cmd == 'Z') {
-                                System.out.println("连接待命中");
-                                buffer.position(buffer.position() + length - 4);
-                                poolSource.closeConnection(conn); 
-                            } else {
-                                buffer.position(buffer.position() + length - 4);
-                            }
-                            if (!buffer.hasRemaining()) break;
-                            cmd = (char) buffer.get();
-                            length = buffer.getInt();
-                            System.out.println("---------cmd:" + cmd + "-----length:" + length);
-                        }
-                        if (cmd == 'E') { //异常了
-                            byte[] field = new byte[255];
-                            String level = null, code = null, message = null;
-                            for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                String value = getCString(buffer, field);
-                                if (type == (byte) 'S') {
-                                    level = value;
-                                } else if (type == 'C') {
-                                    code = value;
-                                } else if (type == 'M') {
-                                    message = value;
-                                }
-                            }
-                            bufferPool.accept(buffer);
-                            future.completeExceptionally(new SQLException(message, code, 0));
-                            conn.dispose();
-                            return;
-                        }
-                        future.complete(conn);
-                    }
-
-                    @Override
-                    public void failed(Throwable exc, Void attachment2) {
-                        bufferPool.accept(buffer);
-                        future.completeExceptionally(exc);
-                        conn.dispose();
-                    }
-                });
-            }
-
-            @Override
-            public void failed(Throwable exc, Void attachment1) {
-                exc.printStackTrace();
-            }
-        });
-        future.join();
-    }
-
-    private static void singleUpdate(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
-        final AsyncConnection conn = poolSource.pollAsync().join();
-        System.out.println("真实连接: " + conn);
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
-        ByteBuffer buffer = bufferPool.get();
-        {
-            buffer.put((byte) 'P');
-            int start = buffer.position();
-            buffer.putInt(0);
-            buffer.put((byte) 0); // unnamed prepared statement
-            putCString(buffer, "UPDATE fortune SET id=1 WHERE id=100");
-            buffer.putShort((short) 0); // no parameter types
-            buffer.putInt(start, buffer.position() - start);
-        }
-        { // BIND
-            buffer.put((byte) 'B');
-            int start = buffer.position();
-            buffer.putInt(0);
-            buffer.put((byte) 0); // portal
-            buffer.put((byte) 0); // prepared statement
-            buffer.putShort((short) 0); // number of format codes
-            buffer.putShort((short) 0); // number of parameters
-            buffer.putShort((short) 0);
-            buffer.putInt(start, buffer.position() - start);
-        }
-        { // DESCRIBE
-            buffer.put((byte) 'D');
-            buffer.putInt(4 + 1 + 1);
-            buffer.put((byte) 'S');
-            buffer.put((byte) 0);
-        }
-        { // EXECUTE
-            buffer.put((byte) 'E');
-            buffer.putInt(4 + 1 + 4);
-            buffer.put((byte) 0);
-            buffer.putInt(0);
-        }
-        if (false) { // CLOSE
-            buffer.put((byte) 'C');
-            buffer.putInt(4 + 1 + 1);
-            buffer.put((byte) 'S');
-            buffer.put((byte) 0);
-        }
-        { // SYNC
-            buffer.put((byte) 'S');
-            buffer.putInt(4);
-        }
-        buffer.flip();
-        final CompletableFuture<Void> future = new CompletableFuture();
-        conn.write(buffer, null, new CompletionHandler<Integer, Void>() {
-            @Override
-            public void completed(Integer result, Void attachment1) {
-                if (result < 0) {
-                    failed(new SQLException("Write Buffer Error"), attachment1);
-                    return;
-                }
-                if (buffer.hasRemaining()) {
-                    conn.write(buffer, attachment1, this);
-                    return;
-                }
-                buffer.clear();
-                conn.read(buffer, null, new CompletionHandler<Integer, Void>() {
-                    @Override
-                    public void completed(Integer result, Void attachment2) {
-                        if (result < 0) {
-                            failed(new SQLException("Read Buffer Error"), attachment2);
-                            return;
-                        }
-                        buffer.flip();
-                        char cmd = (char) buffer.get();
-                        int length = buffer.getInt();
-                        System.out.println("---------cmd:" + cmd + "-----length:" + length);
-                        if (cmd == 'T') {
-                            System.out.println(new RespRowDescDecoder().read(buffer, length, bytes));
-                            cmd = (char) buffer.get();
-                            length = buffer.getInt();
-                            System.out.println("---------cmd:" + cmd + "-----length:" + length);
-                        }
-                        while (cmd != 'E') {
-                            if (cmd == 'C') {
-                                System.out.println(getCString(buffer, new byte[255]));
-                            } else if (cmd == 'Z') {
-                                System.out.println("连接待命中");
-                                buffer.position(buffer.position() + length - 4);
-                                poolSource.closeConnection(conn); 
-                            } else {
-                                buffer.position(buffer.position() + length - 4);
-                            }
-                            if (!buffer.hasRemaining()) break;
-                            cmd = (char) buffer.get();
-                            length = buffer.getInt();
-                            System.out.println("---------cmd:" + cmd + "-----length:" + length);
-                        }
-                        if (cmd == 'E') { //异常了
-                            byte[] field = new byte[255];
-                            String level = null, code = null, message = null;
-                            for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                String value = getCString(buffer, field);
-                                if (type == (byte) 'S') {
-                                    level = value;
-                                } else if (type == 'C') {
-                                    code = value;
-                                } else if (type == 'M') {
-                                    message = value;
-                                }
-                            }
-                            bufferPool.accept(buffer);
-                            future.completeExceptionally(new SQLException(message, code, 0));
-                            conn.dispose();
-                            return;
-                        }
-                        future.complete(null);
-                    }
-
-                    @Override
-                    public void failed(Throwable exc, Void attachment2) {
-                        bufferPool.accept(buffer);
-                        future.completeExceptionally(exc);
-                        conn.dispose();
-                    }
-                });
-            }
-
-            @Override
-            public void failed(Throwable exc, Void attachment1) {
-                exc.printStackTrace();
-            }
-        });
-        future.join();
     }
 
     private static void singleQuery(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
@@ -418,7 +132,7 @@ public class PgSQLTest {
                             } else if (cmd == 'Z') {
                                 System.out.println("连接待命中");
                                 buffer.position(buffer.position() + length - 4);
-                                poolSource.closeConnection(conn); 
+                                poolSource.offerConnection(conn);
                             } else {
                                 buffer.position(buffer.position() + length - 4);
                             }
