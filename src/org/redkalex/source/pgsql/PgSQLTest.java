@@ -13,8 +13,10 @@ import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
+import javax.persistence.Id;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.AsyncConnection;
-import org.redkale.source.DataSources;
+import org.redkale.source.*;
 import org.redkale.util.ObjectPool;
 import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTESBAME;
 import static org.redkalex.source.pgsql.PgSQLDataSource.*;
@@ -45,33 +47,56 @@ public class PgSQLTest {
         prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
         prop.setProperty(DataSources.JDBC_USER, "postgres");
         prop.setProperty(DataSources.JDBC_PWD, "1234");
-        PgPoolSource poolSource = new PgPoolSource("", prop, logger, bufferPool, executor);
+        PgSQLDataSource source = new PgSQLDataSource("", null, prop, prop);
+        PoolSource<AsyncConnection> poolSource = source.writePoolSource();
         System.out.println("user:" + poolSource.getUsername() + ", pass: " + poolSource.getPassword() + ", db: " + poolSource.getDatabase());
         long s, e;
         s = System.currentTimeMillis();
         AsyncConnection conn = poolSource.pollAsync().join();
+        System.out.println("真实连接: " + conn);
         poolSource.closeConnection(conn);
         e = System.currentTimeMillis() - s;
         System.out.println("第一次连接(" + conn + ")耗时: " + e + "ms");
-        System.out.println("--------------------------------------------开始简单查询连接--------------------------------------------");
+        System.out.println("--------------------------------------------开始singleQuery查询连接--------------------------------------------");
         s = System.currentTimeMillis();
         singleQuery(bufferPool, poolSource);
         e = System.currentTimeMillis() - s;
-        System.out.println("查询耗时: " + e + "ms");
-        System.out.println("--------------------------------------------开始更新操作连接--------------------------------------------");
+        System.out.println("SELECT * FROM fortune  查询耗时: " + e + "ms");
+        System.out.println("--------------------------------------------开始singleUpdate更新连接--------------------------------------------");
         s = System.currentTimeMillis();
         singleUpdate(bufferPool, poolSource);
         e = System.currentTimeMillis() - s;
-        System.out.println("更新耗时: " + e + "ms");
-        System.out.println("--------------------------------------------开始复杂查询连接--------------------------------------------");
+        System.out.println("UPDATE fortune SET id=1 WHERE id=100  更新耗时: " + e + "ms");
+        System.out.println("--------------------------------------------开始prepareQuery复杂连接--------------------------------------------");
         s = System.currentTimeMillis();
         prepareQuery(bufferPool, poolSource);
         e = System.currentTimeMillis() - s;
-        System.out.println("复杂查询耗时: " + e + "ms");
+        System.out.println("SELECT * FROM fortune WHERE id = $1  复杂查询耗时: " + e + "ms");
+
+        System.out.println("--------------------------------------------PgSQLDataSource更新操作--------------------------------------------");
+        s = System.currentTimeMillis();
+        String sql = "UPDATE fortune SET id=1 WHERE id=1";
+        Fortune bean = new Fortune();
+        bean.setId(1);
+        bean.setMessage("aa");
+        int rows = source.updateColumn(bean, "message");
+        e = System.currentTimeMillis() - s;
+        System.out.println(sql + " 更新结果:(" + rows + ") 耗时: " + e + "ms");
+
+        bean = new Fortune();
+        bean.setId(1);
+        bean.setMessage("bb");
+        source.update(bean);
+        e = System.currentTimeMillis() - s;
+        System.out.println(sql + " 更新结果:(" + rows + ") 耗时: " + e + "ms");
+        
+        conn = poolSource.pollAsync().join();
+        System.out.println("真实连接: " + conn);
     }
 
-    private static void prepareQuery(final ObjectPool<ByteBuffer> bufferPool, final PgPoolSource poolSource) {
+    private static void prepareQuery(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
         final AsyncConnection conn = poolSource.pollAsync().join();
+        System.out.println("真实连接: " + conn);
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         ByteBuffer buffer = bufferPool.get();
         {
@@ -119,7 +144,7 @@ public class PgSQLTest {
             buffer.put((byte) 0);
             buffer.putInt(0);
         }
-        { // CLOSE
+        if (false) { // CLOSE
             buffer.put((byte) 'C');
             buffer.putInt(4 + 1 + 1);
             buffer.put((byte) 'S');
@@ -166,6 +191,7 @@ public class PgSQLTest {
                             } else if (cmd == 'Z') {
                                 System.out.println("连接待命中");
                                 buffer.position(buffer.position() + length - 4);
+                                poolSource.closeConnection(conn); 
                             } else {
                                 buffer.position(buffer.position() + length - 4);
                             }
@@ -212,8 +238,9 @@ public class PgSQLTest {
         future.join();
     }
 
-    private static void singleUpdate(final ObjectPool<ByteBuffer> bufferPool, final PgPoolSource poolSource) {
+    private static void singleUpdate(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
         final AsyncConnection conn = poolSource.pollAsync().join();
+        System.out.println("真实连接: " + conn);
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         ByteBuffer buffer = bufferPool.get();
         {
@@ -248,7 +275,7 @@ public class PgSQLTest {
             buffer.put((byte) 0);
             buffer.putInt(0);
         }
-        { // CLOSE
+        if (false) { // CLOSE
             buffer.put((byte) 'C');
             buffer.putInt(4 + 1 + 1);
             buffer.put((byte) 'S');
@@ -259,7 +286,7 @@ public class PgSQLTest {
             buffer.putInt(4);
         }
         buffer.flip();
-        final CompletableFuture<AsyncConnection> future = new CompletableFuture();
+        final CompletableFuture<Void> future = new CompletableFuture();
         conn.write(buffer, null, new CompletionHandler<Integer, Void>() {
             @Override
             public void completed(Integer result, Void attachment1) {
@@ -295,6 +322,7 @@ public class PgSQLTest {
                             } else if (cmd == 'Z') {
                                 System.out.println("连接待命中");
                                 buffer.position(buffer.position() + length - 4);
+                                poolSource.closeConnection(conn); 
                             } else {
                                 buffer.position(buffer.position() + length - 4);
                             }
@@ -321,7 +349,7 @@ public class PgSQLTest {
                             conn.dispose();
                             return;
                         }
-                        future.complete(conn);
+                        future.complete(null);
                     }
 
                     @Override
@@ -341,9 +369,9 @@ public class PgSQLTest {
         future.join();
     }
 
-    private static void singleQuery(final ObjectPool<ByteBuffer> bufferPool, final PgPoolSource poolSource) {
+    private static void singleQuery(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
         final AsyncConnection conn = poolSource.pollAsync().join();
-        System.out.println("连接: " + conn);
+        System.out.println("真实连接: " + conn);
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         ByteBuffer buffer = bufferPool.get();
         {
@@ -390,6 +418,7 @@ public class PgSQLTest {
                             } else if (cmd == 'Z') {
                                 System.out.println("连接待命中");
                                 buffer.position(buffer.position() + length - 4);
+                                poolSource.closeConnection(conn); 
                             } else {
                                 buffer.position(buffer.position() + length - 4);
                             }
@@ -435,6 +464,49 @@ public class PgSQLTest {
             }
         });
         future.join();
+    }
+
+    public static class Fortune implements Comparable<Fortune> {
+
+        @Id
+        private int id;
+
+        private String message = "";
+
+        public Fortune() {
+        }
+
+        public Fortune(int id, String message) {
+            this.id = id;
+            this.message = message;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+
+        @Override
+        public int compareTo(Fortune o) {
+            return message.compareTo(o.message);
+        }
+
+        @Override
+        public String toString() {
+            return JsonConvert.root().convertTo(this);
+        }
+
     }
 
 }
