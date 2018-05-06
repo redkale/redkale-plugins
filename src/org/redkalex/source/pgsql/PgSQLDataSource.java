@@ -272,18 +272,18 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                 writer.put((byte) 'B');
                 int start = writer.position();
                 writer.putInt(0);
-                writer.put((byte) 0); // portal
-                writer.put((byte) 0); // prepared statement
-                writer.putShort((short) 0); // number of format codes
-                writer.putShort((short) 0); // number of parameters
-                writer.putShort((short) 0);
+                writer.put((byte) 0); // portal  
+                writer.put((byte) 0); // prepared statement  
+                writer.putShort((short) 0); // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
+                writer.putShort((short) 0);  //number of format codes 参数格式代码。目前每个都必须是零(文本)或者一(二进制)。
+                writer.putShort((short) 0);// number of parameters 后面跟着的参数值的数目(可能为零)。这些必须和查询需要的参数个数匹配。
                 writer.putInt(start, writer.position() - start);
             }
             { // EXECUTE
                 writer.put((byte) 'E');
                 writer.putInt(4 + 1 + 4);
-                writer.put((byte) 0);
-                writer.putInt(0);
+                writer.put((byte) 0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
+                writer.putInt(0); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
             }
         }
         { // SYNC
@@ -331,7 +331,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                         while (buffer.hasRemaining()) {
                             final char cmd = (char) buffer.get();
                             int length = buffer.getInt();
-                            System.out.println("---------------cmd:" + cmd);
+                            System.out.println("---------------cmd:" + cmd + "--------length:" + length);
                             switch (cmd) {
                                 case 'E':
                                     byte[] field = new byte[255];

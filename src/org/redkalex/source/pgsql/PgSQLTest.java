@@ -12,7 +12,7 @@ import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
-import javax.persistence.Id;
+import javax.persistence.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.AsyncConnection;
 import org.redkale.source.*;
@@ -78,7 +78,7 @@ public class PgSQLTest {
         source.delete(bean);
         e = System.currentTimeMillis() - s;
         System.out.println("删除结果:(" + rows + ") 耗时: " + e + "ms");
-        
+
         bean = new Fortune();
         bean.setId(100);
         bean.setMessage("ccc");
@@ -87,6 +87,14 @@ public class PgSQLTest {
         e = System.currentTimeMillis() - s;
         System.out.println("插入结果:(" + rows + ") 耗时: " + e + "ms");
 
+        System.out.println("--------------------------------------------PgSQLDataSource插入操作--------------------------------------------");
+        //create table record(  id serial,  name character varying(128), constraint pk_record_id primary key( id) ); 
+        Record record = new Record();
+        record.setName("ccc");
+        s = System.currentTimeMillis();
+        source.insert(record);
+        e = System.currentTimeMillis() - s;
+        System.out.println("插入Record结果:(" + rows + ") 耗时: " + e + "ms");
         
         conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
@@ -189,7 +197,38 @@ public class PgSQLTest {
         future.join();
     }
 
-    public static class Fortune implements Comparable<Fortune> {
+    public static class Record {
+
+        @Id
+        @GeneratedValue
+        private int id;
+
+        private String name = "";
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return JsonConvert.root().convertTo(this);
+        }
+
+    }
+
+    public static class Fortune implements Comparable<Fortune> { 
 
         @Id
         private int id;
