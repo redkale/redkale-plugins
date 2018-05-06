@@ -136,14 +136,14 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
             }
             objs[i] = params;
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, info.getInsertDollarPrepareSQL(values[0]), values, true, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, info.getInsertDollarPrepareSQL(values[0]), values, true, objs));
     }
 
     @Override
     protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String sql0) {
         final String sql = flipper == null || flipper.getLimit() <= 0 ? sql0 : (sql0 + " LIMIT " + flipper.getLimit());
         if (info.isLoggable(logger, Level.FINEST)) logger.finest(info.getType().getSimpleName() + " delete sql=" + sql);
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, sql, null, false));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, false));
     }
 
     @Override
@@ -159,7 +159,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
             params[attrs.length] = primary.get(values[i]); //最后一个是主键
             objs[i] = params;
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, info.getUpdateDollarPrepareSQL(values[0]), null, false, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, info.getUpdateDollarPrepareSQL(values[0]), null, false, objs));
     }
 
     @Override
@@ -167,7 +167,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         final String sql = flipper == null || flipper.getLimit() <= 0 ? sql0 : (sql0 + " LIMIT " + flipper.getLimit());
         if (info.isLoggable(logger, Level.FINEST)) logger.finest(info.getType().getSimpleName() + " update sql=" + sql);
         Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, sql, null, false, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, false, objs));
     }
 
     @Override
@@ -215,7 +215,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         return String.valueOf(param).getBytes(UTF_8);
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final AsyncConnection conn, final String sql, final T[] values, final boolean insert, final Object[]... parameters) {
+    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String sql, final T[] values, final boolean insert, final Object[]... parameters) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
@@ -330,7 +330,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                         while (buffer.hasRemaining()) {
                             final char cmd = (char) buffer.get();
                             int length = buffer.getInt();
-                            System.out.println("---------------cmd:" + cmd + "--------length:" + length);
+                            System.out.println(sql + "---------------cmd:" + cmd + "--------length:" + length);
                             switch (cmd) {
                                 case 'E':
                                     byte[] field = new byte[255];
@@ -346,6 +346,49 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                         } else if (type == 'M') {
                                             message = value;
                                         }
+                                    }
+                                    if (insert && info.getTableStrategy() != null && info.getTableNotExistSqlStates().contains(';' + code + ';')) { //需要建表
+                                        bufferPool.accept(buffer);
+                                        conn.dispose();
+                                        final String newTable = info.getTable(values[0]);
+                                        final String createTableSql = info.getTableCopySQL(newTable);
+                                        //注意：postgresql不支持跨库复制表结构
+                                        writePool.pollAsync().thenCompose((conn1) -> executeUpdate(info, conn1, createTableSql, values, false).whenComplete((r1, t1) -> {
+                                            if (t1 == null) { //建表成功
+                                                writePool.pollAsync().thenCompose((conn2) -> executeUpdate(info, conn2, sql, values, false, parameters)).whenComplete((r2, t2) -> { //insert必须为false，否则建库失败也会循环到此处
+                                                    if (t2 != null) {//SQL执行失败
+                                                        future.completeExceptionally(t2);
+                                                    } else { //SQL执行成功
+                                                        future.complete(r2);
+                                                    }
+                                                });
+                                            } else if (t1 instanceof SQLException && info.getTableNotExistSqlStates().contains(';' + ((SQLException) t1).getSQLState() + ';')) { //建库
+                                                String createDbSsql = "CREATE DATABASE " + newTable.substring(0, newTable.indexOf('.'));
+                                                writePool.pollAsync().thenCompose((conn3) -> executeUpdate(info, conn3, createDbSsql, values, false)).whenComplete((r3, t3) -> {
+                                                    if (t3 != null) {//建库失败
+                                                        future.completeExceptionally(t3);
+                                                    } else {//建库成功
+                                                        writePool.pollAsync().thenCompose((conn4) -> executeUpdate(info, conn4, createTableSql, values, false)).whenComplete((r4, t4) -> {
+                                                            if (t4 != null) {//建表再次失败
+                                                                future.completeExceptionally(t4);
+                                                            } else {//建表成功
+                                                                writePool.pollAsync().thenCompose((conn5) -> executeUpdate(info, conn5, sql, values, false, parameters)).whenComplete((r5, t5) -> { //insert必须为false，否则建库失败也会循环到此处
+                                                                    if (t5 != null) {//SQL执行失败
+                                                                        future.completeExceptionally(t5);
+                                                                    } else { //SQL执行成功
+                                                                        future.complete(r5);
+                                                                    }
+                                                                });
+                                                            }
+                                                        });
+                                                    }
+                                                });
+                                            } else { //SQL执行失败
+                                                future.completeExceptionally(t1);
+                                            }
+                                        })
+                                        );
+                                        return;
                                     }
                                     future.completeExceptionally(new SQLException(message, code, 0));
                                     futureover = true;

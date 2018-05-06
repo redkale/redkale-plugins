@@ -5,6 +5,7 @@
  */
 package org.redkalex.source.pgsql;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 import java.sql.SQLException;
@@ -95,7 +96,7 @@ public class PgSQLTest {
         source.insert(record);
         e = System.currentTimeMillis() - s;
         System.out.println("插入Record结果:(" + rows + ") 耗时: " + e + "ms");
-        
+
         conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
     }
@@ -197,7 +198,31 @@ public class PgSQLTest {
         future.join();
     }
 
+    //@DistributeTable(strategy = Record.TableStrategy.class)
     public static class Record {
+
+        public static class TableStrategy implements DistributeTableStrategy<Record> {
+
+            private static final String format = "%1$tY%1$tm";
+
+            @Override
+            public String getTable(String table, FilterNode node) {
+                int pos = table.indexOf('.');
+                return table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis());
+            }
+
+            @Override
+            public String getTable(String table, Record bean) {
+                int pos = table.indexOf('.');
+                return table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis());
+            }
+
+            @Override
+            public String getTable(String table, Serializable primary) {
+                int pos = table.indexOf('.');
+                return table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis());
+            }
+        }
 
         @Id
         @GeneratedValue
@@ -228,7 +253,7 @@ public class PgSQLTest {
 
     }
 
-    public static class Fortune implements Comparable<Fortune> { 
+    public static class Fortune implements Comparable<Fortune> {
 
         @Id
         private int id;
