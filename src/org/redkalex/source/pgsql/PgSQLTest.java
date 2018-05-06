@@ -63,22 +63,31 @@ public class PgSQLTest {
         System.out.println("SELECT * FROM fortune  查询耗时: " + e + "ms");
 
         System.out.println("--------------------------------------------PgSQLDataSource更新操作--------------------------------------------");
-        s = System.currentTimeMillis();
-        String sql = "UPDATE fortune SET id=1 WHERE id=1";
         Fortune bean = new Fortune();
         bean.setId(1);
-        bean.setMessage("aa");
+        bean.setMessage("aaa");
+        s = System.currentTimeMillis();
         int rows = source.updateColumn(bean, "message");
         e = System.currentTimeMillis() - s;
-        System.out.println(sql + " 更新结果:(" + rows + ") 耗时: " + e + "ms");
+        System.out.println("更新结果:(" + rows + ") 耗时: " + e + "ms");
 
         bean = new Fortune();
-        bean.setId(1);
-        bean.setMessage("bb");
-        source.update(bean);
+        bean.setId(100);
+        bean.setMessage("ccc");
+        s = System.currentTimeMillis();
+        source.delete(bean);
         e = System.currentTimeMillis() - s;
-        System.out.println(sql + " 更新结果:(" + rows + ") 耗时: " + e + "ms");
+        System.out.println("删除结果:(" + rows + ") 耗时: " + e + "ms");
+        
+        bean = new Fortune();
+        bean.setId(100);
+        bean.setMessage("ccc");
+        s = System.currentTimeMillis();
+        source.insert(bean);
+        e = System.currentTimeMillis() - s;
+        System.out.println("插入结果:(" + rows + ") 耗时: " + e + "ms");
 
+        
         conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
     }

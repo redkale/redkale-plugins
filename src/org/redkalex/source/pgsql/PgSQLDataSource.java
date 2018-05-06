@@ -127,14 +127,24 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Void> insertDB(EntityInfo<T> info, T... values) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
+        final Object[][] objs = new Object[values.length][];
+        for (int i = 0; i < values.length; i++) {
+            final Object[] params = new Object[attrs.length];
+            for (int j = 0; j < attrs.length; j++) {
+                params[j] = attrs[j].get(values[i]);
+            }
+            objs[i] = params;
+        }
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, info.getInsertDollarPrepareSQL(values[0]), values, true, objs)).thenAccept((rs) -> {
+        });
     }
 
     @Override
     protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String sql0) {
         final String sql = flipper == null || flipper.getLimit() <= 0 ? sql0 : (sql0 + " LIMIT " + flipper.getLimit());
         if (info.isLoggable(logger, Level.FINEST)) logger.finest(info.getType().getSimpleName() + " delete sql=" + sql);
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, sql));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, sql, null, false));
     }
 
     @Override
@@ -150,7 +160,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
             params[attrs.length] = primary.get(values[i]); //最后一个是主键
             objs[i] = params;
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, info.getUpdateDollarPrepareSQL(values[0]), objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, info.getUpdateDollarPrepareSQL(values[0]), null, false, objs));
     }
 
     @Override
@@ -158,7 +168,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         final String sql = flipper == null || flipper.getLimit() <= 0 ? sql0 : (sql0 + " LIMIT " + flipper.getLimit());
         if (info.isLoggable(logger, Level.FINEST)) logger.finest(info.getType().getSimpleName() + " update sql=" + sql);
         Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, sql, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, sql, null, false, objs));
     }
 
     @Override
@@ -206,7 +216,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         return String.valueOf(param).getBytes(UTF_8);
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final AsyncConnection conn, final String sql, final Object[]... parameters) {
+    protected <T> CompletableFuture<Integer> executeUpdate(final AsyncConnection conn, final String sql, final T[] values, final boolean insert, final Object[]... parameters) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
@@ -316,45 +326,55 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                             return;
                         }
                         buffer.flip();
-                        char cmd = (char) buffer.get();
-                        int length = buffer.getInt();
-                        boolean success = false;
-                        while (cmd != 'E') {
-                            if (cmd == 'C') {
-                                String val = getCString(buffer, bytes);
-                                int pos = val.lastIndexOf(' ');
-                                if (pos > 0) {
-                                    future.complete(Integer.parseInt(val.substring(pos + 1)));
-                                    success = true;
-                                }
-                            } else if (cmd == 'Z') {
-                                bufferPool.accept(buffer);
-                                writePool.offerConnection(conn);
-                                return;
-                            } else {
-                                buffer.position(buffer.position() + length - 4);
+                        boolean endok = false;
+                        boolean futureover = false;
+                        while (buffer.hasRemaining()) {
+                            final char cmd = (char) buffer.get();
+                            int length = buffer.getInt();
+                            System.out.println("---------------cmd:" + cmd);
+                            switch (cmd) {
+                                case 'E':
+                                    byte[] field = new byte[255];
+                                    String level = null,
+                                     code = null,
+                                     message = null;
+                                    for (byte type = buffer.get(); type != 0; type = buffer.get()) {
+                                        String value = getCString(buffer, field);
+                                        if (type == (byte) 'S') {
+                                            level = value;
+                                        } else if (type == 'C') {
+                                            code = value;
+                                        } else if (type == 'M') {
+                                            message = value;
+                                        }
+                                    }
+                                    future.completeExceptionally(new SQLException(message, code, 0));
+                                    futureover = true;
+                                    break;
+                                case 'C':
+                                    String val = getCString(buffer, bytes);
+                                    int pos = val.lastIndexOf(' ');
+                                    if (pos > 0) {
+                                        future.complete(Integer.parseInt(val.substring(pos + 1)));
+                                        futureover = true;
+                                    }
+                                    break;
+                                case 'Z':
+                                    buffer.position(buffer.position() + length - 4);
+                                    endok = true;
+                                    break;
+                                default:
+                                    buffer.position(buffer.position() + length - 4);
+                                    break;
                             }
-                            if (!buffer.hasRemaining()) break;
-                            cmd = (char) buffer.get();
-                            length = buffer.getInt();
                         }
-                        if (cmd == 'E') { //异常了
-                            byte[] field = new byte[255];
-                            String level = null, code = null, message = null;
-                            for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                String value = getCString(buffer, field);
-                                if (type == (byte) 'S') {
-                                    level = value;
-                                } else if (type == 'C') {
-                                    code = value;
-                                } else if (type == 'M') {
-                                    message = value;
-                                }
-                            }
-                            failed(new SQLException(message, code, 0), attachment2);
-                            return;
+                        bufferPool.accept(buffer);
+                        if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeUpdate error"));
+                        if (endok) {
+                            writePool.offerConnection(conn);
+                        } else {
+                            conn.dispose();
                         }
-                        if (!success) failed(new SQLException("SQL(" + sql + ") executeUpdate error"), attachment2);
                     }
 
                     @Override
