@@ -126,7 +126,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected <T> CompletableFuture<Void> insertDB(EntityInfo<T> info, T... values) {
+    protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final Object[][] objs = new Object[values.length][];
         for (int i = 0; i < values.length; i++) {
@@ -136,8 +136,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
             }
             objs[i] = params;
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, info.getInsertDollarPrepareSQL(values[0]), values, true, objs)).thenAccept((rs) -> {
-        });
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(conn, info.getInsertDollarPrepareSQL(values[0]), values, true, objs));
     }
 
     @Override
