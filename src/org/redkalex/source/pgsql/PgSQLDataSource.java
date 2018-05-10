@@ -347,7 +347,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                             message = value;
                                         }
                                     }
-                                    if (insert && info.getTableStrategy() != null && info.getTableNotExistSqlStates().contains(';' + code + ';')) { //需要建表
+                                    if (insert && info.getTableStrategy() != null && info.isTableNotExist(code)) { //需要建表
                                         bufferPool.accept(buffer);
                                         conn.dispose();
                                         final String newTable = info.getTable(values[0]);
@@ -362,7 +362,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                                         future.complete(r2);
                                                     }
                                                 });
-                                            } else if (t1 instanceof SQLException && info.getTableNotExistSqlStates().contains(';' + ((SQLException) t1).getSQLState() + ';')) { //建库
+                                            } else if (t1 instanceof SQLException && info.isTableNotExist((SQLException) t1)) { //建库
                                                 String createDbSsql = "CREATE DATABASE " + newTable.substring(0, newTable.indexOf('.'));
                                                 writePool.pollAsync().thenCompose((conn3) -> executeUpdate(info, conn3, createDbSsql, values, false)).whenComplete((r3, t3) -> {
                                                     if (t3 != null) {//建库失败
