@@ -90,12 +90,12 @@ public class PgSQLTest {
 
         System.out.println("--------------------------------------------PgSQLDataSource插入操作--------------------------------------------");
         //create table record(  id serial,  name character varying(128), constraint pk_record_id primary key( id) ); 
-        Record record = new Record();
-        record.setName("ccc");
+        Record r1 = new Record("ccc");
+        Record r2 = new Record("eee");
         s = System.currentTimeMillis();
-        source.insert(record);
+        source.insert(r1, r2);
         e = System.currentTimeMillis() - s;
-        System.out.println("插入Record结果:(" + rows + ") 耗时: " + e + "ms");
+        System.out.println("插入Record结果:(" + rows + ") 耗时: " + e + "ms " + r1 + "," + r2);
 
         conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
@@ -229,6 +229,13 @@ public class PgSQLTest {
         private int id;
 
         private String name = "";
+
+        public Record() {
+        }
+
+        public Record(String name) {
+            this.name = name;
+        }
 
         public int getId() {
             return id;

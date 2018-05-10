@@ -23,6 +23,15 @@ public class RowDesc {
         return columns;
     }
 
+    public ColumnDesc getColumn(int i) {
+        return columns[i];
+    }
+
+    public int length() {
+        if (columns == null) return -1;
+        return columns.length;
+    }
+
     @Override
     public String toString() {
         return JsonConvert.root().convertTo(this);

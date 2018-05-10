@@ -31,5 +31,4 @@ public class RespRowDescDecoder implements RespDecoder<RowDesc> {
         }
         return new RowDesc(columns);
     }
-
 }
