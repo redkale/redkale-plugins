@@ -109,6 +109,11 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
+        if (values.length > 200) { //防止一个ByteBuffer接收不完结果数据
+            CompletableFuture future = new CompletableFuture();
+            future.completeExceptionally(new SQLException(values[0].getClass() + " insert too many rows"));
+            return future;
+        }
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final Object[][] objs = new Object[values.length][];
         for (int i = 0; i < values.length; i++) {
