@@ -6,7 +6,7 @@
 package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
-import org.redkale.convert.json.JsonConvert;
+import java.util.Objects;
 
 /**
  *
@@ -17,6 +17,7 @@ public class RowData {
     final byte[][] values;
 
     public RowData(byte[][] values) {
+        Objects.requireNonNull(values);
         this.values = values;
     }
 
@@ -28,7 +29,7 @@ public class RowData {
         byte[] bs = values[i];
         ColumnDesc colDesc = rowDesc.getColumn(i);
         if (bs == null) return null;
-        return colDesc.getObject(bs); 
+        return colDesc.getObject(bs);
     }
 
     public int length() {
@@ -38,6 +39,6 @@ public class RowData {
 
     @Override
     public String toString() {
-        return JsonConvert.root().convertTo(this);
+        return "{cols:" + (values == null ? -1 : values.length) + "}";
     }
 }

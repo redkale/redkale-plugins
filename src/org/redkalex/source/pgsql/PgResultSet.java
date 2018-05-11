@@ -26,7 +26,7 @@ public class PgResultSet implements java.sql.ResultSet {
 
     private int rowIndex = -1;
 
-    private RowData currRowData;
+    private RowData currRow;
 
     public PgResultSet() {
     }
@@ -36,7 +36,7 @@ public class PgResultSet implements java.sql.ResultSet {
         this.colmap = new HashMap<>(rowDesc.length());
         int i = -1;
         for (ColumnDesc col : this.rowDesc.getColumns()) {
-            this.colmap.put(col.getName(), ++i);
+            this.colmap.put(col.getName().toLowerCase(), ++i);
         }
     }
 
@@ -48,7 +48,7 @@ public class PgResultSet implements java.sql.ResultSet {
     @Override
     public boolean next() throws SQLException {
         if (++this.rowIndex < this.rowDatas.size()) {
-            this.currRowData = this.rowDatas.get(this.rowIndex);
+            this.currRow = this.rowDatas.get(this.rowIndex);
             return true;
         }
         return false;
@@ -65,67 +65,67 @@ public class PgResultSet implements java.sql.ResultSet {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        return String.valueOf(this.currRowData.getObject(rowDesc, columnIndex - 1));
+        return String.valueOf(this.currRow.getObject(rowDesc, columnIndex - 1));
     }
 
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
-        return (Boolean) this.currRowData.getObject(rowDesc, columnIndex - 1);
+        return (Boolean) this.currRow.getObject(rowDesc, columnIndex - 1);
     }
 
     @Override
     public byte getByte(int columnIndex) throws SQLException {
-        return (Byte) this.currRowData.getObject(rowDesc, columnIndex - 1);
+        return (Byte) this.currRow.getObject(rowDesc, columnIndex - 1);
     }
 
     @Override
     public short getShort(int columnIndex) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, columnIndex - 1)).shortValue();
+        return ((Number) this.currRow.getObject(rowDesc, columnIndex - 1)).shortValue();
     }
 
     @Override
     public int getInt(int columnIndex) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, columnIndex - 1)).intValue();
+        return ((Number) this.currRow.getObject(rowDesc, columnIndex - 1)).intValue();
     }
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, columnIndex - 1)).longValue();
+        return ((Number) this.currRow.getObject(rowDesc, columnIndex - 1)).longValue();
     }
 
     @Override
     public float getFloat(int columnIndex) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, columnIndex - 1)).floatValue();
+        return ((Number) this.currRow.getObject(rowDesc, columnIndex - 1)).floatValue();
     }
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, columnIndex - 1)).doubleValue();
+        return ((Number) this.currRow.getObject(rowDesc, columnIndex - 1)).doubleValue();
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return (BigDecimal) this.currRowData.getObject(rowDesc, columnIndex - 1);
+        return (BigDecimal) this.currRow.getObject(rowDesc, columnIndex - 1);
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        return (byte[]) this.currRowData.getObject(rowDesc, columnIndex - 1);
+        return (byte[]) this.currRow.getObject(rowDesc, columnIndex - 1);
     }
 
     @Override
     public Date getDate(int columnIndex) throws SQLException {
-        return (Date) this.currRowData.getObject(rowDesc, columnIndex - 1);
+        return (Date) this.currRow.getObject(rowDesc, columnIndex - 1);
     }
 
     @Override
     public Time getTime(int columnIndex) throws SQLException {
-        return (Time) this.currRowData.getObject(rowDesc, columnIndex - 1);
+        return (Time) this.currRow.getObject(rowDesc, columnIndex - 1);
     }
 
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        return (Timestamp) this.currRowData.getObject(rowDesc, columnIndex - 1);
+        return (Timestamp) this.currRow.getObject(rowDesc, columnIndex - 1);
     }
 
     @Override
@@ -145,67 +145,67 @@ public class PgResultSet implements java.sql.ResultSet {
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return String.valueOf(this.currRowData.getObject(rowDesc, colmap.get(columnLabel)));
+        return String.valueOf(this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase())));
     }
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
-        return (Boolean) this.currRowData.getObject(rowDesc, colmap.get(columnLabel));
+        return (Boolean) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
-        return (Byte) this.currRowData.getObject(rowDesc, colmap.get(columnLabel));
+        return (Byte) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
     public short getShort(String columnLabel) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, colmap.get(columnLabel))).shortValue();
+        return ((Number) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()))).shortValue();
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, colmap.get(columnLabel))).intValue();
+        return ((Number) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()))).intValue();
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, colmap.get(columnLabel))).longValue();
+        return ((Number) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()))).longValue();
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, colmap.get(columnLabel))).floatValue();
+        return ((Number) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()))).floatValue();
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
-        return ((Number) this.currRowData.getObject(rowDesc, colmap.get(columnLabel))).doubleValue();
+        return ((Number) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()))).doubleValue();
     }
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        return (BigDecimal) this.currRowData.getObject(rowDesc, colmap.get(columnLabel));
+        return (BigDecimal) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
-        return (byte[]) this.currRowData.getObject(rowDesc, colmap.get(columnLabel));
+        return (byte[]) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
     public Date getDate(String columnLabel) throws SQLException {
-        return (Date) this.currRowData.getObject(rowDesc, colmap.get(columnLabel));
+        return (Date) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
     public Time getTime(String columnLabel) throws SQLException {
-        return (Time) this.currRowData.getObject(rowDesc, colmap.get(columnLabel));
+        return (Time) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
-        return (Timestamp) this.currRowData.getObject(rowDesc, colmap.get(columnLabel));
+        return (Timestamp) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
@@ -245,17 +245,17 @@ public class PgResultSet implements java.sql.ResultSet {
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        return this.currRowData.getObject(rowDesc, columnIndex - 1);
+        return this.currRow.getObject(rowDesc, columnIndex - 1);
     }
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        return this.currRowData.getObject(rowDesc, colmap.get(columnLabel));
+        return this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
     public int findColumn(String columnLabel) throws SQLException {
-        return colmap.get(columnLabel) + 1;
+        return colmap.get(columnLabel.toLowerCase()) + 1;
     }
 
     @Override
@@ -270,12 +270,12 @@ public class PgResultSet implements java.sql.ResultSet {
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-        return (BigDecimal) this.currRowData.getObject(rowDesc, columnIndex - 1);
+        return (BigDecimal) this.currRow.getObject(rowDesc, columnIndex - 1);
     }
 
     @Override
     public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
-        return (BigDecimal) this.currRowData.getObject(rowDesc, colmap.get(columnLabel));
+        return (BigDecimal) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
