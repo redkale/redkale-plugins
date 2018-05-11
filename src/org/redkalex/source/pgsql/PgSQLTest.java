@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 import java.sql.SQLException;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
@@ -17,7 +17,7 @@ import javax.persistence.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.AsyncConnection;
 import org.redkale.source.*;
-import org.redkale.util.ObjectPool;
+import org.redkale.util.*;
 import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTESBAME;
 import static org.redkalex.source.pgsql.PgSQLDataSource.*;
 
@@ -28,6 +28,7 @@ import static org.redkalex.source.pgsql.PgSQLDataSource.*;
 public class PgSQLTest {
 
     public static void main(String[] args) throws Throwable {
+        System.out.println(ByteBuffer.allocate(1).getClass());
         final Logger logger = Logger.getLogger(PgSQLDataSource.class.getSimpleName());
         final int capacity = 16 * 1024;
         final ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(new AtomicLong(), new AtomicLong(), 16,
@@ -88,14 +89,23 @@ public class PgSQLTest {
         e = System.currentTimeMillis() - s;
         System.out.println("插入结果:(" + rows + ") 耗时: " + e + "ms");
 
-        System.out.println("--------------------------------------------PgSQLDataSource插入操作--------------------------------------------");
-        //create table record(  id serial,  name character varying(128), constraint pk_record_id primary key( id) ); 
-        Record r1 = new Record("ccc");
-        Record r2 = new Record("eee");
+        if (false) {
+            System.out.println("--------------------------------------------PgSQLDataSource插入操作--------------------------------------------");
+            //create table record(  id serial,  name character varying(128), constraint pk_record_id primary key( id) ); 
+            Record r1 = new Record("ccc");
+            Record r2 = new Record("eee");
+            s = System.currentTimeMillis();
+            source.insert(r1, r2);
+            e = System.currentTimeMillis() - s;
+            System.out.println("插入Record结果:(" + rows + ") 耗时: " + e + "ms " + r1 + "," + r2);
+        }
+
+        System.out.println("--------------------------------------------PgSQLDataSource查询操作--------------------------------------------");
         s = System.currentTimeMillis();
-        source.insert(r1, r2);
+        List rs = source.queryList(Fortune.class);
+        System.out.println(rs);
         e = System.currentTimeMillis() - s;
-        System.out.println("插入Record结果:(" + rows + ") 耗时: " + e + "ms " + r1 + "," + r2);
+        System.out.println("查询结果:(" + rs.size() + ") 耗时: " + e + "ms ");
 
         conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
@@ -105,12 +115,13 @@ public class PgSQLTest {
         final AsyncConnection conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final String sql = "SELECT a.* FROM fortune a";
         ByteBuffer buffer = bufferPool.get();
         {
             buffer.put((byte) 'Q');
             int start = buffer.position();
             buffer.putInt(0);
-            putCString(buffer, "SELECT * FROM fortune");
+            putCString(buffer, sql);
             buffer.putInt(start, buffer.position() - start);
         }
         buffer.flip();
@@ -135,11 +146,12 @@ public class PgSQLTest {
                             return;
                         }
                         buffer.flip();
+                        ByteBufferReader bufReader = ByteBufferReader.create(buffer);
                         char cmd = (char) buffer.get();
                         int length = buffer.getInt();
-                        System.out.println("---------cmd:" + cmd + "-----length:" + length);
+                        System.out.println(sql + "---------cmd:" + cmd + "-----length:" + length);
                         if (cmd == 'T') {
-                            System.out.println(new RespRowDescDecoder().read(buffer, length, bytes));
+                            System.out.println(new RespRowDescDecoder().read(bufReader, length, bytes));
                             cmd = (char) buffer.get();
                             length = buffer.getInt();
                             System.out.println("---------cmd:" + cmd + "-----length:" + length);

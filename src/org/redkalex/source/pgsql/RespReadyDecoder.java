@@ -5,7 +5,7 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.nio.ByteBuffer;
+import org.redkale.util.ByteBufferReader;
 
 /**
  *
@@ -19,9 +19,10 @@ public class RespReadyDecoder implements RespDecoder<Boolean> {
     }
 
     @Override
-    public Boolean read(ByteBuffer buffer, int length, byte[] bytes) {
+    public Boolean read(ByteBufferReader buffer, int length, byte[] bytes) {
         if (length <= 4) return true;
-        buffer.position(buffer.position() + length - 4);
+        //buffer.position(buffer.position() + length - 4);
+        buffer.skip(length - 4);
         return true;
     }
 

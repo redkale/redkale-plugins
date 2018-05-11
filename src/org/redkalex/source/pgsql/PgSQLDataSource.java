@@ -80,6 +80,14 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         return new String(store, 0, i, StandardCharsets.UTF_8);
     }
 
+    protected static String getCString(ByteBufferReader buffer, byte[] store) {
+        int i = 0;
+        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
+            store[i++] = c;
+        }
+        return new String(store, 0, i, StandardCharsets.UTF_8);
+    }
+
     protected static ByteBuffer putCString(ByteBuffer buffer, String string) {
         buffer.put(string.getBytes(StandardCharsets.UTF_8));
         buffer.put((byte) 0);
@@ -166,37 +174,142 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDB(EntityInfo<T> info, String sql, FilterFuncColumn... columns) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+            final Map map = new HashMap<>();
+            try {
+                if (set.next()) {
+                    int index = 0;
+                    for (FilterFuncColumn ffc : columns) {
+                        for (String col : ffc.cols()) {
+                            Object o = set.getObject(++index);
+                            Number rs = ffc.getDefvalue();
+                            if (o != null) rs = (Number) o;
+                            map.put(ffc.col(col), rs);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return map;
+        }));
     }
 
     @Override
     protected <T> CompletableFuture<Number> getNumberResultDB(EntityInfo<T> info, String sql, Number defVal, String column) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+            Number rs = defVal;
+            try {
+                if (set.next()) {
+                    Object o = set.getObject(1);
+                    if (o != null) rs = (Number) o;
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return rs;
+        }));
     }
 
     @Override
     protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDB(EntityInfo<T> info, String sql, String keyColumn) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+            Map<K, N> rs = new LinkedHashMap<>();
+            try {
+                while (set.next()) {
+                    rs.put((K) set.getObject(1), (N) set.getObject(2));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return rs;
+        }));
     }
 
     @Override
     protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, String sql, boolean onlypk, SelectColumn selects) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+            T rs = null;
+            try {
+                rs = set.next() ? infoGetValue(info, selects, set) : null;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return rs;
+        }));
     }
 
     @Override
     protected <T> CompletableFuture<Serializable> findColumnDB(EntityInfo<T> info, String sql, boolean onlypk, String column, Serializable defValue) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+            Serializable val = defValue;
+            try {
+                if (set.next()) {
+                    final Attribute<T, Serializable> attr = info.getAttribute(column);
+                    if (attr.type() == byte[].class) {
+                        Blob blob = set.getBlob(1);
+                        if (blob != null) val = blob.getBytes(1, (int) blob.length());
+                    } else {
+                        val = (Serializable) set.getObject(1);
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return val;
+        }));
     }
 
     @Override
     protected <T> CompletableFuture<Boolean> existsDB(EntityInfo<T> info, String sql, boolean onlypk) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+            try {
+                boolean rs = set.next() ? (set.getInt(1) > 0) : false;
+                return rs;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }));
     }
 
     @Override
     protected <T> CompletableFuture<Sheet<T>> querySheetDB(EntityInfo<T> info, boolean needtotal, SelectColumn selects, Flipper flipper, FilterNode node) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        final SelectColumn sels = selects;
+        final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
+        final CharSequence join = node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
+        final CharSequence where = node == null ? null : createSQLExpress(node, info, joinTabalis);
+        final String listsql = "SELECT " + info.getQueryColumns("a", selects) + " FROM " + info.getTable(node) + " a" + (join == null ? "" : join)
+            + ((where == null || where.length() == 0) ? "" : (" WHERE " + where)) + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getOffset() + "," + flipper.getLimit()));
+        if (info.isLoggable(logger, Level.FINEST)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        if (!needtotal) {
+            return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, listsql).thenApply((ResultSet set) -> {
+                try {
+                    final List<T> list = new ArrayList();
+                    while (set.next()) {
+                        list.add(infoGetValue(info, sels, set));
+                    }
+                    return Sheet.asSheet(list);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        }
+        final String countsql = "SELECT COUNT(*) FROM " + info.getTable(node) + " a" + (join == null ? "" : join)
+            + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
+        return getNumberResultDB(info, countsql, 0, countsql).thenCompose(total -> {
+            if (total.longValue() <= 0) return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
+            return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, listsql).thenApply((ResultSet set) -> {
+                try {
+                    final List<T> list = new ArrayList();
+                    while (set.next()) {
+                        list.add(infoGetValue(info, sels, set));
+                    }
+                    return new Sheet(total.longValue(), list);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        });
     }
 
     protected static int fetchSize(Flipper flipper) {
@@ -314,15 +427,16 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                     return;
                 }
 
-                final ByteBuffer buffer = bufferPool.get();
-                conn.read(buffer, null, new CompletionHandler<Integer, Void>() {
+                final ByteBuffer readbuf = bufferPool.get();
+                conn.read(readbuf, null, new CompletionHandler<Integer, Void>() {
                     @Override
                     public void completed(Integer result, Void attachment2) {
                         if (result < 0) {
                             failed(new SQLException("Read Buffer Error"), attachment2);
                             return;
                         }
-                        buffer.flip();
+                        readbuf.flip();
+                        ByteBufferReader buffer = ByteBufferReader.create(readbuf);
                         boolean endok = false;
                         boolean futureover = false;
                         RowDesc rowDesc = null;
@@ -330,7 +444,6 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                         while (buffer.hasRemaining()) {
                             final char cmd = (char) buffer.get();
                             int length = buffer.getInt();
-                            System.out.println(sql + "---------------cmd:" + cmd + "--------length:" + length);
                             switch (cmd) {
                                 case 'E':
                                     byte[] field = new byte[255];
@@ -348,7 +461,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                         }
                                     }
                                     if (insert && info.getTableStrategy() != null && info.isTableNotExist(code)) { //需要建表
-                                        bufferPool.accept(buffer);
+                                        bufferPool.accept(readbuf);
                                         conn.dispose();
                                         final String newTable = info.getTable(values[0]);
                                         final String createTableSql = info.getTableCopySQL(newTable);
@@ -410,15 +523,17 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                     if (insert) primary.set(values[++valueIndex], rowData.getObject(rowDesc, 0));
                                     break;
                                 case 'Z':
-                                    buffer.position(buffer.position() + length - 4);
+                                    //buffer.position(buffer.position() + length - 4);
+                                    buffer.skip(length - 4);
                                     endok = true;
                                     break;
                                 default:
-                                    buffer.position(buffer.position() + length - 4);
+                                    //buffer.position(buffer.position() + length - 4);
+                                    buffer.skip(length - 4);
                                     break;
                             }
                         }
-                        bufferPool.accept(buffer);
+                        bufferPool.accept(readbuf);
                         if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeUpdate error"));
                         if (endok) {
                             writePool.offerConnection(conn);
@@ -429,7 +544,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
                     @Override
                     public void failed(Throwable exc, Void attachment2) {
-                        bufferPool.accept(buffer);
+                        bufferPool.accept(readbuf);
                         future.completeExceptionally(exc);
                         conn.dispose();
                     }
@@ -438,44 +553,27 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
             @Override
             public void failed(Throwable exc, ByteBuffer[] attachment1) {
-                for (int i = 0; i < attachment1.length; i++) {
-                    bufferPool.accept(attachment1[i]);
+                for (ByteBuffer attach : attachment1) {
+                    bufferPool.accept(attach);
                 }
-                exc.printStackTrace();
+                future.completeExceptionally(exc);
             }
         });
         return future;
     }
 
-    protected <T> CompletableFuture<Integer> executeQuery(final EntityInfo<T> info, final AsyncConnection conn, final String sql, int fetchSize) {
+    protected <T> CompletableFuture<ResultSet> executeQuery(final EntityInfo<T> info, final AsyncConnection conn, final String sql) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
             writer.put((byte) 'Q');
             int start = writer.position();
             writer.putInt(0);
-            writer.put((byte) 0);
             putCString(writer, sql);
             writer.putInt(start, writer.position() - start);
         }
-        { // DESCRIBE
-            writer.put((byte) 'D');
-            writer.putInt(4 + 1 + 1);
-            writer.put((byte) 'S');
-            writer.put((byte) 0);
-        }
-        { // EXECUTE
-            writer.put((byte) 'E');
-            writer.putInt(4 + 1 + 4);
-            writer.put((byte) 0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
-            writer.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
-        }
-        { // SYNC
-            writer.put((byte) 'S');
-            writer.putInt(4);
-        }
         final ByteBuffer[] buffers = writer.toBuffers();
-        final CompletableFuture<Integer> future = new CompletableFuture();
+        final CompletableFuture<ResultSet> future = new CompletableFuture();
         conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
             @Override
             public void completed(Integer result, ByteBuffer[] attachment1) {
@@ -500,24 +598,31 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                     conn.write(newattachs, newattachs, this);
                     return;
                 }
-
-                final ByteBuffer buffer = bufferPool.get();
-                conn.read(buffer, null, new CompletionHandler<Integer, Void>() {
+                final PgResultSet resultSet = new PgResultSet();
+                final List<ByteBuffer> readBuffs = new ArrayList<>();
+                ByteBuffer readbuffer = bufferPool.get();
+                conn.read(readbuffer, readbuffer, new CompletionHandler<Integer, ByteBuffer>() {
                     @Override
-                    public void completed(Integer result, Void attachment2) {
+                    public void completed(Integer result, ByteBuffer attachment2) {
                         if (result < 0) {
                             failed(new SQLException("Read Buffer Error"), attachment2);
                             return;
                         }
-                        buffer.flip();
+                        if (!attachment2.hasRemaining()) { //还有数据
+                            attachment2.flip();
+                            readBuffs.add(attachment2);
+                            ByteBuffer readbuffer = bufferPool.get();
+                            conn.read(readbuffer, readbuffer, this);
+                            return;
+                        }
+                        attachment2.flip();
+                        readBuffs.add(attachment2);
+                        final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
                         boolean endok = false;
                         boolean futureover = false;
-                        RowDesc rowDesc = null;
-                        int valueIndex = -1;
                         while (buffer.hasRemaining()) {
                             final char cmd = (char) buffer.get();
                             int length = buffer.getInt();
-                            System.out.println(sql + "---------------cmd:" + cmd + "--------length:" + length);
                             switch (cmd) {
                                 case 'E':
                                     byte[] field = new byte[255];
@@ -537,33 +642,32 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                     future.completeExceptionally(new SQLException(message, code, 0));
                                     futureover = true;
                                     break;
-                                case 'C':
-                                    String val = getCString(buffer, bytes);
-                                    int pos = val.lastIndexOf(' ');
-                                    if (pos > 0) {
-                                        future.complete(Integer.parseInt(val.substring(pos + 1)));
-                                        futureover = true;
-                                    }
-                                    break;
                                 case 'T':
-                                    rowDesc = new RespRowDescDecoder().read(buffer, length, bytes);
+                                    RowDesc rowDesc = new RespRowDescDecoder().read(buffer, length, bytes);
+                                    resultSet.setRowDesc(rowDesc);
                                     break;
                                 case 'D':
-                                    final Attribute<T, Serializable> primary = info.getPrimary();
                                     RowData rowData = new RespRowDataDecoder().read(buffer, length, bytes);
+                                    resultSet.addRowData(rowData);
+                                    futureover = true;
                                     break;
                                 case 'Z':
-                                    buffer.position(buffer.position() + length - 4);
+                                    //buffer.position(buffer.position() + length - 4);
+                                    buffer.skip(length - 4);
                                     endok = true;
                                     break;
                                 default:
-                                    buffer.position(buffer.position() + length - 4);
+                                    //buffer.position(buffer.position() + length - 4);
+                                    buffer.skip(length - 4);
                                     break;
                             }
                         }
-                        bufferPool.accept(buffer);
-                        if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeUpdate error"));
+                        for (ByteBuffer buf : readBuffs) {
+                            bufferPool.accept(buf);
+                        }
+                        if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeQuery error"));
                         if (endok) {
+                            future.complete(resultSet);
                             writePool.offerConnection(conn);
                         } else {
                             conn.dispose();
@@ -571,8 +675,8 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                     }
 
                     @Override
-                    public void failed(Throwable exc, Void attachment2) {
-                        bufferPool.accept(buffer);
+                    public void failed(Throwable exc, ByteBuffer attachment2) {
+                        //不用bufferPool.accept
                         future.completeExceptionally(exc);
                         conn.dispose();
                     }
@@ -581,10 +685,10 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
             @Override
             public void failed(Throwable exc, ByteBuffer[] attachment1) {
-                for (int i = 0; i < attachment1.length; i++) {
-                    bufferPool.accept(attachment1[i]);
+                for (ByteBuffer attach : attachment1) {
+                    bufferPool.accept(attach);
                 }
-                exc.printStackTrace();
+                future.completeExceptionally(exc);
             }
         });
         return future;

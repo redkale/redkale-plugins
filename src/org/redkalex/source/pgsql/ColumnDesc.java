@@ -53,6 +53,8 @@ public class ColumnDesc {
             case FLOAT4: return Float.valueOf(new String(value, UTF_8));
             case NUMERIC: // fallthrough
             case FLOAT8: return new BigDecimal(new String(value, UTF_8));
+            case BIT: return Utility.hexToBin(new String(value, 2, value.length - 2, UTF_8))[0];
+            case BIT_ARRAY:// fallthrough
             case BYTEA: return Utility.hexToBin(new String(value, 2, value.length - 2, UTF_8));
             case DATE: String date = new String(value, UTF_8);
                 try {

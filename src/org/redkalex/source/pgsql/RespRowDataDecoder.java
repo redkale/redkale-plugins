@@ -5,7 +5,7 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.nio.ByteBuffer;
+import org.redkale.util.ByteBufferReader;
 
 /**
  *
@@ -19,7 +19,7 @@ public class RespRowDataDecoder implements RespDecoder<RowData> {
     }
 
     @Override
-    public RowData read(final ByteBuffer buffer, final int length, final byte[] bytes) {
+    public RowData read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
         byte[][] values = new byte[buffer.getShort()][];
         for (int i = 0; i < values.length; i++) {
             int sublength = buffer.getInt();

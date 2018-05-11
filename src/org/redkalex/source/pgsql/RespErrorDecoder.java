@@ -5,8 +5,8 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.nio.ByteBuffer;
 import java.sql.SQLException;
+import org.redkale.util.ByteBufferReader;
 import static org.redkalex.source.pgsql.PgSQLDataSource.getCString;
 
 /**
@@ -21,7 +21,7 @@ public class RespErrorDecoder implements RespDecoder<SQLException> {
     }
 
     @Override
-    public SQLException read(final ByteBuffer buffer, final int length, final byte[] bytes) {
+    public SQLException read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
         String level = null, code = null, message = null;
         for (byte type = buffer.get(); type != 0; type = buffer.get()) {
             String value = getCString(buffer, bytes);

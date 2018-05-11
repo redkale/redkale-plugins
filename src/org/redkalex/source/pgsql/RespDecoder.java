@@ -5,7 +5,7 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.nio.ByteBuffer;
+import org.redkale.util.ByteBufferReader;
 
 /**
  *
@@ -16,5 +16,5 @@ public interface RespDecoder<T> {
 
     public byte messageid();
 
-    public T read(final ByteBuffer buffer, final int length, final byte[] bytes);
+    public T read(final ByteBufferReader buffer, final int length, final byte[] bytes);
 }
