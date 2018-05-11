@@ -365,6 +365,12 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                     writer.putShort((short) 0);
                     writer.putInt(start, writer.position() - start);
                 }
+                { // EXECUTE
+                    writer.put((byte) 'E');
+                    writer.putInt(4 + 1 + 4);
+                    writer.put((byte) 0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
+                    writer.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
+                }
             }
         } else {
             { // BIND
@@ -378,12 +384,12 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                 writer.putShort((short) 0);// number of parameters 后面跟着的参数值的数目(可能为零)。这些必须和查询需要的参数个数匹配。
                 writer.putInt(start, writer.position() - start);
             }
-        }
-        { // EXECUTE
-            writer.put((byte) 'E');
-            writer.putInt(4 + 1 + 4);
-            writer.put((byte) 0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
-            writer.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
+            { // EXECUTE
+                writer.put((byte) 'E');
+                writer.putInt(4 + 1 + 4);
+                writer.put((byte) 0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
+                writer.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
+            }
         }
         { // SYNC
             writer.put((byte) 'S');
@@ -433,7 +439,9 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                         final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
                         boolean endok = false;
                         boolean futureover = false;
+                        boolean success = false;
                         RowDesc rowDesc = null;
+                        int count = 0;
                         int valueIndex = -1;
                         while (buffer.hasRemaining()) {
                             final char cmd = (char) buffer.get();
@@ -506,7 +514,8 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                     String val = getCString(buffer, bytes);
                                     int pos = val.lastIndexOf(' ');
                                     if (pos > 0) {
-                                        future.complete(Integer.parseInt(val.substring(pos + 1)));
+                                        count += (Integer.parseInt(val.substring(pos + 1)));
+                                        success = true;
                                         futureover = true;
                                     }
                                     break;
@@ -529,6 +538,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                     break;
                             }
                         }
+                        if (success) future.complete(count);
                         for (ByteBuffer buf : readBuffs) {
                             bufferPool.accept(buf);
                         }
