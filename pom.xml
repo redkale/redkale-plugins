@@ -6,7 +6,16 @@
     <packaging>jar</packaging>
     <url>http://redkale.org</url>
     <description>Redkale-Plugins -- java framework</description>
-    <version>1.5.0</version>
+    <version>1.9.3</version>
+
+	<dependencies>
+		<dependency>  
+			<groupId>org.redkale</groupId>  
+			<artifactId>redkale</artifactId>  
+			<version>1.9.3</version>  
+		</dependency>
+	</dependencies>
+
     <licenses>     
         <license>      
             <name>Apache 2</name>       
@@ -27,7 +36,7 @@
                 <role>Architect</role>     
             </roles>    
             <organization>redkale</organization>     
-            <organizationUrl>http://redkale.org</organizationUrl>       
+            <organizationUrl>https://redkale.org</organizationUrl>       
             <properties>     
                 <dept>No</dept>     
             </properties>     
@@ -56,16 +65,6 @@
         <connection>scm:git:git@github.com/redkale/redkale-plugins.git</connection>
         <developerConnection>scm:git:git@github.com:redkale/redkale-plugins.git</developerConnection>
     </scm>
-
-	<dependencies>
-		<dependency>  
-			<groupId>org.redkale</groupId>  
-			<artifactId>redkale</artifactId>  
-			<version>1.8.4</version>  
-			<scope>system</scope>  
-			<systemPath>${project.basedir}/lib/redkale.jar</systemPath>  
-		</dependency>
-	</dependencies>
 
     <build>
         <plugins>
