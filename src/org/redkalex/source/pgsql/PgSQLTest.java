@@ -109,6 +109,15 @@ public class PgSQLTest {
 
         conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
+
+        final World[] ws = new World[500];
+        for (int i = 0; i < ws.length; i++) {
+            ws[i] = new World();
+            ws[i].setId(i + 1);
+            ws[i].setRandomNumber(i + 1);
+        }
+        System.out.println("查询完毕");
+        source.update(ws);
     }
 
     private static void singleQuery(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
@@ -306,6 +315,41 @@ public class PgSQLTest {
         @Override
         public int compareTo(Fortune o) {
             return message.compareTo(o.message);
+        }
+
+        @Override
+        public String toString() {
+            return JsonConvert.root().convertTo(this);
+        }
+
+    }
+
+    public static class World implements Comparable<World> {
+
+        @Id
+        private int id;
+
+        private int randomNumber;
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public int getRandomNumber() {
+            return randomNumber;
+        }
+
+        public void setRandomNumber(int randomNumber) {
+            this.randomNumber = randomNumber;
+        }
+
+        @Override
+        public int compareTo(World o) {
+            return Integer.compare(id, o.id);
         }
 
         @Override
