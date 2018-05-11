@@ -107,17 +107,22 @@ public class PgSQLTest {
         e = System.currentTimeMillis() - s;
         System.out.println("查询结果:(" + rs.size() + ") 耗时: " + e + "ms ");
 
-        conn = poolSource.pollAsync().join();
-        System.out.println("真实连接: " + conn);
-
+        System.out.println("--------------------------------------------PgSQLDataSource查改操作--------------------------------------------");
         final World[] ws = new World[500];
+        s = System.currentTimeMillis();
         for (int i = 0; i < ws.length; i++) {
-            ws[i] = new World();
+            ws[i] = source.find(World.class, i + 1);
             ws[i].setId(i + 1);
             ws[i].setRandomNumber(i + 1);
         }
-        System.out.println("查询完毕");
+        System.out.println("查询结果:(" + rs.size() + ") 耗时: " + e + "ms ");
         source.update(ws);
+        e = System.currentTimeMillis() - s;
+        System.out.println("更改结果:(" + rs.size() + ") 耗时: " + e + "ms ");
+
+        conn = poolSource.pollAsync().join();
+        System.out.println("真实连接: " + conn);
+
     }
 
     private static void singleQuery(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
