@@ -117,11 +117,6 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
-        if (values.length > 200) { //防止一个ByteBuffer接收不完结果数据
-            CompletableFuture future = new CompletableFuture();
-            future.completeExceptionally(new SQLException(values[0].getClass() + " insert too many rows"));
-            return future;
-        }
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final Object[][] objs = new Object[values.length][];
         for (int i = 0; i < values.length; i++) {
@@ -427,16 +422,21 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                     return;
                 }
 
-                final ByteBuffer readbuf = bufferPool.get();
-                conn.read(readbuf, null, new CompletionHandler<Integer, Void>() {
+                final List<ByteBuffer> readBuffs = new ArrayList<>();
+                ByteBuffer readbuffer = bufferPool.get();
+                conn.read(readbuffer, readbuffer, new CompletionHandler<Integer, ByteBuffer>() {
                     @Override
-                    public void completed(Integer result, Void attachment2) {
-                        if (result < 0) {
-                            failed(new SQLException("Read Buffer Error"), attachment2);
+                    public void completed(Integer result, ByteBuffer attachment2) {
+                        if (!attachment2.hasRemaining()) { //还有数据
+                            attachment2.flip();
+                            readBuffs.add(attachment2);
+                            ByteBuffer readbuffer = bufferPool.get();
+                            conn.read(readbuffer, readbuffer, this);
                             return;
                         }
-                        readbuf.flip();
-                        ByteBufferReader buffer = ByteBufferReader.create(readbuf);
+                        attachment2.flip();
+                        readBuffs.add(attachment2);
+                        final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
                         boolean endok = false;
                         boolean futureover = false;
                         RowDesc rowDesc = null;
@@ -461,7 +461,9 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                         }
                                     }
                                     if (insert && info.getTableStrategy() != null && info.isTableNotExist(code)) { //需要建表
-                                        bufferPool.accept(readbuf);
+                                        for (ByteBuffer buf : readBuffs) {
+                                            bufferPool.accept(buf);
+                                        }
                                         conn.dispose();
                                         final String newTable = info.getTable(values[0]);
                                         final String createTableSql = info.getTableCopySQL(newTable);
@@ -533,7 +535,9 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                     break;
                             }
                         }
-                        bufferPool.accept(readbuf);
+                        for (ByteBuffer buf : readBuffs) {
+                            bufferPool.accept(buf);
+                        }
                         if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeUpdate error"));
                         if (endok) {
                             writePool.offerConnection(conn);
@@ -543,8 +547,8 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                     }
 
                     @Override
-                    public void failed(Throwable exc, Void attachment2) {
-                        bufferPool.accept(readbuf);
+                    public void failed(Throwable exc, ByteBuffer attachment2) {
+                        bufferPool.accept(attachment2);
                         future.completeExceptionally(exc);
                         conn.dispose();
                     }
