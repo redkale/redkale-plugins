@@ -365,12 +365,6 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                     writer.putShort((short) 0);
                     writer.putInt(start, writer.position() - start);
                 }
-                { // EXECUTE
-                    writer.put((byte) 'E');
-                    writer.putInt(4 + 1 + 4);
-                    writer.put((byte) 0);
-                    writer.putInt(fetchSize);
-                }
             }
         } else {
             { // BIND
@@ -384,12 +378,12 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                 writer.putShort((short) 0);// number of parameters 后面跟着的参数值的数目(可能为零)。这些必须和查询需要的参数个数匹配。
                 writer.putInt(start, writer.position() - start);
             }
-            { // EXECUTE
-                writer.put((byte) 'E');
-                writer.putInt(4 + 1 + 4);
-                writer.put((byte) 0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
-                writer.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
-            }
+        }
+        { // EXECUTE
+            writer.put((byte) 'E');
+            writer.putInt(4 + 1 + 4);
+            writer.put((byte) 0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
+            writer.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
         }
         { // SYNC
             writer.put((byte) 'S');
