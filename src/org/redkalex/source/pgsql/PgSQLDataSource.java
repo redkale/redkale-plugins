@@ -666,7 +666,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                         if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeQuery error"));
                         if (endok) {
                             future.complete(resultSet);
-                            writePool.offerConnection(conn);
+                            readPool.offerConnection(conn);
                         } else {
                             conn.dispose();
                         }
