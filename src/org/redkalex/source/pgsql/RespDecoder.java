@@ -10,7 +10,7 @@ import org.redkale.util.ByteBufferReader;
 /**
  *
  * @author zhangjx
- * @param <T>
+ * @param <T> 泛型
  */
 public interface RespDecoder<T> {
 
