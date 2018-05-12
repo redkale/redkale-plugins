@@ -431,7 +431,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                             failed(new SQLException("Read Buffer Error"), attachment2);
                             return;
                         }
-                        if (!attachment2.hasRemaining()) { //还有数据
+                        if (result == 8192 || !attachment2.hasRemaining()) { //还有数据
                             attachment2.flip();
                             readBuffs.add(attachment2);
                             ByteBuffer readbuffer = bufferPool.get();
@@ -620,7 +620,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                             failed(new SQLException("Read Buffer Error"), attachment2);
                             return;
                         }
-                        if (!attachment2.hasRemaining()) { //还有数据
+                        if (result == 8192 || !attachment2.hasRemaining()) { //还有数据
                             attachment2.flip();
                             readBuffs.add(attachment2);
                             ByteBuffer readbuffer = bufferPool.get();
