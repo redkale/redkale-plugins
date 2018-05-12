@@ -15,7 +15,7 @@ import java.sql.*;
 import java.time.format.*;
 import static java.time.format.DateTimeFormatter.*;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
 import java.util.logging.Level;
 import org.redkale.net.AsyncConnection;
 import org.redkale.service.Local;
@@ -111,8 +111,8 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, String rwtype, Properties prop) {
-        return new PgPoolSource(rwtype, prop, logger, bufferPool, executor);
+    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, String rwtype, ArrayBlockingQueue queue, Properties prop) {
+        return new PgPoolSource(rwtype, queue, prop, logger, bufferPool, executor);
     }
 
     @Override

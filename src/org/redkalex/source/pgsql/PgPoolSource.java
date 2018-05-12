@@ -26,8 +26,8 @@ public class PgPoolSource extends PoolTcpSource {
 
     protected static final String CONN_ATTR_BYTESBAME = "bufbytes";
 
-    public PgPoolSource(String rwtype, Properties prop, Logger logger, ObjectPool<ByteBuffer> bufferPool, ThreadPoolExecutor executor) {
-        super(rwtype, prop, logger, bufferPool, executor);
+    public PgPoolSource(String rwtype, ArrayBlockingQueue queue, Properties prop, Logger logger, ObjectPool<ByteBuffer> bufferPool, ThreadPoolExecutor executor) {
+        super(rwtype, queue, prop, logger, bufferPool, executor);
     }
 
     @Override
@@ -178,7 +178,8 @@ public class PgPoolSource extends PoolTcpSource {
     }
 
     @Override
-    protected void sendCloseCommand(AsyncConnection conn) {
+    protected CompletableFuture<AsyncConnection> sendCloseCommand(AsyncConnection conn) {
+        return null;
 //        { // CLOSE
 //            buffer.put((byte) 'C');
 //            buffer.putInt(4 + 1 + 1);
