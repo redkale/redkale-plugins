@@ -427,6 +427,10 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                 conn.read(readbuffer, readbuffer, new CompletionHandler<Integer, ByteBuffer>() {
                     @Override
                     public void completed(Integer result, ByteBuffer attachment2) {
+                        if (result < 0) {
+                            failed(new SQLException("Read Buffer Error"), attachment2);
+                            return;
+                        }
                         if (!attachment2.hasRemaining()) { //还有数据
                             attachment2.flip();
                             readBuffs.add(attachment2);
