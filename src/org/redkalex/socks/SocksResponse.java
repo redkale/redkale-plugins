@@ -5,6 +5,7 @@
  */
 package org.redkalex.socks;
 
+import java.nio.ByteBuffer;
 import org.redkale.net.AsyncConnection;
 import org.redkale.util.ObjectPool;
 import org.redkale.util.Creator;
@@ -72,8 +73,14 @@ class HttpxResponse extends HttpResponse {
         super.channel = channel;
     }
 
+    @Override
     protected AsyncConnection getChannel() {
         return super.channel;
+    }
+
+    @Override
+    protected void offerBuffer(ByteBuffer... buffers) {
+        super.offerBuffer(buffers);
     }
 
     @Override

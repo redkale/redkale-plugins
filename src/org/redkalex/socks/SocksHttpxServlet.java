@@ -72,13 +72,13 @@ public final class SocksHttpxServlet extends SocksServlet {
                     remote.write(buffer, attachment, this);
                     return;
                 }
-                response.getContext().offerBuffer(buffer);
+                response.offerBuffer(buffer);
                 new ProxyCompletionHandler(remote, request, response).completed(0, null);
             }
 
             @Override
             public void failed(Throwable exc, Void attachment) {
-                response.getContext().offerBuffer(buffer);
+                response.offerBuffer(buffer);
                 response.finish(true);
                 try {
                     remote.close();
@@ -158,7 +158,7 @@ public final class SocksHttpxServlet extends SocksServlet {
 
                 @Override
                 public void failed(Throwable exc, Void attachment) {
-                    response.getContext().offerBuffer(rbuffer);
+                    response.offerBuffer(rbuffer);
                     response.finish(true);
                     try {
                         remote.close();
@@ -195,7 +195,7 @@ public final class SocksHttpxServlet extends SocksServlet {
 
                 @Override
                 public void failed(Throwable exc, Void attachment) {
-                    response.getContext().offerBuffer(qbuffer);
+                    response.offerBuffer(qbuffer);
                     response.finish(true);
                     try {
                         remote.close();
