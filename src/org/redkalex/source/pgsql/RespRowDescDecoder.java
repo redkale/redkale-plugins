@@ -6,7 +6,8 @@
 package org.redkalex.source.pgsql;
 
 import org.redkale.util.ByteBufferReader;
-import static org.redkalex.source.pgsql.PgSQLDataSource.getCString;
+import static org.redkalex.source.pgsql.PgSQLDataSource.readUTF8String;
+import static org.redkalex.source.pgsql.PgSQLDataSource.readUTF8String;
 
 /**
  *
@@ -23,7 +24,7 @@ public class RespRowDescDecoder implements RespDecoder<RowDesc> {
     public RowDesc read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
         ColumnDesc[] columns = new ColumnDesc[buffer.getShort()];
         for (int i = 0; i < columns.length; i++) {
-            String name = getCString(buffer, bytes);
+            String name = readUTF8String(buffer, bytes);
             //buffer.position(buffer.position() + 6);
             buffer.skip(6);
             Oid type = Oid.valueOfId(buffer.getInt());

@@ -73,7 +73,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         return writePool;
     }
 
-    protected static String getCString(ByteBuffer buffer, byte[] store) {
+    protected static String readUTF8String(ByteBuffer buffer, byte[] store) {
         int i = 0;
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
             store[i++] = c;
@@ -81,7 +81,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         return new String(store, 0, i, StandardCharsets.UTF_8);
     }
 
-    protected static String getCString(ByteBufferReader buffer, byte[] store) {
+    protected static String readUTF8String(ByteBufferReader buffer, byte[] store) {
         int i = 0;
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
             store[i++] = c;
@@ -89,13 +89,13 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         return new String(store, 0, i, StandardCharsets.UTF_8);
     }
 
-    protected static ByteBuffer putCString(ByteBuffer buffer, String string) {
+    protected static ByteBuffer writeUTF8String(ByteBuffer buffer, String string) {
         buffer.put(string.getBytes(StandardCharsets.UTF_8));
         buffer.put((byte) 0);
         return buffer;
     }
 
-    protected static ByteBufferWriter putCString(ByteBufferWriter buffer, String string) {
+    protected static ByteBufferWriter writeUTF8String(ByteBufferWriter buffer, String string) {
         buffer.put(string.getBytes(StandardCharsets.UTF_8));
         buffer.put((byte) 0);
         return buffer;
@@ -330,7 +330,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
             int start = writer.position();
             writer.putInt(0);
             writer.put((byte) 0); // unnamed prepared statement
-            putCString(writer, sql);
+            writeUTF8String(writer, sql);
             writer.putShort((short) 0); // no parameter types
             writer.putInt(start, writer.position() - start);
         }
@@ -458,7 +458,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                      code = null,
                                      message = null;
                                     for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                        String value = getCString(buffer, field);
+                                        String value = readUTF8String(buffer, field);
                                         if (type == (byte) 'S') {
                                             level = value;
                                         } else if (type == 'C') {
@@ -516,7 +516,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                     futureover = true;
                                     break;
                                 case 'C':
-                                    String val = getCString(buffer, bytes);
+                                    String val = readUTF8String(buffer, bytes);
                                     int pos = val.lastIndexOf(' ');
                                     if (pos > 0) {
                                         count += (Integer.parseInt(val.substring(pos + 1)));
@@ -583,7 +583,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
             writer.put((byte) 'Q');
             int start = writer.position();
             writer.putInt(0);
-            putCString(writer, sql);
+            writeUTF8String(writer, sql);
             writer.putInt(start, writer.position() - start);
         }
         final ByteBuffer[] buffers = writer.toBuffers();
@@ -644,7 +644,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                      code = null,
                                      message = null;
                                     for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                        String value = getCString(buffer, field);
+                                        String value = readUTF8String(buffer, field);
                                         if (type == (byte) 'S') {
                                             level = value;
                                         } else if (type == 'C') {

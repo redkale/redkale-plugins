@@ -135,7 +135,7 @@ public class PgSQLTest {
             buffer.put((byte) 'Q');
             int start = buffer.position();
             buffer.putInt(0);
-            putCString(buffer, sql);
+            writeUTF8String(buffer, sql);
             buffer.putInt(start, buffer.position() - start);
         }
         buffer.flip();
@@ -172,7 +172,7 @@ public class PgSQLTest {
                         }
                         while (cmd != 'E') {
                             if (cmd == 'C') {
-                                System.out.println(getCString(buffer, new byte[255]));
+                                System.out.println(readUTF8String(buffer, new byte[255]));
                             } else if (cmd == 'Z') {
                                 System.out.println("连接待命中");
                                 buffer.position(buffer.position() + length - 4);
@@ -189,7 +189,7 @@ public class PgSQLTest {
                             byte[] field = new byte[255];
                             String level = null, code = null, message = null;
                             for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                String value = getCString(buffer, field);
+                                String value = readUTF8String(buffer, field);
                                 if (type == (byte) 'S') {
                                     level = value;
                                 } else if (type == 'C') {

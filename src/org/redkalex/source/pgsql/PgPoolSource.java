@@ -24,7 +24,7 @@ import static org.redkalex.source.pgsql.PgSQLDataSource.*;
  */
 public class PgPoolSource extends PoolTcpSource {
 
-    protected static final String CONN_ATTR_BYTESBAME = "bufbytes";
+    protected static final String CONN_ATTR_BYTESBAME = "BYTESBAME";
 
     public PgPoolSource(String rwtype, ArrayBlockingQueue queue, Properties prop, Logger logger, ObjectPool<ByteBuffer> bufferPool, ThreadPoolExecutor executor) {
         super(rwtype, queue, prop, logger, bufferPool, executor);
@@ -37,9 +37,9 @@ public class PgPoolSource extends PoolTcpSource {
         {
             buffer.putInt(0);
             buffer.putInt(196608);
-            putCString(putCString(buffer, "user"), username);
-            putCString(putCString(buffer, "database"), database);
-            putCString(putCString(buffer, "client_encoding"), "UTF8");
+            writeUTF8String(writeUTF8String(buffer, "user"), username);
+            writeUTF8String(writeUTF8String(buffer, "database"), database);
+            writeUTF8String(writeUTF8String(buffer, "client_encoding"), "UTF8");
 
             buffer.put((byte) 0);
             buffer.putInt(0, buffer.position());
@@ -148,7 +148,7 @@ public class PgPoolSource extends PoolTcpSource {
             byte[] field = new byte[255];
             String level = null, code = null, message = null;
             for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                String value = getCString(buffer, field);
+                String value = readUTF8String(buffer, field);
                 if (type == (byte) 'S') {
                     level = value;
                 } else if (type == 'C') {

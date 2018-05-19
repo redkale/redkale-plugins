@@ -7,7 +7,8 @@ package org.redkalex.source.pgsql;
 
 import java.sql.SQLException;
 import org.redkale.util.ByteBufferReader;
-import static org.redkalex.source.pgsql.PgSQLDataSource.getCString;
+import static org.redkalex.source.pgsql.PgSQLDataSource.readUTF8String;
+import static org.redkalex.source.pgsql.PgSQLDataSource.readUTF8String;
 
 /**
  *
@@ -24,7 +25,7 @@ public class RespErrorDecoder implements RespDecoder<SQLException> {
     public SQLException read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
         String level = null, code = null, message = null;
         for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-            String value = getCString(buffer, bytes);
+            String value = readUTF8String(buffer, bytes);
             if (type == (byte) 'S') {
                 level = value;
             } else if (type == 'C') {
