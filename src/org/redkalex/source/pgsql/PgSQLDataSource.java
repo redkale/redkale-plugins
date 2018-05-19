@@ -16,6 +16,7 @@ import java.time.format.*;
 import static java.time.format.DateTimeFormatter.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import org.redkale.net.AsyncConnection;
 import org.redkale.service.Local;
@@ -574,6 +575,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         return future;
     }
 
+    //info可以为null,供directQuery
     protected <T> CompletableFuture<ResultSet> executeQuery(final EntityInfo<T> info, final AsyncConnection conn, final String sql) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
@@ -704,6 +706,27 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
             }
         });
         return future;
+    }
+
+    @Local
+    @Override
+    public int directExecute(String sql) {
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(null, conn, sql, null, 0, false)).join();
+    }
+
+    @Local
+    @Override
+    public int[] directExecute(String... sqls) {
+        throw new UnsupportedOperationException("Not supported yet."); 
+    }
+
+    @Local
+    @Override
+    public void directQuery(String sql, Consumer<ResultSet> consumer) {
+        readPool.pollAsync().thenCompose((conn) -> executeQuery(null, conn, sql).thenApply((ResultSet set) -> {
+            consumer.accept(set);
+            return null;
+        })).join(); 
     }
 
 }
