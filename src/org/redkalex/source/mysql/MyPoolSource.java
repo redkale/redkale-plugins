@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 import org.redkale.net.AsyncConnection;
 import org.redkale.source.PoolTcpSource;
 import org.redkale.util.*;
-import static org.redkalex.source.mysql.MySQLDataSource.*;
+import static org.redkalex.source.mysql.MySQLs.*;
 
 /**
  *
@@ -35,7 +35,7 @@ public class MyPoolSource extends PoolTcpSource {
     }
 
     public static void main(String[] args) throws Throwable {
-        MySQLTest.main(args);
+        TestMySQL.main(args);
     }
 
     protected static final String CONN_ATTR_PROTOCOL_VERSION = "PROTOCOL_VERSION";
@@ -45,8 +45,8 @@ public class MyPoolSource extends PoolTcpSource {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         if (true) {
             //MySQLIO.doHandshake
-            int packetLength = (buffer.get() & 0xff) + ((buffer.get() & 0xff) << 8) + ((buffer.get() & 0xff) << 16);
-            byte multiPacketSeq = buffer.get();
+            final int packetLength = (buffer.get() & 0xff) + ((buffer.get() & 0xff) << 8) + ((buffer.get() & 0xff) << 16);
+            final byte multiPacketSeq = buffer.get();
             final int pkgstart = buffer.position();
             int protocolVersion = buffer.get();
             if (protocolVersion < 10) {
@@ -61,22 +61,29 @@ public class MyPoolSource extends PoolTcpSource {
                 future.completeExceptionally(new SQLException("Not supported serverVersion(" + serverVersion + "), must greaterthan 5.0"));
                 return;
             }
-            long threadId = readLong(buffer);
+            final boolean useNewLargePackets = true;
+            final long threadId = readLong(buffer);
             String seed = null;
             if (protocolVersion > 9) {
                 // read auth-plugin-data-part-1 (string[8])
                 seed = readASCIIString(buffer, 8);
                 // read filler ([00])
-                buffer.get();
+                byte b = buffer.get();
+                System.out.println("-------------b: " + (int) b);
             } else {
                 // read scramble (string[NUL])
                 seed = readASCIIString(buffer, bytes);
             }
 
+            final int serverCapabilities = buffer.hasRemaining() ? readInt(buffer) : 0;
+            final int serverCharsetIndex = buffer.get() & 0xff;
+            final int serverStatus = readInt(buffer) ;
+
             System.out.println("protocolVersion = " + protocolVersion);
             System.out.println("serverVersion = " + serverVersion);
             System.out.println("threadId = " + threadId);
             System.out.println("seed = " + seed);
+            System.out.println("serverCapabilities = 0x" + Long.toHexString(serverCapabilities));
             future.completeExceptionally(new SQLException("mysql connect error"));
             return;
         }

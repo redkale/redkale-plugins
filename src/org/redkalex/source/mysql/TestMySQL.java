@@ -17,10 +17,10 @@ import org.redkale.util.ObjectPool;
  *
  * @author zhangjx
  */
-public class MySQLTest {
+public class TestMySQL {
 
     public static void main(String[] args) throws Throwable {
-        final Logger logger = Logger.getLogger(MySQLTest.class.getSimpleName());
+        final Logger logger = Logger.getLogger(TestMySQL.class.getSimpleName());
         final int capacity = 16 * 1024;
         final ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(new AtomicLong(), new AtomicLong(), 16,
             (Object... params) -> ByteBuffer.allocateDirect(capacity), null, (e) -> {

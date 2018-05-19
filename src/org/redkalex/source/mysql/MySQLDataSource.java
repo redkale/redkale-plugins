@@ -9,7 +9,6 @@ import java.io.Serializable;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
-import java.nio.charset.StandardCharsets;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.sql.*;
 import java.time.format.*;
@@ -23,6 +22,7 @@ import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkalex.source.mysql.MyPoolSource.CONN_ATTR_BYTESBAME;
+import static org.redkalex.source.mysql.MySQLs.*;
 import org.redkalex.source.pgsql.*;
 
 /**
@@ -73,84 +73,6 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     @Local
     protected PoolSource<AsyncConnection> writePoolSource() {
         return writePool;
-    }
-
-    protected static long readLong(ByteBuffer buffer) {
-        return ((long) buffer.get() & 0xff) | (((long) buffer.get() & 0xff) << 8)
-            | ((long) (buffer.get() & 0xff) << 16) | ((long) (buffer.get() & 0xff) << 24);
-    }
-
-    protected static long readLong(ByteBufferReader buffer) {
-        return ((long) buffer.get() & 0xff) | (((long) buffer.get() & 0xff) << 8)
-            | ((long) (buffer.get() & 0xff) << 16) | ((long) (buffer.get() & 0xff) << 24);
-    }
-    
-    protected static String readUTF8String(ByteBuffer buffer, byte[] store) {
-        int i = 0;
-        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
-        }
-        return new String(store, 0, i, StandardCharsets.UTF_8);
-    }
-
-    protected static String readUTF8String(ByteBuffer buffer, int length) {
-        byte[] store = new byte[length];
-        buffer.get(store);
-        return new String(store, StandardCharsets.UTF_8);
-    }
-
-    protected static String readUTF8String(ByteBufferReader buffer, byte[] store) {
-        int i = 0;
-        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
-        }
-        return new String(store, 0, i, StandardCharsets.UTF_8);
-    }
-
-    protected static String readUTF8String(ByteBufferReader buffer, int length) {
-        byte[] store = new byte[length];
-        buffer.get(store);
-        return new String(store, StandardCharsets.UTF_8);
-    }
-
-    protected static String readASCIIString(ByteBuffer buffer, byte[] store) {
-        int i = 0;
-        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
-        }
-        return new String(store, 0, i, StandardCharsets.US_ASCII);
-    }
-
-    protected static String readASCIIString(ByteBuffer buffer, int length) {
-        byte[] store = new byte[length];
-        buffer.get(store);
-        return new String(store, StandardCharsets.US_ASCII);
-    }
-
-    protected static String readASCIIString(ByteBufferReader buffer, byte[] store) {
-        int i = 0;
-        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
-        }
-        return new String(store, 0, i, StandardCharsets.US_ASCII);
-    }
-
-    protected static String readASCIIString(ByteBufferReader buffer, int length) {
-        byte[] store = new byte[length];
-        buffer.get(store);
-        return new String(store, StandardCharsets.US_ASCII);
-    }
-
-    protected static ByteBuffer writeUTF8String(ByteBuffer buffer, String string) {
-        buffer.put(string.getBytes(StandardCharsets.UTF_8));
-        buffer.put((byte) 0);
-        return buffer;
-    }
-
-    protected static ByteBufferWriter writeUTF8String(ByteBufferWriter buffer, String string) {
-        buffer.put(string.getBytes(StandardCharsets.UTF_8));
-        buffer.put((byte) 0);
-        return buffer;
     }
 
     @Override
@@ -510,7 +432,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                                      code = null,
                                      message = null;
                                     for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                        String value = MySQLDataSource.readUTF8String(buffer, field);
+                                        String value = readUTF8String(buffer, field);
                                         if (type == (byte) 'S') {
                                             level = value;
                                         } else if (type == 'C') {
@@ -568,7 +490,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                                     futureover = true;
                                     break;
                                 case 'C':
-                                    String val = MySQLDataSource.readUTF8String(buffer, bytes);
+                                    String val = readUTF8String(buffer, bytes);
                                     int pos = val.lastIndexOf(' ');
                                     if (pos > 0) {
                                         count += (Integer.parseInt(val.substring(pos + 1)));
