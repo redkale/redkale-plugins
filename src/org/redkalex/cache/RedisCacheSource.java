@@ -672,10 +672,6 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         return send(null, command, cacheType, set, key, args);
     }
 
-    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final CacheEntryType cacheType, final String key, final byte[]... args) {
-        return send(callback, command, cacheType, false, key, args);
-    }
-
     private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final CacheEntryType cacheType, final boolean set, final String key, final byte[]... args) {
         final BsonByteBufferWriter writer = new BsonByteBufferWriter(transport.getBufferSupplier());
         writer.writeTo(ASTERISK_BYTE);
@@ -701,122 +697,130 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         this.transport.pollConnection(null).whenComplete((conn, ex) -> {
             if (ex != null) {
                 transport.offerBuffer(buffers);
-                future.completeExceptionally(ex);
+                if (future == null) {
+                    callback.failed(ex, null);
+                } else {
+                    future.completeExceptionally(ex);
+                }
                 return;
             }
             conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
                 @Override
                 public void completed(Integer result, ByteBuffer[] attachments) {
                     int index = -1;
-                    for (int i = 0; i < attachments.length; i++) {
-                        if (attachments[i].hasRemaining()) {
-                            index = i;
-                            break;
-                        } else {
-                            transport.offerBuffer(attachments[i]);
+                    try {
+                        for (int i = 0; i < attachments.length; i++) {
+                            if (attachments[i].hasRemaining()) {
+                                index = i;
+                                break;
+                            } else {
+                                transport.offerBuffer(attachments[i]);
+                            }
                         }
-                    }
-                    if (index == 0) {
-                        conn.write(attachments, attachments, this);
-                        return;
-                    } else if (index > 0) {
-                        ByteBuffer[] newattachs = new ByteBuffer[attachments.length - index];
-                        System.arraycopy(attachments, index, newattachs, 0, newattachs.length);
-                        conn.write(newattachs, newattachs, this);
-                        return;
-                    }
-                    //----------------------- 读取返回结果 -------------------------------------
-                    ByteBuffer buffer0 = transport.pollBuffer();
-                    conn.read(buffer0, null, new ReplyCompletionHandler< Void>(conn, buffer0) {
-                        @Override
-                        public void completed(Integer result, Void attachment) {
-                            buffer.flip();
-                            final byte sign = buffer.get();
-                            try {
-                                if (sign == PLUS_BYTE) { // +
-                                    byte[] bs = readBytes();
-                                    if (future == null) {
-                                        callback.completed(null, key);
-                                    } else {
-                                        future.complete(bs);
-                                    }
-                                } else if (sign == MINUS_BYTE) { // -
-                                    String bs = readString();
-                                    if (future == null) {
-                                        callback.failed(new RuntimeException(bs), key);
-                                    } else {
-                                        future.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
-                                    }
-                                } else if (sign == COLON_BYTE) { // :
-                                    long rs = readLong();
-                                    if (future == null) {
-                                        if (command.startsWith("INCR") || command.startsWith("DECR")) {
-                                            callback.completed(rs, key);
-                                        } else {
-                                            callback.completed(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
-                                        }
-                                    } else {
-                                        if (command.startsWith("INCR") || command.startsWith("DECR")) {
-                                            future.complete(rs);
-                                        } else {
-                                            future.complete(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
-                                        }
-                                    }
-                                } else if (sign == DOLLAR_BYTE) { // $
-                                    long val = readLong();
-                                    byte[] rs = val <= 0 ? null : readBytes();
-                                    Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : objValueType);
-                                    if (future == null) {
-                                        callback.completed(("GET".equals(command) || rs == null) ? convert.convertFrom(ct, new String(rs, UTF8)) : null, key);
-                                    } else {
-                                        future.complete("GET".equals(command) ? convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8)) : rs);
-                                    }
-                                } else if (sign == ASTERISK_BYTE) { // *
-                                    final int len = readInt();
-                                    if (len < 0) {
+                        if (index == 0) {
+                            conn.write(attachments, attachments, this);
+                            return;
+                        } else if (index > 0) {
+                            ByteBuffer[] newattachs = new ByteBuffer[attachments.length - index];
+                            System.arraycopy(attachments, index, newattachs, 0, newattachs.length);
+                            conn.write(newattachs, newattachs, this);
+                            return;
+                        }
+                        //----------------------- 读取返回结果 -------------------------------------
+                        ByteBuffer buffer0 = transport.pollBuffer();
+                        conn.read(buffer0, null, new ReplyCompletionHandler< Void>(conn, buffer0) {
+                            @Override
+                            public void completed(Integer result, Void attachment) {
+                                buffer.flip();
+                                final byte sign = buffer.get();
+                                try {
+                                    if (sign == PLUS_BYTE) { // +
+                                        byte[] bs = readBytes();
                                         if (future == null) {
                                             callback.completed(null, key);
                                         } else {
-                                            future.complete((byte[]) null);
+                                            future.complete(bs);
                                         }
-                                    } else {
-                                        Collection rs = set ? new HashSet() : new ArrayList();
-                                        boolean keys = "KEYS".equals(command);
-                                        Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : objValueType);
-                                        for (int i = 0; i < len; i++) {
-                                            if (readInt() > 0) rs.add(keys ? new String(readBytes(), UTF8) : convert.convertFrom(ct, new String(readBytes(), UTF8)));
-                                        }
+                                    } else if (sign == MINUS_BYTE) { // -
+                                        String bs = readString();
                                         if (future == null) {
-                                            callback.completed(rs, key);
+                                            callback.failed(new RuntimeException(bs), key);
                                         } else {
-                                            future.complete((Serializable) rs);
+                                            future.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
+                                        }
+                                    } else if (sign == COLON_BYTE) { // :
+                                        long rs = readLong();
+                                        if (future == null) {
+                                            if (command.startsWith("INCR") || command.startsWith("DECR")) {
+                                                callback.completed(rs, key);
+                                            } else {
+                                                callback.completed(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
+                                            }
+                                        } else {
+                                            if (command.startsWith("INCR") || command.startsWith("DECR")) {
+                                                future.complete(rs);
+                                            } else {
+                                                future.complete(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
+                                            }
+                                        }
+                                    } else if (sign == DOLLAR_BYTE) { // $
+                                        long val = readLong();
+                                        byte[] rs = val <= 0 ? null : readBytes();
+                                        Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : objValueType);
+                                        if (future == null) {
+                                            callback.completed(("GET".equals(command) || rs == null) ? convert.convertFrom(ct, new String(rs, UTF8)) : null, key);
+                                        } else {
+                                            future.complete("GET".equals(command) ? convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8)) : rs);
+                                        }
+                                    } else if (sign == ASTERISK_BYTE) { // *
+                                        final int len = readInt();
+                                        if (len < 0) {
+                                            if (future == null) {
+                                                callback.completed(null, key);
+                                            } else {
+                                                future.complete((byte[]) null);
+                                            }
+                                        } else {
+                                            Collection rs = set ? new HashSet() : new ArrayList();
+                                            boolean keys = "KEYS".equals(command);
+                                            Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : objValueType);
+                                            for (int i = 0; i < len; i++) {
+                                                if (readInt() > 0) rs.add(keys ? new String(readBytes(), UTF8) : convert.convertFrom(ct, new String(readBytes(), UTF8)));
+                                            }
+                                            if (future == null) {
+                                                callback.completed(rs, key);
+                                            } else {
+                                                future.complete((Serializable) rs);
+                                            }
+                                        }
+                                    } else {
+                                        String exstr = "Unknown reply: " + (char) sign;
+                                        if (future == null) {
+                                            callback.failed(new RuntimeException(exstr), key);
+                                        } else {
+                                            future.completeExceptionally(new RuntimeException(exstr));
                                         }
                                     }
-                                } else {
-                                    String exstr = "Unknown reply: " + (char) sign;
-                                    if (future == null) {
-                                        callback.failed(new RuntimeException(exstr), key);
-                                    } else {
-                                        future.completeExceptionally(new RuntimeException(exstr));
-                                    }
+                                    transport.offerConnection(false, conn);
+                                } catch (Exception e) {
+                                    transport.offerConnection(true, conn);
+                                    failed(e, attachment);
                                 }
-                                transport.offerConnection(false, conn);
-                            } catch (IOException e) {
-                                transport.offerConnection(true, conn);
-                                throw new RuntimeException(e);
                             }
-                        }
 
-                        @Override
-                        public void failed(Throwable exc, Void attachment) {
-                            if (future == null) {
-                                callback.failed(exc, attachments);
-                            } else {
-                                future.completeExceptionally(exc);
+                            @Override
+                            public void failed(Throwable exc, Void attachment) {
+                                if (future == null) {
+                                    callback.failed(exc, attachments);
+                                } else {
+                                    future.completeExceptionally(exc);
+                                }
                             }
-                        }
 
-                    });
+                        });
+                    } catch (Exception e) {
+                        failed(e, attachments);
+                    }
                 }
 
                 @Override
