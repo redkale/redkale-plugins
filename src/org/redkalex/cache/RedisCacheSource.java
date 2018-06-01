@@ -102,7 +102,6 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         source.defaultConvert = JsonFactory.root().getConvert();
         source.initValueType(String.class); //value用String类型
         source.init(conf);
-
         System.out.println("------------------------------------");
         source.remove("key1");
         source.remove("key2");
@@ -873,7 +872,7 @@ abstract class ReplyCompletionHandler<T> implements CompletionHandler<Integer, T
         boolean negative = out.get(start) == '-';
         long value = negative ? 0 : (out.get(start) - '0');
         for (int i = 1 + start; i < out.size(); i++) {
-            value *= 10 + out.get(i) - '0';
+            value = value * 10 + (out.get(i) - '0');
         }
         out.clear();
         return negative ? -value : value;
@@ -899,7 +898,7 @@ abstract class ReplyCompletionHandler<T> implements CompletionHandler<Integer, T
         //说明数据还没读取完
         buffer.clear();
         try {
-            conn.read(buffer).get();
+            conn.read(buffer).get(2, TimeUnit.SECONDS);
             buffer.flip();
         } catch (Exception e) {
             throw new IOException(e);
