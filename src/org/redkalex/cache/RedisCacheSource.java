@@ -141,6 +141,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3"));
         System.out.println("sets3 大小 : " + source.getCollectionSize("sets3"));
         System.out.println("all keys: " + source.queryKeys());
+        System.out.println("key startkeys: " + source.queryKeysStartsWith("key"));
         System.out.println("newnum 值 : " + source.incr("newnum"));
         System.out.println("newnum 值 : " + source.decr("newnum"));
         System.out.println("------------------------------------");
@@ -629,8 +630,32 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
+    public List<String> queryKeysStartsWith(String startsWith) {
+        return queryKeysStartsWithAsync(startsWith).join();
+    }
+
+    @Override
+    public List<String> queryKeysEndsWith(String endsWith) {
+        return queryKeysEndsWithAsync(endsWith).join();
+    }
+
+    @Override
     public CompletableFuture<List<String>> queryKeysAsync() {
         return (CompletableFuture) send("KEYS", null, "*", new byte[]{(byte) '*'});
+    }
+
+    @Override
+    public CompletableFuture<List<String>> queryKeysStartsWithAsync(String startsWith) {
+        if (startsWith == null) return queryKeysAsync();
+        String key = startsWith + "*";
+        return (CompletableFuture) send("KEYS", null, key, key.getBytes(UTF8));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> queryKeysEndsWithAsync(String endsWith) {
+        if (endsWith == null) return queryKeysAsync();
+        String key = "*" + endsWith;
+        return (CompletableFuture) send("KEYS", null, key, key.getBytes(UTF8));
     }
 
     //--------------------- getKeySize ------------------------------  
