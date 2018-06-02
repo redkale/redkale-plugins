@@ -761,29 +761,37 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                     if (sign == PLUS_BYTE) { // +
                                         byte[] bs = readBytes();
                                         if (future == null) {
+                                            transport.offerConnection(false, conn); //必须在complete之前，防止并发是conn还没回收完毕
                                             callback.completed(null, key);
                                         } else {
+                                            transport.offerConnection(false, conn);
                                             future.complete(bs);
                                         }
                                     } else if (sign == MINUS_BYTE) { // -
                                         String bs = readString();
                                         if (future == null) {
+                                            transport.offerConnection(false, conn);
                                             callback.failed(new RuntimeException(bs), key);
                                         } else {
+                                            transport.offerConnection(false, conn);
                                             future.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
                                         }
                                     } else if (sign == COLON_BYTE) { // :
                                         long rs = readLong();
                                         if (future == null) {
                                             if (command.startsWith("INCR") || command.startsWith("DECR")) {
+                                                transport.offerConnection(false, conn);
                                                 callback.completed(rs, key);
                                             } else {
+                                                transport.offerConnection(false, conn);
                                                 callback.completed(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
                                             }
                                         } else {
                                             if (command.startsWith("INCR") || command.startsWith("DECR")) {
+                                                transport.offerConnection(false, conn);
                                                 future.complete(rs);
                                             } else {
+                                                transport.offerConnection(false, conn);
                                                 future.complete(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
                                             }
                                         }
@@ -792,16 +800,20 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                         byte[] rs = val <= 0 ? null : readBytes();
                                         Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : objValueType);
                                         if (future == null) {
+                                            transport.offerConnection(false, conn);
                                             callback.completed(("GET".equals(command) || rs == null) ? convert.convertFrom(ct, new String(rs, UTF8)) : null, key);
                                         } else {
+                                            transport.offerConnection(false, conn);
                                             future.complete("GET".equals(command) ? convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8)) : rs);
                                         }
                                     } else if (sign == ASTERISK_BYTE) { // *
                                         final int len = readInt();
                                         if (len < 0) {
                                             if (future == null) {
+                                                transport.offerConnection(false, conn);
                                                 callback.completed(null, key);
                                             } else {
+                                                transport.offerConnection(false, conn);
                                                 future.complete((byte[]) null);
                                             }
                                         } else {
@@ -812,20 +824,23 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                                 if (readInt() > 0) rs.add(keys ? new String(readBytes(), UTF8) : convert.convertFrom(ct, new String(readBytes(), UTF8)));
                                             }
                                             if (future == null) {
+                                                transport.offerConnection(false, conn);
                                                 callback.completed(rs, key);
                                             } else {
+                                                transport.offerConnection(false, conn);
                                                 future.complete((Serializable) rs);
                                             }
                                         }
                                     } else {
                                         String exstr = "Unknown reply: " + (char) sign;
                                         if (future == null) {
+                                            transport.offerConnection(false, conn);
                                             callback.failed(new RuntimeException(exstr), key);
                                         } else {
+                                            transport.offerConnection(false, conn);
                                             future.completeExceptionally(new RuntimeException(exstr));
                                         }
                                     }
-                                    transport.offerConnection(false, conn);
                                 } catch (Exception e) {
                                     failed(e, attachment);
                                 }
