@@ -864,7 +864,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
 
                 @Override
                 public void failed(Throwable exc, ByteBuffer[] attachments) {
-                    transport.offerConnection(false, conn);
+                    transport.offerConnection(true, conn);
                     if (future == null) {
                         callback.failed(exc, attachments);
                     } else {
