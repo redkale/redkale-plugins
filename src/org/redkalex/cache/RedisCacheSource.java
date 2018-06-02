@@ -756,8 +756,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                             @Override
                             public void completed(Integer result, Void attachment) {
                                 buffer.flip();
-                                final byte sign = buffer.get();
                                 try {
+                                    final byte sign = buffer.get();
                                     if (sign == PLUS_BYTE) { // +
                                         byte[] bs = readBytes();
                                         if (future == null) {
@@ -827,13 +827,13 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                     }
                                     transport.offerConnection(false, conn);
                                 } catch (Exception e) {
-                                    transport.offerConnection(true, conn);
                                     failed(e, attachment);
                                 }
                             }
 
                             @Override
                             public void failed(Throwable exc, Void attachment) {
+                                transport.offerConnection(true, conn);
                                 if (future == null) {
                                     callback.failed(exc, attachments);
                                 } else {
