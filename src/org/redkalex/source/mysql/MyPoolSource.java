@@ -48,8 +48,9 @@ public class MyPoolSource extends PoolTcpSource {
             final int packetLength = (buffer.get() & 0xff) + ((buffer.get() & 0xff) << 8) + ((buffer.get() & 0xff) << 16);
             final byte multiPacketSeq = buffer.get();
             final int pkgstart = buffer.position();
+            long clientParam = 0;
             int protocolVersion = buffer.get();
-            if (protocolVersion < 10) {
+            if (protocolVersion < 10) { //小于10的版本暂不实现
                 conn.dispose();
                 future.completeExceptionally(new SQLException("Not supported protocolVersion(" + protocolVersion + "), must greaterthan 10"));
                 return;
@@ -74,15 +75,63 @@ public class MyPoolSource extends PoolTcpSource {
                 // read scramble (string[NUL])
                 seed = readASCIIString(buffer, bytes);
             }
-
-            final int serverCapabilities = buffer.hasRemaining() ? readInt(buffer) : 0;
+            int authPluginDataLength = 0;
+            boolean hasLongColumnInfo = false;
+            int serverCapabilities = buffer.hasRemaining() ? readInt(buffer) : 0;
             final int serverCharsetIndex = buffer.get() & 0xff;
-            final int serverStatus = readInt(buffer) ;
+            final int serverStatus = readInt(buffer);
+            serverCapabilities |= readInt(buffer) << 16;
+            if ((serverCapabilities & CLIENT_PLUGIN_AUTH) != 0) {
+                // read length of auth-plugin-data (1 byte)
+                authPluginDataLength = buffer.get() & 0xff;
+            } else {
+                // read filler ([00])
+                buffer.get();
+            }
+            // next 10 bytes are reserved (all [00])
+            buffer.position(buffer.position() + 10);
+
+            if ((serverCapabilities & CLIENT_SECURE_CONNECTION) != 0) {
+                String seedPart2;
+                StringBuilder newSeed;
+                // read string[$len] auth-plugin-data-part-2 ($len=MAX(13, length of auth-plugin-data - 8))
+                if (authPluginDataLength > 0) {
+                    // TODO: disabled the following check for further clarification
+                    //         			if (this.authPluginDataLength < 21) {
+                    //                      forceClose();
+                    //                      throw SQLError.createSQLException(Messages.getString("MysqlIO.103"), 
+                    //                          SQLError.SQL_STATE_UNABLE_TO_CONNECT_TO_DATASOURCE, getExceptionInterceptor());
+                    //         			}
+                    seedPart2 = readASCIIString(buffer, authPluginDataLength - 8); //buf.readString("ASCII", getExceptionInterceptor(), this.authPluginDataLength - 8);
+                    newSeed = new StringBuilder(authPluginDataLength);
+                } else {
+                    seedPart2 = readASCIIString(buffer, bytes);
+                    newSeed = new StringBuilder(SEED_LENGTH);
+                }
+                newSeed.append(seed);
+                newSeed.append(seedPart2);
+                seed = newSeed.toString();
+            }
+            if (((serverCapabilities & CLIENT_COMPRESS) != 0)) {
+                clientParam |= CLIENT_COMPRESS;
+            }
+            if (this.database != null && !this.database.isEmpty()) {
+                clientParam |= CLIENT_CONNECT_WITH_DB;
+            }
+            if ((serverCapabilities & CLIENT_LONG_FLAG) != 0) {
+                // We understand other column flags, as well
+                clientParam |= CLIENT_LONG_FLAG;
+                hasLongColumnInfo = true;
+            }
+            clientParam |= CLIENT_LONG_PASSWORD; // for long passwords
+
+            System.out.println("(serverCapabilities & CLIENT_PROTOCOL_41) = " + (serverCapabilities & CLIENT_PROTOCOL_41));
 
             System.out.println("protocolVersion = " + protocolVersion);
             System.out.println("serverVersion = " + serverVersion);
             System.out.println("threadId = " + threadId);
             System.out.println("seed = " + seed);
+            System.out.println("authPluginDataLength = " + authPluginDataLength);
             System.out.println("serverCapabilities = 0x" + Long.toHexString(serverCapabilities));
             future.completeExceptionally(new SQLException("mysql connect error"));
             return;
