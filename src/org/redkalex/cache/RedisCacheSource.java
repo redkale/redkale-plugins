@@ -7,7 +7,7 @@ package org.redkalex.cache;
 
 import java.io.*;
 import java.lang.reflect.Type;
-import java.net.InetSocketAddress;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.charset.Charset;
@@ -35,29 +35,31 @@ import org.redkale.util.AnyValue.DefaultAnyValue;
 @ResourceType(CacheSource.class)
 public class RedisCacheSource<V extends Object> extends AbstractService implements CacheSource<V>, Service, AutoCloseable, Resourcable {
 
-    static final String UTF8_NAME = "UTF-8";
+    protected static final String UTF8_NAME = "UTF-8";
 
-    static final Charset UTF8 = Charset.forName(UTF8_NAME);
+    protected static final Charset UTF8 = Charset.forName(UTF8_NAME);
 
-    private static final byte DOLLAR_BYTE = '$';
+    protected static final byte DOLLAR_BYTE = '$';
 
-    private static final byte ASTERISK_BYTE = '*';
+    protected static final byte ASTERISK_BYTE = '*';
 
-    private static final byte PLUS_BYTE = '+';
+    protected static final byte PLUS_BYTE = '+';
 
-    private static final byte MINUS_BYTE = '-';
+    protected static final byte MINUS_BYTE = '-';
 
-    private static final byte COLON_BYTE = ':';
+    protected static final byte COLON_BYTE = ':';
 
     @Resource
-    private JsonConvert defaultConvert;
+    protected JsonConvert defaultConvert;
 
     @Resource(name = "$_convert")
-    private JsonConvert convert;
+    protected JsonConvert convert;
 
-    private Type objValueType = String.class;
+    protected Type objValueType = String.class;
 
-    private Transport transport;
+    protected Map<SocketAddress, byte[]> passwords;
+
+    protected Transport transport;
 
     @Override
     public void init(AnyValue conf) {
@@ -69,9 +71,14 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         final int readTimeoutSeconds = conf.getIntValue("readTimeoutSeconds", TransportFactory.DEFAULT_READTIMEOUTSECONDS);
         final int writeTimeoutSeconds = conf.getIntValue("writeTimeoutSeconds", TransportFactory.DEFAULT_WRITETIMEOUTSECONDS);
         final List<InetSocketAddress> addresses = new ArrayList<>();
+        Map<SocketAddress, byte[]> passwords0 = new HashMap<>();
         for (AnyValue node : conf.getAnyValues("node")) {
-            addresses.add(new InetSocketAddress(node.getValue("addr"), node.getIntValue("port")));
+            InetSocketAddress addr = new InetSocketAddress(node.getValue("addr"), node.getIntValue("port"));
+            addresses.add(addr);
+            String password = node.getValue("password", "").trim();
+            if (!password.isEmpty()) passwords0.put(addr, password.getBytes(UTF8));
         }
+        if (!passwords0.isEmpty()) this.passwords = passwords0;
         TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity, readTimeoutSeconds, writeTimeoutSeconds);
         this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
     }
@@ -718,7 +725,109 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         final ByteBuffer[] buffers = writer.toBuffers();
 
         final CompletableFuture<Serializable> future = callback == null ? new CompletableFuture<>() : null;
-        this.transport.pollConnection(null).whenComplete((conn, ex) -> {
+        CompletableFuture<AsyncConnection> connFuture = this.transport.pollConnection(null);
+        if (passwords != null) {
+            connFuture = connFuture.thenCompose(conn -> {
+                if (conn.getSubobject() != null) return CompletableFuture.completedFuture(conn);
+                byte[] password = passwords.get(conn.getRemoteAddress());
+                if (password == null) return CompletableFuture.completedFuture(conn);
+                final CompletableFuture<AsyncConnection> rsfuture = new CompletableFuture();
+                try {
+                    final BsonByteBufferWriter authwriter = new BsonByteBufferWriter(transport.getBufferSupplier());
+                    authwriter.writeTo(ASTERISK_BYTE);
+                    authwriter.writeTo((byte) '2');
+                    authwriter.writeTo((byte) '\r', (byte) '\n');
+                    authwriter.writeTo(DOLLAR_BYTE);
+                    authwriter.writeTo((byte) '4');
+                    authwriter.writeTo((byte) '\r', (byte) '\n');
+                    authwriter.writeTo("AUTH".getBytes(UTF8));
+                    authwriter.writeTo((byte) '\r', (byte) '\n');
+
+                    authwriter.writeTo(DOLLAR_BYTE);
+                    authwriter.writeTo(String.valueOf(password.length).getBytes(UTF8));
+                    authwriter.writeTo((byte) '\r', (byte) '\n');
+                    authwriter.writeTo(password);
+                    authwriter.writeTo((byte) '\r', (byte) '\n');
+
+                    final ByteBuffer[] authbuffers = authwriter.toBuffers();
+                    conn.write(authbuffers, authbuffers, new CompletionHandler<Integer, ByteBuffer[]>() {
+                        @Override
+                        public void completed(Integer result, ByteBuffer[] attachments) {
+                            int index = -1;
+                            try {
+                                for (int i = 0; i < attachments.length; i++) {
+                                    if (attachments[i].hasRemaining()) {
+                                        index = i;
+                                        break;
+                                    } else {
+                                        transport.offerBuffer(attachments[i]);
+                                    }
+                                }
+                                if (index == 0) {
+                                    conn.write(attachments, attachments, this);
+                                    return;
+                                } else if (index > 0) {
+                                    ByteBuffer[] newattachs = new ByteBuffer[attachments.length - index];
+                                    System.arraycopy(attachments, index, newattachs, 0, newattachs.length);
+                                    conn.write(newattachs, newattachs, this);
+                                    return;
+                                }
+                                //----------------------- 读取返回结果 -------------------------------------
+                                ByteBuffer buffer0 = transport.pollBuffer();
+                                conn.read(buffer0, null, new ReplyCompletionHandler< Void>(conn, buffer0) {
+                                    @Override
+                                    public void completed(Integer result, Void attachment) {
+                                        buffer.flip();
+                                        try {
+                                            final byte sign = buffer.get();
+                                            if (sign == PLUS_BYTE) { // +
+                                                byte[] bs = readBytes();
+                                                if ("OK".equalsIgnoreCase(new String(bs))) {
+                                                    conn.setSubobject("authed");
+                                                    rsfuture.complete(conn);
+                                                } else {
+                                                    transport.offerConnection(false, conn);
+                                                    rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
+                                                }
+                                            } else if (sign == MINUS_BYTE) { // -   异常
+                                                String bs = readString();
+                                                transport.offerConnection(false, conn);
+                                                rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
+                                            } else {
+                                                String exstr = "Unknown reply: " + (char) sign;
+                                                transport.offerConnection(false, conn);
+                                                rsfuture.completeExceptionally(new RuntimeException(exstr));
+                                            }
+                                        } catch (Exception e) {
+                                            failed(e, attachment);
+                                        }
+                                    }
+
+                                    @Override
+                                    public void failed(Throwable exc, Void attachment) {
+                                        transport.offerConnection(true, conn);
+                                        rsfuture.completeExceptionally(exc);
+                                    }
+
+                                });
+                            } catch (Exception e) {
+                                failed(e, attachments);
+                            }
+                        }
+
+                        @Override
+                        public void failed(Throwable exc, ByteBuffer[] attachments) {
+                            transport.offerConnection(true, conn);
+                            rsfuture.completeExceptionally(exc);
+                        }
+                    });
+                } catch (Exception e) {
+                    rsfuture.completeExceptionally(e);
+                }
+                return rsfuture;
+            });
+        }
+        connFuture.whenComplete((conn, ex) -> {
             if (ex != null) {
                 transport.offerBuffer(buffers);
                 if (future == null) {
