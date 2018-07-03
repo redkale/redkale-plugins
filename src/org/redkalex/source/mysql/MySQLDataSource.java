@@ -111,7 +111,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String sql) {
         if (info.isLoggable(logger, Level.FINEST)) {
             final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
-            logger.finest(info.getType().getSimpleName() + " delete sql=" + debugsql);
+            if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " delete sql=" + debugsql);
         }
         return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, fetchSize(flipper), false));
     }
@@ -136,7 +136,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     protected <T> CompletableFuture<Integer> updateDB(EntityInfo<T> info, Flipper flipper, String sql, boolean prepared, Object... params) {
         if (info.isLoggable(logger, Level.FINEST)) {
             final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
-            logger.finest(info.getType().getSimpleName() + " update sql=" + debugsql);
+            if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + debugsql);
         }
         Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
         return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, fetchSize(flipper), false, objs));
@@ -250,7 +250,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         final CharSequence where = node == null ? null : createSQLExpress(node, info, joinTabalis);
         final String listsql = "SELECT " + info.getQueryColumns("a", selects) + " FROM " + info.getTable(node) + " a" + (join == null ? "" : join)
             + ((where == null || where.length() == 0) ? "" : (" WHERE " + where)) + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
-        if (info.isLoggable(logger, Level.FINEST)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        if (info.isLoggable(logger, Level.FINEST, listsql)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
         if (!needtotal) {
             return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, listsql).thenApply((ResultSet set) -> {
                 try {
