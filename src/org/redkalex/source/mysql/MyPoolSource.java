@@ -34,10 +34,6 @@ public class MyPoolSource extends PoolTcpSource {
         return null;
     }
 
-    public static void main(String[] args) throws Throwable {
-        TestMySQL.main(args);
-    }
-
     protected static final String CONN_ATTR_PROTOCOL_VERSION = "PROTOCOL_VERSION";
 
     @Override
