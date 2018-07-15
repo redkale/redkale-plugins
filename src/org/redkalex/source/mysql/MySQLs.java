@@ -5,8 +5,11 @@
  */
 package org.redkalex.source.mysql;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.*;
+import java.sql.SQLException;
 import org.redkale.util.*;
 
 /**
@@ -105,6 +108,18 @@ class MySQLs {
 
     static final String[] EXPLAINABLE_STATEMENT_EXTENSION = new String[]{"INSERT", "UPDATE", "REPLACE", "DELETE"};
 
+    //----------------- Buffer ------------------------
+    static final short TYPE_ID_ERROR = 0xFF;
+
+    static final short TYPE_ID_EOF = 0xFE;
+
+    /** It has the same signature as EOF, but may be issued by server only during handshake phase * */
+    static final short TYPE_ID_AUTH_SWITCH = 0xFE;
+
+    static final short TYPE_ID_LOCAL_INFILE = 0xFB;
+
+    static final short TYPE_ID_OK = 0;
+
     protected static int readInt(ByteBuffer buffer) {
         return (buffer.get() & 0xff) | ((buffer.get() & 0xff) << 8);
     }
@@ -185,5 +200,91 @@ class MySQLs {
         buffer.put(string.getBytes(StandardCharsets.UTF_8));
         buffer.put((byte) 0);
         return buffer;
+    }
+
+    protected static byte[] scramble411(String password, String seed, String passwordEncoding) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+
+        byte[] passwordHashStage1 = md.digest((passwordEncoding == null || passwordEncoding.length() == 0) ? password.getBytes() : password.getBytes(passwordEncoding));
+        md.reset();
+
+        byte[] passwordHashStage2 = md.digest(passwordHashStage1);
+        md.reset();
+
+        byte[] seedAsBytes = seed.getBytes("ASCII"); // for debugging
+        md.update(seedAsBytes);
+        md.update(passwordHashStage2);
+
+        byte[] toBeXord = md.digest();
+
+        int numToXor = toBeXord.length;
+
+        for (int i = 0; i < numToXor; i++) {
+            toBeXord[i] = (byte) (toBeXord[i] ^ passwordHashStage1[i]);
+        }
+
+        return toBeXord;
+    }
+
+    protected static void checkErrorPacket(ByteBuffer buffer, byte[] bytes) throws SQLException {
+        byte statusCode = buffer.get();
+        System.out.println("statusCode ============================================== " + statusCode);
+        System.out.println("this.byteBuffer[0] & 0xff) == TYPE_ID_AUTH_SWITCH = " + ((statusCode & 0xff) == TYPE_ID_AUTH_SWITCH));
+        boolean useSqlStateCodes = true;
+        // Error handling
+        if (statusCode == (byte) 0xff) {
+            String serverErrorMessage;
+            int errno = 2000;
+
+            { //if (this.protocolVersion > 9) 
+                errno = readInt(buffer);
+
+                String xOpen = null;
+
+                serverErrorMessage = readUTF8String(buffer, bytes);
+
+                if (serverErrorMessage.charAt(0) == '#') {
+
+                    // we have an SQLState
+                    if (serverErrorMessage.length() > 6) {
+                        xOpen = serverErrorMessage.substring(1, 6);
+                        serverErrorMessage = serverErrorMessage.substring(6);
+
+                        if (xOpen.equals("HY000")) {
+                            xOpen = SQLError.mysqlToSqlState(errno, useSqlStateCodes);
+                        }
+                    } else {
+                        xOpen = SQLError.mysqlToSqlState(errno, useSqlStateCodes);
+                    }
+                } else {
+                    xOpen = SQLError.mysqlToSqlState(errno, useSqlStateCodes);
+                }
+
+                StringBuilder errorBuf = new StringBuilder();
+
+                String xOpenErrorMessage = SQLError.get(xOpen);
+
+                if (false) {
+                    if (xOpenErrorMessage != null) {
+                        errorBuf.append(xOpenErrorMessage);
+                        errorBuf.append(Messages.getString("MysqlIO.68"));
+                    }
+                }
+
+                errorBuf.append(serverErrorMessage);
+
+//                if (!this.connection.getUseOnlyServerErrorMessages()) {
+//                    if (xOpenErrorMessage != null) {
+//                        errorBuf.append("\"");
+//                    }
+//                }
+//
+//                appendDeadlockStatusInformation(xOpen, errorBuf);
+                if (xOpen != null && xOpen.startsWith("22")) {
+                    //    throw new MysqlDataTruncation(errorBuf.toString(), 0, true, false, 0, 0, errno);
+                }
+                throw SQLError.createSQLException(errorBuf.toString(), xOpen, errno, false, null);
+            }
+        }
     }
 }

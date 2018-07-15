@@ -40,5 +40,6 @@ public class TestMySQL {
         prop.setProperty(DataSources.JDBC_PWD, "");
         MySQLDataSource source = new MySQLDataSource("", null, prop, prop);  
         source.getReadPoolSource().poll();
+        source.directExecute("UPDATE almsrecord SET createtime = 0");
     }
 }
