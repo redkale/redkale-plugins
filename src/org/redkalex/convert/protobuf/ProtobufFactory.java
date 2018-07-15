@@ -49,11 +49,6 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @Override
-    public boolean isReversible() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
     public ConvertFactory createChild() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -61,6 +56,16 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     @Override
     public ConvertFactory createChild(boolean tiny) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public boolean isReversible() {
+        return true;
+    }
+
+    @Override
+    public boolean isFieldSort() {
+        return false;
     }
 
 }
