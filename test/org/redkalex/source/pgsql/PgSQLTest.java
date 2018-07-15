@@ -48,7 +48,61 @@ public class PgSQLTest {
         prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
         prop.setProperty(DataSources.JDBC_USER, "postgres");
         prop.setProperty(DataSources.JDBC_PWD, "1234");
-        PgSQLDataSource source = new PgSQLDataSource("", null, prop, prop);
+        prop.setProperty(DataSources.JDBC_CONNECTIONS_LIMIT, "40");
+        final PgSQLDataSource source = new PgSQLDataSource("", null, prop, prop);
+
+        final int count = 200;
+        final CountDownLatch cdl = new CountDownLatch(count);
+        long s1 = System.currentTimeMillis();
+        for (int j = 0; j < count; j++) {
+            if (false) {
+                new Thread() {
+                    public void run() {
+                        try {
+                            final World[] rs = new World[5];
+                            for (int i = 0; i < rs.length; i++) {
+                                final int index = i;
+                                rs[index] = source.find(World.class, 99);
+                            }
+                            source.update(rs);
+                            cdl.countDown();
+                        } catch (Throwable t) {
+                            t.printStackTrace();
+                        }
+                    }
+                }.start();
+            } else {
+                new Thread() {
+                    public void run() {
+                        try {
+                            final World[] rs = new World[5];
+                            final CompletableFuture<World>[] futures = new CompletableFuture[rs.length];
+                            for (int i = 0; i < rs.length; i++) {
+                                final int index = i;
+                                futures[index] = source.findAsync(World.class, 99).whenComplete((w, t) -> {
+                                    rs[index] = w;
+                                });
+                            }
+                            CompletableFuture.allOf(futures).thenCompose((r) -> {
+                                return source.updateAsync(rs).thenApply((v) -> {
+                                    return rs;
+                                });
+                            }).whenComplete((r, e) -> {
+                                if (e != null) e.printStackTrace();
+                                cdl.countDown();
+                            });
+                        } catch (Throwable t) {
+                            t.printStackTrace();
+                        }
+                    }
+                }.start();
+            }
+        }
+        cdl.await();
+        long e1 = System.currentTimeMillis() - s1;
+        System.out.println("一共耗时: " + e1);
+
+        if (true) return;
         PoolSource<AsyncConnection> poolSource = source.writePoolSource();
         System.out.println("user:" + poolSource.getUsername() + ", pass: " + poolSource.getPassword() + ", db: " + poolSource.getDatabase());
         long s, e;
