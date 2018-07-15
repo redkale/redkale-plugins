@@ -204,10 +204,10 @@ public class MyPoolSource extends PoolTcpSource {
                         buffer.flip();
                         try {
                             conn.write(buffer).get();
-                            System.out.println("----------------发送完成");
+                            System.out.println("----------------发送完成: " + buffer.remaining());
                             buffer.clear();
                             conn.read(buffer).get();
-                            System.out.println("----------------读取完成");
+                            System.out.println("----------------读取完成: " + buffer.position());
                             buffer.flip();
                             try {
                                 checkErrorPacket(buffer, bytes);
