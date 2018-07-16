@@ -5,6 +5,7 @@
  */
 package org.redkalex.convert.protobuf;
 
+import java.nio.charset.StandardCharsets;
 import org.redkale.convert.*;
 import org.redkale.util.*;
 
@@ -71,7 +72,7 @@ public class ProtobufReader extends Reader {
 
     @Override
     public final String readObjectB(final Class clazz) {
-        return null;
+        return "";
     }
 
     @Override
@@ -98,10 +99,8 @@ public class ProtobufReader extends Reader {
      * @return 数组长度或SIGN_NULL
      */
     @Override
-    public int readArrayB() {
-        short bt = readShort();
-        if (bt == Reader.SIGN_NULL) return bt;
-        return (bt & 0xffff) << 16 | ((content[++this.position] & 0xff) << 8) | (content[++this.position] & 0xff);
+    public final int readArrayB() {
+        return Reader.SIGN_NOLENGTH;
     }
 
     @Override
@@ -127,20 +126,10 @@ public class ProtobufReader extends Reader {
 
     @Override
     public final DeMember readFieldName(final DeMember[] members) {
-        final String exceptedfield = readSmallString();
-        int typeval = readByte();
-        final int len = members.length;
-        if (this.fieldIndex >= len) this.fieldIndex = 0;
-        for (int k = this.fieldIndex; k < len; k++) {
-            if (exceptedfield.equals(members[k].getAttribute().field())) {
-                this.fieldIndex = k;
-                return members[k];
-            }
-        }
-        for (int k = 0; k < this.fieldIndex; k++) {
-            if (exceptedfield.equals(members[k].getAttribute().field())) {
-                this.fieldIndex = k;
-                return members[k];
+        int tag = readRawVarint32() >>> 3;
+        for (DeMember member : members) {
+            if (member.getPosition() == tag) {
+                return member;
             }
         }
         return null;
@@ -148,144 +137,155 @@ public class ProtobufReader extends Reader {
 
     //------------------------------------------------------------
     @Override
-    public boolean readBoolean() {
-        return content[++this.position] == 1;
+    public final boolean readBoolean() {
+        return readRawVarint64() != 0;
     }
 
     @Override
     public byte readByte() {
-        return content[++this.position];
+        return (byte) readInt();
     }
 
     @Override
     public final byte[] readByteArray() {
-        int len = readArrayB();
-        if (len == Reader.SIGN_NULL) return null;
-        if (len == Reader.SIGN_NOLENGTH) {
-            int size = 0;
-            byte[] data = new byte[8];
-            while (hasNext()) {
-                if (size >= data.length) {
-                    byte[] newdata = new byte[data.length + 4];
-                    System.arraycopy(data, 0, newdata, 0, size);
-                    data = newdata;
-                }
-                data[size++] = readByte();
-            }
-            readArrayE();
-            byte[] newdata = new byte[size];
-            System.arraycopy(data, 0, newdata, 0, size);
-            return newdata;
-        } else {
-            byte[] values = new byte[len];
-            for (int i = 0; i < values.length; i++) {
-                values[i] = readByte();
-            }
-            readArrayE();
-            return values;
-        }
+        final int size = readRawVarint32();
+        byte[] bs = new byte[size];
+        System.arraycopy(content, position + 1, bs, 0, size);
+        position += size;
+        return bs;
     }
 
     @Override
-    public char readChar() {
-        return (char) ((0xff00 & (content[++this.position] << 8)) | (0xff & content[++this.position]));
+    public final char readChar() {
+        return (char) readInt();
     }
 
     @Override
-    public short readShort() {
-        return (short) ((0xff00 & (content[++this.position] << 8)) | (0xff & content[++this.position]));
+    public final short readShort() {
+        return (short) readInt();
     }
 
     @Override
-    public int readInt() {
-        return ((content[++this.position] & 0xff) << 24) | ((content[++this.position] & 0xff) << 16)
-            | ((content[++this.position] & 0xff) << 8) | (content[++this.position] & 0xff);
+    public final int readInt() { //readSInt32
+        int n = readRawVarint32();
+        return (n >>> 1) ^ -(n & 1);
     }
 
     @Override
-    public long readLong() {
-        return ((((long) content[++this.position] & 0xff) << 56)
-            | (((long) content[++this.position] & 0xff) << 48)
-            | (((long) content[++this.position] & 0xff) << 40)
-            | (((long) content[++this.position] & 0xff) << 32)
-            | (((long) content[++this.position] & 0xff) << 24)
-            | (((long) content[++this.position] & 0xff) << 16)
-            | (((long) content[++this.position] & 0xff) << 8)
-            | (((long) content[++this.position] & 0xff)));
+    public final long readLong() { //readSInt64
+        long n = readRawVarint64();
+        return (n >>> 1) ^ -(n & 1);
     }
 
     @Override
     public final float readFloat() {
-        return Float.intBitsToFloat(readInt());
+        return Float.intBitsToFloat(readRawLittleEndian32());
     }
 
     @Override
     public final double readDouble() {
-        return Double.longBitsToDouble(readLong());
+        return Double.longBitsToDouble(readRawLittleEndian64());
     }
 
     @Override
     public final String readClassName() {
-        return readSmallString();
+        return "";
     }
 
     @Override
-    public String readSmallString() {
-        int len = 0xff & readByte();
-        if (len == 0) return "";
-        String value = new String(content, ++this.position, len);
-        this.position += len - 1; //上一行已经++this.position，所以此处要-1
-        return value;
+    public final String readSmallString() {
+        return readString();
     }
 
     @Override
-    public String readString() {
-        int len = readInt();
-        if (len == SIGN_NULL) return null;
-        if (len == 0) return "";
-        String value = new String(Utility.decodeUTF8(content, ++this.position, len));
-        this.position += len - 1;//上一行已经++this.position，所以此处要-1
-        return value;
+    public final String readString() {
+        return new String(readByteArray(), StandardCharsets.UTF_8);
     }
 
     protected int readRawVarint32() {
-//    fastpath:
-//    {
-//        long tempPos = currentByteBufferPos;
-//
-//        if (currentByteBufferLimit == currentByteBufferPos) {
-//            break fastpath;
-//        }
-//
-//        int x;
-//        if ((x = UnsafeUtil.getByte(tempPos++)) >= 0) {
-//            currentByteBufferPos++;
-//            return x;
-//        } else if (currentByteBufferLimit - currentByteBufferPos < 10) {
-//            break fastpath;
-//        } else if ((x ^= (UnsafeUtil.getByte(tempPos++) << 7)) < 0) {
-//            x ^= (~0 << 7);
-//        } else if ((x ^= (UnsafeUtil.getByte(tempPos++) << 14)) >= 0) {
-//            x ^= (~0 << 7) ^ (~0 << 14);
-//        } else if ((x ^= (UnsafeUtil.getByte(tempPos++) << 21)) < 0) {
-//            x ^= (~0 << 7) ^ (~0 << 14) ^ (~0 << 21);
-//        } else {
-//            int y = UnsafeUtil.getByte(tempPos++);
-//            x ^= y << 28;
-//            x ^= (~0 << 7) ^ (~0 << 14) ^ (~0 << 21) ^ (~0 << 28);
-//            if (y < 0
-//                && UnsafeUtil.getByte(tempPos++) < 0
-//                && UnsafeUtil.getByte(tempPos++) < 0
-//                && UnsafeUtil.getByte(tempPos++) < 0
-//                && UnsafeUtil.getByte(tempPos++) < 0
-//                && UnsafeUtil.getByte(tempPos++) < 0) {
-//                break fastpath; // Will throw malformedVarint()
-//            }
-//        }
-//        currentByteBufferPos = tempPos;
-//        return x;
-//    }
+        fastpath:
+        {
+            if (this.position == content.length - 1) break fastpath;
+            int x;
+            if ((x = content[++this.position]) >= 0) {
+                return x;
+            } else if (content.length - this.position < 10) {
+                break fastpath;
+            } else if ((x ^= (content[++this.position] << 7)) < 0) {
+                x ^= (~0 << 7);
+            } else if ((x ^= (content[++this.position] << 14)) >= 0) {
+                x ^= (~0 << 7) ^ (~0 << 14);
+            } else if ((x ^= (content[++this.position] << 21)) < 0) {
+                x ^= (~0 << 7) ^ (~0 << 14) ^ (~0 << 21);
+            } else {
+                int y = content[++this.position];
+                x ^= y << 28;
+                x ^= (~0 << 7) ^ (~0 << 14) ^ (~0 << 21) ^ (~0 << 28);
+                if (y < 0
+                    && content[++this.position] < 0
+                    && content[++this.position] < 0
+                    && content[++this.position] < 0
+                    && content[++this.position] < 0
+                    && content[++this.position] < 0) {
+                    break fastpath; // Will throw malformedVarint()
+                }
+            }
+            return x;
+        }
         return (int) readRawVarint64SlowPath();
+    }
+
+    protected long readRawVarint64() {
+        fastpath:
+        {
+
+            if (this.position == content.length - 1) break fastpath;
+
+            long x;
+            int y;
+            if ((y = content[++this.position]) >= 0) {
+                return y;
+            } else if (content.length - this.position < 9) {
+                break fastpath;
+            } else if ((y ^= (content[++this.position] << 7)) < 0) {
+                x = y ^ (~0 << 7);
+            } else if ((y ^= (content[++this.position] << 14)) >= 0) {
+                x = y ^ ((~0 << 7) ^ (~0 << 14));
+            } else if ((y ^= (content[++this.position] << 21)) < 0) {
+                x = y ^ ((~0 << 7) ^ (~0 << 14) ^ (~0 << 21));
+            } else if ((x = y ^ ((long) content[++this.position] << 28)) >= 0L) {
+                x ^= (~0L << 7) ^ (~0L << 14) ^ (~0L << 21) ^ (~0L << 28);
+            } else if ((x ^= ((long) content[++this.position] << 35)) < 0L) {
+                x ^= (~0L << 7) ^ (~0L << 14) ^ (~0L << 21) ^ (~0L << 28) ^ (~0L << 35);
+            } else if ((x ^= ((long) content[++this.position] << 42)) >= 0L) {
+                x ^= (~0L << 7) ^ (~0L << 14) ^ (~0L << 21) ^ (~0L << 28) ^ (~0L << 35) ^ (~0L << 42);
+            } else if ((x ^= ((long) content[++this.position] << 49)) < 0L) {
+                x ^= (~0L << 7)
+                    ^ (~0L << 14)
+                    ^ (~0L << 21)
+                    ^ (~0L << 28)
+                    ^ (~0L << 35)
+                    ^ (~0L << 42)
+                    ^ (~0L << 49);
+            } else {
+                x ^= ((long) content[++this.position] << 56);
+                x ^= (~0L << 7)
+                    ^ (~0L << 14)
+                    ^ (~0L << 21)
+                    ^ (~0L << 28)
+                    ^ (~0L << 35)
+                    ^ (~0L << 42)
+                    ^ (~0L << 49)
+                    ^ (~0L << 56);
+                if (x < 0L) {
+                    if (content[++this.position] < 0L) {
+                        break fastpath; // Will throw malformedVarint()
+                    }
+                }
+            }
+            return x;
+        }
+        return readRawVarint64SlowPath();
     }
 
     protected long readRawVarint64SlowPath() {
@@ -298,5 +298,23 @@ public class ProtobufReader extends Reader {
             }
         }
         throw new ConvertException("readRawVarint64SlowPath error");
+    }
+
+    protected int readRawLittleEndian32() {
+        return ((content[++this.position] & 0xff)
+            | ((content[++this.position] & 0xff) << 8)
+            | ((content[++this.position] & 0xff) << 16)
+            | ((content[++this.position] & 0xff) << 24));
+    }
+
+    protected long readRawLittleEndian64() {
+        return ((content[++this.position] & 0xffL)
+            | ((content[++this.position] & 0xffL) << 8)
+            | ((content[++this.position] & 0xffL) << 16)
+            | ((content[++this.position] & 0xffL) << 24)
+            | ((content[++this.position] & 0xffL) << 32)
+            | ((content[++this.position] & 0xffL) << 40)
+            | ((content[++this.position] & 0xffL) << 48)
+            | ((content[++this.position] & 0xffL) << 56));
     }
 }

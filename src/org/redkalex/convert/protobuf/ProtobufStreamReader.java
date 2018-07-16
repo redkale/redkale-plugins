@@ -49,15 +49,4 @@ class ProtobufStreamReader extends ProtobufByteBufferReader {
         return currByte;
     }
 
-    @Override
-    protected byte[] read(final int len) {
-        byte[] bs = new byte[len];
-        try {
-            in.read(bs);
-            this.position += len;
-        } catch (IOException e) {
-            throw new ConvertException(e);
-        }
-        return bs;
-    }
 }
