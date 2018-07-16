@@ -6,6 +6,10 @@
 package org.redkalex.convert.protobuf;
 
 import java.io.Serializable;
+import java.lang.reflect.*;
+import java.util.*;
+import java.util.concurrent.atomic.*;
+import java.util.stream.Stream;
 import org.redkale.convert.*;
 import org.redkale.util.AnyValue;
 
@@ -72,12 +76,62 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         return false;
     }
 
-    public static int wireType(Class type) {
-        if (type == double.class || type == Double.class) return 1;
-        if (type == float.class || type == Float.class) return 5;
-        if (type == boolean.class || type == Boolean.class || type.isEnum()) return 0;
-        if (type.isPrimitive() || Number.class.isAssignableFrom(type)) return 0;
+    public static int wireType(Type javaType) {
+        if (javaType == double.class || javaType == Double.class) return 1;
+        if (javaType == float.class || javaType == Float.class) return 5;
+        if (javaType == boolean.class || javaType == Boolean.class) return 0;
+        if (javaType instanceof Class) {
+            Class javaClazz = (Class) javaType;
+            if (javaClazz.isEnum()) return 0;
+            if (javaClazz.isPrimitive() || Number.class.isAssignableFrom(javaClazz)) return 0;
+        }
         return 2;
     }
 
+    public static String wireTypeString(Type javaType) {
+        if (javaType == double.class || javaType == Double.class) return "double";
+        if (javaType == long.class || javaType == Long.class) return "sint64";
+        if (javaType == float.class || javaType == Float.class) return "float";
+        if (javaType == int.class || javaType == Integer.class) return "sint32";
+        if (javaType == short.class || javaType == Short.class) return "sint32";
+        if (javaType == char.class || javaType == Character.class) return "sint32";
+        if (javaType == byte.class || javaType == Byte.class) return "sint32";
+        if (javaType == boolean.class || javaType == Boolean.class) return "bool";
+        if (javaType == AtomicLong.class) return "sint64";
+        if (javaType == AtomicInteger.class) return "sint32";
+        if (javaType == AtomicBoolean.class) return "bool";
+
+        if (javaType == double[].class || javaType == Double[].class) return "repeated double";
+        if (javaType == long[].class || javaType == Long[].class) return "repeated sint64";
+        if (javaType == float[].class || javaType == Float[].class) return "repeated float";
+        if (javaType == int[].class || javaType == Integer[].class) return "repeated sint32";
+        if (javaType == short[].class || javaType == Short[].class) return "repeated sint32";
+        if (javaType == char[].class || javaType == Character[].class) return "repeated sint32";
+        if (javaType == byte[].class || javaType == Byte[].class) return "repeated sint32";
+        if (javaType == boolean[].class || javaType == Boolean[].class) return "repeated bool";
+        if (javaType == AtomicLong[].class) return "repeated sint64";
+        if (javaType == AtomicInteger[].class) return "repeated sint32";
+        if (javaType == AtomicBoolean[].class) return "repeated bool";
+
+        if (javaType == java.util.Properties.class) return "map<string,string>";
+        if (javaType instanceof Class) {
+            Class javaClazz = (Class) javaType;
+            if (javaClazz.isArray()) return "repeated " + wireTypeString(javaClazz.getComponentType());
+            if (javaClazz.isEnum()) return "enum";
+            if (CharSequence.class.isAssignableFrom(javaClazz)) return "string";
+            return javaClazz.getSimpleName();
+        } else if (javaType instanceof ParameterizedType) { //Collection、Stream、Map 必须是泛型
+            final ParameterizedType pt = (ParameterizedType) javaType;
+            final Class rawType = (Class) pt.getRawType();
+            if (Map.class.isAssignableFrom(rawType)) {
+                Type keyType = pt.getActualTypeArguments()[0];
+                Type valueType = pt.getActualTypeArguments()[1];
+                return "map<" + wireTypeString(keyType) + "," + wireTypeString(valueType) + ">";
+            } else if (Collection.class.isAssignableFrom(rawType)
+                || Stream.class.isAssignableFrom(rawType)) {
+                return "repeated " + wireTypeString(pt.getActualTypeArguments()[0]);
+            }
+        }
+        throw new UnsupportedOperationException("ProtobufConvert not supported type(" + javaType + ")");
+    }
 }
