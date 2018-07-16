@@ -113,6 +113,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         source.remove("key1");
         source.remove("key2");
         source.remove("300");
+        source.set(1000, "key1", "value1");
         source.set("key1", "value1");
         source.setString("keystr1", "strvalue1");
         source.setLong("keylong1", 333L);
@@ -874,7 +875,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                             callback.completed(null, key);
                                         } else {
                                             transport.offerConnection(false, conn);
-                                            future.complete(bs);
+                                            future.complete("SET".equals(command) ? null : bs);
                                         }
                                     } else if (sign == MINUS_BYTE) { // -
                                         String bs = readString();
