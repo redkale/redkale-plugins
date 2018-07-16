@@ -171,6 +171,22 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
+    public final void writeByteArray(byte[] values) {
+        if (values == null) {
+            writeNull();
+            return;
+        }
+        writeArrayB(values.length);
+        boolean flag = false;
+        for (byte v : values) {
+            if (flag) writeArrayMark();
+            writeByte(v);
+            flag = true;
+        }
+        writeArrayE();
+    }
+
+    @Override
     public void writeChar(char value) {
         writeInt(value);
     }
