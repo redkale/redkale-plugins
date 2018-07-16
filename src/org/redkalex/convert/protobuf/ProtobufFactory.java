@@ -37,6 +37,10 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         return instance;
     }
 
+    public static ProtobufFactory create() {
+        return new ProtobufFactory(null, Boolean.getBoolean("convert.protobuf.tiny"));
+    }
+
     @Override
     public final ProtobufConvert getConvert() {
         if (convert == null) convert = new ProtobufConvert(this, tiny);
@@ -44,18 +48,18 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @Override
+    public ProtobufFactory createChild() {
+        return new ProtobufFactory(this, this.tiny);
+    }
+
+    @Override
+    public ProtobufFactory createChild(boolean tiny) {
+        return new ProtobufFactory(this, tiny);
+    }
+
+    @Override
     public ConvertType getConvertType() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public ConvertFactory createChild() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public ConvertFactory createChild(boolean tiny) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return ConvertType.DIY;
     }
 
     @Override
@@ -66,6 +70,14 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     @Override
     public boolean isFieldSort() {
         return false;
+    }
+
+    public static int wireType(Class type) {
+        if (type == double.class || type == Double.class) return 1;
+        if (type == float.class || type == Float.class) return 5;
+        if (type == boolean.class || type == Boolean.class || type.isEnum()) return 0;
+        if (type.isPrimitive() || Number.class.isAssignableFrom(type)) return 0;
+        return 2;
     }
 
 }

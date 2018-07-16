@@ -6,7 +6,7 @@
 package org.redkalex.convert.protobuf;
 
 import org.redkale.convert.*;
-import org.redkale.util.ObjectPool;
+import org.redkale.util.*;
 
 /**
  *
@@ -60,104 +60,214 @@ public class ProtobufReader extends Reader {
         this.recycle();
     }
 
+    /**
+     * 跳过属性的值
+     */
     @Override
-    public boolean hasNext() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    @SuppressWarnings("unchecked")
+    public final void skipValue() {
+
     }
 
     @Override
-    public void skipValue() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public final String readObjectB(final Class clazz) {
+        return null;
     }
 
     @Override
-    public void readBlank() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public final void readObjectE(final Class clazz) {
+
+    }
+
+    protected byte currentByte() {
+        return this.content[this.position];
     }
 
     @Override
-    public void readObjectE(Class clazz) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public final int readMapB() {
+        return readArrayB();
     }
 
+    @Override
+    public final void readMapE() {
+    }
+
+    /**
+     * 判断下一个非空白字节是否为[
+     *
+     * @return 数组长度或SIGN_NULL
+     */
     @Override
     public int readArrayB() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        short bt = readShort();
+        if (bt == Reader.SIGN_NULL) return bt;
+        return (bt & 0xffff) << 16 | ((content[++this.position] & 0xff) << 8) | (content[++this.position] & 0xff);
     }
 
     @Override
-    public void readArrayE() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public final void readArrayE() {
+    }
+
+    /**
+     * 判断下一个非空白字节是否:
+     */
+    @Override
+    public final void readBlank() {
+    }
+
+    /**
+     * 判断对象是否存在下一个属性或者数组是否存在下一个元素
+     *
+     * @return 是否存在
+     */
+    @Override
+    public final boolean hasNext() {
+        return this.position < this.content.length - 1;
     }
 
     @Override
-    public int readMapB() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public final DeMember readFieldName(final DeMember[] members) {
+        final String exceptedfield = readSmallString();
+        int typeval = readByte();
+        final int len = members.length;
+        if (this.fieldIndex >= len) this.fieldIndex = 0;
+        for (int k = this.fieldIndex; k < len; k++) {
+            if (exceptedfield.equals(members[k].getAttribute().field())) {
+                this.fieldIndex = k;
+                return members[k];
+            }
+        }
+        for (int k = 0; k < this.fieldIndex; k++) {
+            if (exceptedfield.equals(members[k].getAttribute().field())) {
+                this.fieldIndex = k;
+                return members[k];
+            }
+        }
+        return null;
     }
 
-    @Override
-    public void readMapE() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public DeMember readFieldName(DeMember[] members) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
+    //------------------------------------------------------------
     @Override
     public boolean readBoolean() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return content[++this.position] == 1;
     }
 
     @Override
     public byte readByte() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return content[++this.position];
     }
 
     @Override
     public char readChar() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return (char) ((0xff00 & (content[++this.position] << 8)) | (0xff & content[++this.position]));
     }
 
     @Override
     public short readShort() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return (short) ((0xff00 & (content[++this.position] << 8)) | (0xff & content[++this.position]));
     }
 
     @Override
     public int readInt() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return ((content[++this.position] & 0xff) << 24) | ((content[++this.position] & 0xff) << 16)
+            | ((content[++this.position] & 0xff) << 8) | (content[++this.position] & 0xff);
     }
 
     @Override
     public long readLong() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return ((((long) content[++this.position] & 0xff) << 56)
+            | (((long) content[++this.position] & 0xff) << 48)
+            | (((long) content[++this.position] & 0xff) << 40)
+            | (((long) content[++this.position] & 0xff) << 32)
+            | (((long) content[++this.position] & 0xff) << 24)
+            | (((long) content[++this.position] & 0xff) << 16)
+            | (((long) content[++this.position] & 0xff) << 8)
+            | (((long) content[++this.position] & 0xff)));
     }
 
     @Override
-    public float readFloat() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public final float readFloat() {
+        return Float.intBitsToFloat(readInt());
     }
 
     @Override
-    public double readDouble() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public final double readDouble() {
+        return Double.longBitsToDouble(readLong());
+    }
+
+    @Override
+    public final String readClassName() {
+        return readSmallString();
     }
 
     @Override
     public String readSmallString() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public String readClassName() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        int len = 0xff & readByte();
+        if (len == 0) return "";
+        String value = new String(content, ++this.position, len);
+        this.position += len - 1; //上一行已经++this.position，所以此处要-1
+        return value;
     }
 
     @Override
     public String readString() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        int len = readInt();
+        if (len == SIGN_NULL) return null;
+        if (len == 0) return "";
+        String value = new String(Utility.decodeUTF8(content, ++this.position, len));
+        this.position += len - 1;//上一行已经++this.position，所以此处要-1
+        return value;
     }
 
+    protected int readRawVarint32() {
+//    fastpath:
+//    {
+//        long tempPos = currentByteBufferPos;
+//
+//        if (currentByteBufferLimit == currentByteBufferPos) {
+//            break fastpath;
+//        }
+//
+//        int x;
+//        if ((x = UnsafeUtil.getByte(tempPos++)) >= 0) {
+//            currentByteBufferPos++;
+//            return x;
+//        } else if (currentByteBufferLimit - currentByteBufferPos < 10) {
+//            break fastpath;
+//        } else if ((x ^= (UnsafeUtil.getByte(tempPos++) << 7)) < 0) {
+//            x ^= (~0 << 7);
+//        } else if ((x ^= (UnsafeUtil.getByte(tempPos++) << 14)) >= 0) {
+//            x ^= (~0 << 7) ^ (~0 << 14);
+//        } else if ((x ^= (UnsafeUtil.getByte(tempPos++) << 21)) < 0) {
+//            x ^= (~0 << 7) ^ (~0 << 14) ^ (~0 << 21);
+//        } else {
+//            int y = UnsafeUtil.getByte(tempPos++);
+//            x ^= y << 28;
+//            x ^= (~0 << 7) ^ (~0 << 14) ^ (~0 << 21) ^ (~0 << 28);
+//            if (y < 0
+//                && UnsafeUtil.getByte(tempPos++) < 0
+//                && UnsafeUtil.getByte(tempPos++) < 0
+//                && UnsafeUtil.getByte(tempPos++) < 0
+//                && UnsafeUtil.getByte(tempPos++) < 0
+//                && UnsafeUtil.getByte(tempPos++) < 0) {
+//                break fastpath; // Will throw malformedVarint()
+//            }
+//        }
+//        currentByteBufferPos = tempPos;
+//        return x;
+//    }
+        return (int) readRawVarint64SlowPath();
+    }
+
+    protected long readRawVarint64SlowPath() {
+        long result = 0;
+        for (int shift = 0; shift < 64; shift += 7) {
+            final byte b = readByte();
+            result |= (long) (b & 0x7F) << shift;
+            if ((b & 0x80) == 0) {
+                return result;
+            }
+        }
+        throw new ConvertException("readRawVarint64SlowPath error");
+    }
 }
