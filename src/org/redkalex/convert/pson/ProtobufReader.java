@@ -100,7 +100,7 @@ public class ProtobufReader extends Reader {
      */
     @Override
     public final int readArrayB() {
-        return Reader.SIGN_NOLENGTH;
+        return Reader.SIGN_NOLENBUTBYTES;
     }
 
     @Override
@@ -114,13 +114,29 @@ public class ProtobufReader extends Reader {
     public final void readBlank() {
     }
 
+    @Override
+    public int position() {
+        return this.position;
+    }
+
+    @Override
+    public int readMemberContentLength() {
+        return readRawVarint32();
+    }
+
     /**
      * 判断对象是否存在下一个属性或者数组是否存在下一个元素
+     *
+     * @param startPosition 起始位置
+     * @param contentLength 内容大小， 不确定的传-1
      *
      * @return 是否存在
      */
     @Override
-    public final boolean hasNext() {
+    public boolean hasNext(int startPosition, int contentLength) {
+        if (startPosition >= 0 && contentLength >= 0) {
+            return this.position < (startPosition + contentLength);
+        }
         return this.position < this.content.length - 1;
     }
 

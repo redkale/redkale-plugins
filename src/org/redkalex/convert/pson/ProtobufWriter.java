@@ -6,6 +6,7 @@
 package org.redkalex.convert.pson;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import org.redkale.convert.*;
 import org.redkale.util.*;
 
@@ -131,7 +132,53 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
-    public void writeArrayB(int size) {
+    public void writeArrayB(int size, Encodeable<Writer, Object> encoder, Object obj) {
+        if (size < 1 || obj == null) {
+            writeUInt32(0);
+        } else if (obj instanceof byte[]) {
+            writeUInt32(((byte[]) obj).length);
+        } else {
+            final Class type = obj.getClass();
+            ProtobufWriter tmp = new ProtobufWriter();
+            if (type == boolean[].class) {
+                for (boolean item : (boolean[]) obj) {
+                    tmp.writeBoolean(item);
+                }
+            } else if (type == short[].class) {
+                for (short item : (short[]) obj) {
+                    tmp.writeShort(item);
+                }
+            } else if (type == char[].class) {
+                for (char item : (char[]) obj) {
+                    tmp.writeChar(item);
+                }
+            } else if (type == int[].class) {
+                for (int item : (int[]) obj) {
+                    tmp.writeInt(item);
+                }
+            } else if (type == float[].class) {
+                for (float item : (float[]) obj) {
+                    tmp.writeFloat(item);
+                }
+            } else if (type == long[].class) {
+                for (long item : (long[]) obj) {
+                    tmp.writeLong(item);
+                }
+            } else if (type == double[].class) {
+                for (double item : (double[]) obj) {
+                    tmp.writeDouble(item);
+                }
+            } else if (Collection.class.isAssignableFrom(type)) {
+                for (Object item : (Collection) obj) {
+                    encoder.convertTo(tmp, item);
+                }
+            } else {
+                for (Object item : (Object[]) obj) {
+                    encoder.convertTo(tmp, item);
+                }
+            }
+            writeUInt32(tmp.count());
+        }
     }
 
     @Override
@@ -143,7 +190,7 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
-    public void writeMapB(int size) {
+    public void writeMapB(int size, Encodeable<Writer, Object> keyEncoder, Encodeable<Writer, Object> valueEncoder, Object obj) {
     }
 
     @Override
@@ -176,7 +223,7 @@ public class ProtobufWriter extends Writer {
             writeNull();
             return;
         }
-        writeArrayB(values.length);
+        writeArrayB(values.length, null, values);
         boolean flag = false;
         for (byte v : values) {
             if (flag) writeArrayMark();
