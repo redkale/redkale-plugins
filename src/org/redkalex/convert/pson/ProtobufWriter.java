@@ -6,7 +6,7 @@
 package org.redkalex.convert.pson;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
+import java.util.*;
 import org.redkale.convert.*;
 import org.redkale.util.*;
 
@@ -191,6 +191,16 @@ public class ProtobufWriter extends Writer {
 
     @Override
     public void writeMapB(int size, Encodeable<Writer, Object> keyEncoder, Encodeable<Writer, Object> valueEncoder, Object obj) {
+        if (size < 1 || obj == null) {
+            writeUInt32(0);
+        } else {
+            ProtobufWriter tmp = new ProtobufWriter();
+            for (Map.Entry en : ((Map<?, ?>) obj).entrySet()) {
+                keyEncoder.convertTo(tmp, en.getKey());
+                valueEncoder.convertTo(tmp, en.getValue());
+            }
+            writeUInt32(tmp.count());
+        }
     }
 
     @Override
