@@ -46,6 +46,11 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @Override
+    public SimpledCoder createEnumSimpledCoder(Class enumClass) {
+        return new ProtobufEnumSimpledCoder(enumClass);
+    }
+
+    @Override
     public final ProtobufConvert getConvert() {
         if (convert == null) convert = new ProtobufConvert(this, tiny);
         return (ProtobufConvert) convert;
