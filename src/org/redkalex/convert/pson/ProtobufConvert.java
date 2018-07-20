@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 import org.redkale.convert.*;
 import org.redkale.util.*;
+import static org.redkalex.convert.pson.ProtobufFactory.wireTypeString;
 
 /**
  * protobuf的Convert实现  <br>
@@ -79,17 +80,23 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     public <T> String getProtoDescriptor(Class<T> clazz) {
         StringBuilder sb = new StringBuilder();
-        sb.append("//java ").append(clazz.isArray() ? (clazz.getComponentType().getName() + "[]") : clazz.getName()).append("\r\n");
-        sb.append("syntax = \"proto3\";\r\n");
+        sb.append("//java ").append(clazz.isArray() ? (clazz.getComponentType().getName() + "[]") : clazz.getName()).append("\r\n\r\n");
+        sb.append("option java_package = \"").append(clazz.getPackage().getName()).append("\";\r\n\r\n");
+        sb.append("syntax = \"proto3\";\r\n\r\n");
         defineProtoDescriptor(clazz, sb, "");
         return sb.toString();
     }
 
-    protected <T> void defineProtoDescriptor(Class<T> clazz, StringBuilder sb, String prefix) {
-        sb.append(prefix).append("message ").append(clazz.getSimpleName().replace("[]", "_Array")).append(" {\r\n");
-        Encodeable<ProtobufWriter, T> encoder = factory.loadEncoder(clazz);
-
-        sb.append(prefix).append("}\r\n");
+    protected void defineProtoDescriptor(Type type, StringBuilder sb, String prefix) {
+        Encodeable encoder = factory.loadEncoder(type);
+        if (encoder instanceof ObjectEncoder) {
+            sb.append(prefix).append("message ").append(((Class) type).getSimpleName().replace("[]", "_Array")).append(" {\r\n");
+            for (EnMember member : ((ObjectEncoder) encoder).getMembers()) {
+                sb.append(prefix).append("    ").append(wireTypeString(member.getEncoder().getType()))
+                    .append(" ").append(member.getAttribute().field()).append(" = ").append(member.getPosition()).append(";\r\n");
+            }
+            sb.append(prefix).append("}\r\n");
+        }
     }
 
     //------------------------------ convertFrom -----------------------------------------------------------

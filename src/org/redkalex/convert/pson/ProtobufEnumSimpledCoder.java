@@ -35,7 +35,6 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
             int index = -1;
             for (E item : (E[]) method.invoke(null)) {
                 values1.put(item, ++index);
-                System.out.println(item+"----------"+index);
                 values2.put(index, item);
             }
         } catch (Exception e) {
@@ -58,6 +57,11 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
         int value = ((ProtobufReader)in).readRawVarint32();
         if (value == -1) return null;
         return values2.get(value);
+    }
+
+    @Override
+    public Class<E> getType() {
+        return type;
     }
 
 }

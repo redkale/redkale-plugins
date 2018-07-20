@@ -121,7 +121,7 @@ public class ProtobufReader extends Reader {
 
     @Override
     public int readMemberContentLength() {
-        return readRawVarint32();
+        return readRawVarint32(); //readUInt32
     }
 
     /**
@@ -218,7 +218,7 @@ public class ProtobufReader extends Reader {
         return new String(readByteArray(), StandardCharsets.UTF_8);
     }
 
-    protected int readRawVarint32() {
+    protected int readRawVarint32() {  //readUInt32
         fastpath:
         {
             if (this.position == content.length - 1) break fastpath;
