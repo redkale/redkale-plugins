@@ -123,8 +123,9 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
-    public void writeObjectB(Object obj) {
+    public int writeObjectB(Object obj) {
         super.writeObjectB(obj);
+        return -1;
     }
 
     @Override
@@ -132,11 +133,15 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
-    public void writeArrayB(int size, Encodeable<Writer, Object> encoder, Object obj) {
+    public int writeArrayB(int size, Encodeable<Writer, Object> encoder, Object obj) {
         if (size < 1 || obj == null) {
             writeUInt32(0);
+            return 0;
         } else if (obj instanceof byte[]) {
-            writeUInt32(((byte[]) obj).length);
+            int length = ((byte[]) obj).length;
+            writeUInt32(length);
+            writeTo((byte[]) obj);
+            return length;
         } else {
             final Class type = obj.getClass();
             ProtobufWriter tmp = new ProtobufWriter();
@@ -177,7 +182,10 @@ public class ProtobufWriter extends Writer {
                     encoder.convertTo(tmp, item);
                 }
             }
-            writeUInt32(tmp.count());
+            int length = tmp.count();
+            writeUInt32(length);
+            writeTo(tmp.toArray());
+            return length;
         }
     }
 
@@ -190,16 +198,20 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
-    public void writeMapB(int size, Encodeable<Writer, Object> keyEncoder, Encodeable<Writer, Object> valueEncoder, Object obj) {
+    public int writeMapB(int size, Encodeable<Writer, Object> keyEncoder, Encodeable<Writer, Object> valueEncoder, Object obj) {
         if (size < 1 || obj == null) {
             writeUInt32(0);
+            return 0;
         } else {
             ProtobufWriter tmp = new ProtobufWriter();
             for (Map.Entry en : ((Map<?, ?>) obj).entrySet()) {
                 keyEncoder.convertTo(tmp, en.getKey());
                 valueEncoder.convertTo(tmp, en.getValue());
             }
-            writeUInt32(tmp.count());
+            int length = tmp.count();
+            writeUInt32(length);
+            writeTo(tmp.toArray());
+            return length;
         }
     }
 
@@ -216,6 +228,22 @@ public class ProtobufWriter extends Writer {
         Attribute attribute = member.getAttribute();
         int wiretype = ProtobufFactory.wireType(attribute.type());
         writeUInt32(member.getPosition() << 3 | wiretype);
+    }
+
+    @Override
+    public void writeObjectField(final EnMember member, Object obj) {
+        Object value = member.getAttribute().get(obj);
+        if (value == null) return;
+        if (tiny()) {
+            if (member.isStringType()) {
+                if (((CharSequence) value).length() == 0) return;
+            } else if (member.isBoolType()) {
+                if (!((Boolean) value)) return;
+            }
+        }
+        this.writeFieldName(member);
+        member.getEncoder().convertTo(this, value);
+        this.comma = true;
     }
 
     public static void main(String[] args) throws Throwable {
