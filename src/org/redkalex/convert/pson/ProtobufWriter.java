@@ -7,6 +7,7 @@ package org.redkalex.convert.pson;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.stream.Stream;
 import org.redkale.convert.*;
 import org.redkale.util.*;
 
@@ -234,15 +235,19 @@ public class ProtobufWriter extends Writer {
     public void writeObjectField(final EnMember member, Object obj) {
         Object value = member.getAttribute().get(obj);
         if (value == null) return;
-        if (tiny()) {
-            if (member.isStringType()) {
-                if (((CharSequence) value).length() == 0) return;
-            } else if (member.isBoolType()) {
-                if (!((Boolean) value)) return;
-            }
-        }
         this.writeFieldName(member);
-        member.getEncoder().convertTo(this, value);
+        Encodeable encoder = member.getEncoder();
+        if (encoder instanceof MapEncoder) {
+            ((MapEncoder) encoder).convertTo(this, member, (Map) value);
+        } else if (encoder instanceof ArrayEncoder) {
+            ((ArrayEncoder) encoder).convertTo(this, member, (Object[]) value);
+        } else if (encoder instanceof CollectionEncoder) {
+            ((CollectionEncoder) encoder).convertTo(this, member, (Collection) value);
+        } else if (encoder instanceof StreamEncoder) {
+            ((StreamEncoder) encoder).convertTo(this, member, (Stream) value);
+        } else {
+            encoder.convertTo(this, value);
+        }
         this.comma = true;
     }
 

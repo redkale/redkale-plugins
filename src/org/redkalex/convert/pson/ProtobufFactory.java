@@ -35,6 +35,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     private ProtobufFactory(ProtobufFactory parent, boolean tiny) {
         super(parent, tiny);
+        tiny = false; //固定false
     }
 
     public static ProtobufFactory root() {
@@ -46,8 +47,48 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @Override
-    public SimpledCoder createEnumSimpledCoder(Class enumClass) {
+    protected SimpledCoder createEnumSimpledCoder(Class enumClass) {
         return new ProtobufEnumSimpledCoder(enumClass);
+    }
+
+    @Override
+    protected <E> Decodeable<ProtobufReader, E> createMapDecoder(Type type) {
+        return new MapDecoder(this, type);
+    }
+
+    @Override
+    protected <E> Encodeable<ProtobufWriter, E> createMapEncoder(Type type) {
+        return new ProtobufMapEncoder(this, type);
+    }
+
+    @Override
+    protected <E> Decodeable<ProtobufReader, E> createArrayDecoder(Type type) {
+        return new ArrayDecoder(this, type);
+    }
+
+    @Override
+    protected <E> Encodeable<ProtobufWriter, E> createArrayEncoder(Type type) {
+        return new ProtobufArrayEncoder(this, type);
+    }
+
+    @Override
+    protected <E> Decodeable<ProtobufReader, E> createCollectionDecoder(Type type) {
+        return new CollectionDecoder(this, type);
+    }
+
+    @Override
+    protected <E> Encodeable<ProtobufWriter, E> createCollectionEncoder(Type type) {
+        return new ProtobufCollectionEncoder(this, type);
+    }
+
+    @Override
+    protected <E> Decodeable<ProtobufReader, E> createStreamDecoder(Type type) {
+        return new StreamDecoder(this, type);
+    }
+
+    @Override
+    protected <E> Encodeable<ProtobufWriter, E> createStreamEncoder(Type type) {
+        return new ProtobufStreamEncoder(this, type);
     }
 
     @Override
