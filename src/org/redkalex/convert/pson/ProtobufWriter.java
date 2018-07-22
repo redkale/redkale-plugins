@@ -247,7 +247,6 @@ public class ProtobufWriter extends Writer {
     public void writeObjectField(final EnMember member, Object obj) {
         Object value = member.getAttribute().get(obj);
         if (value == null) return;
-        this.writeFieldName(member);
         Encodeable encoder = member.getEncoder();
         if (encoder instanceof MapEncoder) {
             ((MapEncoder) encoder).convertTo(this, member, (Map) value);
@@ -258,6 +257,7 @@ public class ProtobufWriter extends Writer {
         } else if (encoder instanceof StreamEncoder) {
             ((StreamEncoder) encoder).convertTo(this, member, (Stream) value);
         } else {
+            this.writeFieldName(member);
             encoder.convertTo(this, value);
         }
         this.comma = true;

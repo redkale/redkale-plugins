@@ -120,7 +120,9 @@ public class ProtobufReader extends Reader {
     }
 
     @Override
-    public int readMemberContentLength() {
+    public int readMemberContentLength(DeMember member) {
+        if (member == null) return -1; //为byte[]
+        if (!(member.getDecoder() instanceof ProtobufArrayDecoder)) return -1;
         return readRawVarint32(); //readUInt32
     }
 

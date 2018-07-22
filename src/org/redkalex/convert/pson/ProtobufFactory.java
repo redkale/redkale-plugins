@@ -36,6 +36,10 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     private ProtobufFactory(ProtobufFactory parent, boolean tiny) {
         super(parent, tiny);
         tiny = false; //固定false
+        if (parent == null) { //root
+            this.register(String[].class, this.createArrayDecoder(String[].class));
+            this.register(String[].class, this.createArrayEncoder(String[].class));
+        }
     }
 
     public static ProtobufFactory root() {
@@ -57,13 +61,18 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @Override
+    protected ObjectDecoder createObjectDecoder(Type type) {
+        return new ProtobufObjectDecoder(type);
+    }
+
+    @Override
     protected <E> Encodeable<ProtobufWriter, E> createMapEncoder(Type type) {
         return new ProtobufMapEncoder(this, type);
     }
 
     @Override
     protected <E> Decodeable<ProtobufReader, E> createArrayDecoder(Type type) {
-        return new ArrayDecoder(this, type);
+        return new ProtobufArrayDecoder(this, type);
     }
 
     @Override
