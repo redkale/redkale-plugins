@@ -135,7 +135,10 @@ public class ProtobufWriter extends Writer {
 
     @Override
     public int writeArrayB(int size, Encodeable<Writer, Object> encoder, Object obj) {
-        if (size < 1 || obj == null) {
+        if (obj == null) {
+            writeNull();
+            return 0;
+        } else if (size < 1) {
             writeUInt32(0);
             return 0;
         } else if (obj instanceof byte[]) {
@@ -150,38 +153,60 @@ public class ProtobufWriter extends Writer {
                 for (boolean item : (boolean[]) obj) {
                     tmp.writeBoolean(item);
                 }
+            } else if (type == Boolean[].class) {
+                for (Boolean item : (Boolean[]) obj) {
+                    tmp.writeBoolean(item == null ? false : item);
+                }
             } else if (type == short[].class) {
                 for (short item : (short[]) obj) {
                     tmp.writeShort(item);
+                }
+            } else if (type == Short[].class) {
+                for (Short item : (Short[]) obj) {
+                    tmp.writeShort(item == null ? 0 : item);
                 }
             } else if (type == char[].class) {
                 for (char item : (char[]) obj) {
                     tmp.writeChar(item);
                 }
+            } else if (type == Character[].class) {
+                for (Character item : (Character[]) obj) {
+                    tmp.writeChar(item == null ? 0 : item);
+                }
             } else if (type == int[].class) {
                 for (int item : (int[]) obj) {
                     tmp.writeInt(item);
+                }
+            } else if (type == Integer[].class) {
+                for (Integer item : (Integer[]) obj) {
+                    tmp.writeInt(item == null ? 0 : item);
                 }
             } else if (type == float[].class) {
                 for (float item : (float[]) obj) {
                     tmp.writeFloat(item);
                 }
+            } else if (type == Float[].class) {
+                for (Float item : (Float[]) obj) {
+                    tmp.writeFloat(item == null ? 0F : item);
+                }
             } else if (type == long[].class) {
                 for (long item : (long[]) obj) {
                     tmp.writeLong(item);
+                }
+            } else if (type == Long[].class) {
+                for (Long item : (Long[]) obj) {
+                    tmp.writeLong(item == null ? 0L : item);
                 }
             } else if (type == double[].class) {
                 for (double item : (double[]) obj) {
                     tmp.writeDouble(item);
                 }
-            } else if (Collection.class.isAssignableFrom(type)) {
-                for (Object item : (Collection) obj) {
-                    encoder.convertTo(tmp, item);
+            } else if (type == Double[].class) {
+                for (Double item : (Double[]) obj) {
+                    tmp.writeDouble(item == null ? 0D : item);
                 }
             } else {
-                for (Object item : (Object[]) obj) {
-                    encoder.convertTo(tmp, item);
-                }
+                return -1;
             }
             int length = tmp.count();
             writeUInt32(length);
@@ -200,20 +225,7 @@ public class ProtobufWriter extends Writer {
 
     @Override
     public int writeMapB(int size, Encodeable<Writer, Object> keyEncoder, Encodeable<Writer, Object> valueEncoder, Object obj) {
-        if (size < 1 || obj == null) {
-            writeUInt32(0);
-            return 0;
-        } else {
-            ProtobufWriter tmp = new ProtobufWriter();
-            for (Map.Entry en : ((Map<?, ?>) obj).entrySet()) {
-                keyEncoder.convertTo(tmp, en.getKey());
-                valueEncoder.convertTo(tmp, en.getValue());
-            }
-            int length = tmp.count();
-            writeUInt32(length);
-            writeTo(tmp.toArray());
-            return length;
-        }
+        return -1;
     }
 
     @Override
@@ -266,12 +278,13 @@ public class ProtobufWriter extends Writer {
             writeNull();
             return;
         }
-        writeArrayB(values.length, null, values);
-        boolean flag = false;
-        for (byte v : values) {
-            if (flag) writeArrayMark();
-            writeByte(v);
-            flag = true;
+        if (writeArrayB(values.length, null, values) < 0) {
+            boolean flag = false;
+            for (byte v : values) {
+                if (flag) writeArrayMark();
+                writeByte(v);
+                flag = true;
+            }
         }
         writeArrayE();
     }
