@@ -21,10 +21,7 @@ public class ProtobufArrayEncoder<T> extends ArrayEncoder<T> {
 
     @Override
     protected void writeValue(Writer out, EnMember member, Encodeable<Writer, Object> encoder, Object value) {
-        if (member != null) {
-            System.out.println("---------------" + member.getAttribute().field());
-            out.writeFieldName(member);
-        }
+        if (member != null) out.writeFieldName(member);
         encoder.convertTo(out, value);
     }
 }

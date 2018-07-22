@@ -263,10 +263,6 @@ public class ProtobufWriter extends Writer {
         this.comma = true;
     }
 
-    public static void main(String[] args) throws Throwable {
-        System.out.println(1 << 3);
-    }
-
     @Override
     public void writeByte(byte value) {
         writeInt(value);
