@@ -162,7 +162,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         if (javaType == int[].class || javaType == Integer[].class) return "repeated sint32";
         if (javaType == short[].class || javaType == Short[].class) return "repeated sint32";
         if (javaType == char[].class || javaType == Character[].class) return "repeated sint32";
-        if (javaType == byte[].class || javaType == Byte[].class) return "repeated sint32";
+        if (javaType == byte[].class || javaType == Byte[].class) return "bytes";
         if (javaType == boolean[].class || javaType == Boolean[].class) return "repeated bool";
         if (javaType == AtomicLong[].class) return "repeated sint64";
         if (javaType == AtomicInteger[].class) return "repeated sint32";

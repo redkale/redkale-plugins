@@ -22,10 +22,12 @@ public class ProtobufArrayDecoder<T> extends ArrayDecoder<T> {
     @Override
     protected T readMemberValue(Reader in, DeMember member, boolean first) {
         if (member == null || first) {
-            return this.decoder.convertFrom(in);
+            T rs = this.decoder.convertFrom(in);
+            return rs;
         }
         ProtobufReader reader = (ProtobufReader) in;
         int tag = reader.readRawVarint32() >>> 3;
-        return (T) member.getDecoder().convertFrom(reader);
+        T rs = (T) this.decoder.convertFrom(reader);
+        return rs;
     }
 }

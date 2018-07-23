@@ -5,6 +5,7 @@
  */
 package org.redkalex.convert.pson;
 
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import org.redkale.convert.*;
 import org.redkale.util.*;
@@ -85,8 +86,8 @@ public class ProtobufReader extends Reader {
     }
 
     @Override
-    public final int readMapB() {
-        return readArrayB();
+    public final int readMapB(DeMember member, Decodeable keydecoder) {
+        return readArrayB(member, keydecoder);
     }
 
     @Override
@@ -99,8 +100,17 @@ public class ProtobufReader extends Reader {
      * @return 数组长度或SIGN_NULL
      */
     @Override
-    public final int readArrayB() {
-        return Reader.SIGN_NOLENBUTBYTES;
+    public final int readArrayB(DeMember member, Decodeable decoder) {
+        if (member == null || decoder == null) return Reader.SIGN_NOLENBUTBYTES;
+        Type type = decoder.getType();
+        if (!(type instanceof Class)) return Reader.SIGN_NOLENBUTBYTES;
+        Class clazz = (Class) type;
+        if (clazz.isPrimitive() || clazz == Boolean.class
+            || clazz == Byte.class || clazz == Short.class
+            || clazz == Character.class || clazz == Integer.class
+            || clazz == Float.class || clazz == Long.class
+            || clazz == Double.class) return Reader.SIGN_NOLENBUTBYTES;
+        return Reader.SIGN_NOLENGTH;
     }
 
     @Override
