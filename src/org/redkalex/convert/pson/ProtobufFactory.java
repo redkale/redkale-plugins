@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.Stream;
 import org.redkale.convert.*;
-import org.redkale.util.AnyValue;
+import org.redkale.util.*;
 
 /**
  *
@@ -129,6 +129,16 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     @Override
     public boolean isFieldSort() {
         return false;
+    }
+
+    public static int getTag(EnMember member) {
+        int wiretype = ProtobufFactory.wireType(member.getAttribute().type());
+        return (member.getPosition() << 3 | wiretype);
+    }
+
+    public static int getTag(DeMember member) {
+        int wiretype = ProtobufFactory.wireType(member.getAttribute().type());
+        return (member.getPosition() << 3 | wiretype);
     }
 
     public static int wireType(Type javaType) {

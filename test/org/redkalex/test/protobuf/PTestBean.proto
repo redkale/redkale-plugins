@@ -26,6 +26,7 @@ message PTestBean {
 	string email = 12;
 	Kind kind = 13;
 	map<string,sint32> map = 14;
+	string end = 15;
 
     enum Kind {
        ONE =0;

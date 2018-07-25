@@ -25,7 +25,7 @@ public class ProtobufStreamDecoder<T> extends StreamDecoder<T> {
             return rs;
         }
         ProtobufReader reader = (ProtobufReader) in;
-        int tag = reader.readRawVarint32() >>> 3;
+        int tag = reader.readTag();
         T rs = (T) this.decoder.convertFrom(reader);
         return rs;
     }

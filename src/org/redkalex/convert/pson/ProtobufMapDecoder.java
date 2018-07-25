@@ -21,23 +21,23 @@ public class ProtobufMapDecoder<K, V> extends MapDecoder<K, V> {
     }
 
     @Override
-    protected Reader getMapEntryReader(Reader in) {
+    protected Reader getMapEntryReader(Reader in, DeMember member, boolean first) {
+        if (!first && member != null) ((ProtobufReader) in).readRawVarint32();
         byte[] bs = ((ProtobufReader) in).readByteArray();
-        //Utility.println("获得的字节", bs);
         return new ProtobufReader(bs);
     }
 
     @Override
     protected K readKeyMember(Reader in, DeMember member, boolean first) {
         ProtobufReader reader = (ProtobufReader) in;
-        int tag = reader.readRawVarint32() >>> 3;
+        reader.readTag();
         return keyDecoder.convertFrom(in);
     }
 
     @Override
     protected V readValueMember(Reader in, DeMember member, boolean first) {
         ProtobufReader reader = (ProtobufReader) in;
-        int tag = reader.readRawVarint32() >>> 3;
+        reader.readTag();
         return valueDecoder.convertFrom(in);
     }
 }

@@ -219,6 +219,16 @@ public final class PTestBeanOuterClass {
 
     int getMapOrThrow(
         java.lang.String key);
+
+    /**
+     * <code>string end = 15;</code>
+     */
+    java.lang.String getEnd();
+    /**
+     * <code>string end = 15;</code>
+     */
+    com.google.protobuf.ByteString
+        getEndBytes();
   }
   /**
    * Protobuf type {@code PTestBean}
@@ -246,6 +256,7 @@ public final class PTestBeanOuterClass {
       name_ = "";
       email_ = "";
       kind_ = 0;
+      end_ = "";
     }
 
     @java.lang.Override
@@ -458,6 +469,12 @@ public final class PTestBeanOuterClass {
                   MapDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
               map_.getMutableMap().put(
                   map__.getKey(), map__.getValue());
+              break;
+            }
+            case 122: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              end_ = s;
               break;
             }
             default: {
@@ -2113,6 +2130,40 @@ public final class PTestBeanOuterClass {
       return map.get(key);
     }
 
+    public static final int END_FIELD_NUMBER = 15;
+    private volatile java.lang.Object end_;
+    /**
+     * <code>string end = 15;</code>
+     */
+    public java.lang.String getEnd() {
+      java.lang.Object ref = end_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        end_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string end = 15;</code>
+     */
+    public com.google.protobuf.ByteString
+        getEndBytes() {
+      java.lang.Object ref = end_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        end_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -2197,6 +2248,9 @@ public final class PTestBeanOuterClass {
           internalGetMap(),
           MapDefaultEntryHolder.defaultEntry,
           14);
+      if (!getEndBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 15, end_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -2326,6 +2380,9 @@ public final class PTestBeanOuterClass {
         size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(14, map__);
       }
+      if (!getEndBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(15, end_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -2369,6 +2426,8 @@ public final class PTestBeanOuterClass {
       result = result && kind_ == other.kind_;
       result = result && internalGetMap().equals(
           other.internalGetMap());
+      result = result && getEnd()
+          .equals(other.getEnd());
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -2428,6 +2487,8 @@ public final class PTestBeanOuterClass {
         hash = (37 * hash) + MAP_FIELD_NUMBER;
         hash = (53 * hash) + internalGetMap().hashCode();
       }
+      hash = (37 * hash) + END_FIELD_NUMBER;
+      hash = (53 * hash) + getEnd().hashCode();
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -2615,6 +2676,8 @@ public final class PTestBeanOuterClass {
         kind_ = 0;
 
         internalGetMutableMap().clear();
+        end_ = "";
+
         return this;
       }
 
@@ -2698,6 +2761,7 @@ public final class PTestBeanOuterClass {
         result.kind_ = kind_;
         result.map_ = internalGetMap();
         result.map_.makeImmutable();
+        result.end_ = end_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2869,6 +2933,10 @@ public final class PTestBeanOuterClass {
         }
         internalGetMutableMap().mergeFrom(
             other.internalGetMap());
+        if (!other.getEnd().isEmpty()) {
+          end_ = other.end_;
+          onChanged();
+        }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
@@ -4032,6 +4100,75 @@ public final class PTestBeanOuterClass {
             .putAll(values);
         return this;
       }
+
+      private java.lang.Object end_ = "";
+      /**
+       * <code>string end = 15;</code>
+       */
+      public java.lang.String getEnd() {
+        java.lang.Object ref = end_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          end_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string end = 15;</code>
+       */
+      public com.google.protobuf.ByteString
+          getEndBytes() {
+        java.lang.Object ref = end_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          end_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string end = 15;</code>
+       */
+      public Builder setEnd(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        end_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string end = 15;</code>
+       */
+      public Builder clearEnd() {
+        
+        end_ = getDefaultInstance().getEnd();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string end = 15;</code>
+       */
+      public Builder setEndBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        end_ = value;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -4109,19 +4246,19 @@ public final class PTestBeanOuterClass {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017PTestBean.proto\"\264\003\n\tPTestBean\022\r\n\005bools" +
+      "\n\017PTestBean.proto\"\301\003\n\tPTestBean\022\r\n\005bools" +
       "\030\001 \003(\010\022\r\n\005bytes\030\002 \003(\014\022\r\n\005chars\030\003 \003(\021\022%\n\006" +
       "entrys\030\004 \003(\0132\025.PTestBean.PTestEntry\022\014\n\004i" +
       "nts\030\005 \003(\021\022\016\n\006floats\030\006 \003(\002\022\r\n\005longs\030\007 \003(\022" +
       "\022\017\n\007doubles\030\010 \003(\001\022\017\n\007strings\030\t \003(\t\022\n\n\002id" +
       "\030\n \001(\021\022\014\n\004name\030\013 \001(\t\022\r\n\005email\030\014 \001(\t\022\035\n\004k" +
       "ind\030\r \001(\0162\017.PTestBean.Kind\022 \n\003map\030\016 \003(\0132" +
-      "\023.PTestBean.MapEntry\032I\n\nPTestEntry\022\r\n\005bo" +
-      "ols\030\001 \003(\010\022\r\n\005bytes\030\002 \003(\014\022\r\n\005chars\030\003 \003(\021\022" +
-      "\016\n\006shorts\030\004 \003(\021\032*\n\010MapEntry\022\013\n\003key\030\001 \001(\t" +
-      "\022\r\n\005value\030\002 \001(\021:\0028\001\"#\n\004Kind\022\007\n\003ONE\020\000\022\007\n\003" +
-      "TWO\020\001\022\t\n\005THREE\020\002B\034\n\032org.redkalex.test.pr" +
-      "otobufb\006proto3"
+      "\023.PTestBean.MapEntry\022\013\n\003end\030\017 \001(\t\032I\n\nPTe" +
+      "stEntry\022\r\n\005bools\030\001 \003(\010\022\r\n\005bytes\030\002 \003(\014\022\r\n" +
+      "\005chars\030\003 \003(\021\022\016\n\006shorts\030\004 \003(\021\032*\n\010MapEntry" +
+      "\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\021:\0028\001\"#\n\004Kind" +
+      "\022\007\n\003ONE\020\000\022\007\n\003TWO\020\001\022\t\n\005THREE\020\002B\034\n\032org.red" +
+      "kalex.test.protobufb\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -4140,7 +4277,7 @@ public final class PTestBeanOuterClass {
     internal_static_PTestBean_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_PTestBean_descriptor,
-        new java.lang.String[] { "Bools", "Bytes", "Chars", "Entrys", "Ints", "Floats", "Longs", "Doubles", "Strings", "Id", "Name", "Email", "Kind", "Map", });
+        new java.lang.String[] { "Bools", "Bytes", "Chars", "Entrys", "Ints", "Floats", "Longs", "Doubles", "Strings", "Id", "Name", "Email", "Kind", "Map", "End", });
     internal_static_PTestBean_PTestEntry_descriptor =
       internal_static_PTestBean_descriptor.getNestedTypes().get(0);
     internal_static_PTestBean_PTestEntry_fieldAccessorTable = new

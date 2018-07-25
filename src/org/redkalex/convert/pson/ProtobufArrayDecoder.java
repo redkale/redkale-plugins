@@ -26,7 +26,7 @@ public class ProtobufArrayDecoder<T> extends ArrayDecoder<T> {
             return rs;
         }
         ProtobufReader reader = (ProtobufReader) in;
-        int tag = reader.readRawVarint32() >>> 3;
+        reader.readTag();
         T rs = (T) this.decoder.convertFrom(reader);
         return rs;
     }

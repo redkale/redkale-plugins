@@ -109,7 +109,9 @@ public class ProtobufReader extends Reader {
             || clazz == Byte.class || clazz == Short.class
             || clazz == Character.class || clazz == Integer.class
             || clazz == Float.class || clazz == Long.class
-            || clazz == Double.class) return Reader.SIGN_NOLENBUTBYTES;
+            || clazz == Double.class) {
+            return Reader.SIGN_NOLENBUTBYTES;
+        }
         return Reader.SIGN_NOLENGTH;
     }
 
@@ -130,31 +132,33 @@ public class ProtobufReader extends Reader {
     }
 
     @Override
-    public int readMemberContentLength(DeMember member) {
-        if (member == null) return -1; //为byte[]
-        if (!(member.getDecoder() instanceof ProtobufArrayDecoder)) return -1;
+    public int readMemberContentLength(DeMember member, Decodeable decoder) {
+        if (member == null && decoder == null) return -1; //为byte[]
+        if (member != null && !(member.getDecoder() instanceof ProtobufArrayDecoder)) return -1;
         return readRawVarint32(); //readUInt32
     }
 
     /**
      * 判断对象是否存在下一个属性或者数组是否存在下一个元素
      *
+     * @param member        DeMember
      * @param startPosition 起始位置
      * @param contentLength 内容大小， 不确定的传-1
      *
      * @return 是否存在
      */
     @Override
-    public boolean hasNext(int startPosition, int contentLength) {
+    public boolean hasNext(DeMember member, int startPosition, int contentLength) {
+        //("-------------: " + startPosition + ", " + contentLength + ", " + this.position);
         if (startPosition >= 0 && contentLength >= 0) {
-            return this.position < (startPosition + contentLength);
+            return (this.position) < (startPosition + contentLength);
         }
-        return this.position < this.content.length - 1;
+        return (this.position + 1) < this.content.length;
     }
 
     @Override
     public final DeMember readFieldName(final DeMember[] members) {
-        int tag = readRawVarint32() >>> 3;
+        int tag = readTag();
         for (DeMember member : members) {
             if (member.getPosition() == tag) {
                 return member;
@@ -230,34 +234,42 @@ public class ProtobufReader extends Reader {
         return new String(readByteArray(), StandardCharsets.UTF_8);
     }
 
+    protected int readTag() {
+        return readRawVarint32() >>> 3;
+    }
+
     protected int readRawVarint32() {  //readUInt32
         fastpath:
         {
-            if (this.position == content.length - 1) break fastpath;
+            int tempPos = this.position;
+            if ((tempPos + 1) == content.length) break fastpath;
+
             int x;
-            if ((x = content[++this.position]) >= 0) {
+            if ((x = content[++tempPos]) >= 0) {
+                this.position = tempPos;
                 return x;
-            } else if (content.length - this.position < 10) {
+            } else if (content.length - (tempPos + 1) < 9) {
                 break fastpath;
-            } else if ((x ^= (content[++this.position] << 7)) < 0) {
+            } else if ((x ^= (content[++tempPos] << 7)) < 0) {
                 x ^= (~0 << 7);
-            } else if ((x ^= (content[++this.position] << 14)) >= 0) {
+            } else if ((x ^= (content[++tempPos] << 14)) >= 0) {
                 x ^= (~0 << 7) ^ (~0 << 14);
-            } else if ((x ^= (content[++this.position] << 21)) < 0) {
+            } else if ((x ^= (content[++tempPos] << 21)) < 0) {
                 x ^= (~0 << 7) ^ (~0 << 14) ^ (~0 << 21);
             } else {
-                int y = content[++this.position];
+                int y = content[++tempPos];
                 x ^= y << 28;
                 x ^= (~0 << 7) ^ (~0 << 14) ^ (~0 << 21) ^ (~0 << 28);
                 if (y < 0
-                    && content[++this.position] < 0
-                    && content[++this.position] < 0
-                    && content[++this.position] < 0
-                    && content[++this.position] < 0
-                    && content[++this.position] < 0) {
+                    && content[++tempPos] < 0
+                    && content[++tempPos] < 0
+                    && content[++tempPos] < 0
+                    && content[++tempPos] < 0
+                    && content[++tempPos] < 0) {
                     break fastpath; // Will throw malformedVarint()
                 }
             }
+            this.position = tempPos;
             return x;
         }
         return (int) readRawVarint64SlowPath();
@@ -266,28 +278,29 @@ public class ProtobufReader extends Reader {
     protected long readRawVarint64() {
         fastpath:
         {
-
-            if (this.position == content.length - 1) break fastpath;
+            int tempPos = this.position;
+            if ((tempPos + 1) == content.length) break fastpath;
 
             long x;
             int y;
-            if ((y = content[++this.position]) >= 0) {
+            if ((y = content[++tempPos]) >= 0) {
+                this.position = tempPos;
                 return y;
-            } else if (content.length - this.position < 9) {
+            } else if (content.length - (tempPos + 1) < 9) {
                 break fastpath;
-            } else if ((y ^= (content[++this.position] << 7)) < 0) {
+            } else if ((y ^= (content[++tempPos] << 7)) < 0) {
                 x = y ^ (~0 << 7);
-            } else if ((y ^= (content[++this.position] << 14)) >= 0) {
+            } else if ((y ^= (content[++tempPos] << 14)) >= 0) {
                 x = y ^ ((~0 << 7) ^ (~0 << 14));
-            } else if ((y ^= (content[++this.position] << 21)) < 0) {
+            } else if ((y ^= (content[++tempPos] << 21)) < 0) {
                 x = y ^ ((~0 << 7) ^ (~0 << 14) ^ (~0 << 21));
-            } else if ((x = y ^ ((long) content[++this.position] << 28)) >= 0L) {
+            } else if ((x = y ^ ((long) content[++tempPos] << 28)) >= 0L) {
                 x ^= (~0L << 7) ^ (~0L << 14) ^ (~0L << 21) ^ (~0L << 28);
-            } else if ((x ^= ((long) content[++this.position] << 35)) < 0L) {
+            } else if ((x ^= ((long) content[++tempPos] << 35)) < 0L) {
                 x ^= (~0L << 7) ^ (~0L << 14) ^ (~0L << 21) ^ (~0L << 28) ^ (~0L << 35);
-            } else if ((x ^= ((long) content[++this.position] << 42)) >= 0L) {
+            } else if ((x ^= ((long) content[++tempPos] << 42)) >= 0L) {
                 x ^= (~0L << 7) ^ (~0L << 14) ^ (~0L << 21) ^ (~0L << 28) ^ (~0L << 35) ^ (~0L << 42);
-            } else if ((x ^= ((long) content[++this.position] << 49)) < 0L) {
+            } else if ((x ^= ((long) content[++tempPos] << 49)) < 0L) {
                 x ^= (~0L << 7)
                     ^ (~0L << 14)
                     ^ (~0L << 21)
@@ -296,7 +309,7 @@ public class ProtobufReader extends Reader {
                     ^ (~0L << 42)
                     ^ (~0L << 49);
             } else {
-                x ^= ((long) content[++this.position] << 56);
+                x ^= ((long) content[++tempPos] << 56);
                 x ^= (~0L << 7)
                     ^ (~0L << 14)
                     ^ (~0L << 21)
@@ -306,11 +319,12 @@ public class ProtobufReader extends Reader {
                     ^ (~0L << 49)
                     ^ (~0L << 56);
                 if (x < 0L) {
-                    if (content[++this.position] < 0L) {
+                    if (content[++tempPos] < 0L) {
                         break fastpath; // Will throw malformedVarint()
                     }
                 }
             }
+            this.position = tempPos;
             return x;
         }
         return readRawVarint64SlowPath();
@@ -319,11 +333,9 @@ public class ProtobufReader extends Reader {
     protected long readRawVarint64SlowPath() {
         long result = 0;
         for (int shift = 0; shift < 64; shift += 7) {
-            final byte b = readByte();
+            final byte b = content[++this.position];
             result |= (long) (b & 0x7F) << shift;
-            if ((b & 0x80) == 0) {
-                return result;
-            }
+            if ((b & 0x80) == 0) return result;
         }
         throw new ConvertException("readRawVarint64SlowPath error");
     }

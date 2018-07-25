@@ -238,9 +238,7 @@ public class ProtobufWriter extends Writer {
 
     @Override
     public void writeFieldName(EnMember member) {
-        Attribute attribute = member.getAttribute();
-        int wiretype = ProtobufFactory.wireType(attribute.type());
-        writeUInt32(member.getPosition() << 3 | wiretype);
+        writeUInt32(ProtobufFactory.getTag(member));
     }
 
     @Override
