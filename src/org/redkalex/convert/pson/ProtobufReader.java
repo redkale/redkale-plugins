@@ -87,7 +87,7 @@ public class ProtobufReader extends Reader {
 
     @Override
     public final int readMapB(DeMember member, Decodeable keydecoder) {
-        return readArrayB(member, keydecoder);
+        return Reader.SIGN_NOLENGTH;
     }
 
     @Override

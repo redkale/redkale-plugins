@@ -6,7 +6,7 @@
 package org.redkalex.test.protobuf;
 
 import com.google.protobuf.ByteString;
-import java.util.Map;
+import java.util.*;
 import org.redkale.convert.ConvertColumn;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.Utility;
@@ -45,46 +45,46 @@ public class TestBean {
     }
 
     @ConvertColumn(index = 1)
-    public boolean[] bools = new boolean[]{true, false, true};
+    public boolean[] bools ;
 
     @ConvertColumn(index = 2)
-    public byte[] bytes = new byte[]{1, 2, 3, 4};
+    public byte[] bytes;
 
     @ConvertColumn(index = 3)
-    public char[] chars = new char[]{'A', 'B', 'C'};
+    public char[] chars ;
 
     @ConvertColumn(index = 4)
-    public PTestEntry[] entrys = new PTestEntry[]{new PTestEntry(), new PTestEntry()};
+    public PTestEntry[] entrys;
 
     @ConvertColumn(index = 5)
-    public int[] ints = new int[]{100, 200, 300};
+    public int[] ints ;
 
     @ConvertColumn(index = 6)
-    public float[] floats = new float[]{10.12f, 20.34f};
+    public float[] floats;
 
     @ConvertColumn(index = 7)
-    public long[] longs = new long[]{111, 222, 333};
+    public long[] longs ;
 
     @ConvertColumn(index = 8)
-    public double[] doubles = new double[]{65.65, 78.78}; //8
+    public double[] doubles; //8
 
     @ConvertColumn(index = 9)
-    public String[] strings = new String[]{"str1", "str2", "str3"}; //9
+    public String[] strings ; //9
 
     @ConvertColumn(index = 10)
     public int id = 0x7788; //10
 
     @ConvertColumn(index = 11)
-    public String name = "redkale"; //11
+    public String name; //11
 
     @ConvertColumn(index = 12)
-    public String email = "redkale@qq.org"; //12
+    public String email; //12
 
     @ConvertColumn(index = 13)
-    public Kind kind = Kind.TWO;  //13
+    public Kind kind;  //13
 
     @ConvertColumn(index = 14)
-    public Map<String, Integer> map = Utility.ofMap("aa", 0x55, "bb", 0x66); //14
+    public Map<String, Integer> map; //14
 
     @Override
     public String toString() {
@@ -93,21 +93,22 @@ public class TestBean {
 
     public static void main(String[] args) throws Throwable {
         System.out.println(ProtobufConvert.root().getProtoDescriptor(TestBean.class));
-        System.out.println(Integer.toHexString(5<<3|2));
+        System.out.println(Integer.toHexString('a')); 
+        System.out.println(Integer.toHexString(14<<3|2));
         TestBean bean = new TestBean();
-        bean.bools = null;
-        bean.bytes = null;
-        bean.chars = null;
-        //bean.entrys = null;
-        //bean.ints = null;
-        bean.floats = null;
-        bean.longs = null;
-        bean.doubles = null;
-        //bean.strings = null;
-        //bean.name = null;
-        bean.email = null;
-        bean.kind = null;
-        bean.map = null;
+//        bean.bools = new boolean[]{true, false, true};
+//        bean.bytes = new byte[]{1, 2, 3, 4};
+//        bean.chars = new char[]{'A', 'B', 'C'};
+//        bean.entrys  = new PTestEntry[]{new PTestEntry(), new PTestEntry()};
+//        bean.ints = new int[]{100, 200, 300};
+//        bean.floats  = new float[]{10.12f, 20.34f};
+//        bean.longs = new long[]{111, 222, 333};
+//        bean.doubles = new double[]{65.65, 78.78};
+//        bean.strings = new String[]{"str1", "str2", "str3"};
+//        bean.name = "redkale";
+//        bean.email = "redkale@qq.org";
+//        bean.kind  = Kind.TWO;
+        bean.map = Utility.ofMap("aa", 0x55, "bb", 0x66);
         System.out.println(bean);
         byte[] bs = ProtobufConvert.root().convertTo(bean);
         Utility.println("convert-", bs);
@@ -116,7 +117,7 @@ public class TestBean {
         for (int i = 0; bean.bools != null && i < bean.bools.length; i++) {
             builder.addBools(bean.bools[i]);
         }
-        if(bean.bytes != null)   builder.addBytes(ByteString.copyFrom(bean.bytes));
+        if (bean.bytes != null) builder.addBytes(ByteString.copyFrom(bean.bytes));
         for (int i = 0; bean.chars != null && i < bean.chars.length; i++) {
             builder.addChars(bean.chars[i]);
         }
@@ -125,7 +126,7 @@ public class TestBean {
             for (int j = 0; bean.entrys[i].bools != null && j < bean.entrys[i].bools.length; j++) {
                 entry.addBools(bean.entrys[i].bools[j]);
             }
-            if(bean.entrys[i].bytes != null)   entry.addBytes(ByteString.copyFrom(bean.entrys[i].bytes));
+            if (bean.entrys[i].bytes != null) entry.addBytes(ByteString.copyFrom(bean.entrys[i].bytes));
             for (int j = 0; bean.entrys[i].chars != null && j < bean.entrys[i].chars.length; j++) {
                 entry.addChars(bean.entrys[i].chars[j]);
             }
@@ -155,7 +156,10 @@ public class TestBean {
         if (bean.kind != null) builder.setKind(PTestBeanOuterClass.PTestBean.Kind.TWO);
         if (bean.map != null) builder.putAllMap(bean.map);
         PTestBeanOuterClass.PTestBean bean2 = builder.build();
-        Utility.println("protobuf", bean2.toByteArray());
+        byte[] bs2 = bean2.toByteArray();
+        Utility.println("protobuf", bs2);
+        Thread.sleep(10); 
+        if (!Arrays.equals(bs, bs2)) throw new RuntimeException("两者序列化出来的byte[]不一致");
         //集合判断hasNext有问题，还未解决
         System.out.println(ProtobufConvert.root().convertFrom(TestBean.class, bs).toString());
     }

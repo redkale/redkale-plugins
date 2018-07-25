@@ -21,8 +21,15 @@ public class ProtobufMapEncoder<K, V> extends MapEncoder<K, V> {
     }
 
     @Override
-    protected void writeKey(Writer out, EnMember member, K key) {
+    protected void writeMemberValue(Writer out, EnMember member, K key, V value, boolean first) {
+        ProtobufWriter tmp = new ProtobufWriter();
         if (member != null) out.writeFieldName(member);
-        keyencoder.convertTo(out, key);
+        tmp.writeUInt32(1 << 3 | ProtobufFactory.wireType(keyencoder.getType()));
+        keyencoder.convertTo(tmp, key);
+        tmp.writeUInt32(2 << 3 | ProtobufFactory.wireType(valencoder.getType()));
+        valencoder.convertTo(tmp, value);
+        int length = tmp.count();
+        ((ProtobufWriter) out).writeUInt32(length);
+        ((ProtobufWriter) out).writeTo(tmp.toArray());
     }
 }

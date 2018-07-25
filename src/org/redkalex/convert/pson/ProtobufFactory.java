@@ -56,13 +56,13 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @Override
-    protected <E> Decodeable<ProtobufReader, E> createMapDecoder(Type type) {
-        return new MapDecoder(this, type);
+    protected ObjectDecoder createObjectDecoder(Type type) {
+        return new ProtobufObjectDecoder(type);
     }
 
     @Override
-    protected ObjectDecoder createObjectDecoder(Type type) {
-        return new ProtobufObjectDecoder(type);
+    protected <E> Decodeable<ProtobufReader, E> createMapDecoder(Type type) {
+        return new ProtobufMapDecoder(this, type);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     @Override
     protected <E> Decodeable<ProtobufReader, E> createCollectionDecoder(Type type) {
-        return new CollectionDecoder(this, type);
+        return new ProtobufCollectionDecoder(this, type);
     }
 
     @Override
@@ -92,7 +92,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     @Override
     protected <E> Decodeable<ProtobufReader, E> createStreamDecoder(Type type) {
-        return new StreamDecoder(this, type);
+        return new ProtobufStreamDecoder(this, type);
     }
 
     @Override

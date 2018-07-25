@@ -20,8 +20,16 @@ public class ProtobufStreamEncoder<T> extends StreamEncoder<T> {
     }
 
     @Override
-    protected void writeValue(Writer out, EnMember member, Object value) {
+    protected void writeMemberValue(Writer out, EnMember member, Object item, boolean first) {
         if (member != null) out.writeFieldName(member);
-        encoder.convertTo(out, value);
+        if (item instanceof CharSequence) {
+            encoder.convertTo(out, item);
+        } else {
+            ProtobufWriter tmp = new ProtobufWriter();
+            encoder.convertTo(tmp, item);
+            int length = tmp.count();
+            ((ProtobufWriter) out).writeUInt32(length);
+            ((ProtobufWriter) out).writeTo(tmp.toArray());
+        }
     }
 }
