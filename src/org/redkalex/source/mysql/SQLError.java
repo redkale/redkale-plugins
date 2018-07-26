@@ -593,43 +593,43 @@ public class SQLError {
         mysqlToSql99State.put(MysqlErrorNumbers.ER_LOCK_DEADLOCK, SQL_STATE_ROLLBACK_SERIALIZATION_FAILURE);
     }
 
-    /**
-     * Turns output of 'SHOW WARNINGS' into JDBC SQLWarning instances.
-     * 
-     * If 'forTruncationOnly' is true, only looks for truncation warnings, and
-     * actually throws DataTruncation as an exception.
-     * 
-     * @param connection
-     *            the connection to use for getting warnings.
-     * 
-     * @return the SQLWarning chain (or null if no warnings)
-     * 
-     * @throws SQLException
-     *             if the warnings could not be retrieved
-     */
+//    /**
+//     * Turns output of 'SHOW WARNINGS' into JDBC SQLWarning instances.
+//     * 
+//     * If 'forTruncationOnly' is true, only looks for truncation warnings, and
+//     * actually throws DataTruncation as an exception.
+//     * 
+//     * @param connection
+//     *            the connection to use for getting warnings.
+//     * 
+//     * @return the SQLWarning chain (or null if no warnings)
+//     * 
+//     * @throws SQLException
+//     *             if the warnings could not be retrieved
+//     */
 //    static SQLWarning convertShowWarningsToSQLWarnings(Connection connection) throws SQLException {
 //        return convertShowWarningsToSQLWarnings(connection, 0, false);
 //    }
 
-    /**
-     * Turns output of 'SHOW WARNINGS' into JDBC SQLWarning instances.
-     * 
-     * If 'forTruncationOnly' is true, only looks for truncation warnings, and
-     * actually throws DataTruncation as an exception.
-     * 
-     * @param connection
-     *            the connection to use for getting warnings.
-     * @param warningCountIfKnown
-     *            the warning count (if known), otherwise set it to 0.
-     * @param forTruncationOnly
-     *            if this method should only scan for data truncation warnings
-     * 
-     * @return the SQLWarning chain (or null if no warnings)
-     * 
-     * @throws SQLException
-     *             if the warnings could not be retrieved, or if data truncation
-     *             is being scanned for and truncations were found.
-     */
+//    /**
+//     * Turns output of 'SHOW WARNINGS' into JDBC SQLWarning instances.
+//     * 
+//     * If 'forTruncationOnly' is true, only looks for truncation warnings, and
+//     * actually throws DataTruncation as an exception.
+//     * 
+//     * @param connection
+//     *            the connection to use for getting warnings.
+//     * @param warningCountIfKnown
+//     *            the warning count (if known), otherwise set it to 0.
+//     * @param forTruncationOnly
+//     *            if this method should only scan for data truncation warnings
+//     * 
+//     * @return the SQLWarning chain (or null if no warnings)
+//     * 
+//     * @throws SQLException
+//     *             if the warnings could not be retrieved, or if data truncation
+//     *             is being scanned for and truncations were found.
+//     */
 //    static SQLWarning convertShowWarningsToSQLWarnings(Connection connection, int warningCountIfKnown, boolean forTruncationOnly) throws SQLException {
 //        java.sql.Statement stmt = null;
 //        java.sql.ResultSet warnRs = null;
@@ -842,13 +842,7 @@ public class SQLError {
         return createSQLException(message, sqlState, vendorErrorCode, false, interceptor);
     }
 
-    /**
-     * @param message
-     * @param sqlState
-     * @param vendorErrorCode
-     * @param isTransient
-     * @param interceptor
-     */
+
     public static SQLException createSQLException(String message, String sqlState, int vendorErrorCode, boolean isTransient, ExceptionInterceptor interceptor) {
              return new SQLException(message, sqlState, vendorErrorCode);
 //        try {

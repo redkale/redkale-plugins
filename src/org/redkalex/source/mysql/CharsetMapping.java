@@ -640,16 +640,17 @@ public class CharsetMapping {
     /**
      * MySQL charset could map to several Java encodings.
      * So here we choose the one according to next rules:
-     * <li>if there is no static mapping for this charset then return javaEncoding value as is because this
+     *    if there is no static mapping for this charset then return javaEncoding value as is because this
      * could be a custom charset for example
-     * <li>if static mapping exists and javaEncoding equals to one of Java encoding canonical names or aliases available
+     *    if static mapping exists and javaEncoding equals to one of Java encoding canonical names or aliases available
      * for this mapping then javaEncoding value as is; this is required when result should match to connection encoding, for example if connection encoding is
      * Cp943 we must avoid getting SHIFT_JIS for sjis mysql charset
-     * <li>if static mapping exists and javaEncoding doesn't match any Java encoding canonical
+     *   if static mapping exists and javaEncoding doesn't match any Java encoding canonical
      * names or aliases available for this mapping then return default Java encoding (the first in mapping list)
      * 
-     * @param mysqlCharsetName
-     * @param javaEncoding
+     * @param mysqlCharsetName String
+     * @param javaEncoding String
+     * @return String
      */
     public static String getJavaEncodingForMysqlCharset(String mysqlCharsetName, String javaEncoding) {
         String res = javaEncoding;
@@ -687,7 +688,8 @@ public class CharsetMapping {
     /**
      * Character sets that we can't convert ourselves.
      * 
-     * @param javaEncodingName
+     * @param javaEncodingName String
+     * @return boolean
      */
     final public static boolean isMultibyteCharset(String javaEncodingName) {
         return MULTIBYTE_ENCODINGS.contains(javaEncodingName.toUpperCase(Locale.ENGLISH));
