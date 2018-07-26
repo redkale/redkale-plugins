@@ -15,19 +15,15 @@ import org.redkale.convert.*;
  */
 public class ProtobufCollectionDecoder<T> extends CollectionDecoder<T> {
 
+    private final boolean string;
+
     public ProtobufCollectionDecoder(ConvertFactory factory, Type type) {
         super(factory, type);
+        this.string = String.class == this.getComponentType();
     }
 
     @Override
     protected Reader getItemReader(Reader in, DeMember member, boolean first) {
-        if (member == null || first) return in;
-        ProtobufReader reader = (ProtobufReader) in;
-        int tag = reader.readTag();
-        if (tag != ProtobufFactory.getTag(member)) {
-            reader.backTag(tag);
-            return null;
-        }
-        return in;
+        return ProtobufFactory.getItemReader(string, in, member, first);
     }
 }

@@ -131,6 +131,30 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         return false;
     }
 
+    protected static Reader getItemReader(boolean string, Reader in, DeMember member, boolean first) {
+        if (string) {
+            if (member == null || first) return in;
+            ProtobufReader reader = (ProtobufReader) in;
+            int tag = reader.readTag();
+            if (tag != ProtobufFactory.getTag(member)) {
+                reader.backTag(tag);
+                return null;
+            }
+            return in;
+        } else {
+            ProtobufReader reader = (ProtobufReader) in;
+            if (!first && member != null) {
+                int tag = reader.readTag();
+                if (tag != ProtobufFactory.getTag(member)) {
+                    reader.backTag(tag);
+                    return null;
+                }
+            }
+            byte[] bs = reader.readByteArray();
+            return new ProtobufReader(bs);
+        }
+    }
+
     public static int getTag(EnMember member) {
         int wiretype = ProtobufFactory.wireType(member.getAttribute().type());
         return (member.getPosition() << 3 | wiretype);

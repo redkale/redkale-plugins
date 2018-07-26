@@ -88,7 +88,7 @@ public class TestBean {
 
     @ConvertColumn(index = 15)
     public String end; //15
-    
+
     @Override
     public String toString() {
         return JsonConvert.root().convertTo(this);
@@ -111,22 +111,22 @@ public class TestBean {
         //System.out.println(ProtobufConvert.root().getProtoDescriptor(TestBean.class));
         //System.out.println(Integer.toHexString(14<<3|2));
         TestBean bean = new TestBean();
-        
+
         bean.bools = new boolean[]{true, false, true};
         bean.bytes = new byte[]{1, 2, 3, 4};
         bean.chars = new char[]{'A', 'B', 'C'};
-//        bean.entrys  = new PTestEntry[]{new PTestEntry(), new PTestEntry()};
-//        bean.ints = new int[]{100, 200, 300};
-//        bean.floats = new float[]{10.12f, 20.34f};
-//        bean.longs = new long[]{111, 222, 333};
-//        bean.doubles = new double[]{65.65, 78.78};
-//        bean.strings = new String[]{"str1", "str2", "str3"};
-//        bean.name = "redkale";
-//        bean.email = "redkale@qq.org";
-//        bean.kind = Kind.TWO;
-//        bean.map = Utility.ofMap("aa", 0x55, "bb", 0x66);
-//        bean.end = "over";
-        
+        bean.ints = new int[]{100, 200, 300};
+        bean.floats = new float[]{10.12f, 20.34f};
+        bean.longs = new long[]{111, 222, 333};
+        bean.doubles = new double[]{65.65, 78.78};
+        bean.name = "redkale";
+        bean.email = "redkale@qq.org";
+        bean.kind = Kind.TWO;
+        bean.strings = new String[]{"str1", "str2", "str3"};
+        bean.entrys = new PTestEntry[]{new PTestEntry(), new PTestEntry()};
+        bean.map = Utility.ofMap("aa", 0x55, "bb", 0x66);
+        bean.end = "over";
+
         //-------------------------------
         byte[] bs = ProtobufConvert.root().convertTo(bean);
         Utility.println("pconvert ", bs);

@@ -14,19 +14,15 @@ import org.redkale.convert.*;
  */
 public class ProtobufStreamDecoder<T> extends StreamDecoder<T> {
 
+    private final boolean string;
+
     public ProtobufStreamDecoder(ConvertFactory factory, Type type) {
         super(factory, type);
+        this.string = String.class == this.getComponentType();
     }
 
     @Override
     protected Reader getItemReader(Reader in, DeMember member, boolean first) {
-        if (member == null || first) return in;
-        ProtobufReader reader = (ProtobufReader) in;
-        int tag = reader.readTag();
-        if (tag != ProtobufFactory.getTag(member)) {
-            reader.backTag(tag);
-            return null;
-        }
-        return in;
+        return ProtobufFactory.getItemReader(string, in, member, first);
     }
 }
