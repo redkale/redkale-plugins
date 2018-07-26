@@ -83,10 +83,6 @@ public class ProtobufReader extends Reader {
 
     }
 
-    protected byte currentByte() {
-        return this.content[this.position];
-    }
-
     @Override
     public final int readMapB(DeMember member, Decodeable keydecoder) {
         return Reader.SIGN_NOLENGTH;
@@ -129,32 +125,15 @@ public class ProtobufReader extends Reader {
     }
 
     @Override
-    public int position() {
+    public final int position() {
         return this.position;
     }
 
     @Override
-    public int readMemberContentLength(DeMember member, Decodeable decoder) {
+    public final int readMemberContentLength(DeMember member, Decodeable decoder) {
         if (member == null && decoder == null) return -1; //为byte[]
         if (member != null && !(member.getDecoder() instanceof ProtobufArrayDecoder)) return -1;
         return readRawVarint32(); //readUInt32
-    }
-
-    /**
-     * 判断对象是否存在下一个属性或者数组是否存在下一个元素
-     *
-     * @param startPosition 起始位置
-     * @param contentLength 内容大小， 不确定的传-1
-     *
-     * @return 是否存在
-     */
-    @Override
-    public boolean hasNext(int startPosition, int contentLength) {
-        //("-------------: " + startPosition + ", " + contentLength + ", " + this.position);
-        if (startPosition >= 0 && contentLength >= 0) {
-            return (this.position) < (startPosition + contentLength);
-        }
-        return (this.position + 1) < this.content.length;
     }
 
     @Override
@@ -175,17 +154,8 @@ public class ProtobufReader extends Reader {
     }
 
     @Override
-    public byte readByte() {
+    public final byte readByte() {
         return (byte) readInt();
-    }
-
-    @Override
-    public final byte[] readByteArray() {
-        final int size = readRawVarint32();
-        byte[] bs = new byte[size];
-        System.arraycopy(content, position + 1, bs, 0, size);
-        position += size;
-        return bs;
     }
 
     @Override
@@ -235,7 +205,7 @@ public class ProtobufReader extends Reader {
         return new String(readByteArray(), StandardCharsets.UTF_8);
     }
 
-    protected int readTag() {
+    protected final int readTag() {
         if (cachetag != Integer.MIN_VALUE) {
             int tag = cachetag;
             cachetag = Integer.MIN_VALUE;
@@ -244,8 +214,38 @@ public class ProtobufReader extends Reader {
         return readRawVarint32();
     }
 
-    protected void backTag(int tag) {
+    protected final void backTag(int tag) {
         this.cachetag = tag;
+    }
+
+    protected byte currentByte() {
+        return this.content[this.position];
+    }
+
+    /**
+     * 判断对象是否存在下一个属性或者数组是否存在下一个元素
+     *
+     * @param startPosition 起始位置
+     * @param contentLength 内容大小， 不确定的传-1
+     *
+     * @return 是否存在
+     */
+    @Override
+    public boolean hasNext(int startPosition, int contentLength) {
+        //("-------------: " + startPosition + ", " + contentLength + ", " + this.position);
+        if (startPosition >= 0 && contentLength >= 0) {
+            return (this.position) < (startPosition + contentLength);
+        }
+        return (this.position + 1) < this.content.length;
+    }
+
+    @Override
+    public byte[] readByteArray() {
+        final int size = readRawVarint32();
+        byte[] bs = new byte[size];
+        System.arraycopy(content, position + 1, bs, 0, size);
+        position += size;
+        return bs;
     }
 
     protected int readRawVarint32() {  //readUInt32
