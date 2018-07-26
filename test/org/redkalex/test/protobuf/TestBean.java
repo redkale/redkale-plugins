@@ -132,6 +132,38 @@ public class TestBean {
         Utility.println("pconvert ", bs);
         PTestBeanOuterClass.PTestBean.Builder builder = PTestBeanOuterClass.PTestBean.newBuilder();
 
+        PTestBeanOuterClass.PTestBean bean2 = createPTestBean(bean, builder);
+        byte[] bs2 = bean2.toByteArray();
+        Utility.println("protobuf ", bs2);
+        Thread.sleep(10);
+        if (!Arrays.equals(bs, bs2)) throw new RuntimeException("两者序列化出来的byte[]不一致");
+
+        System.out.println(bean);
+        System.out.println(ProtobufConvert.root().convertFrom(TestBean.class, bs).toString());
+
+        int count = 100000;
+        long s, e;
+        s = System.currentTimeMillis();
+        for (int z = 0; z < count; z++) {
+            ProtobufConvert.root().convertTo(bean);
+        }
+        e = System.currentTimeMillis() - s;
+        System.out.println("redkale-protobuf耗时-------" + e);
+
+        s = System.currentTimeMillis();
+        for (int z = 0; z < count; z++) {
+            createPTestBean(bean, builder).toByteArray();
+        }
+        e = System.currentTimeMillis() - s;
+        System.out.println("原生编译protobuf耗时-------" + e);
+    }
+
+    private static PTestBeanOuterClass.PTestBean createPTestBean(TestBean bean, PTestBeanOuterClass.PTestBean.Builder builder) {
+        if (builder == null) {
+            builder = PTestBeanOuterClass.PTestBean.newBuilder();
+        } else {
+            builder.clear();
+        }
         for (int i = 0; bean.bools != null && i < bean.bools.length; i++) {
             builder.addBools(bean.bools[i]);
         }
@@ -175,13 +207,7 @@ public class TestBean {
         if (bean.map != null) builder.putAllMap(bean.map);
         if (bean.end != null) builder.setEnd(bean.end);
         PTestBeanOuterClass.PTestBean bean2 = builder.build();
-        byte[] bs2 = bean2.toByteArray();
-        Utility.println("protobuf ", bs2);
-        Thread.sleep(10);
-        if (!Arrays.equals(bs, bs2)) throw new RuntimeException("两者序列化出来的byte[]不一致");
-
-        System.out.println(bean);
-        System.out.println(ProtobufConvert.root().convertFrom(TestBean.class, bs).toString());
+        return bean2;
     }
 }
 
