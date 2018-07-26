@@ -34,7 +34,7 @@ class ProtobufStreamReader extends ProtobufByteBufferReader {
     }
 
     @Override
-    public byte readByte() {
+    public byte nextByte() {
         try {
             byte b = (currByte = (byte) in.read());
             this.position++;

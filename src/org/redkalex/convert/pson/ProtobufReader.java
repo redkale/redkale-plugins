@@ -70,7 +70,7 @@ public class ProtobufReader extends Reader {
     @Override
     @SuppressWarnings("unchecked")
     public final void skipValue() {
-
+        readTag();
     }
 
     @Override
@@ -138,12 +138,14 @@ public class ProtobufReader extends Reader {
 
     @Override
     public final DeMember readFieldName(final DeMember[] members) {
-        int tag = readTag() >>> 3;
+        int tag = readTag();
+        int pos = tag >>> 3;
         for (DeMember member : members) {
-            if (member.getPosition() == tag) {
+            if (member.getPosition() == pos) {
                 return member;
             }
         }
+        backTag(tag);
         return null;
     }
 
