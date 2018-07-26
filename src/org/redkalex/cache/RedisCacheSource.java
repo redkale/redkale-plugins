@@ -483,26 +483,32 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     //--------------------- existsItem ------------------------------  
+    @Override
     public boolean existsSetItem(String key, V value) {
         return existsSetItemAsync(key, value).join();
     }
 
+    @Override
     public CompletableFuture<Boolean> existsSetItemAsync(String key, V value) {
         return (CompletableFuture) send("SISMEMBER", null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, value));
     }
 
+    @Override
     public boolean existsStringSetItem(String key, String value) {
         return existsStringSetItemAsync(key, value).join();
     }
 
+    @Override
     public CompletableFuture<Boolean> existsStringSetItemAsync(String key, String value) {
         return (CompletableFuture) send("SISMEMBER", null, key, key.getBytes(UTF8), formatValue(CacheEntryType.STRING, value));
     }
 
+    @Override
     public boolean existsLongSetItem(String key, long value) {
         return existsLongSetItemAsync(key, value).join();
     }
 
+    @Override
     public CompletableFuture<Boolean> existsLongSetItemAsync(String key, long value) {
         return (CompletableFuture) send("SISMEMBER", null, key, key.getBytes(UTF8), formatValue(CacheEntryType.LONG, value));
     }
