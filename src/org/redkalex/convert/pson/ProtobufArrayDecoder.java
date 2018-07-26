@@ -20,6 +20,11 @@ public class ProtobufArrayDecoder<T> extends ArrayDecoder<T> {
     }
 
     @Override
+    protected Reader getItemReader(Reader in, DeMember member, boolean first) {
+        return in;
+    }
+
+    @Override
     protected T readMemberValue(Reader in, DeMember member, boolean first) {
         if (member == null || first) {
             T rs = this.decoder.convertFrom(in);

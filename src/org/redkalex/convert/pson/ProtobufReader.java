@@ -141,14 +141,13 @@ public class ProtobufReader extends Reader {
     /**
      * 判断对象是否存在下一个属性或者数组是否存在下一个元素
      *
-     * @param member        DeMember
      * @param startPosition 起始位置
      * @param contentLength 内容大小， 不确定的传-1
      *
      * @return 是否存在
      */
     @Override
-    public boolean hasNext(DeMember member, int startPosition, int contentLength) {
+    public boolean hasNext(int startPosition, int contentLength) {
         //("-------------: " + startPosition + ", " + contentLength + ", " + this.position);
         if (startPosition >= 0 && contentLength >= 0) {
             return (this.position) < (startPosition + contentLength);

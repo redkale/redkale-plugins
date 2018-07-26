@@ -20,7 +20,7 @@ public class ProtobufObjectDecoder<T> extends ObjectDecoder<ProtobufReader, T> {
     }
 
     @Override
-    protected boolean hasNext(ProtobufReader in) {
+    protected boolean hasNext(ProtobufReader in, boolean first) {
         return in.hasNext();
     }
 
