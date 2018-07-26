@@ -21,18 +21,14 @@ public class ProtobufArrayDecoder<T> extends ArrayDecoder<T> {
 
     @Override
     protected Reader getItemReader(Reader in, DeMember member, boolean first) {
+        if (member == null || first) return in;
+        ProtobufReader reader = (ProtobufReader) in;
+        int tag = reader.readTag();
+        if (tag != ProtobufFactory.getTag(member)) {
+            reader.backTag(tag);
+            return null;
+        }
         return in;
     }
 
-    @Override
-    protected T readMemberValue(Reader in, DeMember member, boolean first) {
-        if (member == null || first) {
-            T rs = this.decoder.convertFrom(in);
-            return rs;
-        }
-        ProtobufReader reader = (ProtobufReader) in;
-        reader.readTag();
-        T rs = (T) this.decoder.convertFrom(reader);
-        return rs;
-    }
 }

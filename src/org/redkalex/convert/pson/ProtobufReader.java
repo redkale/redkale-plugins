@@ -20,6 +20,8 @@ public class ProtobufReader extends Reader {
 
     private byte[] content;
 
+    protected int cachetag = Integer.MIN_VALUE;
+
     public static ObjectPool<ProtobufReader> createPool(int max) {
         return new ObjectPool<>(max, (Object... params) -> new ProtobufReader(), null, (t) -> t.recycle());
     }
@@ -157,7 +159,7 @@ public class ProtobufReader extends Reader {
 
     @Override
     public final DeMember readFieldName(final DeMember[] members) {
-        int tag = readTag();
+        int tag = readTag() >>> 3;
         for (DeMember member : members) {
             if (member.getPosition() == tag) {
                 return member;
@@ -234,7 +236,16 @@ public class ProtobufReader extends Reader {
     }
 
     protected int readTag() {
-        return readRawVarint32() >>> 3;
+        if (cachetag != Integer.MIN_VALUE) {
+            int tag = cachetag;
+            cachetag = Integer.MIN_VALUE;
+            return tag;
+        }
+        return readRawVarint32();
+    }
+
+    protected void backTag(int tag) {
+        this.cachetag = tag;
     }
 
     protected int readRawVarint32() {  //readUInt32

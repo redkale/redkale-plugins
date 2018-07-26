@@ -14,9 +14,20 @@ import org.redkale.convert.*;
  * @param <T> T
  */
 public class ProtobufCollectionDecoder<T> extends CollectionDecoder<T> {
-    
+
     public ProtobufCollectionDecoder(ConvertFactory factory, Type type) {
         super(factory, type);
     }
-    
+
+    @Override
+    protected Reader getItemReader(Reader in, DeMember member, boolean first) {
+        if (member == null || first) return in;
+        ProtobufReader reader = (ProtobufReader) in;
+        int tag = reader.readTag();
+        if (tag != ProtobufFactory.getTag(member)) {
+            reader.backTag(tag);
+            return null;
+        }
+        return in;
+    }
 }

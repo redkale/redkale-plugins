@@ -22,8 +22,15 @@ public class ProtobufMapDecoder<K, V> extends MapDecoder<K, V> {
 
     @Override
     protected Reader getEntryReader(Reader in, DeMember member, boolean first) {
-        if (!first && member != null) ((ProtobufReader) in).readTag();
-        byte[] bs = ((ProtobufReader) in).readByteArray();
+        ProtobufReader reader = (ProtobufReader) in;
+        if (!first && member != null) {
+            int tag = reader.readTag();
+            if (tag != ProtobufFactory.getTag(member)) {
+                reader.backTag(tag);
+                return null;
+            }
+        }
+        byte[] bs = reader.readByteArray();
         return new ProtobufReader(bs);
     }
 

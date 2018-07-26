@@ -19,14 +19,14 @@ public class ProtobufStreamDecoder<T> extends StreamDecoder<T> {
     }
 
     @Override
-    protected T readMemberValue(Reader in, DeMember member, boolean first) {
-        if (member == null || first) {
-            T rs = this.decoder.convertFrom(in);
-            return rs;
-        }
+    protected Reader getItemReader(Reader in, DeMember member, boolean first) {
+        if (member == null || first) return in;
         ProtobufReader reader = (ProtobufReader) in;
         int tag = reader.readTag();
-        T rs = (T) this.decoder.convertFrom(reader);
-        return rs;
+        if (tag != ProtobufFactory.getTag(member)) {
+            reader.backTag(tag);
+            return null;
+        }
+        return in;
     }
 }
