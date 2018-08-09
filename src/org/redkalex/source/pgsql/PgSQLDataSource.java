@@ -130,8 +130,8 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, String rwtype, ArrayBlockingQueue queue, Properties prop) {
-        return new PgPoolSource(rwtype, queue, prop, logger, bufferPool, executor);
+    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop) {
+        return new PgPoolSource(rwtype, queue, semaphore, prop, logger, bufferPool, executor);
     }
 
     @Override
@@ -699,8 +699,8 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                         }
                         if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeQuery error"));
                         if (endok) {
-                            future.complete(resultSet);
                             readPool.offerConnection(conn);
+                            future.complete(resultSet);
                         } else {
                             conn.dispose();
                         }

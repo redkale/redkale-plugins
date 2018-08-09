@@ -26,8 +26,8 @@ public class PgPoolSource extends PoolTcpSource {
 
     protected static final String CONN_ATTR_BYTESBAME = "BYTESBAME";
 
-    public PgPoolSource(String rwtype, ArrayBlockingQueue queue, Properties prop, Logger logger, ObjectPool<ByteBuffer> bufferPool, ThreadPoolExecutor executor) {
-        super(rwtype, queue, prop, logger, bufferPool, executor);
+    public PgPoolSource(String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop, Logger logger, ObjectPool<ByteBuffer> bufferPool, ThreadPoolExecutor executor) {
+        super(rwtype, queue, semaphore, prop, logger, bufferPool, executor);
     }
 
     @Override

@@ -86,8 +86,8 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, String rwtype, ArrayBlockingQueue queue, Properties prop) {
-        return new MyPoolSource(rwtype, queue, prop, logger, bufferPool, executor);
+    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop) {
+        return new MyPoolSource(rwtype, queue, semaphore, prop, logger, bufferPool, executor);
     }
 
     @Override
