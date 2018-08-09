@@ -75,18 +75,36 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
 
     protected static String readUTF8String(ByteBuffer buffer, byte[] store) {
         int i = 0;
+        ByteArray array = null;
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
+            if (array != null) {
+                array.write(c);
+            } else {
+                store[i++] = c;
+                if (i == store.length) {
+                    array = new ByteArray(1024);
+                    array.write(store);
+                }
+            }
         }
-        return new String(store, 0, i, StandardCharsets.UTF_8);
+        return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
     }
 
     protected static String readUTF8String(ByteBufferReader buffer, byte[] store) {
         int i = 0;
+        ByteArray array = null;
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
+            if (array != null) {
+                array.write(c);
+            } else {
+                store[i++] = c;
+                if (i == store.length) {
+                    array = new ByteArray(1024);
+                    array.write(store);
+                }
+            }
         }
-        return new String(store, 0, i, StandardCharsets.UTF_8);
+        return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
     }
 
     protected static ByteBuffer writeUTF8String(ByteBuffer buffer, String string) {
