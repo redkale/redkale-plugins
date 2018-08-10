@@ -150,10 +150,19 @@ class MySQLs {
 
     protected static String readUTF8String(ByteBufferReader buffer, byte[] store) {
         int i = 0;
+        ByteArray array = null;
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
+            if (array != null) {
+                array.write(c);
+            } else {
+                store[i++] = c;
+                if (i == store.length) {
+                    array = new ByteArray(1024);
+                    array.write(store);
+                }
+            }
         }
-        return new String(store, 0, i, StandardCharsets.UTF_8);
+        return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
     }
 
     protected static String readUTF8String(ByteBufferReader buffer, int length) {
@@ -164,10 +173,19 @@ class MySQLs {
 
     protected static String readASCIIString(ByteBuffer buffer, byte[] store) {
         int i = 0;
+        ByteArray array = null;
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
+            if (array != null) {
+                array.write(c);
+            } else {
+                store[i++] = c;
+                if (i == store.length) {
+                    array = new ByteArray(1024);
+                    array.write(store);
+                }
+            }
         }
-        return new String(store, 0, i, StandardCharsets.US_ASCII);
+        return array == null ? new String(store, 0, i, StandardCharsets.US_ASCII) : array.toString(StandardCharsets.US_ASCII);
     }
 
     protected static String readASCIIString(ByteBuffer buffer, int length) {
@@ -178,10 +196,19 @@ class MySQLs {
 
     protected static String readASCIIString(ByteBufferReader buffer, byte[] store) {
         int i = 0;
+        ByteArray array = null;
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            store[i++] = c;
+            if (array != null) {
+                array.write(c);
+            } else {
+                store[i++] = c;
+                if (i == store.length) {
+                    array = new ByteArray(1024);
+                    array.write(store);
+                }
+            }
         }
-        return new String(store, 0, i, StandardCharsets.US_ASCII);
+        return array == null ? new String(store, 0, i, StandardCharsets.US_ASCII) : array.toString(StandardCharsets.US_ASCII);
     }
 
     protected static String readASCIIString(ByteBufferReader buffer, int length) {

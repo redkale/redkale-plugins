@@ -8,11 +8,11 @@ package org.redkalex.source.pgsql;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
+import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Logger;
 import javax.persistence.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.AsyncConnection;
@@ -27,9 +27,13 @@ import static org.redkalex.source.pgsql.PgSQLDataSource.*;
  */
 public class PgSQLTest {
 
+    private static final Random random = new SecureRandom();
+
+    protected static int randomId() {
+        return random.nextInt(10000) + 1;
+    }
+
     public static void main(String[] args) throws Throwable {
-        System.out.println(ByteBuffer.allocate(1).getClass());
-        final Logger logger = Logger.getLogger(PgSQLDataSource.class.getSimpleName());
         final int capacity = 16 * 1024;
         final ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(new AtomicLong(), new AtomicLong(), 16,
             (Object... params) -> ByteBuffer.allocateDirect(capacity), null, (e) -> {
@@ -38,20 +42,14 @@ public class PgSQLTest {
                 return true;
             });
 
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, (Runnable r) -> {
-            Thread t = new Thread(r);
-            t.setDaemon(true);
-            return t;
-        });
-
         Properties prop = new Properties();
         prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
         prop.setProperty(DataSources.JDBC_USER, "postgres");
         prop.setProperty(DataSources.JDBC_PWD, "1234");
-        prop.setProperty(DataSources.JDBC_CONNECTIONS_LIMIT, "40");
+        prop.setProperty(DataSources.JDBC_CONNECTIONS_LIMIT, "32");
         final PgSQLDataSource source = new PgSQLDataSource("", null, prop, prop);
 
-        final int count = 200;
+        final int count = 2000;
         final CountDownLatch cdl = new CountDownLatch(count);
         long s1 = System.currentTimeMillis();
         for (int j = 0; j < count; j++) {
@@ -62,7 +60,7 @@ public class PgSQLTest {
                             final World[] rs = new World[5];
                             for (int i = 0; i < rs.length; i++) {
                                 final int index = i;
-                                rs[index] = source.find(World.class, 99);
+                                rs[index] = source.find(World.class, randomId());
                             }
                             source.update(rs);
                             cdl.countDown();
@@ -76,18 +74,15 @@ public class PgSQLTest {
                     public void run() {
                         try {
                             final World[] rs = new World[5];
-                            final CompletableFuture<World>[] futures = new CompletableFuture[rs.length];
+                            final CompletableFuture<Integer>[] futures = new CompletableFuture[rs.length];
                             for (int i = 0; i < rs.length; i++) {
                                 final int index = i;
-                                futures[index] = source.findAsync(World.class, 99).whenComplete((w, t) -> {
+                                futures[index] = source.findAsync(World.class, randomId()).thenCompose(w -> {
                                     rs[index] = w;
+                                    return source.updateAsync(w);
                                 });
                             }
-                            CompletableFuture.allOf(futures).thenCompose((r) -> {
-                                return source.updateAsync(rs).thenApply((v) -> {
-                                    return rs;
-                                });
-                            }).whenComplete((r, e) -> {
+                            CompletableFuture.allOf(futures).whenComplete((r, e) -> {
                                 if (e != null) e.printStackTrace();
                                 cdl.countDown();
                             });
@@ -101,6 +96,14 @@ public class PgSQLTest {
         cdl.await();
         long e1 = System.currentTimeMillis() - s1;
         System.out.println("一共耗时: " + e1);
+        System.out.println("只读池创建数: " + source.readPoolSource().getCreatCount());
+        System.out.println("只读池回收数: " + source.readPoolSource().getCycleCount());
+        System.out.println("只读池保存数: " + source.readPoolSource().getSaveCount());
+        System.out.println("只读池关闭数: " + source.readPoolSource().getCloseCount());
+        System.out.println("可写池创建数: " + source.writePoolSource().getCreatCount());
+        System.out.println("可写池回收数: " + source.writePoolSource().getCycleCount());
+        System.out.println("可写池保存数: " + source.writePoolSource().getSaveCount());
+        System.out.println("可写池关闭数: " + source.writePoolSource().getCloseCount());
 
         if (true) return;
         PoolSource<AsyncConnection> poolSource = source.writePoolSource();
