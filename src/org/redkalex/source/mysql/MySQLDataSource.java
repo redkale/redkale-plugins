@@ -15,7 +15,7 @@ import java.time.format.*;
 import static java.time.format.DateTimeFormatter.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.Consumer;
+import java.util.function.*;
 import java.util.logging.Level;
 import org.redkale.net.AsyncConnection;
 import org.redkale.service.Local;
@@ -696,10 +696,9 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Local
     @Override
-    public void directQuery(String sql, Consumer<ResultSet> consumer) {
-        readPool.pollAsync().thenCompose((conn) -> executeQuery(null, conn, sql).thenApply((ResultSet set) -> {
-            consumer.accept(set);
-            return null;
+    public <V> V directQuery(String sql, Function<ResultSet, V> handler) {
+        return readPool.pollAsync().thenCompose((conn) -> executeQuery(null, conn, sql).thenApply((ResultSet set) -> {
+            return handler.apply(set);
         })).join();
     }
 
