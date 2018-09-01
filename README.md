@@ -2,7 +2,9 @@
 <p>
    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RedKale的扩展插件库。
 </p>
+<p>
 <strong>redkale-plugins已有的功能如下：</strong>
+</p>
 <ol>
 <li>苹果APNS的消息推送------ApnsService</li>
 <li>Redis的CacheSource实现------RedisCacheSource</li>
