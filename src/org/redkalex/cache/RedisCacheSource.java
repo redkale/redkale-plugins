@@ -13,6 +13,7 @@ import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redkale.convert.bson.BsonByteBufferWriter;
 import org.redkale.convert.json.*;
@@ -49,6 +50,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
 
     protected static final byte COLON_BYTE = ':';
 
+    private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+
     @Resource
     protected JsonConvert defaultConvert;
 
@@ -65,6 +68,19 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     public void init(AnyValue conf) {
         if (this.convert == null) this.convert = this.defaultConvert;
         if (conf == null) conf = new AnyValue.DefaultAnyValue();
+
+        AnyValue prop = conf.getAnyValue("properties");
+        if (prop != null) {
+            String storeValueStr = prop.getValue("value-type");
+            if (storeValueStr != null) {
+                try {
+                    this.initValueType(Thread.currentThread().getContextClassLoader().loadClass(storeValueStr));
+                } catch (Throwable e) {
+                    logger.log(Level.SEVERE, this.getClass().getSimpleName() + " load key & value store class (" + storeValueStr + ") error", e);
+                }
+            }
+        }
+
         final int bufferCapacity = conf.getIntValue("bufferCapacity", 8 * 1024);
         final int bufferPoolSize = conf.getIntValue("bufferPoolSize", Runtime.getRuntime().availableProcessors() * 8);
         final int threads = conf.getIntValue("threads", Runtime.getRuntime().availableProcessors() * 8);
@@ -81,6 +97,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         if (!passwords0.isEmpty()) this.passwords = passwords0;
         TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity, readTimeoutSeconds, writeTimeoutSeconds);
         this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
+
     }
 
     public void updateRemoteAddresses(final Collection<InetSocketAddress> addresses) {
@@ -165,7 +182,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         System.out.println("myaddrs:  " + source.getCollection("myaddrs", InetSocketAddress.class));
         System.out.println("------------------------------------");
         source.remove("myaddrs");
-        Type mapType = new TypeToken<Map<String, Integer>>(){}.getType();
+        Type mapType = new TypeToken<Map<String, Integer>>() {
+        }.getType();
         Map<String, Integer> map = new HashMap<>();
         map.put("a", 1);
         map.put("b", 2);
