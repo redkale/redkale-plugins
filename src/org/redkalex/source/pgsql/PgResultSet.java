@@ -16,6 +16,7 @@ import java.util.*;
  *
  * @author zhangjx
  */
+@SuppressWarnings("deprecation")
 public class PgResultSet implements java.sql.ResultSet {
 
     private RowDesc rowDesc;
@@ -104,6 +105,7 @@ public class PgResultSet implements java.sql.ResultSet {
     }
 
     @Override
+    @Deprecated
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
         return (BigDecimal) this.currRow.getObject(rowDesc, columnIndex - 1);
     }
@@ -134,6 +136,7 @@ public class PgResultSet implements java.sql.ResultSet {
     }
 
     @Override
+    @Deprecated
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -184,6 +187,7 @@ public class PgResultSet implements java.sql.ResultSet {
     }
 
     @Override
+    @Deprecated
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
         return (BigDecimal) this.currRow.getObject(rowDesc, colmap.get(columnLabel.toLowerCase()));
     }
@@ -214,6 +218,7 @@ public class PgResultSet implements java.sql.ResultSet {
     }
 
     @Override
+    @Deprecated
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
