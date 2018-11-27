@@ -23,10 +23,10 @@ public class ProtobufCollectionEncoder<T> extends CollectionEncoder<T> {
     protected void writeValue(Writer out, EnMember member, Object item) {
         if (member != null) out.writeFieldName(member);
         if (item instanceof CharSequence) {
-            encoder.convertTo(out, item);
+            componentEncoder.convertTo(out, item);
         } else {
             ProtobufWriter tmp = new ProtobufWriter();
-            encoder.convertTo(tmp, item);
+            componentEncoder.convertTo(tmp, item);
             int length = tmp.count();
             ((ProtobufWriter) out).writeUInt32(length);
             ((ProtobufWriter) out).writeTo(tmp.toArray());

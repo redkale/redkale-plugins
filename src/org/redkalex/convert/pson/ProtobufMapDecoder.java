@@ -35,16 +35,16 @@ public class ProtobufMapDecoder<K, V> extends MapDecoder<K, V> {
     }
 
     @Override
-    protected K readKeyMember(Reader in, DeMember member, boolean first) {
+    protected K readKeyMember(Reader in, DeMember member, Decodeable<Reader, K> decoder, boolean first) {
         ProtobufReader reader = (ProtobufReader) in;
         reader.readTag();
-        return keyDecoder.convertFrom(in);
+        return decoder.convertFrom(in);
     }
 
     @Override
-    protected V readValueMember(Reader in, DeMember member, boolean first) {
+    protected V readValueMember(Reader in, DeMember member, Decodeable<Reader, V> decoder, boolean first) {
         ProtobufReader reader = (ProtobufReader) in;
         reader.readTag();
-        return valueDecoder.convertFrom(in);
+        return decoder.convertFrom(in);
     }
 }

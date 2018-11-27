@@ -84,7 +84,7 @@ public class ProtobufReader extends Reader {
     }
 
     @Override
-    public final int readMapB(DeMember member, Decodeable keydecoder) {
+    public final int readMapB(DeMember member, byte[] typevals, Decodeable keyDecoder, Decodeable valueDecoder) {
         return Reader.SIGN_NOLENGTH;
     }
 
@@ -93,14 +93,18 @@ public class ProtobufReader extends Reader {
     }
 
     /**
-     * 判断下一个非空白字节是否为[
+     * 判断下一个非空白字符是否为[
      *
-     * @return 数组长度或SIGN_NULL
+     * @param member           DeMember
+     * @param typevals         byte[]
+     * @param componentDecoder Decodeable
+     *
+     * @return SIGN_NOLENGTH 或 SIGN_NULL
      */
     @Override
-    public final int readArrayB(DeMember member, Decodeable decoder) {
-        if (member == null || decoder == null) return Reader.SIGN_NOLENBUTBYTES;
-        Type type = decoder.getType();
+    public final int readArrayB(DeMember member, byte[] typevals, Decodeable componentDecoder) {
+        if (member == null || componentDecoder == null) return Reader.SIGN_NOLENBUTBYTES;
+        Type type = componentDecoder.getType();
         if (!(type instanceof Class)) return Reader.SIGN_NOLENBUTBYTES;
         Class clazz = (Class) type;
         if (clazz.isPrimitive() || clazz == Boolean.class

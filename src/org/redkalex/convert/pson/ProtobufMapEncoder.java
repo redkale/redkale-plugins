@@ -24,10 +24,10 @@ public class ProtobufMapEncoder<K, V> extends MapEncoder<K, V> {
     protected void writeMemberValue(Writer out, EnMember member, K key, V value, boolean first) {
         ProtobufWriter tmp = new ProtobufWriter();
         if (member != null) out.writeFieldName(member);
-        tmp.writeUInt32(1 << 3 | ProtobufFactory.wireType(keyencoder.getType()));
-        keyencoder.convertTo(tmp, key);
-        tmp.writeUInt32(2 << 3 | ProtobufFactory.wireType(valencoder.getType()));
-        valencoder.convertTo(tmp, value);
+        tmp.writeUInt32(1 << 3 | ProtobufFactory.wireType(keyEncoder.getType()));
+        keyEncoder.convertTo(tmp, key);
+        tmp.writeUInt32(2 << 3 | ProtobufFactory.wireType(valueEncoder.getType()));
+        valueEncoder.convertTo(tmp, value);
         int length = tmp.count();
         ((ProtobufWriter) out).writeUInt32(length);
         ((ProtobufWriter) out).writeTo(tmp.toArray());
