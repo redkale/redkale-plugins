@@ -7,7 +7,6 @@ package org.redkalex.socks;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.util.function.*;
 import org.redkale.net.http.*;
 
 /**
@@ -29,11 +28,6 @@ public class SocksContext extends HttpContext {
             e.printStackTrace();
         }
         this.group = g;
-    }
-
-    @Override
-    protected Consumer<ByteBuffer> getBufferConsumer() {
-        return super.getBufferConsumer();
     }
 
     @Override
