@@ -187,33 +187,34 @@ public class PgSQLTest {
         System.out.println("真实连接: " + conn);
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final String sql = "SELECT a.* FROM fortune a";
-        ByteBuffer buffer = bufferPool.get();
+        ByteBuffer wbuffer = bufferPool.get();
         {
-            buffer.put((byte) 'Q');
-            int start = buffer.position();
-            buffer.putInt(0);
-            writeUTF8String(buffer, sql);
-            buffer.putInt(start, buffer.position() - start);
+            wbuffer.put((byte) 'Q');
+            int start = wbuffer.position();
+            wbuffer.putInt(0);
+            writeUTF8String(wbuffer, sql);
+            wbuffer.putInt(start, wbuffer.position() - start);
         }
-        buffer.flip();
+        wbuffer.flip();
         final CompletableFuture<AsyncConnection> future = new CompletableFuture();
-        conn.write(buffer, null, new CompletionHandler<Integer, Void>() {
+        conn.write(wbuffer, null, new CompletionHandler<Integer, Void>() {
             @Override
             public void completed(Integer result, Void attachment1) {
                 if (result < 0) {
                     failed(new SQLException("Write Buffer Error"), attachment1);
                     return;
                 }
-                if (buffer.hasRemaining()) {
-                    conn.write(buffer, attachment1, this);
+                if (wbuffer.hasRemaining()) {
+                    conn.write(wbuffer, attachment1, this);
                     return;
                 }
-                buffer.clear();
-                conn.read(buffer, null, new CompletionHandler<Integer, Void>() {
+                wbuffer.clear();
+                conn.setReadBuffer(wbuffer);
+                conn.read(new CompletionHandler<Integer, ByteBuffer>() {
                     @Override
-                    public void completed(Integer result, Void attachment2) {
+                    public void completed(Integer result, ByteBuffer buffer) {
                         if (result < 0) {
-                            failed(new SQLException("Read Buffer Error"), attachment2);
+                            failed(new SQLException("Read Buffer Error"), buffer);
                             return;
                         }
                         buffer.flip();
@@ -255,7 +256,7 @@ public class PgSQLTest {
                                     message = value;
                                 }
                             }
-                            bufferPool.accept(buffer);
+                            conn.offerBuffer(buffer);
                             System.out.println("---------Exception------level:" + level + "-----code:" + code + "-----message:" + message);
                             future.completeExceptionally(new SQLException(message, code, 0));
                             conn.dispose();
@@ -265,8 +266,8 @@ public class PgSQLTest {
                     }
 
                     @Override
-                    public void failed(Throwable exc, Void attachment2) {
-                        bufferPool.accept(buffer);
+                    public void failed(Throwable exc, ByteBuffer attachment2) {
+                        conn.offerBuffer(attachment2);
                         future.completeExceptionally(exc);
                         conn.dispose();
                     }

@@ -934,15 +934,14 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                     return;
                                 }
                                 //----------------------- 读取返回结果 -------------------------------------
-                                ByteBuffer buffer0 = transport.pollBuffer();
-                                conn.read(buffer0, null, new ReplyCompletionHandler< Void>(conn, buffer0) {
+                                conn.read(new ReplyCompletionHandler(conn) {
                                     @Override
-                                    public void completed(Integer result, Void attachment) {
+                                    public void completed(Integer result, ByteBuffer buffer) {
                                         buffer.flip();
                                         try {
                                             final byte sign = buffer.get();
                                             if (sign == PLUS_BYTE) { // +
-                                                byte[] bs = readBytes();
+                                                byte[] bs = readBytes(buffer);
                                                 if ("OK".equalsIgnoreCase(new String(bs))) {
                                                     conn.setSubobject("authed");
                                                     rsfuture.complete(conn);
@@ -951,7 +950,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                                     rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
                                                 }
                                             } else if (sign == MINUS_BYTE) { // -   异常
-                                                String bs = readString();
+                                                String bs = readString(buffer);
                                                 transport.offerConnection(false, conn);
                                                 rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
                                             } else {
@@ -960,12 +959,13 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                                 rsfuture.completeExceptionally(new RuntimeException(exstr));
                                             }
                                         } catch (Exception e) {
-                                            failed(e, attachment);
+                                            failed(e, buffer);
                                         }
                                     }
 
                                     @Override
-                                    public void failed(Throwable exc, Void attachment) {
+                                    public void failed(Throwable exc, ByteBuffer buffer) {
+                                        conn.offerBuffer(buffer);
                                         transport.offerConnection(true, conn);
                                         rsfuture.completeExceptionally(exc);
                                     }
@@ -1021,15 +1021,14 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                             return;
                         }
                         //----------------------- 读取返回结果 -------------------------------------
-                        ByteBuffer buffer0 = transport.pollBuffer();
-                        conn.read(buffer0, null, new ReplyCompletionHandler< Void>(conn, buffer0) {
+                        conn.read(new ReplyCompletionHandler(conn) {
                             @Override
-                            public void completed(Integer result, Void attachment) {
+                            public void completed(Integer result, ByteBuffer buffer) {
                                 buffer.flip();
                                 try {
                                     final byte sign = buffer.get();
                                     if (sign == PLUS_BYTE) { // +
-                                        byte[] bs = readBytes();
+                                        byte[] bs = readBytes(buffer);
                                         if (future == null) {
                                             transport.offerConnection(false, conn); //必须在complete之前，防止并发是conn还没回收完毕
                                             callback.completed(null, key);
@@ -1038,7 +1037,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                             future.complete("SET".equals(command) ? null : bs);
                                         }
                                     } else if (sign == MINUS_BYTE) { // -
-                                        String bs = readString();
+                                        String bs = readString(buffer);
                                         if (future == null) {
                                             transport.offerConnection(false, conn);
                                             callback.failed(new RuntimeException(bs), key);
@@ -1047,7 +1046,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                             future.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
                                         }
                                     } else if (sign == COLON_BYTE) { // :
-                                        long rs = readLong();
+                                        long rs = readLong(buffer);
                                         if (future == null) {
                                             if (command.startsWith("INCR") || command.startsWith("DECR")) {
                                                 transport.offerConnection(false, conn);
@@ -1066,8 +1065,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                             }
                                         }
                                     } else if (sign == DOLLAR_BYTE) { // $
-                                        long val = readLong();
-                                        byte[] rs = val <= 0 ? null : readBytes();
+                                        long val = readLong(buffer);
+                                        byte[] rs = val <= 0 ? null : readBytes(buffer);
                                         Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                         if (future == null) {
                                             transport.offerConnection(false, conn);
@@ -1077,7 +1076,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                             future.complete("GET".equals(command) ? convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8)) : rs);
                                         }
                                     } else if (sign == ASTERISK_BYTE) { // *
-                                        final int len = readInt();
+                                        final int len = readInt(buffer);
                                         if (len < 0) {
                                             if (future == null) {
                                                 transport.offerConnection(false, conn);
@@ -1091,7 +1090,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                             boolean keys = "KEYS".equals(command);
                                             Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                             for (int i = 0; i < len; i++) {
-                                                if (readInt() > 0) rs.add(keys ? new String(readBytes(), UTF8) : convert.convertFrom(ct, new String(readBytes(), UTF8)));
+                                                if (readInt(buffer) > 0) rs.add(keys ? new String(readBytes(buffer), UTF8) : convert.convertFrom(ct, new String(readBytes(buffer), UTF8)));
                                             }
                                             if (future == null) {
                                                 transport.offerConnection(false, conn);
@@ -1112,12 +1111,13 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                         }
                                     }
                                 } catch (Exception e) {
-                                    failed(e, attachment);
+                                    failed(e, buffer);
                                 }
                             }
 
                             @Override
-                            public void failed(Throwable exc, Void attachment) {
+                            public void failed(Throwable exc, ByteBuffer attachment) {
+                                conn.offerBuffer(attachment);
                                 transport.offerConnection(true, conn);
                                 if (future == null) {
                                     callback.failed(exc, attachments);
@@ -1148,35 +1148,32 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
 
 }
 
-abstract class ReplyCompletionHandler<T> implements CompletionHandler<Integer, T> {
+abstract class ReplyCompletionHandler implements CompletionHandler<Integer, ByteBuffer> {
 
     protected final ByteArray out = new ByteArray();
 
-    protected final ByteBuffer buffer;
-
     protected final AsyncConnection conn;
 
-    public ReplyCompletionHandler(AsyncConnection conn, ByteBuffer buffer) {
+    public ReplyCompletionHandler(AsyncConnection conn) {
         this.conn = conn;
-        this.buffer = buffer;
     }
 
-    protected byte[] readBytes() throws IOException {
-        readLine();
+    protected byte[] readBytes(ByteBuffer buffer) throws IOException {
+        readLine(buffer);
         return out.getBytesAndClear();
     }
 
-    protected String readString() throws IOException {
-        readLine();
+    protected String readString(ByteBuffer buffer) throws IOException {
+        readLine(buffer);
         return out.toStringAndClear(null);//传null则表示使用UTF8 
     }
 
-    protected int readInt() throws IOException {
-        return (int) readLong();
+    protected int readInt(ByteBuffer buffer) throws IOException {
+        return (int) readLong(buffer);
     }
 
-    protected long readLong() throws IOException {
-        readLine();
+    protected long readLong(ByteBuffer buffer) throws IOException {
+        readLine(buffer);
         int start = 0;
         if (out.get(0) == '$') start = 1;
         boolean negative = out.get(start) == '-';
@@ -1188,7 +1185,7 @@ abstract class ReplyCompletionHandler<T> implements CompletionHandler<Integer, T
         return negative ? -value : value;
     }
 
-    private void readLine() throws IOException {
+    private void readLine(ByteBuffer buffer) throws IOException {
         boolean has = buffer.hasRemaining();
         byte lasted = has ? buffer.get() : 0;
         if (lasted == '\n' && !out.isEmpty() && out.getLastByte() == '\r') {
@@ -1207,13 +1204,9 @@ abstract class ReplyCompletionHandler<T> implements CompletionHandler<Integer, T
         }
         //说明数据还没读取完
         buffer.clear();
-        try {
-            conn.read(buffer).get(2, TimeUnit.SECONDS);
-            buffer.flip();
-        } catch (Exception e) {
-            throw new IOException(e);
-        }
-        readLine();
+        conn.read(buffer);
+        buffer.flip();
+        readLine(buffer);
     }
 
 }

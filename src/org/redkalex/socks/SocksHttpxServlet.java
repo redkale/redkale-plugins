@@ -6,7 +6,6 @@
 package org.redkalex.socks;
 
 import org.redkale.net.AsyncConnection;
-import org.redkale.util.Utility;
 import org.redkale.util.AutoLoad;
 import java.io.*;
 import java.net.*;
@@ -63,7 +62,7 @@ public final class SocksHttpxServlet extends SocksServlet {
         if (!body.isEmpty()) buffer.put(body.directBytes(), 0, body.size());
         buffer.put(LINE);
         buffer.flip();
-        final AsyncConnection remote = AsyncConnection.createTCP(group, request.getHostSocketAddress(), 6, 6).join();
+        final AsyncConnection remote = AsyncConnection.createTCP(response.getContext(), group, request.getHostSocketAddress(), 6, 6).join();
         remote.write(buffer, null, new CompletionHandler<Integer, Void>() {
 
             @Override
@@ -91,7 +90,7 @@ public final class SocksHttpxServlet extends SocksServlet {
     private void connect(HttpxRequest request, HttpxResponse response, final AsynchronousChannelGroup group) throws IOException {
         final InetSocketAddress remoteAddress = request.getURLSocketAddress();
         final AsyncConnection remote = remoteAddress.getPort() == 443
-            ? AsyncConnection.create(Utility.createDefaultSSLSocket(remoteAddress)) : AsyncConnection.createTCP(group, remoteAddress, 6, 6).join();
+            ? null : AsyncConnection.createTCP(response.getContext(), group, remoteAddress, 6, 6).join(); //AsyncConnection.create(Utility.createDefaultSSLSocket(remoteAddress))
         final ByteBuffer buffer0 = response.getContext().pollBuffer();
         buffer0.put("HTTP/1.1 200 Connection established\r\nConnection: close\r\n\r\n".getBytes());
         buffer0.flip();
@@ -130,13 +129,12 @@ public final class SocksHttpxServlet extends SocksServlet {
 
         @Override
         public void completed(Integer result0, Void v0) {
-            final ByteBuffer rbuffer = request.getContext().pollBuffer();
-            remote.read(rbuffer, null, new CompletionHandler<Integer, Void>() {
+            remote.read(new CompletionHandler<Integer, ByteBuffer>() {
 
                 @Override
-                public void completed(Integer result, Void attachment) {
+                public void completed(Integer result, ByteBuffer rbuffer) {
                     if (result <= 0) {
-                        failed(null, attachment); //获取信息完毕
+                        failed(null, rbuffer); //获取信息完毕
                         return;
                     }
                     rbuffer.flip();
@@ -146,7 +144,8 @@ public final class SocksHttpxServlet extends SocksServlet {
                         @Override
                         public void completed(Integer result, Void attachment) {
                             rbuffer.clear();
-                            remote.read(rbuffer, attachment, parent);
+                            remote.setReadBuffer(rbuffer);
+                            remote.read(parent);
                         }
 
                         @Override
@@ -157,8 +156,8 @@ public final class SocksHttpxServlet extends SocksServlet {
                 }
 
                 @Override
-                public void failed(Throwable exc, Void attachment) {
-                    response.offerBuffer(rbuffer);
+                public void failed(Throwable exc, ByteBuffer attachment) {
+                    response.offerBuffer(attachment);
                     response.finish(true);
                     try {
                         remote.close();
@@ -167,13 +166,12 @@ public final class SocksHttpxServlet extends SocksServlet {
                 }
             });
 
-            final ByteBuffer qbuffer = request.getContext().pollBuffer();
-            request.getChannel().read(qbuffer, null, new CompletionHandler<Integer, Void>() {
+            request.getChannel().read(new CompletionHandler<Integer, ByteBuffer>() {
 
                 @Override
-                public void completed(Integer result, Void attachment) {
+                public void completed(Integer result, ByteBuffer qbuffer) {
                     if (result <= 0) {
-                        failed(null, attachment); //获取信息完毕
+                        failed(null, qbuffer); //获取信息完毕
                         return;
                     }
                     qbuffer.flip();
@@ -183,7 +181,8 @@ public final class SocksHttpxServlet extends SocksServlet {
                         @Override
                         public void completed(Integer result, Void attachment) {
                             qbuffer.clear();
-                            request.getChannel().read(qbuffer, null, parent);
+                            request.getChannel().setReadBuffer(qbuffer); 
+                            request.getChannel().read(parent);
                         }
 
                         @Override
@@ -194,8 +193,8 @@ public final class SocksHttpxServlet extends SocksServlet {
                 }
 
                 @Override
-                public void failed(Throwable exc, Void attachment) {
-                    response.offerBuffer(qbuffer);
+                public void failed(Throwable exc, ByteBuffer attachment) {
+                    response.offerBuffer(attachment);
                     response.finish(true);
                     try {
                         remote.close();

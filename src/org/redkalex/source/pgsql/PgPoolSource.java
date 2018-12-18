@@ -102,20 +102,21 @@ public class PgPoolSource extends PoolTcpSource {
                             return;
                         }
                         buffer.clear();
-                        conn.read(buffer, null, new CompletionHandler<Integer, Void>() {
+                        conn.setReadBuffer(buffer);
+                        conn.read(new CompletionHandler<Integer, ByteBuffer>() {
                             @Override
-                            public void completed(Integer result, Void attachment2) {
+                            public void completed(Integer result, ByteBuffer attachment2) {
                                 if (result < 0) {
                                     failed(new RuntimeException("Read Buffer Error"), attachment2);
                                     return;
                                 }
-                                buffer.flip();
-                                respConnectBuffer(buffer, future, conn);
+                                attachment2.flip();
+                                respConnectBuffer(attachment2, future, conn);
                             }
 
                             @Override
-                            public void failed(Throwable exc, Void attachment2) {
-                                bufferPool.accept(buffer);
+                            public void failed(Throwable exc, ByteBuffer attachment2) {
+                                conn.offerBuffer(attachment2);
                                 future.completeExceptionally(exc);
                                 conn.dispose();
                             }

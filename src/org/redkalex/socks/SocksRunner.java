@@ -82,10 +82,11 @@ public class SocksRunner implements Runnable {
 
     private void connect() {
         buffer.clear();
-        this.channel.read(buffer, null, new CompletionHandler<Integer, Void>() {
+        this.channel.setReadBuffer(buffer); 
+        this.channel.read( new CompletionHandler<Integer, ByteBuffer>() {
 
             @Override
-            public void completed(Integer result, Void attachment) {
+            public void completed(Integer result, ByteBuffer attachment) {
                 buffer.flip();
                 if (!buffer.hasRemaining()) {
                     closeRunner(null);
@@ -106,7 +107,7 @@ public class SocksRunner implements Runnable {
                     return;
                 }
                 try {
-                    remoteChannel = AsyncConnection.createTCP(context.getAsynchronousChannelGroup(), remoteAddress, 6, 6).join();
+                    remoteChannel = AsyncConnection.createTCP(context, context.getAsynchronousChannelGroup(), remoteAddress, 6, 6).join();
                     buffer.clear();
                     buffer.putChar((char) 0x0500);
                     buffer.put((byte) 0x00);  //rsv
@@ -156,7 +157,7 @@ public class SocksRunner implements Runnable {
             }
 
             @Override
-            public void failed(Throwable exc, Void attachment) {
+            public void failed(Throwable exc, ByteBuffer attachment) {
                 closeRunner(exc);
             }
         });
@@ -211,20 +212,21 @@ public class SocksRunner implements Runnable {
                 return;
             }
             rbuffer.clear();
-            readconn.read(rbuffer, null, new CompletionHandler<Integer, Void>() {
+            readconn.setReadBuffer(rbuffer); 
+            readconn.read( new CompletionHandler<Integer, ByteBuffer>() {
 
                 @Override
-                public void completed(Integer result, Void attachment) {
+                public void completed(Integer result, ByteBuffer attachment) {
                     if (result < 1) {
                         self.failed(null, attachment);
                         return;
                     }
-                    rbuffer.flip();
-                    writeconn.write(rbuffer, attachment, self);
+                    attachment.flip();
+                    writeconn.write(attachment, attachment, self);
                 }
 
                 @Override
-                public void failed(Throwable exc, Void attachment) {
+                public void failed(Throwable exc, ByteBuffer attachment) {
                     self.failed(exc, attachment);
                 }
             });

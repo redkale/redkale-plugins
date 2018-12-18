@@ -203,10 +203,10 @@ public class MyPoolSource extends PoolTcpSource {
                         }
                         buffer.flip();
                         try {
-                            conn.write(buffer).get();
+                            conn.write(buffer);
                             System.out.println("----------------发送完成: " + buffer.remaining());
                             buffer.clear();
-                            conn.read(buffer).get();
+                            conn.read(buffer);
                             System.out.println("----------------读取完成: " + buffer.position());
                             buffer.flip();
                             try {

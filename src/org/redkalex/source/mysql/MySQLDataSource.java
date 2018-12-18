@@ -398,8 +398,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                 }
 
                 final List<ByteBuffer> readBuffs = new ArrayList<>();
-                ByteBuffer readbuffer = bufferPool.get();
-                conn.read(readbuffer, readbuffer, new CompletionHandler<Integer, ByteBuffer>() {
+                conn.read(new CompletionHandler<Integer, ByteBuffer>() {
                     @Override
                     public void completed(Integer result, ByteBuffer attachment2) {
                         if (result < 0) {
@@ -409,8 +408,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         if (result == 8192 || !attachment2.hasRemaining()) { //postgresql数据包上限为8192 还有数据
                             attachment2.flip();
                             readBuffs.add(attachment2);
-                            ByteBuffer readbuffer = bufferPool.get();
-                            conn.read(readbuffer, readbuffer, this);
+                            conn.read(this);
                             return;
                         }
                         attachment2.flip();
@@ -588,8 +586,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                 }
                 final PgResultSet resultSet = new PgResultSet();
                 final List<ByteBuffer> readBuffs = new ArrayList<>();
-                ByteBuffer readbuffer = bufferPool.get();
-                conn.read(readbuffer, readbuffer, new CompletionHandler<Integer, ByteBuffer>() {
+                conn.read(new CompletionHandler<Integer, ByteBuffer>() {
                     @Override
                     public void completed(Integer result, ByteBuffer attachment2) {
                         if (result < 0) {
@@ -600,7 +597,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                             attachment2.flip();
                             readBuffs.add(attachment2);
                             ByteBuffer readbuffer = bufferPool.get();
-                            conn.read(readbuffer, readbuffer, this);
+                            conn.read(this);
                             return;
                         }
                         attachment2.flip();
