@@ -157,9 +157,12 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         source.getCollectionAndRefresh("keys3", 3000);
 
         source.remove("sets3");
+        source.remove("sets4");
         source.appendSetItem("sets3", "setvals1");
         source.appendSetItem("sets3", "setvals2");
         source.appendSetItem("sets3", "setvals1");
+        source.appendSetItem("sets4", "setvals2");
+        source.appendSetItem("sets4", "setvals1");
         System.out.println("[两值] sets3 VALUES : " + source.getCollection("sets3"));
         System.out.println("[有值] sets3 EXISTS : " + source.exists("sets3"));
         System.out.println("[有值] sets3-setvals2 EXISTSITEM : " + source.existsSetItem("sets3", "setvals2"));
@@ -171,15 +174,20 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         System.out.println("key startkeys: " + source.queryKeysStartsWith("key"));
         System.out.println("newnum 值 : " + source.incr("newnum"));
         System.out.println("newnum 值 : " + source.decr("newnum"));
+        System.out.println("sets3&sets4:  " + source.getStringCollectionMap("sets3", "sets4"));
         System.out.println("------------------------------------");
         source.set("myaddr", InetSocketAddress.class, addr);
         System.out.println("myaddr:  " + source.get("myaddr", InetSocketAddress.class));
         source.remove("myaddrs");
+        source.remove("myaddrs2");
         source.appendSetItem("myaddrs", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
         source.appendSetItem("myaddrs", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7799));
         System.out.println("myaddrs:  " + source.getCollection("myaddrs", InetSocketAddress.class));
         source.removeSetItem("myaddrs", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
         System.out.println("myaddrs:  " + source.getCollection("myaddrs", InetSocketAddress.class));
+        source.appendSetItem("myaddrs2", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
+        source.appendSetItem("myaddrs2", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7799));
+        System.out.println("myaddrs&myaddrs2:  " + source.getCollectionMap(InetSocketAddress.class, "myaddrs", "myaddrs2"));
         System.out.println("------------------------------------");
         source.remove("myaddrs");
         Type mapType = new TypeToken<Map<String, Integer>>() {
@@ -490,7 +498,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
-    public CompletableFuture<Collection<V>> getCollectionAsync(String key, final Type componentType) {
+    public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return (CompletableFuture) send("OBJECT", null, componentType, key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
@@ -502,6 +510,47 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
+    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final Type componentType, final String... keys) {
+        return (CompletableFuture) send("OBJECT", null, componentType, keys[0], "ENCODING".getBytes(UTF8), keys[0].getBytes(UTF8)).thenCompose(t -> {
+            if (t == null) return CompletableFuture.completedFuture(null);
+            final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
+            final Map<String, Collection<T>> map = new HashMap<>();
+            final CompletableFuture[] futures = new CompletableFuture[keys.length];
+            if (new String((byte[]) t).contains("list")) { //list        
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
+                        if (c != null) {
+                            synchronized (map) {
+                                map.put(key, (Collection) c);
+                            }
+                        }
+                    });
+                }
+            } else {
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(UTF8)).thenAccept(c -> {
+                        if (c != null) {
+                            synchronized (map) {
+                                map.put(key, (Collection) c);
+                            }
+                        }
+                    });
+                }
+            }
+            CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+                if (e != null) {
+                    rsFuture.completeExceptionally(e);
+                } else {
+                    rsFuture.complete(map);
+                }
+            });
+            return rsFuture;
+        });
+    }
+
+    @Override
     public Collection<V> getCollection(String key) {
         return getCollectionAsync(key).join();
     }
@@ -509,6 +558,11 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     @Override
     public <T> Collection<T> getCollection(String key, final Type componentType) {
         return (Collection) getCollectionAsync(key, componentType).join();
+    }
+
+    @Override
+    public <T> Map<String, Collection<T>> getCollectionMap(final Type componentType, String... keys) {
+        return (Map) getCollectionMapAsync(componentType, keys).join();
     }
 
     @Override
@@ -524,8 +578,54 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
+    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(String... keys) {
+        return (CompletableFuture) send("OBJECT", null, (Type) null, keys[0], "ENCODING".getBytes(UTF8), keys[0].getBytes(UTF8)).thenCompose(t -> {
+            if (t == null) return CompletableFuture.completedFuture(null);
+            final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
+            final Map<String, Collection<String>> map = new HashMap<>();
+            final CompletableFuture[] futures = new CompletableFuture[keys.length];
+            if (new String((byte[]) t).contains("list")) { //list        
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
+                        if (c != null) {
+                            synchronized (map) {
+                                map.put(key, (Collection) c);
+                            }
+                        }
+                    });
+                }
+            } else {
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = send("SMEMBERS", CacheEntryType.STRING, (Type) null, true, key, key.getBytes(UTF8)).thenAccept(c -> {
+                        if (c != null) {
+                            synchronized (map) {
+                                map.put(key, (Collection) c);
+                            }
+                        }
+                    });
+                }
+            }
+            CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+                if (e != null) {
+                    rsFuture.completeExceptionally(e);
+                } else {
+                    rsFuture.complete(map);
+                }
+            });
+            return rsFuture;
+        });
+    }
+
+    @Override
     public Collection<String> getStringCollection(String key) {
         return getStringCollectionAsync(key).join();
+    }
+
+    @Override
+    public Map<String, Collection<String>> getStringCollectionMap(String... keys) {
+        return getStringCollectionMapAsync(keys).join();
     }
 
     @Override
@@ -541,8 +641,54 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
+    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(String... keys) {
+        return (CompletableFuture) send("OBJECT", null, (Type) null, keys[0], "ENCODING".getBytes(UTF8), keys[0].getBytes(UTF8)).thenCompose(t -> {
+            if (t == null) return CompletableFuture.completedFuture(null);
+            final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
+            final Map<String, Collection<Long>> map = new HashMap<>();
+            final CompletableFuture[] futures = new CompletableFuture[keys.length];
+            if (new String((byte[]) t).contains("list")) { //list        
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
+                        if (c != null) {
+                            synchronized (map) {
+                                map.put(key, (Collection) c);
+                            }
+                        }
+                    });
+                }
+            } else {
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = send("SMEMBERS", CacheEntryType.LONG, (Type) null, true, key, key.getBytes(UTF8)).thenAccept(c -> {
+                        if (c != null) {
+                            synchronized (map) {
+                                map.put(key, (Collection) c);
+                            }
+                        }
+                    });
+                }
+            }
+            CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+                if (e != null) {
+                    rsFuture.completeExceptionally(e);
+                } else {
+                    rsFuture.complete(map);
+                }
+            });
+            return rsFuture;
+        });
+    }
+
+    @Override
     public Collection<Long> getLongCollection(String key) {
         return getLongCollectionAsync(key).join();
+    }
+
+    @Override
+    public Map<String, Collection<Long>> getLongCollectionMap(String... keys) {
+        return getLongCollectionMapAsync(keys).join();
     }
 
     //--------------------- getCollectionAndRefresh ------------------------------  
