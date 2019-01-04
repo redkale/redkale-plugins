@@ -161,6 +161,22 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
+    protected <T> CompletableFuture<Integer> clearDB(EntityInfo<T> info, String sql) {
+        if (info.isLoggable(logger, Level.FINEST)) {
+            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clear sql=" + sql);
+        }
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, 0, false));
+    }
+
+    @Override
+    protected <T> CompletableFuture<Integer> dropDB(EntityInfo<T> info, String sql) {
+        if (info.isLoggable(logger, Level.FINEST)) {
+            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " drop sql=" + sql);
+        }
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, 0, false));
+    }
+
+    @Override
     protected <T> CompletableFuture<Integer> updateDB(EntityInfo<T> info, final T... values) {
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();

@@ -699,4 +699,14 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         })).join();
     }
 
+    @Override
+    protected <T> CompletableFuture<Integer> clearDB(EntityInfo<T> info, String sql) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    protected <T> CompletableFuture<Integer> dropDB(EntityInfo<T> info, String sql) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
 }
