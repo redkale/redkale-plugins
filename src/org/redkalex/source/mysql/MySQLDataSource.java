@@ -700,12 +700,12 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> clearDB(EntityInfo<T> info, String sql) {
+    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, String sql) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> dropDB(EntityInfo<T> info, String sql) {
+    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, String sql) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
