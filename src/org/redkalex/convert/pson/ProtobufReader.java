@@ -373,4 +373,9 @@ public class ProtobufReader extends Reader {
             | ((content[++this.position] & 0xffL) << 48)
             | ((content[++this.position] & 0xffL) << 56));
     }
+
+    @Override
+    public ValueType readType() {
+        throw new UnsupportedOperationException("Not supported yet."); 
+    }
 }
