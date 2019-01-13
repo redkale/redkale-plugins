@@ -261,7 +261,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
             T rs = null;
             try {
-                rs = set.next() ? infoGetValue(info, selects, set) : null;
+                rs = set.next() ? getEntityValue(info, selects, set) : null;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -276,17 +276,12 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
             try {
                 if (set.next()) {
                     final Attribute<T, Serializable> attr = info.getAttribute(column);
-                    if (attr.type() == byte[].class) {
-                        Blob blob = set.getBlob(1);
-                        if (blob != null) val = blob.getBytes(1, (int) blob.length());
-                    } else {
-                        val = (Serializable) set.getObject(1);
-                    }
+                    val = getFieldValue(info, attr, set, 1);
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            return val;
+            return val == null ? defValue : val;
         }));
     }
 
@@ -316,7 +311,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                 try {
                     final List<T> list = new ArrayList();
                     while (set.next()) {
-                        list.add(infoGetValue(info, sels, set));
+                        list.add(getEntityValue(info, sels, set));
                     }
                     return Sheet.asSheet(list);
                 } catch (Exception e) {
@@ -332,7 +327,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                 try {
                     final List<T> list = new ArrayList();
                     while (set.next()) {
-                        list.add(infoGetValue(info, sels, set));
+                        list.add(getEntityValue(info, sels, set));
                     }
                     return new Sheet(total.longValue(), list);
                 } catch (Exception e) {

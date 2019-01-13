@@ -201,7 +201,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
             T rs = null;
             try {
-                rs = set.next() ? infoGetValue(info, selects, set) : null;
+                rs = set.next() ? getEntityValue(info, selects, set) : null;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -256,7 +256,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                 try {
                     final List<T> list = new ArrayList();
                     while (set.next()) {
-                        list.add(infoGetValue(info, sels, set));
+                        list.add(getEntityValue(info, sels, set));
                     }
                     return Sheet.asSheet(list);
                 } catch (Exception e) {
@@ -272,7 +272,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                 try {
                     final List<T> list = new ArrayList();
                     while (set.next()) {
-                        list.add(infoGetValue(info, sels, set));
+                        list.add(getEntityValue(info, sels, set));
                     }
                     return new Sheet(total.longValue(), list);
                 } catch (Exception e) {
