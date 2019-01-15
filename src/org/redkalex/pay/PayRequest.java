@@ -5,7 +5,7 @@
  */
 package org.redkalex.pay;
 
-import org.redkale.convert.json.JsonFactory;
+import org.redkale.convert.json.*;
 
 /**
  *
@@ -39,7 +39,7 @@ public class PayRequest {
 
     @Override
     public String toString() {
-        return JsonFactory.root().getConvert().convertTo(this);
+        return JsonConvert.root().convertTo(this);
     }
 
     public String getAppid() {
