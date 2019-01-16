@@ -40,6 +40,14 @@ public class PayResponse extends RetResult<Map<String, String>> {
         super(retcode, retinfo, result);
     }
 
+    public String attach(String name) {
+        return attach == null ? null : attach.get(name);
+    }
+
+    public String attach(String name, String defValue) {
+        return attach == null ? defValue : attach.getOrDefault(name, defValue);
+    }
+
     @Override
     public PayResponse retcode(int retcode) {
         this.retcode = retcode;

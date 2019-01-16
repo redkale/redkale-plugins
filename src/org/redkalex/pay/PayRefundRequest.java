@@ -29,8 +29,8 @@ public class PayRefundRequest extends PayRequest {
 
     protected String clientAddr = "";  //客户端IP地址
 
-    protected Map<String, String> map; //扩展信息
-    
+    protected Map<String, String> attach; //扩展信息
+
     @Override
     public void checkVaild() {
         super.checkVaild();
@@ -41,12 +41,20 @@ public class PayRefundRequest extends PayRequest {
         if (this.clientAddr == null || this.clientAddr.isEmpty()) throw new RuntimeException("clientAddr is illegal");
     }
 
-    public Map<String, String> add(String key, String value) {
-        if (this.map == null) this.map = new TreeMap<>();
-        this.map.put(key, value);
-        return this.map;
+    public Map<String, String> attach(String key, Object value) {
+        if (this.attach == null) this.attach = new TreeMap<>();
+        this.attach.put(key, String.valueOf(value));
+        return this.attach;
     }
-    
+
+    public String attach(String name) {
+        return attach == null ? null : attach.get(name);
+    }
+
+    public String attach(String name, String defValue) {
+        return attach == null ? defValue : attach.getOrDefault(name, defValue);
+    }
+
     public long getRefundmoney() {
         return refundmoney;
     }
@@ -95,20 +103,39 @@ public class PayRefundRequest extends PayRequest {
         this.clientAddr = clientAddr;
     }
 
+    public Map<String, String> getAttach() {
+        return attach;
+    }
+
+    public void setAttach(Map<String, String> attach) {
+        this.attach = attach;
+    }
+
+    @Deprecated
+    public Map<String, String> add(String key, String value) {
+        if (this.attach == null) this.attach = new TreeMap<>();
+        this.attach.put(key, value);
+        return this.attach;
+    }
+
+    @Deprecated
     public String getMapValue(String name) {
-        return map == null ? null : map.get(name);
+        return attach == null ? null : attach.get(name);
     }
 
+    @Deprecated
     public String getMapValue(String name, String defValue) {
-        return map == null ? defValue : map.getOrDefault(name, defValue);
+        return attach == null ? defValue : attach.getOrDefault(name, defValue);
     }
 
+    @Deprecated
     public Map<String, String> getMap() {
-        return map;
+        return attach;
     }
 
+    @Deprecated
     public void setMap(Map<String, String> map) {
-        this.map = map;
+        this.attach = map;
     }
 
 }
