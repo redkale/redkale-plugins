@@ -19,7 +19,7 @@ import org.redkale.service.RetResult;
 public class PayResponse extends RetResult<Map<String, String>> {
 
     @ConvertColumn(ignore = true, type = ConvertType.JSON)
-    protected String responsetext = ""; //第三方支付返回的结果字符串
+    protected String responsetext = ""; //第三方支付返回的原始结果字符串
 
     public PayResponse() {
     }

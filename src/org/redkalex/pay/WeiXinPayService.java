@@ -190,16 +190,16 @@ public class WeiXinPayService extends AbstractPayService {
         if (element == null) return result.retcode(RETPAY_CONF_ERROR);
         result.setPayno(map.getOrDefault("out_trade_no", ""));
         result.setThirdpayno(map.getOrDefault("transaction_id", ""));
-        if ("NOTPAY".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_WAITING).result(rstext);
-        if (!"SUCCESS".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_FAILED).result(rstext);
+        if ("NOTPAY".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(rstext);
+        if (!"SUCCESS".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext);
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
-        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR).result(rstext);
+        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR).notifytext(rstext);
         String state = map.get("trade_state");
         if (state == null && "SUCCESS".equals(map.get("result_code")) && Long.parseLong(map.get("total_fee")) > 0) {
             state = "SUCCESS";
         }
-        if (!"SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).result(rstext);
-        return result.result(rstext);
+        if (!"SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext);
+        return result.notifytext(rstext);
     }
 
     /**

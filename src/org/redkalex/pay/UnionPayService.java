@@ -189,11 +189,11 @@ public class UnionPayService extends AbstractPayService {
         if (element == null) return result.retcode(RETPAY_CONF_ERROR);
         if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR);
         //https://open.unionpay.com/upload/download/%E5%B9%B3%E5%8F%B0%E6%8E%A5%E5%85%A5%E6%8E%A5%E5%8F%A3%E8%A7%84%E8%8C%83-%E7%AC%AC5%E9%83%A8%E5%88%86-%E9%99%84%E5%BD%95V2.0.pdf
-        if ("70".equals(map.get("respCode"))) return result.retcode(RETPAY_PAY_WAITING).result(map.getOrDefault("respMsg", "unpay"));
+        if ("70".equals(map.get("respCode"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(map.getOrDefault("respMsg", "unpay"));
         if (!"00".equalsIgnoreCase(map.get("respCode")) || Long.parseLong(map.getOrDefault("txnAmt", "0")) < 1) {
             return result.retcode(RETPAY_PAY_ERROR).retinfo(map.getOrDefault("respMsg", null));
         }
-        return result.result(rstext);
+        return result.notifytext(rstext);
     }
 
     @Override
