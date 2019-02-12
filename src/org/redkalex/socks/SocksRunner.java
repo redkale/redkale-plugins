@@ -204,7 +204,7 @@ public class SocksRunner implements Runnable {
         public void completed(Integer result0, Void v0) {
             final CompletionHandler self = this;
             if (rbuffer.hasRemaining()) {
-                writeconn.write(rbuffer, null, self);
+                writeconn.write(rbuffer, v0, self);
                 return;
             }
             if (result0 < 1) {
@@ -218,16 +218,16 @@ public class SocksRunner implements Runnable {
                 @Override
                 public void completed(Integer result, ByteBuffer attachment) {
                     if (result < 1) {
-                        self.failed(null, attachment);
+                        self.failed(null, v0);
                         return;
                     }
                     attachment.flip();
-                    writeconn.write(attachment, attachment, self);
+                    writeconn.write(attachment, v0, self);
                 }
 
                 @Override
                 public void failed(Throwable exc, ByteBuffer attachment) {
-                    self.failed(exc, attachment);
+                    self.failed(exc, v0);
                 }
             });
         }
