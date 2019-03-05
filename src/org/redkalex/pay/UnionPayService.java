@@ -134,7 +134,7 @@ public class UnionPayService extends AbstractPayService {
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
             result.setAppid(element.appid);
             TreeMap<String, String> map = new TreeMap<>();
-            if (request.getMap() != null) map.putAll(request.getMap());
+            if (request.getAttach() != null) map.putAll(request.getAttach());
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
             map.put("version", element.version);            //版本号 全渠道默认值
@@ -182,7 +182,7 @@ public class UnionPayService extends AbstractPayService {
         final PayNotifyResponse result = new PayNotifyResponse();
         result.setPaytype(request.getPaytype());
         final String rstext = "success";
-        Map<String, String> map = request.getMap();
+        Map<String, String> map = request.getAttach();
         result.setPayno(map.getOrDefault("orderId", ""));
         result.setThirdpayno(map.getOrDefault("queryId", ""));
         final UnionPayElement element = elements.get(request.getAppid());
@@ -204,7 +204,7 @@ public class UnionPayService extends AbstractPayService {
             final UnionPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR);
             TreeMap<String, String> map = new TreeMap<>();
-            if (request.getMap() != null) map.putAll(request.getMap());
+            if (request.getAttach() != null) map.putAll(request.getAttach());
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
             map.put("version", element.version);            //版本号 全渠道默认值
@@ -466,7 +466,6 @@ public class UnionPayService extends AbstractPayService {
 
         //"pay.union.notifyurl" //回调url
         //public String notifyurl = "";
-
         //"pay.union.createurl" //请求付款url
         public String createurl = "https://gateway.95516.com/gateway/api/appTransReq.do";
 

@@ -97,7 +97,7 @@ public class EhkingPayService extends AbstractPayService {
             pd.put("name", request.getPaytitle());
             pd.put("quantity", "1");
             pd.put("amount", "" + request.getPaymoney());
-            pd.put("receiver", request.getMap() == null ? "" : request.getMap().getOrDefault("receiver", ""));
+            pd.put("receiver", request.getAttach("receiver", ""));
 
             map.put("merchantId", element.merchno);
             map.put("orderAmount", "" + request.getPaymoney());
@@ -105,10 +105,10 @@ public class EhkingPayService extends AbstractPayService {
             map.put("requestId", request.getPayno());
             String notifyurl = (request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl;
             map.put("notifyUrl", notifyurl);
-            map.put("callbackUrl", request.getMap() == null ? notifyurl : request.getMap().getOrDefault("gotourl", notifyurl));
+            map.put("callbackUrl", request.getAttach("gotourl", notifyurl));
             map.put("remark", request.getPayno());
-            map.put("paymentModeCode", request.getMap() == null ? "" : request.getMap().getOrDefault("bankcode", ""));
-            map.put("forUse", request.getMap() == null ? "" : request.getMap().getOrDefault("foruse", ""));
+            map.put("paymentModeCode", request.getAttach("bankcode", ""));
+            map.put("forUse", request.getAttach("foruse", ""));
 
             map.put("productDetails", new Object[]{pd});
             map.put("payer", new LinkedHashMap<>());

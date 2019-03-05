@@ -47,11 +47,11 @@ public class PayRefundRequest extends PayRequest {
         return this.attach;
     }
 
-    public String attach(String name) {
+    public String getAttach(String name) {
         return attach == null ? null : attach.get(name);
     }
 
-    public String attach(String name, String defValue) {
+    public String getAttach(String name, String defValue) {
         return attach == null ? defValue : attach.getOrDefault(name, defValue);
     }
 
@@ -116,6 +116,16 @@ public class PayRefundRequest extends PayRequest {
         if (this.attach == null) this.attach = new TreeMap<>();
         this.attach.put(key, value);
         return this.attach;
+    }
+
+    @Deprecated
+    public String attach(String name) {
+        return attach == null ? null : attach.get(name);
+    }
+
+    @Deprecated
+    public String attach(String name, String defValue) {
+        return attach == null ? defValue : attach.getOrDefault(name, defValue);
     }
 
     @Deprecated
