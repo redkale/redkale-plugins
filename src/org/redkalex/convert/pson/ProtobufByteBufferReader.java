@@ -20,16 +20,7 @@ public class ProtobufByteBufferReader extends ProtobufReader {
 
     private ByteBuffer currentBuffer;
 
-    protected ConvertMask mask; //mask二选一
-
-    protected ConvertMask[] masks; //mask二选一
-
-    protected ProtobufByteBufferReader(ConvertMask[] masks, ByteBuffer... buffers) {
-        this.masks = masks;
-        this.buffers = buffers;
-        if (buffers != null && buffers.length > 0) this.currentBuffer = buffers[currentIndex];
-        if (this.masks.length != buffers.length) throw new RuntimeException("masks.length must equals buffers.length");
-    }
+    protected ConvertMask mask;
 
     protected ProtobufByteBufferReader(ConvertMask mask, ByteBuffer... buffers) {
         this.mask = mask;
@@ -44,31 +35,24 @@ public class ProtobufByteBufferReader extends ProtobufReader {
         this.currentBuffer = null;
         this.buffers = null;
         this.mask = null;
-        this.masks = null;
         return false;
     }
 
     @Override
     protected byte currentByte() {
-        if (mask != null) return mask.unmask(currentBuffer.get(currentBuffer.position()));
-        if (masks != null) return masks[this.currentIndex].unmask(currentBuffer.get(currentBuffer.position()));
-        return currentBuffer.get(currentBuffer.position());
+        return mask == null ? currentBuffer.get(currentBuffer.position()) : mask.unmask(currentBuffer.get(currentBuffer.position()));
     }
 
     protected byte nextByte() {
         if (this.currentBuffer.hasRemaining()) {
             this.position++;
-            if (mask != null) return mask.unmask(this.currentBuffer.get());
-            if (masks != null) return masks[this.currentIndex].unmask(this.currentBuffer.get());
-            return this.currentBuffer.get();
+            return mask == null ? this.currentBuffer.get() : mask.unmask(this.currentBuffer.get());
         }
         for (;;) {
             this.currentBuffer = this.buffers[++this.currentIndex];
             if (this.currentBuffer.hasRemaining()) {
                 this.position++;
-                if (mask != null) return mask.unmask(this.currentBuffer.get());
-                if (masks != null) return masks[this.currentIndex].unmask(this.currentBuffer.get());
-                return this.currentBuffer.get();
+                return mask == null ? this.currentBuffer.get() : mask.unmask(this.currentBuffer.get());
             }
         }
     }

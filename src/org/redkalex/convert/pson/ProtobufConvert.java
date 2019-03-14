@@ -147,16 +147,6 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         return (T) decoder.convertFrom(new ProtobufByteBufferReader(mask, buffers));
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> T convertFrom(final Type type, final ConvertMask[] masks, final ByteBuffer... buffers) {
-        if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertFrom ByteBuffer");
-        if (type == null || buffers.length < 1) return null;
-        Decodeable decoder = factory.loadDecoder(type);
-        if (!(decoder instanceof ObjectDecoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
-        return (T) decoder.convertFrom(new ProtobufByteBufferReader(masks, buffers));
-    }
-
     @SuppressWarnings("unchecked")
     public <T> T convertFrom(final Type type, final ProtobufReader reader) {
         if (type == null) return null;
