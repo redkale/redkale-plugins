@@ -325,6 +325,11 @@ public class ProtobufWriter extends Writer {
         writeTo(bs);
     }
 
+    @Override
+    public void writeWrapper(StringConvertWrapper value) {
+        if (value != null) writeString(value.getValue());
+    }
+
     protected void writeUInt32(int value) {
         while (true) {
             if ((value & ~0x7F) == 0) {
