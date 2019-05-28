@@ -494,53 +494,59 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                             message = value;
                                         }
                                     }
-                                    if (insert && info.getTableStrategy() != null && info.isTableNotExist(code)) { //需要建表
-                                        for (ByteBuffer buf : readBuffs) {
-                                            bufferPool.accept(buf);
-                                        }
-                                        conn.dispose();
-                                        final String newTable = info.getTable(values[0]);
-                                        final String createTableSql = info.getTableCopySQL(newTable);
-                                        //注意：postgresql不支持跨库复制表结构
-                                        writePool.pollAsync().thenCompose((conn1) -> executeUpdate(info, conn1, createTableSql, values, 0, false).whenComplete((r1, t1) -> {
-                                            if (t1 == null) { //建表成功 
-                                                writePool.pollAsync().thenCompose((conn2) -> executeUpdate(info, conn2, sql, values, fetchSize, false, parameters)).whenComplete((r2, t2) -> { //insert必须为false，否则建库失败也会循环到此处
-                                                    if (t2 != null) {//SQL执行失败
-                                                        future.completeExceptionally(t2);
-                                                    } else { //SQL执行成功
-                                                        future.complete(r2);
-                                                    }
-                                                });
-                                            } else if (t1 instanceof SQLException && info.isTableNotExist((SQLException) t1)) { //建库
-                                                String createDbSsql = "CREATE DATABASE " + newTable.substring(0, newTable.indexOf('.'));
-                                                writePool.pollAsync().thenCompose((conn3) -> executeUpdate(info, conn3, createDbSsql, values, 0, false)).whenComplete((r3, t3) -> {
-                                                    if (t3 != null) {//建库失败
-                                                        future.completeExceptionally(t3);
-                                                    } else {//建库成功
-                                                        writePool.pollAsync().thenCompose((conn4) -> executeUpdate(info, conn4, createTableSql, values, 0, false)).whenComplete((r4, t4) -> {
-                                                            if (t4 != null) {//建表再次失败
-                                                                future.completeExceptionally(t4);
-                                                            } else {//建表成功
-                                                                writePool.pollAsync().thenCompose((conn5) -> executeUpdate(info, conn5, sql, values, fetchSize, false, parameters)).whenComplete((r5, t5) -> { //insert必须为false，否则建库失败也会循环到此处
-                                                                    if (t5 != null) {//SQL执行失败
-                                                                        future.completeExceptionally(t5);
-                                                                    } else { //SQL执行成功
-                                                                        future.complete(r5);
-                                                                    }
-                                                                });
-                                                            }
-                                                        });
-                                                    }
-                                                });
-                                            } else { //SQL执行失败
-                                                future.completeExceptionally(t1);
+                                    if ((sql.startsWith("DROP TABLE") || sql.startsWith("TRUNCATE TABLE")) && info.isTableNotExist(code)) {
+                                        count = -1;
+                                        success = true;
+                                        futureover = true;
+                                    } else {
+                                        if (insert && info.getTableStrategy() != null && info.isTableNotExist(code)) { //需要建表
+                                            for (ByteBuffer buf : readBuffs) {
+                                                bufferPool.accept(buf);
                                             }
-                                        })
-                                        );
-                                        return;
+                                            conn.dispose();
+                                            final String newTable = info.getTable(values[0]);
+                                            final String createTableSql = info.getTableCopySQL(newTable);
+                                            //注意：postgresql不支持跨库复制表结构
+                                            writePool.pollAsync().thenCompose((conn1) -> executeUpdate(info, conn1, createTableSql, values, 0, false).whenComplete((r1, t1) -> {
+                                                if (t1 == null) { //建表成功 
+                                                    writePool.pollAsync().thenCompose((conn2) -> executeUpdate(info, conn2, sql, values, fetchSize, false, parameters)).whenComplete((r2, t2) -> { //insert必须为false，否则建库失败也会循环到此处
+                                                        if (t2 != null) {//SQL执行失败
+                                                            future.completeExceptionally(t2);
+                                                        } else { //SQL执行成功
+                                                            future.complete(r2);
+                                                        }
+                                                    });
+                                                } else if (t1 instanceof SQLException && info.isTableNotExist((SQLException) t1)) { //建库
+                                                    String createDbSsql = "CREATE DATABASE " + newTable.substring(0, newTable.indexOf('.'));
+                                                    writePool.pollAsync().thenCompose((conn3) -> executeUpdate(info, conn3, createDbSsql, values, 0, false)).whenComplete((r3, t3) -> {
+                                                        if (t3 != null) {//建库失败
+                                                            future.completeExceptionally(t3);
+                                                        } else {//建库成功
+                                                            writePool.pollAsync().thenCompose((conn4) -> executeUpdate(info, conn4, createTableSql, values, 0, false)).whenComplete((r4, t4) -> {
+                                                                if (t4 != null) {//建表再次失败
+                                                                    future.completeExceptionally(t4);
+                                                                } else {//建表成功
+                                                                    writePool.pollAsync().thenCompose((conn5) -> executeUpdate(info, conn5, sql, values, fetchSize, false, parameters)).whenComplete((r5, t5) -> { //insert必须为false，否则建库失败也会循环到此处
+                                                                        if (t5 != null) {//SQL执行失败
+                                                                            future.completeExceptionally(t5);
+                                                                        } else { //SQL执行成功
+                                                                            future.complete(r5);
+                                                                        }
+                                                                    });
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                } else { //SQL执行失败
+                                                    future.completeExceptionally(t1);
+                                                }
+                                            })
+                                            );
+                                            return;
+                                        }
+                                        future.completeExceptionally(new SQLException(message, code, 0));
+                                        futureover = true;
                                     }
-                                    future.completeExceptionally(new SQLException(message, code, 0));
-                                    futureover = true;
                                     break;
                                 case 'C':
                                     String val = readUTF8String(buffer, bytes);
