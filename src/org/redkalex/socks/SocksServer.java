@@ -60,8 +60,6 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
         contextConfig.executor = this.executor;
         contextConfig.sslContext = this.sslContext;
         contextConfig.bufferCapacity = rcapacity;
-        contextConfig.bufferPool = bufferPool;
-        contextConfig.responsePool = responsePool;
         contextConfig.maxbody = this.maxbody;
         contextConfig.charset = this.charset;
         contextConfig.address = this.address;
@@ -71,8 +69,30 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
         contextConfig.readTimeoutSeconds = this.readTimeoutSeconds;
         contextConfig.writeTimeoutSeconds = this.writeTimeoutSeconds;
 
-        SocksContext localcontext = new SocksContext(contextConfig);
-        responsePool.setCreator((Object... params) -> new SocksResponse(localcontext, new SocksRequest(localcontext)));
-        return localcontext;
+        return new SocksContext(contextConfig);
+    }
+
+    @Override
+    protected ObjectPool<ByteBuffer> createBufferPool(AtomicLong createCounter, AtomicLong cycleCounter, int bufferPoolSize) {
+        AtomicLong createBufferCounter = new AtomicLong();
+        AtomicLong cycleBufferCounter = new AtomicLong();
+        final int rcapacity = this.bufferCapacity;
+        ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(createBufferCounter, cycleBufferCounter, bufferPoolSize,
+            (Object... params) -> ByteBuffer.allocateDirect(rcapacity), null, (e) -> {
+                if (e == null || e.isReadOnly() || e.capacity() != rcapacity) return false;
+                e.clear();
+                return true;
+            });
+        return bufferPool;
+    }
+
+    @Override
+    protected ObjectPool<Response> createResponsePool(AtomicLong createCounter, AtomicLong cycleCounter, int responsePoolSize) {
+        return SocksResponse.createPool(createCounter, cycleCounter, responsePoolSize, null);
+    }
+
+    @Override
+    protected Creator<Response> createResponseCreator(ObjectPool<ByteBuffer> bufferPool, ObjectPool<Response> responsePool) {
+        return (Object... params) -> new SocksResponse(this.context, new SocksRequest(this.context, bufferPool), responsePool);
     }
 }

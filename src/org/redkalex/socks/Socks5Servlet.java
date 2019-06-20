@@ -16,6 +16,7 @@ import java.util.logging.*;
 /**
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 @AutoLoad(false)
@@ -51,7 +52,7 @@ public class Socks5Servlet extends SocksServlet {
 
     @Override
     public void execute(SocksRequest request, SocksResponse response) throws IOException {
-        response.getContext().submitAsync(new SocksRunner(response.getContext(), response.removeChannel(), bindAddressBytes));
+        response.getContext().submitAsync(new SocksRunner(response.getContext(), response.getBufferPool(), response.removeChannel(), bindAddressBytes));
         response.finish(true);
     }
 

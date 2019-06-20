@@ -9,11 +9,12 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import org.redkale.net.*;
 import org.redkale.net.http.*;
-import org.redkale.util.ByteArray;
+import org.redkale.util.*;
 
 /**
  *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 public class SocksRequest extends Request<SocksContext> {
@@ -22,8 +23,8 @@ public class SocksRequest extends Request<SocksContext> {
 
     private boolean http;
 
-    protected SocksRequest(SocksContext context) {
-        super(context);
+    protected SocksRequest(SocksContext context, ObjectPool<ByteBuffer> bufferPool) {
+        super(context, bufferPool);
         this.httpRequest = new HttpxRequest(context, null);
     }
 
@@ -85,8 +86,8 @@ public class SocksRequest extends Request<SocksContext> {
 
 class HttpxRequest extends HttpRequest {
 
-    public HttpxRequest(HttpContext context, String remoteAddrHeader) {
-        super(context, remoteAddrHeader);
+    public HttpxRequest(HttpContext context, ObjectPool<ByteBuffer> bufferPool) {
+        super(context, bufferPool);
     }
 
     protected InetSocketAddress getURLSocketAddress() {

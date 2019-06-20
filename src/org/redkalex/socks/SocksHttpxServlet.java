@@ -41,7 +41,7 @@ public final class SocksHttpxServlet extends SocksServlet {
         String url = request.getRequestURI();
         url = url.substring(url.indexOf("://") + 3);
         url = url.substring(url.indexOf('/'));
-        final ByteBuffer buffer = response.getContext().pollBuffer();
+        final ByteBuffer buffer = response.getBufferPool().get();
         buffer.put((request.getMethod() + " " + url + " HTTP/1.1\r\n").getBytes());
         for (String header : request.getHeaderNames()) {
             if (!header.startsWith("Proxy-")) {
@@ -62,7 +62,7 @@ public final class SocksHttpxServlet extends SocksServlet {
         if (!body.isEmpty()) buffer.put(body.directBytes(), 0, body.size());
         buffer.put(LINE);
         buffer.flip();
-        final AsyncConnection remote = AsyncConnection.createTCP(response.getContext(), group, request.getHostSocketAddress(), 6, 6).join();
+        final AsyncConnection remote = AsyncConnection.createTCP(response.getBufferPool(), group, request.getHostSocketAddress(), 6, 6).join();
         remote.write(buffer, null, new CompletionHandler<Integer, Void>() {
 
             @Override
@@ -90,8 +90,8 @@ public final class SocksHttpxServlet extends SocksServlet {
     private void connect(HttpxRequest request, HttpxResponse response, final AsynchronousChannelGroup group) throws IOException {
         final InetSocketAddress remoteAddress = request.getURLSocketAddress();
         final AsyncConnection remote = remoteAddress.getPort() == 443
-            ? null : AsyncConnection.createTCP(response.getContext(), group, remoteAddress, 6, 6).join(); //AsyncConnection.create(Utility.createDefaultSSLSocket(remoteAddress))
-        final ByteBuffer buffer0 = response.getContext().pollBuffer();
+            ? null : AsyncConnection.createTCP(response.getBufferPool(), group, remoteAddress, 6, 6).join(); //AsyncConnection.create(Utility.createDefaultSSLSocket(remoteAddress))
+        final ByteBuffer buffer0 = response.getBufferPool().get();
         buffer0.put("HTTP/1.1 200 Connection established\r\nConnection: close\r\n\r\n".getBytes());
         buffer0.flip();
         response.sendBody(buffer0, null, new CompletionHandler<Integer, Void>() {

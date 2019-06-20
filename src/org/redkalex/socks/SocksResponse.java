@@ -24,9 +24,9 @@ public class SocksResponse extends Response<SocksContext, SocksRequest> {
 
     private final HttpxResponse httpResponse;
 
-    protected SocksResponse(SocksContext context, SocksRequest request) {
-        super(context, request);
-        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), new HttpResponseConfig(), this);
+    protected SocksResponse(SocksContext context, SocksRequest request, ObjectPool<Response> responsePool) {
+        super(context, request, responsePool);
+        this.httpResponse = new HttpxResponse(context, request.getHttpxRequest(), responsePool, new HttpResponseConfig(), this);
     }
 
     public static ObjectPool<Response> createPool(AtomicLong creatCounter, AtomicLong cycleCounter, int max, Creator<Response> creator) {
@@ -53,14 +53,18 @@ public class SocksResponse extends Response<SocksContext, SocksRequest> {
         this.httpResponse.recycle();
         return super.recycle();
     }
+
+    protected ObjectPool<ByteBuffer> getBufferPool() {
+        return this.bufferPool;
+    }
 }
 
 class HttpxResponse extends HttpResponse {
 
     private final SocksResponse socksResponse;
 
-    public HttpxResponse(HttpContext context, HttpRequest request, HttpResponseConfig config, SocksResponse socksResponse) {
-        super(context, request, config);
+    public HttpxResponse(HttpContext context, HttpRequest request, ObjectPool<Response> responsePool, HttpResponseConfig config, SocksResponse socksResponse) {
+        super(context, request, responsePool, config);
         this.socksResponse = socksResponse;
     }
 
@@ -81,6 +85,10 @@ class HttpxResponse extends HttpResponse {
     @Override
     protected void offerBuffer(ByteBuffer... buffers) {
         super.offerBuffer(buffers);
+    }
+
+    protected ObjectPool<ByteBuffer> getBufferPool() {
+        return this.bufferPool;
     }
 
     @Override
