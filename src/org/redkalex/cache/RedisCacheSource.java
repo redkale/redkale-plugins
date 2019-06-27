@@ -174,7 +174,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         System.out.println("key startkeys: " + source.queryKeysStartsWith("key"));
         System.out.println("newnum 值 : " + source.incr("newnum"));
         System.out.println("newnum 值 : " + source.decr("newnum"));
-        System.out.println("sets3&sets4:  " + source.getStringCollectionMap("sets3", "sets4"));
+        System.out.println("sets3&sets4:  " + source.getStringCollectionMap(true, "sets3", "sets4"));
         System.out.println("------------------------------------");
         source.set("myaddr", InetSocketAddress.class, addr);
         System.out.println("myaddr:  " + source.get("myaddr", InetSocketAddress.class));
@@ -187,7 +187,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         System.out.println("myaddrs:  " + source.getCollection("myaddrs", InetSocketAddress.class));
         source.appendSetItem("myaddrs2", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
         source.appendSetItem("myaddrs2", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7799));
-        System.out.println("myaddrs&myaddrs2:  " + source.getCollectionMap(InetSocketAddress.class, "myaddrs", "myaddrs2"));
+        System.out.println("myaddrs&myaddrs2:  " + source.getCollectionMap(true, InetSocketAddress.class, "myaddrs", "myaddrs2"));
         System.out.println("------------------------------------");
         source.remove("myaddrs");
         Type mapType = new TypeToken<Map<String, Integer>>() {
@@ -510,44 +510,41 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final Type componentType, final String... keys) {
-        return (CompletableFuture) send("OBJECT", null, componentType, keys[0], "ENCODING".getBytes(UTF8), keys[0].getBytes(UTF8)).thenCompose(t -> {
-            if (t == null) return CompletableFuture.completedFuture(null);
-            final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
-            final Map<String, Collection<T>> map = new HashMap<>();
-            final CompletableFuture[] futures = new CompletableFuture[keys.length];
-            if (new String((byte[]) t).contains("list")) { //list        
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
-                        if (c != null) {
-                            synchronized (map) {
-                                map.put(key, (Collection) c);
-                            }
+    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
+        final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
+        final Map<String, Collection<T>> map = new HashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        if (!set) { //list        
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
+                    if (c != null) {
+                        synchronized (map) {
+                            map.put(key, (Collection) c);
                         }
-                    });
-                }
-            } else {
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(UTF8)).thenAccept(c -> {
-                        if (c != null) {
-                            synchronized (map) {
-                                map.put(key, (Collection) c);
-                            }
-                        }
-                    });
-                }
+                    }
+                });
             }
-            CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-                if (e != null) {
-                    rsFuture.completeExceptionally(e);
-                } else {
-                    rsFuture.complete(map);
-                }
-            });
-            return rsFuture;
+        } else {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(UTF8)).thenAccept(c -> {
+                    if (c != null) {
+                        synchronized (map) {
+                            map.put(key, (Collection) c);
+                        }
+                    }
+                });
+            }
+        }
+        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+            if (e != null) {
+                rsFuture.completeExceptionally(e);
+            } else {
+                rsFuture.complete(map);
+            }
         });
+        return rsFuture;
     }
 
     @Override
@@ -561,8 +558,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
-    public <T> Map<String, Collection<T>> getCollectionMap(final Type componentType, String... keys) {
-        return (Map) getCollectionMapAsync(componentType, keys).join();
+    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
+        return (Map) getCollectionMapAsync(set, componentType, keys).join();
     }
 
     @Override
@@ -578,44 +575,41 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
-    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(String... keys) {
-        return (CompletableFuture) send("OBJECT", null, (Type) null, keys[0], "ENCODING".getBytes(UTF8), keys[0].getBytes(UTF8)).thenCompose(t -> {
-            if (t == null) return CompletableFuture.completedFuture(null);
-            final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
-            final Map<String, Collection<String>> map = new HashMap<>();
-            final CompletableFuture[] futures = new CompletableFuture[keys.length];
-            if (new String((byte[]) t).contains("list")) { //list        
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
-                        if (c != null) {
-                            synchronized (map) {
-                                map.put(key, (Collection) c);
-                            }
+    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(final boolean set, String... keys) {
+        final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
+        final Map<String, Collection<String>> map = new HashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        if (!set) { //list        
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
+                    if (c != null) {
+                        synchronized (map) {
+                            map.put(key, (Collection) c);
                         }
-                    });
-                }
-            } else {
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = send("SMEMBERS", CacheEntryType.STRING, (Type) null, true, key, key.getBytes(UTF8)).thenAccept(c -> {
-                        if (c != null) {
-                            synchronized (map) {
-                                map.put(key, (Collection) c);
-                            }
-                        }
-                    });
-                }
+                    }
+                });
             }
-            CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-                if (e != null) {
-                    rsFuture.completeExceptionally(e);
-                } else {
-                    rsFuture.complete(map);
-                }
-            });
-            return rsFuture;
+        } else {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = send("SMEMBERS", CacheEntryType.STRING, (Type) null, true, key, key.getBytes(UTF8)).thenAccept(c -> {
+                    if (c != null) {
+                        synchronized (map) {
+                            map.put(key, (Collection) c);
+                        }
+                    }
+                });
+            }
+        }
+        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+            if (e != null) {
+                rsFuture.completeExceptionally(e);
+            } else {
+                rsFuture.complete(map);
+            }
         });
+        return rsFuture;
     }
 
     @Override
@@ -624,8 +618,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
-    public Map<String, Collection<String>> getStringCollectionMap(String... keys) {
-        return getStringCollectionMapAsync(keys).join();
+    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
+        return getStringCollectionMapAsync(set, keys).join();
     }
 
     @Override
@@ -641,44 +635,41 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
-    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(String... keys) {
-        return (CompletableFuture) send("OBJECT", null, (Type) null, keys[0], "ENCODING".getBytes(UTF8), keys[0].getBytes(UTF8)).thenCompose(t -> {
-            if (t == null) return CompletableFuture.completedFuture(null);
-            final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
-            final Map<String, Collection<Long>> map = new HashMap<>();
-            final CompletableFuture[] futures = new CompletableFuture[keys.length];
-            if (new String((byte[]) t).contains("list")) { //list        
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
-                        if (c != null) {
-                            synchronized (map) {
-                                map.put(key, (Collection) c);
-                            }
+    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(final boolean set, String... keys) {
+        final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
+        final Map<String, Collection<Long>> map = new HashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        if (!set) { //list        
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
+                    if (c != null) {
+                        synchronized (map) {
+                            map.put(key, (Collection) c);
                         }
-                    });
-                }
-            } else {
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = send("SMEMBERS", CacheEntryType.LONG, (Type) null, true, key, key.getBytes(UTF8)).thenAccept(c -> {
-                        if (c != null) {
-                            synchronized (map) {
-                                map.put(key, (Collection) c);
-                            }
-                        }
-                    });
-                }
+                    }
+                });
             }
-            CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-                if (e != null) {
-                    rsFuture.completeExceptionally(e);
-                } else {
-                    rsFuture.complete(map);
-                }
-            });
-            return rsFuture;
+        } else {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = send("SMEMBERS", CacheEntryType.LONG, (Type) null, true, key, key.getBytes(UTF8)).thenAccept(c -> {
+                    if (c != null) {
+                        synchronized (map) {
+                            map.put(key, (Collection) c);
+                        }
+                    }
+                });
+            }
+        }
+        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+            if (e != null) {
+                rsFuture.completeExceptionally(e);
+            } else {
+                rsFuture.complete(map);
+            }
         });
+        return rsFuture;
     }
 
     @Override
@@ -687,8 +678,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
-    public Map<String, Collection<Long>> getLongCollectionMap(String... keys) {
-        return getLongCollectionMapAsync(keys).join();
+    public Map<String, Collection<Long>> getLongCollectionMap(final boolean set, String... keys) {
+        return getLongCollectionMapAsync(set, keys).join();
     }
 
     //--------------------- getCollectionAndRefresh ------------------------------  
