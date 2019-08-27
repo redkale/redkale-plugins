@@ -19,6 +19,8 @@ public class PayRequest {
 
     protected short paytype; //支付类型; 
 
+    protected short subpaytype; //子支付类型; 
+
     protected String payno = ""; //自己的订单号
 
     public PayRequest() {
@@ -56,6 +58,14 @@ public class PayRequest {
 
     public void setPaytype(short paytype) {
         this.paytype = paytype;
+    }
+
+    public short getSubpaytype() {
+        return subpaytype;
+    }
+
+    public void setSubpaytype(short subpaytype) {
+        this.subpaytype = subpaytype;
     }
 
     public String getPayno() {
