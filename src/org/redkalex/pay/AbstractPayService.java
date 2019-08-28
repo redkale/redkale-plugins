@@ -6,6 +6,7 @@
 package org.redkalex.pay;
 
 import java.io.*;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.logging.*;
@@ -68,6 +69,14 @@ public abstract class AbstractPayService implements Service {
     protected String joinMap(Map<String, ?> map) {
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         return map.entrySet().stream().map((e -> e.getKey() + "=" + e.getValue())).collect(Collectors.joining("&"));
+    }
+
+    protected String urlEncodeUTF8(Object val) {
+        try {
+            return URLEncoder.encode(val.toString(), "UTF-8");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Comment("支付配置信息抽象类")
