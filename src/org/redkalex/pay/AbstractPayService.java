@@ -72,6 +72,7 @@ public abstract class AbstractPayService implements Service {
     }
 
     protected String urlEncodeUTF8(Object val) {
+        if (val == null) return null;
         try {
             return URLEncoder.encode(val.toString(), "UTF-8");
         } catch (IOException e) {
