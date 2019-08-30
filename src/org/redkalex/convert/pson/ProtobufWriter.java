@@ -326,7 +326,7 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
-    public void writeWrapper(StringConvertWrapper value) {
+    public void writeWrapper(StringWrapper value) {
         if (value != null) writeString(value.getValue());
     }
 
