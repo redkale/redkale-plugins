@@ -48,6 +48,12 @@ public class EhkingPayService extends AbstractPayService {
     @Override
     public void init(AnyValue conf) {
         if (this.convert == null) this.convert = JsonConvert.root();
+        this.reloadConfig(Pays.PAYTYPE_EHKING);
+    }
+
+    @Override
+    @Comment("重新加载配置")
+    public void reloadConfig(short paytype) {
         if (this.conf != null && !this.conf.isEmpty()) { //存在易宝支付配置
             try {
                 File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);

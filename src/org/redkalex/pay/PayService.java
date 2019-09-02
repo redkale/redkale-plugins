@@ -54,6 +54,23 @@ public class PayService extends AbstractPayService {
     }
 
     @Override
+    @Comment("重新加载配置")
+    public void reloadConfig(short paytype) {
+        if (paytype == PAYTYPE_UNION) {
+            unionPayService.reloadConfig(paytype);
+        } else if (paytype == PAYTYPE_WEIXIN) {
+            weiXinPayService.reloadConfig(paytype);
+        } else if (paytype == PAYTYPE_ALIPAY) {
+            aliPayService.reloadConfig(paytype);
+        } else if (paytype == PAYTYPE_EHKING) {
+            ehkingPayService.reloadConfig(paytype);
+        } else {
+            AbstractPayService service = diyPayServiceMap.get(paytype);
+            if (service != null) service.reloadConfig(paytype);
+        }
+    }
+
+    @Override
     public PayPreResponse prepay(PayPreRequest request) {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.prepay(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.prepay(request);
@@ -142,7 +159,7 @@ public class PayService extends AbstractPayService {
 
     @Override
     public PayElement getPayElement(String appid) {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public String getNotifyurl(short paytype, String appid) {

@@ -35,6 +35,9 @@ public abstract class AbstractPayService implements Service {
 
     protected final boolean finest = logger.isLoggable(Level.FINEST);
 
+    @Comment("重新加载配置")
+    public abstract void reloadConfig(short paytype);
+
     @Comment("手机预支付")
     public abstract PayPreResponse prepay(PayPreRequest request);
 
