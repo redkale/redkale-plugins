@@ -19,6 +19,8 @@ public class PayNotifyResponse extends PayResponse {
 
     protected String payno = ""; //自己的订单号
 
+    protected long payedmoney; //到账的金额，单位：分
+
     protected String thirdpayno = ""; //第三方的支付流水号
 
     protected String notifytext = ""; //返回的文本信息, 常见场景是success字符串
@@ -68,6 +70,14 @@ public class PayNotifyResponse extends PayResponse {
 
     public void setPayno(String payno) {
         this.payno = payno;
+    }
+
+    public long getPayedmoney() {
+        return payedmoney;
+    }
+
+    public void setPayedmoney(long payedmoney) {
+        this.payedmoney = payedmoney;
     }
 
     public String getThirdpayno() {

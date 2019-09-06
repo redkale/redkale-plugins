@@ -199,6 +199,7 @@ public class UnionPayService extends AbstractPayService {
         if (!"00".equalsIgnoreCase(map.get("respCode")) || Long.parseLong(map.getOrDefault("txnAmt", "0")) < 1) {
             return result.retcode(RETPAY_PAY_ERROR).retinfo(map.getOrDefault("respMsg", null));
         }
+        result.setPayedmoney(Long.parseLong(map.get("txnAmt")));
         return result.notifytext(rstext);
     }
 

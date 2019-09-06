@@ -158,6 +158,7 @@ public class AliPayService extends AbstractPayService {
         String state = map.getOrDefault("trade_status", "");
         if ("WAIT_BUYER_PAY".equals(state)) return result.retcode(RETPAY_PAY_WAITING);
         if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED);
+        result.setPayedmoney((long) (Float.parseFloat(map.get("total_fee")) * 100));
         return result.notifytext(rstext);
     }
 

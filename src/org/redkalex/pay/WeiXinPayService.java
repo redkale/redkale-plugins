@@ -203,6 +203,7 @@ public class WeiXinPayService extends AbstractPayService {
         String state = map.get("trade_state");
         if (state == null && "SUCCESS".equals(map.get("result_code")) && Long.parseLong(map.get("total_fee")) > 0) {
             state = "SUCCESS";
+            result.setPayedmoney(Long.parseLong(map.get("total_fee")));
         }
         if (!"SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext);
         return result.notifytext(rstext);

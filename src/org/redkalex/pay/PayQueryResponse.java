@@ -15,11 +15,11 @@ import java.util.Map;
  */
 public class PayQueryResponse extends PayResponse {
 
-    private short paystatus;
+    protected short paystatus;
 
-    private long payedmoney;
+    protected long payedmoney;
 
-    private String thirdpayno = ""; //第三方的支付流水号
+    protected String thirdpayno = ""; //第三方的支付流水号
 
     @Override
     public PayQueryResponse retcode(int retcode) {
