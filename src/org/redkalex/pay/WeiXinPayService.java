@@ -51,6 +51,12 @@ public class WeiXinPayService extends AbstractPayService {
     }
 
     @Override
+    @Comment("判断是否支持指定支付类型")
+    public boolean supportPayType(final short paytype) {
+        return paytype == Pays.PAYTYPE_WEIXIN && !elements.isEmpty();
+    }
+
+    @Override
     @Comment("重新加载配置")
     public void reloadConfig(short paytype) {
         if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置

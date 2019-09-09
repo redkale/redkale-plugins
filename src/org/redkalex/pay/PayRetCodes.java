@@ -37,6 +37,9 @@ public abstract class PayRetCodes {
     @RetLabel("等待用户支付")
     public static final int RETPAY_PAY_WAITING = 20010005;
 
+    @RetLabel("不支持的支付类型")
+    public static final int RETPAY_PAY_TYPEILLEGAL = 20010006;
+
     @RetLabel("交易签名被篡改")
     public static final int RETPAY_FALSIFY_ERROR = 20010011;
 

@@ -60,6 +60,12 @@ public class UnionPayService extends AbstractPayService {
     }
 
     @Override
+    @Comment("判断是否支持指定支付类型")
+    public boolean supportPayType(final short paytype) {
+        return paytype == Pays.PAYTYPE_UNION && !elements.isEmpty();
+    }
+
+    @Override
     @Comment("重新加载配置")
     public void reloadConfig(short paytype) {
         if (this.conf != null && !this.conf.isEmpty()) { //存在支付宝支付配置

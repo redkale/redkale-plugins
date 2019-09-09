@@ -54,6 +54,18 @@ public class PayService extends AbstractPayService {
     }
 
     @Override
+    @Comment("判断是否支持指定支付类型")
+    public boolean supportPayType(final short paytype) {
+        if (paytype == PAYTYPE_UNION) return unionPayService.supportPayType(paytype);
+        if (paytype == PAYTYPE_WEIXIN) return weiXinPayService.supportPayType(paytype);
+        if (paytype == PAYTYPE_ALIPAY) return aliPayService.supportPayType(paytype);
+        if (paytype == PAYTYPE_EHKING) return ehkingPayService.supportPayType(paytype);
+        AbstractPayService service = diyPayServiceMap.get(paytype);
+        if (service == null) return false;
+        return service.supportPayType(paytype);
+    }
+
+    @Override
     @Comment("重新加载配置")
     public void reloadConfig(short paytype) {
         if (paytype == PAYTYPE_UNION) {
