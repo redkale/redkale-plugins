@@ -309,7 +309,6 @@ public class PgSQLTest {
         }
 
         @Id
-        @GeneratedValue
         private int id;
 
         private String name = "";
