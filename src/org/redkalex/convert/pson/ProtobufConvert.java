@@ -8,7 +8,7 @@ package org.redkalex.convert.pson;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
-import java.util.function.Supplier;
+import java.util.function.*;
 import org.redkale.convert.*;
 import org.redkale.util.*;
 import static org.redkalex.convert.pson.ProtobufFactory.wireTypeString;
@@ -160,8 +160,13 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     //------------------------------ convertTo -----------------------------------------------------------
     @Override
     public byte[] convertTo(final Object value) {
+        return convertTo((BiFunction) null, value);
+    }
+
+    @Override
+    public byte[] convertTo(BiFunction<Attribute, Object, Object> fieldFunc, final Object value) {
         if (value == null) {
-            final ProtobufWriter out = writerPool.get().tiny(tiny);
+            final ProtobufWriter out = funcWrite(writerPool.get().tiny(tiny), fieldFunc);
             out.writeNull();
             byte[] result = out.toArray();
             writerPool.accept(out);
@@ -172,8 +177,13 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public byte[] convertTo(final Type type, final Object value) {
+        return convertTo(type, (BiFunction) null, value);
+    }
+
+    @Override
+    public byte[] convertTo(final Type type, BiFunction<Attribute, Object, Object> fieldFunc, final Object value) {
         if (type == null) return null;
-        final ProtobufWriter out = writerPool.get().tiny(tiny);
+        final ProtobufWriter out = funcWrite(writerPool.get().tiny(tiny), fieldFunc);
         Encodeable encoder = factory.loadEncoder(type);
         if (!(encoder instanceof ObjectEncoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
         encoder.convertTo(out, value);
@@ -184,9 +194,14 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public byte[] convertMapTo(final Object... values) {
+        return convertTo((BiFunction) null, values);
+    }
+
+    @Override
+    public byte[] convertMapTo(BiFunction<Attribute, Object, Object> fieldFunc, final Object... values) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
         if (values == null) return null;
-        final ProtobufWriter out = writerPool.get().tiny(tiny);
+        final ProtobufWriter out = funcWrite(writerPool.get().tiny(tiny), fieldFunc);
         ((AnyEncoder) factory.getAnyEncoder()).convertMapTo(out, values);
         byte[] result = out.toArray();
         writerPool.accept(out);
@@ -227,9 +242,14 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public ByteBuffer[] convertTo(final Supplier<ByteBuffer> supplier, final Object value) {
+        return convertTo(supplier, (BiFunction) null, value);
+    }
+
+    @Override
+    public ByteBuffer[] convertTo(final Supplier<ByteBuffer> supplier, BiFunction<Attribute, Object, Object> fieldFunc, final Object value) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");
         if (supplier == null) return null;
-        ProtobufByteBufferWriter out = new ProtobufByteBufferWriter(tiny, supplier);
+        ProtobufByteBufferWriter out = funcWrite(new ProtobufByteBufferWriter(tiny, supplier), fieldFunc);
         if (value == null) {
             out.writeNull();
         } else {
@@ -242,9 +262,14 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public ByteBuffer[] convertTo(final Supplier<ByteBuffer> supplier, final Type type, final Object value) {
+        return convertTo(supplier, type, (BiFunction) null, value);
+    }
+
+    @Override
+    public ByteBuffer[] convertTo(final Supplier<ByteBuffer> supplier, final Type type, BiFunction<Attribute, Object, Object> fieldFunc, final Object value) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");
         if (supplier == null || type == null) return null;
-        ProtobufByteBufferWriter out = new ProtobufByteBufferWriter(tiny, supplier);
+        ProtobufByteBufferWriter out = funcWrite(new ProtobufByteBufferWriter(tiny, supplier), fieldFunc);
         if (value == null) {
             out.writeNull();
         } else {
@@ -257,9 +282,14 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public ByteBuffer[] convertMapTo(final Supplier<ByteBuffer> supplier, final Object... values) {
+        return convertMapTo(supplier, (BiFunction) null, values);
+    }
+
+    @Override
+    public ByteBuffer[] convertMapTo(final Supplier<ByteBuffer> supplier, BiFunction<Attribute, Object, Object> fieldFunc, final Object... values) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
         if (supplier == null) return null;
-        ProtobufByteBufferWriter out = new ProtobufByteBufferWriter(tiny, supplier);
+        ProtobufByteBufferWriter out = funcWrite(new ProtobufByteBufferWriter(tiny, supplier), fieldFunc);
         if (values == null) {
             out.writeNull();
         } else {
