@@ -50,7 +50,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     }
 
     @Override
-    public ProtobufConvert newConvert(final BiFunction<Attribute, Object, Object> fieldFunc, Function<Object, EnFieldObject[]> objExtFunc) {
+    public ProtobufConvert newConvert(final BiFunction<Attribute, Object, Object> fieldFunc, Function<Object, EnFieldValue[]> objExtFunc) {
         return new ProtobufConvert(getFactory(), tiny) {
             @Override
             protected <S extends ProtobufWriter> S configWrite(S writer) {
