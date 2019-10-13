@@ -5,6 +5,7 @@
  */
 package org.redkalex.convert.pson;
 
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Stream;
@@ -239,8 +240,8 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
-    public void writeFieldName(EnMember member) {
-        writeUInt32(ProtobufFactory.getTag(member));
+    public void writeFieldName(String fieldName, Type fieldType, int fieldPos) {
+        writeUInt32(ProtobufFactory.getTag(fieldName, fieldType, fieldPos));
     }
 
     @Override

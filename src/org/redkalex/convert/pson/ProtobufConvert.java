@@ -46,10 +46,15 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public ProtobufConvert newConvert(final BiFunction<Attribute, Object, Object> fieldFunc) {
+        return newConvert(fieldFunc, null);
+    }
+
+    @Override
+    public ProtobufConvert newConvert(final BiFunction<Attribute, Object, Object> fieldFunc, Function<Object, EnFieldObject[]> objExtFunc) {
         return new ProtobufConvert(getFactory(), tiny) {
             @Override
             protected <S extends ProtobufWriter> S configWrite(S writer) {
-                return fieldFunc(writer, fieldFunc);
+                return fieldFunc(writer, fieldFunc, objExtFunc);
             }
         };
     }

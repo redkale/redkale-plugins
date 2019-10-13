@@ -155,9 +155,9 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         }
     }
 
-    public static int getTag(EnMember member) {
-        int wiretype = ProtobufFactory.wireType(member.getAttribute().type());
-        return (member.getPosition() << 3 | wiretype);
+    public static int getTag(String fieldName, Type fieldType, int fieldPos) {
+        int wiretype = ProtobufFactory.wireType(fieldType);
+        return (fieldPos << 3 | wiretype);
     }
 
     public static int getTag(DeMember member) {
