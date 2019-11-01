@@ -76,8 +76,8 @@ public class MyPoolSource extends PoolTcpSource {
                             return;
                         }
                         attachment2.flip();
-                        MySQLOKorErrorPacket okPacket = new MySQLOKorErrorPacket(buffer, bytes);
-                        if (!okPacket.isSuccess()) {
+                        MySQLOKPacket okPacket = new MySQLOKPacket(buffer, bytes);
+                        if (!okPacket.isOK()) {
                             conn.offerBuffer(buffer);
                             future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState));
                             conn.dispose();
