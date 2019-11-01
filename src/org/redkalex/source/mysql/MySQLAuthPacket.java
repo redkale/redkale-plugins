@@ -34,7 +34,7 @@ public class MySQLAuthPacket extends MySQLPacket {
         byte[] seed = Utility.append(handshakePacket.seed, handshakePacket.seed2);
         this.packetId = 1;
         this.clientFlags = getClientCapabilities();
-        this.maxPacketSize = 16 * 1024 * 1024;
+        this.maxPacketSize = 64 * 1024 * 1024;
         this.username = username;
         this.password = MySQLs.scramble411(password, seed);
         this.database = database;
