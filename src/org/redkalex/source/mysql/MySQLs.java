@@ -411,18 +411,6 @@ class MySQLs {
         return bs;
     }
 
-    protected static String readUTF8String(ByteBuffer buffer, int length) {
-        byte[] store = new byte[length];
-        buffer.get(store);
-        return new String(store, StandardCharsets.UTF_8);
-    }
-
-    protected static String readUTF8String(ByteBufferReader buffer, int length) {
-        byte[] store = new byte[length];
-        buffer.get(store);
-        return new String(store, StandardCharsets.UTF_8);
-    }
-
     protected static byte[] readBytes(ByteBuffer buffer, byte[] store, int len) {
         byte[] bs = store == null || len > store.length ? new byte[len] : store;
         buffer.get(bs, 0, len);
@@ -484,6 +472,7 @@ class MySQLs {
                     array.write(store);
                 }
             }
+            if(!buffer.hasRemaining()) break;
         }
         return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
     }
@@ -501,6 +490,7 @@ class MySQLs {
                     array.write(store);
                 }
             }
+            if(!buffer.hasRemaining()) break;
         }
         return array == null ? new String(store, 0, i, StandardCharsets.US_ASCII) : array.toString(StandardCharsets.US_ASCII);
     }
@@ -524,6 +514,7 @@ class MySQLs {
                     array.write(store);
                 }
             }
+            if(!buffer.hasRemaining()) break;
         }
         return array == null ? new String(store, 0, i, StandardCharsets.US_ASCII) : array.toString(StandardCharsets.US_ASCII);
     }

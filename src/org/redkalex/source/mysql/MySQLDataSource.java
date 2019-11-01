@@ -9,7 +9,6 @@ import java.io.Serializable;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
-import java.nio.charset.StandardCharsets;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.sql.*;
 import java.util.*;
@@ -71,52 +70,6 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     @Local
     protected PoolSource<AsyncConnection> writePoolSource() {
         return writePool;
-    }
-
-    protected static String readUTF8String(ByteBuffer buffer, byte[] store) {
-        int i = 0;
-        ByteArray array = null;
-        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            if (array != null) {
-                array.write(c);
-            } else {
-                store[i++] = c;
-                if (i == store.length) {
-                    array = new ByteArray(1024);
-                    array.write(store);
-                }
-            }
-        }
-        return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
-    }
-
-    protected static String readUTF8String(ByteBufferReader buffer, byte[] store) {
-        int i = 0;
-        ByteArray array = null;
-        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            if (array != null) {
-                array.write(c);
-            } else {
-                store[i++] = c;
-                if (i == store.length) {
-                    array = new ByteArray(1024);
-                    array.write(store);
-                }
-            }
-        }
-        return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
-    }
-
-    protected static ByteBuffer writeUTF8String(ByteBuffer buffer, String string) {
-        buffer.put(string.getBytes(StandardCharsets.UTF_8));
-        buffer.put((byte) 0);
-        return buffer;
-    }
-
-    protected static ByteBufferWriter writeUTF8String(ByteBufferWriter buffer, String string) {
-        buffer.put(string.getBytes(StandardCharsets.UTF_8));
-        buffer.put((byte) 0);
-        return buffer;
     }
 
     @Override
@@ -452,11 +405,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
-            writer.put((byte) 'Q');
-            int start = writer.position();
-            writer.putInt(0);
-            writeUTF8String(writer, sql);
-            writer.putInt(start, writer.position() - start);
+            new MySQLQueryPacket(sql).writeTo(writer);
         }
         final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<ResultSet> future = new CompletableFuture();
@@ -514,7 +463,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                                      code = null,
                                      message = null;
                                     for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                        String value = readUTF8String(buffer, field);
+                                        String value = MySQLs.readUTF8String(buffer, field);
                                         if (type == (byte) 'S') {
                                             level = value;
                                         } else if (type == 'C') {
