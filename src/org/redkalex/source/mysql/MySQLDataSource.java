@@ -9,10 +9,9 @@ import java.io.Serializable;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
+import java.nio.charset.StandardCharsets;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.sql.*;
-import java.time.format.*;
-import static java.time.format.DateTimeFormatter.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -23,8 +22,6 @@ import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkalex.source.mysql.MyPoolSource.CONN_ATTR_BYTESBAME;
-import static org.redkalex.source.mysql.MySQLs.*;
-import org.redkalex.source.pgsql.*;
 
 /**
  * 尚未实现
@@ -58,33 +55,9 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         prop.setProperty(DataSources.JDBC_PWD, "");
         MySQLDataSource source = new MySQLDataSource("", null, prop, prop);
         source.getReadPoolSource().poll();
+        source.directExecute("SET NAMES utf8");
         source.directExecute("UPDATE almsrecord SET createtime = 0");
     }
-
-    private static final byte[] TRUE = new byte[]{'t'};
-
-    private static final byte[] FALSE = new byte[]{'f'};
-
-    static final DateTimeFormatter TIMESTAMP_FORMAT = new DateTimeFormatterBuilder()
-        .parseCaseInsensitive()
-        .append(ISO_LOCAL_DATE)
-        .appendLiteral(' ')
-        .append(ISO_LOCAL_TIME)
-        .toFormatter();
-
-    static final DateTimeFormatter TIMESTAMPZ_FORMAT = new DateTimeFormatterBuilder()
-        .parseCaseInsensitive()
-        .append(ISO_LOCAL_DATE)
-        .appendLiteral(' ')
-        .append(ISO_LOCAL_TIME)
-        .appendOffset("+HH:mm", "")
-        .toFormatter();
-
-    static final DateTimeFormatter TIMEZ_FORMAT = new DateTimeFormatterBuilder()
-        .parseCaseInsensitive()
-        .append(ISO_LOCAL_TIME)
-        .appendOffset("+HH:mm", "")
-        .toFormatter();
 
     public MySQLDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
         super(unitName, persistxml, readprop, writeprop);
@@ -98,6 +71,52 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     @Local
     protected PoolSource<AsyncConnection> writePoolSource() {
         return writePool;
+    }
+
+    protected static String readUTF8String(ByteBuffer buffer, byte[] store) {
+        int i = 0;
+        ByteArray array = null;
+        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
+            if (array != null) {
+                array.write(c);
+            } else {
+                store[i++] = c;
+                if (i == store.length) {
+                    array = new ByteArray(1024);
+                    array.write(store);
+                }
+            }
+        }
+        return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
+    }
+
+    protected static String readUTF8String(ByteBufferReader buffer, byte[] store) {
+        int i = 0;
+        ByteArray array = null;
+        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
+            if (array != null) {
+                array.write(c);
+            } else {
+                store[i++] = c;
+                if (i == store.length) {
+                    array = new ByteArray(1024);
+                    array.write(store);
+                }
+            }
+        }
+        return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
+    }
+
+    protected static ByteBuffer writeUTF8String(ByteBuffer buffer, String string) {
+        buffer.put(string.getBytes(StandardCharsets.UTF_8));
+        buffer.put((byte) 0);
+        return buffer;
+    }
+
+    protected static ByteBufferWriter writeUTF8String(ByteBufferWriter buffer, String string) {
+        buffer.put(string.getBytes(StandardCharsets.UTF_8));
+        buffer.put((byte) 0);
+        return buffer;
     }
 
     @Override
@@ -139,6 +158,22 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " delete sql=" + debugsql);
         }
         return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, fetchSize(flipper), false));
+    }
+
+    @Override
+    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, String sql) {
+        if (info.isLoggable(logger, Level.FINEST)) {
+            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sql);
+        }
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, 0, false));
+    }
+
+    @Override
+    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, String sql) {
+        if (info.isLoggable(logger, Level.FINEST)) {
+            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sql);
+        }
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, 0, false));
     }
 
     @Override
@@ -241,17 +276,12 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             try {
                 if (set.next()) {
                     final Attribute<T, Serializable> attr = info.getAttribute(column);
-                    if (attr.type() == byte[].class) {
-                        Blob blob = set.getBlob(1);
-                        if (blob != null) val = blob.getBytes(1, (int) blob.length());
-                    } else {
-                        val = (Serializable) set.getObject(1);
-                    }
+                    val = getFieldValue(info, attr, set, 1);
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            return val;
+            return val == null ? defValue : val;
         }));
     }
 
@@ -314,10 +344,6 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     protected static byte[] formatPrepareParam(Object param) {
         if (param == null) return null;
         if (param instanceof byte[]) return (byte[]) param;
-        if (param instanceof Boolean) return (Boolean) param ? TRUE : FALSE;
-        if (param instanceof java.sql.Date) return ISO_LOCAL_DATE.format(((java.sql.Date) param).toLocalDate()).getBytes(UTF_8);
-        if (param instanceof java.sql.Time) return ISO_LOCAL_TIME.format(((java.sql.Time) param).toLocalTime()).getBytes(UTF_8);
-        if (param instanceof java.sql.Timestamp) return TIMESTAMP_FORMAT.format(((java.sql.Timestamp) param).toLocalDateTime()).getBytes(UTF_8);
         return String.valueOf(param).getBytes(UTF_8);
     }
 
@@ -325,76 +351,9 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
-            writer.put((byte) 'P');
-            int start = writer.position();
-            writer.putInt(0);
-            writer.put((byte) 0); // unnamed prepared statement
-            writeUTF8String(writer, sql);
-            writer.putShort((short) 0); // no parameter types
-            writer.putInt(start, writer.position() - start);
+            new MySQLQueryPacket(sql).writeTo(writer);
         }
-        { // DESCRIBE
-            writer.put((byte) 'D');
-            writer.putInt(4 + 1 + 1);
-            writer.put((byte) 'S');
-            writer.put((byte) 0);
-        }
-        if (parameters != null && parameters.length > 0) {
-            for (Object[] params : parameters) {
-                { // BIND
-                    writer.put((byte) 'B');
-                    int start = writer.position();
-                    writer.putInt(0);
-                    writer.put((byte) 0); // portal
-                    writer.put((byte) 0); // prepared statement
-                    writer.putShort((short) 0); // number of format codes
-                    if (params == null || params.length == 0) {
-                        writer.putShort((short) 0); // number of parameters
-                    } else {
-                        writer.putShort((short) params.length); // number of parameters
-                        for (Object param : params) {
-                            byte[] bs = formatPrepareParam(param);
-                            if (bs == null) {
-                                writer.putInt(-1);
-                            } else {
-                                writer.putInt(bs.length);
-                                writer.put(bs);
-                            }
-                        }
-                    }
-                    writer.putShort((short) 0);
-                    writer.putInt(start, writer.position() - start);
-                }
-                { // EXECUTE
-                    writer.put((byte) 'E');
-                    writer.putInt(4 + 1 + 4);
-                    writer.put((byte) 0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
-                    writer.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
-                }
-            }
-        } else {
-            { // BIND
-                writer.put((byte) 'B');
-                int start = writer.position();
-                writer.putInt(0);
-                writer.put((byte) 0); // portal  
-                writer.put((byte) 0); // prepared statement  
-                writer.putShort((short) 0); // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
-                writer.putShort((short) 0);  //number of format codes 参数格式代码。目前每个都必须是零(文本)或者一(二进制)。
-                writer.putShort((short) 0);// number of parameters 后面跟着的参数值的数目(可能为零)。这些必须和查询需要的参数个数匹配。
-                writer.putInt(start, writer.position() - start);
-            }
-            { // EXECUTE
-                writer.put((byte) 'E');
-                writer.putInt(4 + 1 + 4);
-                writer.put((byte) 0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
-                writer.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
-            }
-        }
-        { // SYNC
-            writer.put((byte) 'S');
-            writer.putInt(4);
-        }
+
         final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<Integer> future = new CompletableFuture();
         conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
@@ -430,7 +389,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                             failed(new SQLException("Read Buffer Error"), attachment2);
                             return;
                         }
-                        if (result == 8192 || !attachment2.hasRemaining()) { //postgresql数据包上限为8192 还有数据
+                        if (result == 16 * 1024 || !attachment2.hasRemaining()) { //mysqlsql数据包上限为16*1024 还有数据
                             attachment2.flip();
                             readBuffs.add(attachment2);
                             conn.read(this);
@@ -439,112 +398,28 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         attachment2.flip();
                         readBuffs.add(attachment2);
                         final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
+
                         boolean endok = false;
                         boolean futureover = false;
                         boolean success = false;
-                        RowDesc rowDesc = null;
-                        int count = 0;
-                        int valueIndex = -1;
-                        while (buffer.hasRemaining()) {
-                            final char cmd = (char) buffer.get();
-                            int length = buffer.getInt();
-                            switch (cmd) {
-                                case 'E':
-                                    byte[] field = new byte[255];
-                                    String level = null,
-                                     code = null,
-                                     message = null;
-                                    for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                        String value = readUTF8String(buffer, field);
-                                        if (type == (byte) 'S') {
-                                            level = value;
-                                        } else if (type == 'C') {
-                                            code = value;
-                                        } else if (type == 'M') {
-                                            message = value;
-                                        }
-                                    }
-                                    if (insert && info.getTableStrategy() != null && info.isTableNotExist(code)) { //需要建表
-                                        for (ByteBuffer buf : readBuffs) {
-                                            bufferPool.accept(buf);
-                                        }
-                                        conn.dispose();
-                                        final String newTable = info.getTable(values[0]);
-                                        final String createTableSql = info.getTableCopySQL(newTable);
-                                        //注意：postgresql不支持跨库复制表结构
-                                        writePool.pollAsync().thenCompose((conn1) -> executeUpdate(info, conn1, createTableSql, values, 0, false).whenComplete((r1, t1) -> {
-                                            if (t1 == null) { //建表成功 
-                                                writePool.pollAsync().thenCompose((conn2) -> executeUpdate(info, conn2, sql, values, fetchSize, false, parameters)).whenComplete((r2, t2) -> { //insert必须为false，否则建库失败也会循环到此处
-                                                    if (t2 != null) {//SQL执行失败
-                                                        future.completeExceptionally(t2);
-                                                    } else { //SQL执行成功
-                                                        future.complete(r2);
-                                                    }
-                                                });
-                                            } else if (t1 instanceof SQLException && info.isTableNotExist((SQLException) t1)) { //建库
-                                                String createDbSsql = "CREATE DATABASE " + newTable.substring(0, newTable.indexOf('.'));
-                                                writePool.pollAsync().thenCompose((conn3) -> executeUpdate(info, conn3, createDbSsql, values, 0, false)).whenComplete((r3, t3) -> {
-                                                    if (t3 != null) {//建库失败
-                                                        future.completeExceptionally(t3);
-                                                    } else {//建库成功
-                                                        writePool.pollAsync().thenCompose((conn4) -> executeUpdate(info, conn4, createTableSql, values, 0, false)).whenComplete((r4, t4) -> {
-                                                            if (t4 != null) {//建表再次失败
-                                                                future.completeExceptionally(t4);
-                                                            } else {//建表成功
-                                                                writePool.pollAsync().thenCompose((conn5) -> executeUpdate(info, conn5, sql, values, fetchSize, false, parameters)).whenComplete((r5, t5) -> { //insert必须为false，否则建库失败也会循环到此处
-                                                                    if (t5 != null) {//SQL执行失败
-                                                                        future.completeExceptionally(t5);
-                                                                    } else { //SQL执行成功
-                                                                        future.complete(r5);
-                                                                    }
-                                                                });
-                                                            }
-                                                        });
-                                                    }
-                                                });
-                                            } else { //SQL执行失败
-                                                future.completeExceptionally(t1);
-                                            }
-                                        })
-                                        );
-                                        return;
-                                    }
-                                    future.completeExceptionally(new SQLException(message, code, 0));
-                                    futureover = true;
-                                    break;
-                                case 'C':
-                                    String val = readUTF8String(buffer, bytes);
-                                    int pos = val.lastIndexOf(' ');
-                                    if (pos > 0) {
-                                        count += (Integer.parseInt(val.substring(pos + 1)));
-                                        success = true;
-                                        futureover = true;
-                                    }
-                                    break;
-                                case 'T':
-                                    rowDesc = new RespRowDescDecoder().read(buffer, length, bytes);
-                                    break;
-                                case 'D':
-                                    final Attribute<T, Serializable> primary = info.getPrimary();
-                                    RowData rowData = new RespRowDataDecoder().read(buffer, length, bytes);
-                                    if (insert) primary.set(values[++valueIndex], rowData.getObject(rowDesc, 0));
-                                    break;
-                                case 'Z':
-                                    //buffer.position(buffer.position() + length - 4);
-                                    buffer.skip(length - 4);
-                                    endok = true;
-                                    break;
-                                default:
-                                    //buffer.position(buffer.position() + length - 4);
-                                    buffer.skip(length - 4);
-                                    break;
-                            }
+                        SQLException ex = null;
+                        long rscount = -1;
+                        MySQLOKorErrorPacket okPacket = readBuffs.size() == 1 ? new MySQLOKorErrorPacket(attachment2, bytes) : new MySQLOKorErrorPacket(buffer, bytes);
+                        System.out.println("结果： " + okPacket);
+                        if (!okPacket.isSuccess()) {
+                            ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
+                        } else {
+                            success = true;
+                            endok = true;
+                            futureover = true;
+                            rscount = okPacket.affectedRows;
                         }
-                        if (success) future.complete(count);
+
+                        if (success) future.complete((int) rscount);
                         for (ByteBuffer buf : readBuffs) {
                             bufferPool.accept(buf);
                         }
-                        if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeUpdate error"));
+                        if (!futureover) future.completeExceptionally(ex == null ? ex : new SQLException("SQL(" + sql + ") executeUpdate error"));
                         if (endok) {
                             writePool.offerConnection(conn);
                         } else {
@@ -554,7 +429,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
                     @Override
                     public void failed(Throwable exc, ByteBuffer attachment2) {
-                        bufferPool.accept(attachment2);
+                        conn.offerBuffer(attachment2);
                         future.completeExceptionally(exc);
                         conn.dispose();
                     }
@@ -609,7 +484,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                     conn.write(newattachs, newattachs, this);
                     return;
                 }
-                final PgResultSet resultSet = new PgResultSet();
+                final MyResultSet resultSet = new MyResultSet();
                 final List<ByteBuffer> readBuffs = new ArrayList<>();
                 conn.read(new CompletionHandler<Integer, ByteBuffer>() {
                     @Override
@@ -621,7 +496,6 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         if (result == 8192 || !attachment2.hasRemaining()) { //postgresql数据包上限为8192 还有数据
                             attachment2.flip();
                             readBuffs.add(attachment2);
-                            ByteBuffer readbuffer = bufferPool.get();
                             conn.read(this);
                             return;
                         }
@@ -653,12 +527,12 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                                     futureover = true;
                                     break;
                                 case 'T':
-                                    RowDesc rowDesc = new RespRowDescDecoder().read(buffer, length, bytes);
-                                    resultSet.setRowDesc(rowDesc);
+                                    //RowDesc rowDesc = new RespRowDescDecoder().read(buffer, length, bytes);
+                                    //resultSet.setRowDesc(rowDesc);
                                     break;
                                 case 'D':
-                                    RowData rowData = new RespRowDataDecoder().read(buffer, length, bytes);
-                                    resultSet.addRowData(rowData);
+                                    //RowData rowData = new RespRowDataDecoder().read(buffer, length, bytes);
+                                    //resultSet.addRowData(rowData);
                                     futureover = true;
                                     break;
                                 case 'Z':
@@ -677,8 +551,8 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         }
                         if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeQuery error"));
                         if (endok) {
-                            future.complete(resultSet);
                             readPool.offerConnection(conn);
+                            future.complete(resultSet);
                         } else {
                             conn.dispose();
                         }
@@ -722,16 +596,6 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         return readPool.pollAsync().thenCompose((conn) -> executeQuery(null, conn, sql).thenApply((ResultSet set) -> {
             return handler.apply(set);
         })).join();
-    }
-
-    @Override
-    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, String sql) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, String sql) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
 }

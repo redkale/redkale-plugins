@@ -34,7 +34,7 @@ public class MySQLAuthPacket extends MySQLPacket {
         byte[] seed = Utility.append(handshakePacket.seed, handshakePacket.seed2);
         this.packetId = 1;
         this.clientFlags = getClientCapabilities();
-        this.maxPacketSize = 1024 * 1024 * 1024;
+        this.maxPacketSize = 10 * 1024 * 1024;
         this.username = username;
         this.password = MySQLs.scramble411(password, seed);
         this.database = database;
@@ -65,7 +65,7 @@ public class MySQLAuthPacket extends MySQLPacket {
         return buffer;
     }
 
-    private int calcPacketSize() {
+    protected int calcPacketSize() {
         int size = 32;// 4+4+1+23;
         size += (username == null || username.isEmpty()) ? 1 : username.length() + 1;
         size += (password == null) ? 1 : MySQLs.getLength(password);
