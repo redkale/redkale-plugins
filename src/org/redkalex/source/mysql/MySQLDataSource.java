@@ -405,7 +405,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         SQLException ex = null;
                         long rscount = -1;
                         MySQLOKorErrorPacket okPacket = readBuffs.size() == 1 ? new MySQLOKorErrorPacket(attachment2, bytes) : new MySQLOKorErrorPacket(buffer, bytes);
-                        System.out.println("结果： " + okPacket);
+                        System.out.println("执行sql="+sql+", 结果： " + okPacket);
                         if (!okPacket.isSuccess()) {
                             ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
                         } else {

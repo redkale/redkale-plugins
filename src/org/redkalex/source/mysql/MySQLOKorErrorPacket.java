@@ -20,6 +20,8 @@ public class MySQLOKorErrorPacket extends MySQLPacket {
 
     private static final int STATUSCODE_OK = 0x00;
 
+    public int retcode;
+
     public int statusCode;
 
     public int vendorCode;
@@ -40,8 +42,8 @@ public class MySQLOKorErrorPacket extends MySQLPacket {
         Utility.println("MySQLOKorErrorPacket.buffer", buffer);
         packetLength = MySQLs.readUB3(buffer);
         packetId = buffer.get();
-        this.statusCode = buffer.get() & 0xff;
-        if (this.statusCode == 0xff) {
+        this.retcode = buffer.get() & 0xff;
+        if (this.retcode == 0xff) {
             this.vendorCode = MySQLs.readUB2(buffer);
             byte[] bs = MySQLs.readBytes(buffer, array);
             if (bs != null) {
@@ -61,48 +63,41 @@ public class MySQLOKorErrorPacket extends MySQLPacket {
                 }
             }
         } else {
+            //com.mysql.cj.protocol.a.NativeProtocol
             affectedRows = MySQLs.readLength(buffer);
             insertId = MySQLs.readLength(buffer);
             serverStatus = MySQLs.readUB2(buffer);
             warningCount = MySQLs.readUB2(buffer);
-            if (buffer.hasRemaining()) this.message = new String(MySQLs.readBytes(buffer, array));
+            if (buffer.hasRemaining()) {
+                this.statusCode = buffer.get() & 0xff;
+                this.vendorCode = MySQLs.readUB2(buffer);
+                byte[] bs = MySQLs.readBytes(buffer, array);
+                if (bs != null) {
+                    this.message = new String(bs);
+                    if (this.message.charAt(0) == '#') {
+                        if (this.message.length() > 6) {
+                            this.sqlState = this.message.substring(1, 6);
+                            this.message = this.message.substring(6);
+                            if (this.sqlState.equals("HY000")) {
+                                this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
+                            }
+                        } else {
+                            this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
+                        }
+                    } else {
+                        this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
+                    }
+                }
+            }
         }
     }
 
     public MySQLOKorErrorPacket(ByteBufferReader buffer, byte[] array) {
-        packetLength = MySQLs.readUB3(buffer);
-        packetId = buffer.get();
-        this.statusCode = buffer.get() & 0xff;
-        if (this.statusCode == 0xff) {
-            this.vendorCode = MySQLs.readUB2(buffer);
-            byte[] bs = MySQLs.readBytes(buffer, array);
-            if (bs != null) {
-                this.message = new String(bs);
-                if (this.message.charAt(0) == '#') {
-                    if (this.message.length() > 6) {
-                        this.sqlState = this.message.substring(1, 6);
-                        this.message = this.message.substring(6);
-                        if (this.sqlState.equals("HY000")) {
-                            this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
-                        }
-                    } else {
-                        this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
-                    }
-                } else {
-                    this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
-                }
-            }
-        } else {
-            affectedRows = MySQLs.readLength(buffer);
-            insertId = MySQLs.readLength(buffer);
-            serverStatus = MySQLs.readUB2(buffer);
-            warningCount = MySQLs.readUB2(buffer);
-            if (buffer.hasRemaining()) this.message = new String(MySQLs.readBytes(buffer, array));
-        }
+        MySQLs.readUB3((ByteBufferReader) null);
     }
 
     public boolean isSuccess() {
-        return this.statusCode == STATUSCODE_OK;
+        return this.retcode == STATUSCODE_OK;
     }
 
     public String toMessageString(String defval) {
