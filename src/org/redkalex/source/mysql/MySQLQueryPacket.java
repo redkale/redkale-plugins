@@ -19,20 +19,20 @@ public class MySQLQueryPacket extends MySQLPacket {
 
     public MySQLQueryPacket(String sql) {
         this.message = sql.getBytes();
-        this.packetId = 1;
+        this.packetIndex = 1;
     }
 
     public ByteBufferWriter writeTo(ByteBufferWriter buffer) {
-        int size = calcPacketSize();//前面的一个flag+messgag的字节长度
-        MySQLs.writeUB3(buffer, size);//存放的长度的字节数为3个字节，所以调用了wirteUB3
-        buffer.put(packetId);
+        int size = calcPacketSize();
+        MySQLs.writeUB3(buffer, size);
+        buffer.put(packetIndex);
         buffer.put(COM_QUERY);
         buffer.put(message);
         return buffer;
     }
 
     protected int calcPacketSize() {
-        int size = 4 + 1;
+        int size = 1;
         if (message != null) {
             size += message.length;
         }

@@ -34,7 +34,7 @@ public class MySQLHandshakePacket extends MySQLPacket {
 
     public MySQLHandshakePacket(ByteBuffer buffer, byte[] array) throws SQLException {
         packetLength = MySQLs.readUB3(buffer);
-        packetId = buffer.get();
+        packetIndex = buffer.get();
         protocolVersion = buffer.get();
         if (protocolVersion < 10) {
             throw new SQLException("Not supported protocolVersion(" + protocolVersion + "), must greaterthan 10");

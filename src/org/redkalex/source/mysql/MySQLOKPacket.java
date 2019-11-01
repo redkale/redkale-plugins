@@ -49,7 +49,7 @@ public class MySQLOKPacket extends MySQLPacket {
     public MySQLOKPacket(ByteBuffer buffer, byte[] array) {
         Utility.println("MySQLOKorErrorPacket.buffer", buffer);
         this.packetLength = MySQLs.readUB3(buffer);
-        this.packetId = buffer.get();
+        this.packetIndex = buffer.get();
         this.typeid = buffer.get() & 0xff;
         if (this.typeid == TYPE_ID_EOF) {
             buffer.get(); // skips the 'last packet' flag (packet signature)

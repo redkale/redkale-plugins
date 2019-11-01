@@ -17,6 +17,8 @@ import org.redkale.util.*;
  */
 class MySQLs {
 
+    public static final int MAX_PACKET_SIZE = 256 * 256 * 256 - 1;
+
     static final String CODE_PAGE_1252 = "Cp1252";
 
     static final int NULL_LENGTH = ~0;
@@ -472,7 +474,7 @@ class MySQLs {
                     array.write(store);
                 }
             }
-            if(!buffer.hasRemaining()) break;
+            if (!buffer.hasRemaining()) break;
         }
         return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
     }
@@ -490,7 +492,7 @@ class MySQLs {
                     array.write(store);
                 }
             }
-            if(!buffer.hasRemaining()) break;
+            if (!buffer.hasRemaining()) break;
         }
         return array == null ? new String(store, 0, i, StandardCharsets.US_ASCII) : array.toString(StandardCharsets.US_ASCII);
     }
@@ -514,7 +516,7 @@ class MySQLs {
                     array.write(store);
                 }
             }
-            if(!buffer.hasRemaining()) break;
+            if (!buffer.hasRemaining()) break;
         }
         return array == null ? new String(store, 0, i, StandardCharsets.US_ASCII) : array.toString(StandardCharsets.US_ASCII);
     }

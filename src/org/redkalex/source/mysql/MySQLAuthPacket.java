@@ -16,10 +16,6 @@ public class MySQLAuthPacket extends MySQLPacket {
 
     private static final byte[] FILLER = new byte[23];
 
-    public long clientFlags;
-
-    public long maxPacketSize;
-
     public int charsetIndex;
 
     public byte[] extra;
@@ -32,9 +28,7 @@ public class MySQLAuthPacket extends MySQLPacket {
 
     public MySQLAuthPacket(MySQLHandshakePacket handshakePacket, String username, String password, String database) {
         byte[] seed = Utility.append(handshakePacket.seed, handshakePacket.seed2);
-        this.packetId = 1;
-        this.clientFlags = getClientCapabilities();
-        this.maxPacketSize = 64 * 1024 * 1024;
+        this.packetIndex = 1;
         this.username = username;
         this.password = MySQLs.scramble411(password, seed);
         this.database = database;
@@ -42,9 +36,9 @@ public class MySQLAuthPacket extends MySQLPacket {
 
     public ByteBuffer writeTo(ByteBuffer buffer) {
         MySQLs.writeUB3(buffer, calcPacketSize());
-        buffer.put(packetId);
-        MySQLs.writeUB4(buffer, clientFlags);
-        MySQLs.writeUB4(buffer, maxPacketSize);
+        buffer.put(packetIndex);
+        MySQLs.writeUB4(buffer, getClientCapabilities());
+        MySQLs.writeUB4(buffer, MySQLs.MAX_PACKET_SIZE);
         buffer.put((byte) 8);
         buffer.put(FILLER);
         if (username == null || username.isEmpty()) {

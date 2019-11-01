@@ -15,7 +15,7 @@ public abstract class MySQLPacket {
 
     public int packetLength;
 
-    public byte packetId;
+    public byte packetIndex;
 
     @Override
     public String toString() {
