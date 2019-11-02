@@ -13,8 +13,6 @@ import org.redkale.util.ByteBufferWriter;
  */
 public class MySQLQueryPacket extends MySQLPacket {
 
-    public static final byte COM_QUERY = 3;
-
     public byte[] message;
 
     public MySQLQueryPacket(String sql) {

@@ -113,7 +113,36 @@ public class MyPoolSource extends PoolTcpSource {
 
     @Override
     protected CompletableFuture<AsyncConnection> sendCloseCommand(AsyncConnection conn) {
-        return null;
+        final ByteBuffer buffer = bufferPool.get();
+        MySQLs.writeUB3(buffer, 1);
+        buffer.put((byte) 0x0);
+        buffer.put(MySQLPacket.COM_QUIT);
+        buffer.flip();
+        CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
+        conn.write(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
+            @Override
+            public void completed(Integer result, ByteBuffer attachment) {
+                if (result < 0) {
+                    failed(new RuntimeException("Write Buffer Error"), attachment);
+                    return;
+                }
+                if (buffer.hasRemaining()) {
+                    conn.write(buffer, attachment, this);
+                    return;
+                }
+                buffer.clear();
+                bufferPool.accept(buffer);
+                future.complete(conn);
+            }
+
+            @Override
+            public void failed(Throwable exc, ByteBuffer attachment) {
+                bufferPool.accept(buffer);
+                conn.dispose();
+                future.completeExceptionally(exc);
+            }
+        });
+        return future;
     }
 
 }
