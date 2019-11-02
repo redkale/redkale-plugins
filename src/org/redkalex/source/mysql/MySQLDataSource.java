@@ -21,6 +21,7 @@ import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkalex.source.mysql.MyPoolSource.CONN_ATTR_BYTESBAME;
+import static org.redkalex.source.mysql.MySQLs.MAX_PACKET_SIZE;
 
 /**
  * 尚未实现
@@ -342,7 +343,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                             failed(new SQLException("Read Buffer Error"), attachment2);
                             return;
                         }
-                        if (result == 16 * 1024 || !attachment2.hasRemaining()) { //mysqlsql数据包上限为16*1024 还有数据
+                        if (result == MAX_PACKET_SIZE || !attachment2.hasRemaining()) { //mysqlsql数据包上限为MAX_PACKET_SIZE还有数据
                             attachment2.flip();
                             readBuffs.add(attachment2);
                             conn.read(this);
@@ -442,7 +443,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                             failed(new SQLException("Read Buffer Error"), attachment2);
                             return;
                         }
-                        if (result == 8192 || !attachment2.hasRemaining()) { //postgresql数据包上限为8192 还有数据
+                        if (result == MAX_PACKET_SIZE || !attachment2.hasRemaining()) { //postgresql数据包上限为MAX_PACKET_SIZE还有数据
                             attachment2.flip();
                             readBuffs.add(attachment2);
                             conn.read(this);
@@ -453,51 +454,20 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
                         boolean endok = false;
                         boolean futureover = false;
-                        while (buffer.hasRemaining()) {
-                            final char cmd = (char) buffer.get();
-                            int length = buffer.getInt();
-                            switch (cmd) {
-                                case 'E':
-                                    byte[] field = new byte[255];
-                                    String level = null,
-                                     code = null,
-                                     message = null;
-                                    for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                        String value = MySQLs.readUTF8String(buffer, field);
-                                        if (type == (byte) 'S') {
-                                            level = value;
-                                        } else if (type == 'C') {
-                                            code = value;
-                                        } else if (type == 'M') {
-                                            message = value;
-                                        }
-                                    }
-                                    future.completeExceptionally(new SQLException(message, code, 0));
-                                    futureover = true;
-                                    break;
-                                case 'T':
-                                    //RowDesc rowDesc = new RespRowDescDecoder().read(buffer, length, bytes);
-                                    //resultSet.setRowDesc(rowDesc);
-                                    break;
-                                case 'D':
-                                    //RowData rowData = new RespRowDataDecoder().read(buffer, length, bytes);
-                                    //resultSet.addRowData(rowData);
-                                    futureover = true;
-                                    break;
-                                case 'Z':
-                                    //buffer.position(buffer.position() + length - 4);
-                                    buffer.skip(length - 4);
-                                    endok = true;
-                                    break;
-                                default:
-                                    //buffer.position(buffer.position() + length - 4);
-                                    buffer.skip(length - 4);
-                                    break;
-                            }
+                        boolean success = false;
+                        SQLException ex = null;
+                        long rscount = -1;
+                        MySQLOKPacket okPacket = new MySQLOKPacket(buffer, null);// new MySQLColumnCountPacket(buffer, bytes);
+                        System.out.println("查询sql=" + sql + ", 结果： " + okPacket);
+                        if (!okPacket.isOK()) {
+                            ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
+                        } else {
+                            success = true;
+                            endok = true;
+                            futureover = true;
+                            rscount = okPacket.updateCount;
                         }
-                        for (ByteBuffer buf : readBuffs) {
-                            bufferPool.accept(buf);
-                        }
+
                         if (!futureover) future.completeExceptionally(new SQLException("SQL(" + sql + ") executeQuery error"));
                         if (endok) {
                             readPool.offerConnection(conn);
