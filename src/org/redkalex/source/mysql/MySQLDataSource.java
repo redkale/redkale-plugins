@@ -358,7 +358,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         SQLException ex = null;
                         long rscount = -1;
                         MySQLOKPacket okPacket = readBuffs.size() == 1 ? new MySQLOKPacket(attachment2, bytes) : new MySQLOKPacket(buffer, bytes);
-                        System.out.println("执行sql="+sql+", 结果： " + okPacket);
+                        System.out.println("执行sql=" + sql + ", 结果： " + okPacket);
                         if (!okPacket.isOK()) {
                             ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
                         } else {
@@ -372,7 +372,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         for (ByteBuffer buf : readBuffs) {
                             bufferPool.accept(buf);
                         }
-                        if (!futureover) future.completeExceptionally(ex == null ? ex : new SQLException("SQL(" + sql + ") executeUpdate error"));
+                        if (!futureover) future.completeExceptionally(ex == null ? new SQLException("SQL(" + sql + ") executeUpdate error") : ex);
                         if (endok) {
                             writePool.offerConnection(conn);
                         } else {

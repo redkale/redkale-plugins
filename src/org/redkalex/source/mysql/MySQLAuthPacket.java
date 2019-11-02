@@ -73,12 +73,14 @@ public class MySQLAuthPacket extends MySQLPacket {
         flag |= MySQLs.CLIENT_FOUND_ROWS;
         flag |= MySQLs.CLIENT_LONG_FLAG;
         flag |= MySQLs.CLIENT_CONNECT_WITH_DB;
-        flag |= MySQLs.CLIENT_COMPRESS;
-        flag |= MySQLs.CLIENT_LOCAL_FILES;
+        flag |= MySQLs.CLIENT_ODBC;
+        flag |= MySQLs.CLIENT_IGNORE_SPACE;
         flag |= MySQLs.CLIENT_PROTOCOL_41;
         flag |= MySQLs.CLIENT_INTERACTIVE;
+        flag |= MySQLs.CLIENT_IGNORE_SIGPIPE;
         flag |= MySQLs.CLIENT_TRANSACTIONS;
         flag |= MySQLs.CLIENT_SECURE_CONNECTION;
         return flag;
     }
+
 }

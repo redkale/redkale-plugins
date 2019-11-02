@@ -20,6 +20,8 @@ public class MySQLHandshakePacket extends MySQLPacket {
 
     public String serverVersion;
 
+    public byte[] authPlugin;
+
     public long threadId;
 
     public byte[] seed;
@@ -50,5 +52,8 @@ public class MySQLHandshakePacket extends MySQLPacket {
         serverStatus = MySQLs.readUB2(buffer);
         buffer.get(FILLER_13); //预留字节
         seed2 = MySQLs.readBytes(buffer, array);
+        if (buffer.hasRemaining()) {
+            authPlugin = MySQLs.readBytes(buffer, array);
+        }
     }
 }

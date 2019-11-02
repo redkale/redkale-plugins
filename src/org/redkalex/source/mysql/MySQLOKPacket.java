@@ -47,7 +47,6 @@ public class MySQLOKPacket extends MySQLPacket {
     public int warningCount;
 
     public MySQLOKPacket(ByteBuffer buffer, byte[] array) {
-        Utility.println("MySQLOKorErrorPacket.buffer", buffer);
         this.packetLength = MySQLs.readUB3(buffer);
         this.packetIndex = buffer.get();
         this.typeid = buffer.get() & 0xff;

@@ -19,7 +19,7 @@ public class MySQLQueryPacket extends MySQLPacket {
 
     public MySQLQueryPacket(String sql) {
         this.message = sql.getBytes();
-        this.packetIndex = 1;
+        this.packetIndex = 0;
     }
 
     public ByteBufferWriter writeTo(ByteBufferWriter buffer) {

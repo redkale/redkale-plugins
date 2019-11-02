@@ -61,19 +61,27 @@ class MySQLs {
     static final int CLIENT_LONG_FLAG = 0x00000004;
 
     /* Get all column flags */
-    protected static final int CLIENT_CONNECT_WITH_DB = 0x00000008;
+    static final int CLIENT_CONNECT_WITH_DB = 0x00000008;
+
+    static final int CLIENT_NO_SCHEMA = 0x00000010;
 
     static final int CLIENT_COMPRESS = 0x00000020;
 
+    static final int CLIENT_ODBC = 0x00000040;
+
     /* Can use compression protcol */
     static final int CLIENT_LOCAL_FILES = 0x00000080;
+
+    static final int CLIENT_IGNORE_SPACE = 0x00000100;
 
     /* Can use LOAD DATA LOCAL */
     static final int CLIENT_PROTOCOL_41 = 0x00000200; // for > 4.1.1
 
     static final int CLIENT_INTERACTIVE = 0x00000400;
 
-    protected static final int CLIENT_SSL = 0x00000800;
+    static final int CLIENT_SSL = 0x00000800;
+
+    static final int CLIENT_IGNORE_SIGPIPE = 0x00001000;
 
     static final int CLIENT_TRANSACTIONS = 0x00002000; // Client knows about transactions
 
