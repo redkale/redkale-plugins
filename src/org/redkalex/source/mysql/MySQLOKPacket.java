@@ -80,8 +80,8 @@ public class MySQLOKPacket extends MySQLPacket {
             this.statusFlags = MySQLs.readUB2(buffer);
             this.warningCount = MySQLs.readUB2(buffer);
             if (buffer.hasRemaining()) {
-                buffer.get(); // skips the 'last packet' flag (packet signature)
-                this.vendorCode = MySQLs.readUB2(buffer);
+                //buffer.get(); // skips the 'last packet' flag (packet signature)
+                //this.vendorCode = MySQLs.readUB2(buffer);
                 byte[] bs = MySQLs.readBytes(buffer, array);
                 if (bs != null) {
                     this.info = new String(bs);
