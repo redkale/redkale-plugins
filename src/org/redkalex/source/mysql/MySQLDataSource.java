@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -31,6 +32,16 @@ import static org.redkalex.source.mysql.MyPoolSource.CONN_ATTR_BYTESBAME;
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
 public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
+
+    private static final byte[] BYTES_NULL = "NULL".getBytes(StandardCharsets.UTF_8);
+
+    private static final byte[] SQL_SET_AUTOCOMMIT_0 = "SET autocommit=0".getBytes(StandardCharsets.UTF_8);
+
+    private static final byte[] SQL_SET_AUTOCOMMIT_1 = "SET autocommit=1".getBytes(StandardCharsets.UTF_8);
+
+    private static final byte[] SQL_COMMIT = "COMMIT".getBytes(StandardCharsets.UTF_8);
+
+    private static final byte[] SQL_ROLLBACK = "ROLLBACK".getBytes(StandardCharsets.UTF_8);
 
     public static void main(String[] args) throws Throwable {
         final Logger logger = Logger.getLogger(MySQLDataSource.class.getSimpleName());
@@ -89,26 +100,35 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     @Override
     protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
-        final StringBuilder[] sqls = new StringBuilder[values.length];
-        String presql = info.getInsertDollarPrepareSQL(values[0]);
-        presql = presql.substring(0, presql.indexOf("VALUES"));
+        final byte[][] sqlBytesArray = new byte[values.length][];
+        String presql = info.getInsertPrepareSQL(values[0]);
+        byte[] prebs = (presql.substring(0, presql.indexOf("VALUES")) + "VALUES(").getBytes(StandardCharsets.UTF_8);
+        ByteArray ba = new ByteArray();
         for (int i = 0; i < values.length; i++) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(presql).append("VALUES(");
+            ba.write(prebs);
             for (int j = 0; j < attrs.length; j++) {
-                if (j > 0) sb.append(",");
-                Object param = formatPrepareParam(attrs[j].get(values[i]));
+                if (j > 0) ba.write((byte) ',');
+                byte[] param = formatPrepareParam(attrs[j].get(values[i]));
                 if (param == null) {
-                    sb.append("NULL");
+                    ba.write(BYTES_NULL);
                 } else {
-                    sb.append('\'').append(param).append('\'');
+                    ba.write((byte) 0x27);
+                    for (byte b : param) {
+                        if (b == 0x5c || b == 0x27) ba.write((byte) 0x5c);
+                        ba.write(b);
+                    }
+                    ba.write((byte) 0x27);
                 }
             }
-            sb.append(")");
-            System.out.println("sql = " + sb);
-            sqls[i] = sb;
+            ba.write((byte) ')');
+            sqlBytesArray[i] = ba.getBytes();
+            ba.clear();
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sqls).thenApply(rs -> rs[0]));
+        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, sqlBytesArray).thenApply((int[] rs) -> {
+            int count = 0;
+            for (int i : rs) count += i;
+            return count;
+        }));
     }
 
     @Override
@@ -117,7 +137,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " delete sql=" + realsql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, realsql, null, false));
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, realsql.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -125,7 +145,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, false));
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, sql.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -133,23 +153,44 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, false));
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, sql.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
     protected <T> CompletableFuture<Integer> updateDB(EntityInfo<T> info, final T... values) {
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
-        final Object[][] objs = new Object[values.length][];
+        final byte[][] sqlBytesArray = new byte[values.length][];
+        final char[] sqlChs = info.getUpdatePrepareSQL(values[0]).toCharArray();
+        ByteArray ba = new ByteArray();
         for (int i = 0; i < values.length; i++) {
-            final Object[] params = new Object[attrs.length + 1];
-            for (int j = 0; j < attrs.length; j++) {
-                params[j] = attrs[j].get(values[i]);
+            int index = -1;
+            for (char ch : sqlChs) {
+                if (ch != '?') {
+                    ba.write((byte) ch);
+                    continue;
+                }
+                index++;
+                byte[] param = index < attrs.length ? formatPrepareParam(attrs[index].get(values[i])) : formatPrepareParam(primary.get(values[i])); //最后一个是主键
+                if (param == null) {
+                    ba.write(BYTES_NULL);
+                } else {
+                    ba.write((byte) 0x27);
+                    for (byte b : param) {
+                        if (b == 0x5c || b == 0x27) ba.write((byte) 0x5c);
+                        ba.write(b);
+                    }
+                    ba.write((byte) 0x27);
+                }
             }
-            params[attrs.length] = primary.get(values[i]); //最后一个是主键
-            objs[i] = params;
+            sqlBytesArray[i] = ba.getBytes();
+            ba.clear();
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, info.getUpdateDollarPrepareSQL(values[0]), null, false, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, sqlBytesArray).thenApply((int[] rs) -> {
+            int count = 0;
+            for (int i : rs) count += i;
+            return count;
+        }));
     }
 
     @Override
@@ -159,7 +200,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + realsql);
         }
         Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, realsql, null, false, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, realsql.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -297,61 +338,61 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         });
     }
 
-    protected static Object formatPrepareParam(Object param) {
+    protected static byte[] formatPrepareParam(Object param) {
         if (param == null) return null;
         if (param instanceof CharSequence) {
-            return param.toString().replace("\\", "\\\\").replace("'", "\\'");
+            return param.toString().getBytes(StandardCharsets.UTF_8);
         }
         if (param instanceof Boolean) {
-            return (Boolean) param ? 1 : 0;
+            return (Boolean) param ? new byte[]{0x31} : new byte[]{0x30};
         }
         if (param instanceof byte[]) {
-            return formatPrepareParam(new String((byte[]) param));
+            return (byte[]) param;
         }
-        return String.valueOf(param);
+        return String.valueOf(param).getBytes(StandardCharsets.UTF_8);
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String sql, final T[] values, final boolean insert2, final Object[]... parameters) {
-        return executeUpdate(info, conn, sql).thenApply(a -> a[0]);
+    protected <T> CompletableFuture<Integer> executeOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] sqlBytes) {
+        return executeBatchUpdate(info, conn, sqlBytes).thenApply(a -> a[0]);
     }
 
-    protected <T> CompletableFuture<int[]> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final CharSequence... sqls) {
+    protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[]... sqlBytesArray) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
-        if (sqls.length == 1) {
-            return executeOneUpdate(info, conn, bytes, "SET autocommit=1").thenCompose(o -> executeOneUpdate(info, conn, bytes, sqls[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
+        if (sqlBytesArray.length == 1) {
+            return executeItemBatchUpdate(info, conn, bytes, SQL_SET_AUTOCOMMIT_1).thenCompose(o -> executeItemBatchUpdate(info, conn, bytes, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
                 if (t == null) writePool.offerConnection(conn);
             });
         }
         //多个
-        final int[] rs = new int[sqls.length + 2];
-        CompletableFuture<Integer> future = executeOneUpdate(info, conn, bytes, "SET autocommit=0");
+        final int[] rs = new int[sqlBytesArray.length + 2];
+        CompletableFuture<Integer> future = executeItemBatchUpdate(info, conn, bytes, SQL_SET_AUTOCOMMIT_0);
         future.thenAccept((Integer a) -> rs[0] = a);
-        for (int i = 0; i < sqls.length; i++) {
+        for (int i = 0; i < sqlBytesArray.length; i++) {
             final int index = i + 1;
-            final CharSequence sql = sqls[i];
+            final byte[] sqlBytes = sqlBytesArray[i];
             future = future.thenCompose(a -> {
-                CompletableFuture<Integer> nextFuture = executeOneUpdate(info, conn, bytes, sql);
+                CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, bytes, sqlBytes);
                 nextFuture.thenAccept(b -> rs[index] = b);
                 nextFuture.whenComplete((o, t) -> {
-                    if (t != null) executeOneUpdate(info, conn, bytes, "ROLLBACK").join();
+                    if (t != null) executeItemBatchUpdate(info, conn, bytes, SQL_ROLLBACK).join();
                 });
                 return nextFuture;
             });
         }
         future = future.thenCompose(a -> {
-            CompletableFuture<Integer> nextFuture = executeOneUpdate(info, conn, bytes, "COMMIT");
-            nextFuture.thenAccept(b -> rs[sqls.length] = b);
+            CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, bytes, SQL_COMMIT);
+            nextFuture.thenAccept(b -> rs[sqlBytesArray.length] = b);
             return nextFuture;
         });
-        return future.thenApply(a -> Arrays.copyOfRange(rs, 1, sqls.length + 1)).whenComplete((o, t) -> {
+        return future.thenApply(a -> Arrays.copyOfRange(rs, 1, sqlBytesArray.length + 1)).whenComplete((o, t) -> {
             if (t == null) writePool.offerConnection(conn);
         });
     }
 
-    protected <T> CompletableFuture<Integer> executeOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] bytes, final CharSequence sql) {
+    protected <T> CompletableFuture<Integer> executeItemBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] array, final byte[] sqlBytes) {
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
-            new MySQLQueryPacket(sql.toString()).writeTo(writer);
+            new MySQLQueryPacket(sqlBytes).writeTo(writer);
         }
         final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<Integer> future = new CompletableFuture();
@@ -397,8 +438,8 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         attachment2.flip();
                         readBuffs.add(attachment2);
                         final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
-                        MySQLOKPacket okPacket = new MySQLOKPacket(-1, buffer, bytes);
-                        System.out.println("执行sql=" + sql + ", 结果： " + okPacket);
+                        MySQLOKPacket okPacket = new MySQLOKPacket(-1, buffer, array);
+                        System.out.println("执行sql=" + new String(sqlBytes, StandardCharsets.UTF_8) + ", 结果： " + okPacket);
                         if (!okPacket.isOK()) {
                             future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode));
                             conn.dispose();
@@ -432,10 +473,10 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
     //info可以为null,供directQuery
     protected <T> CompletableFuture<ResultSet> executeQuery(final EntityInfo<T> info, final AsyncConnection conn, final String sql) {
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
-            new MySQLQueryPacket(sql).writeTo(writer);
+            new MySQLQueryPacket(sql.getBytes(StandardCharsets.UTF_8)).writeTo(writer);
         }
         final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<ResultSet> future = new CompletableFuture();
@@ -487,25 +528,25 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         int packetLength = MySQLs.readUB3(buffer);
                         MyResultSet resultSet = null;
                         if (packetLength < 4) {
-                            MySQLColumnCountPacket countPacket = new MySQLColumnCountPacket(packetLength, buffer, bytes);
+                            MySQLColumnCountPacket countPacket = new MySQLColumnCountPacket(packetLength, buffer, array);
                             System.out.println("查询sql=" + sql + ", 字段数： " + countPacket.columnCount);
                             System.out.println("--------- column desc start  -------------");
                             MySQLColumnDescPacket[] colDescs = new MySQLColumnDescPacket[countPacket.columnCount];
                             for (int i = 0; i < colDescs.length; i++) {
-                                colDescs[i] = new MySQLColumnDescPacket(buffer, bytes);
+                                colDescs[i] = new MySQLColumnDescPacket(buffer, array);
                             }
-                            MySQLEOFPacket eofPacket = new MySQLEOFPacket(-1, buffer, bytes);
+                            MySQLEOFPacket eofPacket = new MySQLEOFPacket(-1, buffer, array);
                             System.out.println("字段描述EOF包： " + eofPacket);
 
                             List<MySQLRowDataPacket> rows = new ArrayList<>();
                             int colPacketLength = MySQLs.readUB3(buffer);
                             while (colPacketLength != 5) { //EOF包
-                                MySQLRowDataPacket rowData = new MySQLRowDataPacket(colDescs, colPacketLength, buffer, countPacket.columnCount, bytes);
+                                MySQLRowDataPacket rowData = new MySQLRowDataPacket(colDescs, colPacketLength, buffer, countPacket.columnCount, array);
                                 rows.add(rowData);
                                 colPacketLength = MySQLs.readUB3(buffer);
                                 System.out.println("行记录: " + rowData);
                             }
-                            eofPacket = new MySQLEOFPacket(colPacketLength, buffer, bytes);
+                            eofPacket = new MySQLEOFPacket(colPacketLength, buffer, array);
                             System.out.println("查询结果包解析完毕： " + eofPacket);
 
                             resultSet = new MyResultSet(colDescs, rows);
@@ -513,7 +554,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                             endok = true;
                             futureover = true;
                         } else {
-                            MySQLOKPacket okPacket = new MySQLOKPacket(packetLength, buffer, bytes);
+                            MySQLOKPacket okPacket = new MySQLOKPacket(packetLength, buffer, array);
                             System.out.println("查询sql=" + sql + ", 异常： " + okPacket);
                             ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
                         }
@@ -550,13 +591,18 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     @Local
     @Override
     public int directExecute(String sql) {
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(null, conn, sql)).join()[0];
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(null, conn, sql.getBytes(StandardCharsets.UTF_8))).join();
     }
 
     @Local
     @Override
     public int[] directExecute(String... sqls) {
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(null, conn, sqls)).join();
+        byte[][] sqlBytesArray = new byte[sqls.length][];
+        for (int i = 0; i < sqls.length; i++) {
+            sqlBytesArray[i] = sqls[i].getBytes(StandardCharsets.UTF_8);
+
+        }
+        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(null, conn, sqlBytesArray)).join();
     }
 
     @Local

@@ -15,8 +15,8 @@ public class MySQLQueryPacket extends MySQLPacket {
 
     public byte[] message;
 
-    public MySQLQueryPacket(String sql) {
-        this.message = sql.getBytes();
+    public MySQLQueryPacket(byte[] sqlBytes) {
+        this.message = sqlBytes;
         this.packetIndex = 0;
     }
 
