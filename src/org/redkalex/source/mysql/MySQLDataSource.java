@@ -299,25 +299,6 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         return executeUpdate(info, conn, sql).thenApply(a -> a[0]);
     }
 
-    protected <T> CompletableFuture<int[]> executeUpdate2(final EntityInfo<T> info, final AsyncConnection conn, final String... sqls) {
-        final int[] rs = new int[sqls.length];
-        final CompletableFuture<Integer>[] futures = new CompletableFuture[sqls.length];
-        for (int i = 0; i < sqls.length; i++) {
-            final int index = i;
-            futures[i] = null; //executeOneUpdate(info, conn, sqls[i]);
-            futures[i].thenAccept((Integer a) -> {
-                rs[index] = a;
-                System.out.println("i = " + index + ", a = " + a + ", sql = " + sqls[index]);
-            });
-        }
-        CompletableFuture<Integer> future = null;
-        for (int i = 0; i < futures.length - 1; i++) {
-            final int index = i;
-            future = future == null ? futures[i] : futures[index].thenCompose(a -> futures[index + 1]);
-        }
-        return future.thenApply(a -> rs);
-    }
-
     protected <T> CompletableFuture<int[]> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String... sqls) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final int[] rs = new int[sqls.length];
@@ -326,7 +307,11 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             rs[0] = a;
             System.out.println("i = " + 0 + ", update = " + a + ", sql = " + sqls[0]);
         });
-        if (sqls.length == 1) return future.thenApply(a -> rs);
+        if (sqls.length == 1) {
+            return future.thenApply(a -> rs).whenComplete((o, t) -> {
+                if (t != null) writePool.offerConnection(conn);
+            });
+        }
         for (int i = 1; i < sqls.length; i++) {
             final int index = i;
             final String sql = sqls[i];
@@ -339,110 +324,9 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                 return nextFuture;
             });
         }
-        CompletableFuture<int[]> rsFuture = future.thenApply(a -> rs);
-        rsFuture.whenComplete((o, t) -> {
+        return future.thenApply(a -> rs).whenComplete((o, t) -> {
             if (t != null) writePool.offerConnection(conn);
         });
-        return rsFuture;
-
-//        final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
-//        final String sql = sqls[0];
-//        {
-//            new MySQLQueryPacket(sql).writeTo(writer);
-//        }
-//
-//        final ByteBuffer[] buffers = writer.toBuffers();
-//        final int[] rs = new int[sqls.length];
-//        final CompletableFuture<int[]> future = new CompletableFuture();
-//        conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
-//            @Override
-//            public void completed(Integer result, ByteBuffer[] attachment1) {
-//                if (result < 0) {
-//                    failed(new SQLException("Write Buffer Error"), attachment1);
-//                    return;
-//                }
-//                int index = -1;
-//                for (int i = 0; i < attachment1.length; i++) {
-//                    if (attachment1[i].hasRemaining()) {
-//                        index = i;
-//                        break;
-//                    }
-//                    bufferPool.accept(attachment1[i]);
-//                }
-//                if (index == 0) {
-//                    conn.write(attachment1, attachment1, this);
-//                    return;
-//                } else if (index > 0) {
-//                    ByteBuffer[] newattachs = new ByteBuffer[attachment1.length - index];
-//                    System.arraycopy(attachment1, index, newattachs, 0, newattachs.length);
-//                    conn.write(newattachs, newattachs, this);
-//                    return;
-//                }
-//
-//                final List<ByteBuffer> readBuffs = new ArrayList<>();
-//                conn.read(new CompletionHandler<Integer, ByteBuffer>() {
-//                    @Override
-//                    public void completed(Integer result, ByteBuffer attachment2) {
-//                        if (result < 0) {
-//                            failed(new SQLException("Read Buffer Error"), attachment2);
-//                            return;
-//                        }
-//                        if (result == 16 * 1024 || !attachment2.hasRemaining()) { //mysqlsql数据包上限为16*1024还有数据
-//                            attachment2.flip();
-//                            readBuffs.add(attachment2);
-//                            conn.read(this);
-//                            return;
-//                        }
-//                        attachment2.flip();
-//                        readBuffs.add(attachment2);
-//                        final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
-//
-//                        boolean endok = false;
-//                        boolean futureover = false;
-//                        boolean success = false;
-//                        SQLException ex = null;
-//                        long rscount = -1;
-//                        MySQLOKPacket okPacket = new MySQLOKPacket(-1, buffer, bytes);
-//                        System.out.println("执行sql=" + sql + ", 结果： " + okPacket);
-//                        if (!okPacket.isOK()) {
-//                            ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
-//                        } else {
-//                            success = true;
-//                            endok = true;
-//                            futureover = true;
-//                            rscount = okPacket.updateCount;
-//                        }
-//
-//                        if (success) future.complete(rs);
-//                        for (ByteBuffer buf : readBuffs) {
-//                            bufferPool.accept(buf);
-//                        }
-//                        if (!futureover) future.completeExceptionally(ex == null ? new SQLException("SQL(" + sql + ") executeUpdate error") : ex);
-//                        if (endok) {
-//                            writePool.offerConnection(conn);
-//                        } else {
-//                            conn.dispose();
-//                        }
-//                    }
-//
-//                    @Override
-//                    public void failed(Throwable exc, ByteBuffer attachment2) {
-//                        conn.offerBuffer(attachment2);
-//                        future.completeExceptionally(exc);
-//                        conn.dispose();
-//                    }
-//                });
-//            }
-//
-//            @Override
-//            public void failed(Throwable exc, ByteBuffer[] attachment1) {
-//                for (ByteBuffer attach : attachment1) {
-//                    bufferPool.accept(attach);
-//                }
-//                future.completeExceptionally(exc);
-//            }
-//        });
-//        return future;
     }
 
     protected <T> CompletableFuture<Integer> executeOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] bytes, final String sql) {
