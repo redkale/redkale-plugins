@@ -223,7 +223,7 @@ public class PgSQLTest {
                         int length = buffer.getInt();
                         System.out.println(sql + "---------cmd:" + cmd + "-----length:" + length);
                         if (cmd == 'T') {
-                            System.out.println(new RespRowDescDecoder().read(bufReader, length, bytes));
+                            System.out.println(new PgRespRowDescDecoder().read(bufReader, length, bytes));
                             cmd = (char) buffer.get();
                             length = buffer.getInt();
                             System.out.println("---------cmd:" + cmd + "-----length:" + length);
