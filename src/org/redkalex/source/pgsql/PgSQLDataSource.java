@@ -99,7 +99,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
             } else {
                 store[i++] = c;
                 if (i == store.length) {
-                    array = new ByteArray(1024); 
+                    array = new ByteArray(1024);
                     array.write(store);
                 }
             }
@@ -479,7 +479,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                             final char cmd = (char) buffer.get();
                             int length = buffer.getInt();
                             switch (cmd) {
-                                
+
                                 case 'C':
                                     String val = readUTF8String(buffer, bytes);
                                     int pos = val.lastIndexOf(' ');
@@ -495,7 +495,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                                 case 'D':
                                     final Attribute<T, Serializable> primary = info.getPrimary();
                                     PgRowData rowData = new PgRespRowDataDecoder().read(buffer, length, bytes);
-                                    if (insert) primary.set(values[++valueIndex], rowData.getObject(rowDesc, 0));
+                                    if (insert && rowData.length() > 0) primary.set(values[++valueIndex], rowData.getObject(rowDesc, 0));
                                     break;
                                 case 'Z':
                                     //buffer.position(buffer.position() + length - 4);
@@ -601,7 +601,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
                             final char cmd = (char) buffer.get();
                             int length = buffer.getInt();
                             switch (cmd) {
-                                
+
                                 case 'T':
                                     PgRowDesc rowDesc = new PgRespRowDescDecoder().read(buffer, length, bytes);
                                     resultSet.setRowDesc(rowDesc);
