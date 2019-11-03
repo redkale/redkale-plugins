@@ -13,7 +13,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.*;
 import java.util.function.*;
 import java.util.logging.*;
 import org.redkale.net.AsyncConnection;
@@ -100,16 +100,16 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         }
         String sql0 = info.getInsertDollarPrepareSQL(values[0]);
         final String sql = sql0;
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, values, 0, true, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, values, true, objs));
     }
 
     @Override
     protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String sql) {
+        final String realsql = flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
         if (info.isLoggable(logger, Level.FINEST)) {
-            final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
-            if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " delete sql=" + debugsql);
+            if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " delete sql=" + realsql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, fetchSize(flipper), false));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, realsql, null, false));
     }
 
     @Override
@@ -117,7 +117,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, 0, false));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, false));
     }
 
     @Override
@@ -125,7 +125,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, 0, false));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, false));
     }
 
     @Override
@@ -141,17 +141,17 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             params[attrs.length] = primary.get(values[i]); //最后一个是主键
             objs[i] = params;
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, info.getUpdateDollarPrepareSQL(values[0]), null, 0, false, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, info.getUpdateDollarPrepareSQL(values[0]), null, false, objs));
     }
 
     @Override
     protected <T> CompletableFuture<Integer> updateDB(EntityInfo<T> info, Flipper flipper, String sql, boolean prepared, Object... params) {
+        final String realsql = flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
         if (info.isLoggable(logger, Level.FINEST)) {
-            final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
-            if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + debugsql);
+            if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + realsql);
         }
         Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, null, fetchSize(flipper), false, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, realsql, null, false, objs));
     }
 
     @Override
@@ -289,23 +289,163 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         });
     }
 
-    protected static int fetchSize(Flipper flipper) {
-        return flipper == null || flipper.getLimit() <= 0 ? 0 : flipper.getLimit();
-    }
-
     protected static byte[] formatPrepareParam(Object param) {
         if (param == null) return null;
         if (param instanceof byte[]) return (byte[]) param;
         return String.valueOf(param).getBytes(UTF_8);
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String sql, final T[] values, int fetchSize, final boolean insert, final Object[]... parameters) {
+    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String sql, final T[] values, final boolean insert2, final Object[]... parameters) {
+        return executeUpdate(info, conn, sql).thenApply(a -> a[0]);
+    }
+
+    protected <T> CompletableFuture<int[]> executeUpdate2(final EntityInfo<T> info, final AsyncConnection conn, final String... sqls) {
+        final int[] rs = new int[sqls.length];
+        final CompletableFuture<Integer>[] futures = new CompletableFuture[sqls.length];
+        for (int i = 0; i < sqls.length; i++) {
+            final int index = i;
+            futures[i] = null; //executeOneUpdate(info, conn, sqls[i]);
+            futures[i].thenAccept((Integer a) -> {
+                rs[index] = a;
+                System.out.println("i = " + index + ", a = " + a + ", sql = " + sqls[index]);
+            });
+        }
+        CompletableFuture<Integer> future = null;
+        for (int i = 0; i < futures.length - 1; i++) {
+            final int index = i;
+            future = future == null ? futures[i] : futures[index].thenCompose(a -> futures[index + 1]);
+        }
+        return future.thenApply(a -> rs);
+    }
+
+    protected <T> CompletableFuture<int[]> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String... sqls) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final int[] rs = new int[sqls.length];
+        CompletableFuture<Integer> future = executeOneUpdate(info, conn, bytes, sqls[0]);
+        future.thenAccept((Integer a) -> {
+            rs[0] = a;
+            System.out.println("i = " + 0 + ", update = " + a + ", sql = " + sqls[0]);
+        });
+        if (sqls.length == 1) return future.thenApply(a -> rs);
+        for (int i = 1; i < sqls.length; i++) {
+            final int index = i;
+            final String sql = sqls[i];
+            future = future.thenCompose(a -> {
+                CompletableFuture<Integer> nextFuture = executeOneUpdate(info, conn, bytes, sql);
+                nextFuture.thenAccept(b -> {
+                    rs[index] = b;
+                    System.out.println("i = " + index + ", update = " + b + ", sql = " + sqls[index]);
+                });
+                return nextFuture;
+            });
+        }
+        return future.thenApply(a -> rs);
+
+//        final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
+//        final String sql = sqls[0];
+//        {
+//            new MySQLQueryPacket(sql).writeTo(writer);
+//        }
+//
+//        final ByteBuffer[] buffers = writer.toBuffers();
+//        final int[] rs = new int[sqls.length];
+//        final CompletableFuture<int[]> future = new CompletableFuture();
+//        conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
+//            @Override
+//            public void completed(Integer result, ByteBuffer[] attachment1) {
+//                if (result < 0) {
+//                    failed(new SQLException("Write Buffer Error"), attachment1);
+//                    return;
+//                }
+//                int index = -1;
+//                for (int i = 0; i < attachment1.length; i++) {
+//                    if (attachment1[i].hasRemaining()) {
+//                        index = i;
+//                        break;
+//                    }
+//                    bufferPool.accept(attachment1[i]);
+//                }
+//                if (index == 0) {
+//                    conn.write(attachment1, attachment1, this);
+//                    return;
+//                } else if (index > 0) {
+//                    ByteBuffer[] newattachs = new ByteBuffer[attachment1.length - index];
+//                    System.arraycopy(attachment1, index, newattachs, 0, newattachs.length);
+//                    conn.write(newattachs, newattachs, this);
+//                    return;
+//                }
+//
+//                final List<ByteBuffer> readBuffs = new ArrayList<>();
+//                conn.read(new CompletionHandler<Integer, ByteBuffer>() {
+//                    @Override
+//                    public void completed(Integer result, ByteBuffer attachment2) {
+//                        if (result < 0) {
+//                            failed(new SQLException("Read Buffer Error"), attachment2);
+//                            return;
+//                        }
+//                        if (result == 16 * 1024 || !attachment2.hasRemaining()) { //mysqlsql数据包上限为16*1024还有数据
+//                            attachment2.flip();
+//                            readBuffs.add(attachment2);
+//                            conn.read(this);
+//                            return;
+//                        }
+//                        attachment2.flip();
+//                        readBuffs.add(attachment2);
+//                        final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
+//
+//                        boolean endok = false;
+//                        boolean futureover = false;
+//                        boolean success = false;
+//                        SQLException ex = null;
+//                        long rscount = -1;
+//                        MySQLOKPacket okPacket = new MySQLOKPacket(-1, buffer, bytes);
+//                        System.out.println("执行sql=" + sql + ", 结果： " + okPacket);
+//                        if (!okPacket.isOK()) {
+//                            ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
+//                        } else {
+//                            success = true;
+//                            endok = true;
+//                            futureover = true;
+//                            rscount = okPacket.updateCount;
+//                        }
+//
+//                        if (success) future.complete(rs);
+//                        for (ByteBuffer buf : readBuffs) {
+//                            bufferPool.accept(buf);
+//                        }
+//                        if (!futureover) future.completeExceptionally(ex == null ? new SQLException("SQL(" + sql + ") executeUpdate error") : ex);
+//                        if (endok) {
+//                            writePool.offerConnection(conn);
+//                        } else {
+//                            conn.dispose();
+//                        }
+//                    }
+//
+//                    @Override
+//                    public void failed(Throwable exc, ByteBuffer attachment2) {
+//                        conn.offerBuffer(attachment2);
+//                        future.completeExceptionally(exc);
+//                        conn.dispose();
+//                    }
+//                });
+//            }
+//
+//            @Override
+//            public void failed(Throwable exc, ByteBuffer[] attachment1) {
+//                for (ByteBuffer attach : attachment1) {
+//                    bufferPool.accept(attach);
+//                }
+//                future.completeExceptionally(exc);
+//            }
+//        });
+//        return future;
+    }
+
+    protected <T> CompletableFuture<Integer> executeOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] bytes, final String sql) {
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
             new MySQLQueryPacket(sql).writeTo(writer);
         }
-
         final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<Integer> future = new CompletableFuture();
         conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
@@ -350,32 +490,16 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         attachment2.flip();
                         readBuffs.add(attachment2);
                         final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
-
-                        boolean endok = false;
-                        boolean futureover = false;
-                        boolean success = false;
-                        SQLException ex = null;
-                        long rscount = -1;
                         MySQLOKPacket okPacket = new MySQLOKPacket(-1, buffer, bytes);
                         System.out.println("执行sql=" + sql + ", 结果： " + okPacket);
                         if (!okPacket.isOK()) {
-                            ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
-                        } else {
-                            success = true;
-                            endok = true;
-                            futureover = true;
-                            rscount = okPacket.updateCount;
-                        }
-
-                        if (success) future.complete((int) rscount);
-                        for (ByteBuffer buf : readBuffs) {
-                            bufferPool.accept(buf);
-                        }
-                        if (!futureover) future.completeExceptionally(ex == null ? new SQLException("SQL(" + sql + ") executeUpdate error") : ex);
-                        if (endok) {
-                            writePool.offerConnection(conn);
-                        } else {
+                            future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode));
                             conn.dispose();
+                        } else {
+                            for (ByteBuffer buf : readBuffs) {
+                                bufferPool.accept(buf);
+                            }
+                            future.complete((int) okPacket.updateCount);
                         }
                     }
 
@@ -469,9 +593,10 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                             List<MySQLRowDataPacket> rows = new ArrayList<>();
                             int colPacketLength = MySQLs.readUB3(buffer);
                             while (colPacketLength != 5) { //EOF包
-                                System.out.println("包长度: " + colPacketLength);
-                                rows.add(new MySQLRowDataPacket(colDescs, colPacketLength, buffer, countPacket.columnCount, bytes));
+                                MySQLRowDataPacket rowData = new MySQLRowDataPacket(colDescs, colPacketLength, buffer, countPacket.columnCount, bytes);
+                                rows.add(rowData);
                                 colPacketLength = MySQLs.readUB3(buffer);
+                                System.out.println("行记录: " + rowData);
                             }
                             eofPacket = new MySQLEOFPacket(colPacketLength, buffer, bytes);
                             System.out.println("查询结果包解析完毕： " + eofPacket);
@@ -518,13 +643,13 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     @Local
     @Override
     public int directExecute(String sql) {
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(null, conn, sql, null, 0, false)).join();
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(null, conn, sql, null, false)).join();
     }
 
     @Local
     @Override
     public int[] directExecute(String... sqls) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(null, conn, sqls)).join();
     }
 
     @Local
