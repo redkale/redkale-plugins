@@ -42,8 +42,8 @@ public class MySQLHandshakePacket extends MySQLPacket {
             throw new SQLException("Not supported protocolVersion(" + protocolVersion + "), must greaterthan 10");
         }
         serverVersion = MySQLs.readASCIIString(buffer, array);
-        if (Integer.parseInt(serverVersion.substring(0, serverVersion.indexOf('.'))) < 8) {
-            throw new SQLException("Not supported serverVersion(" + serverVersion + "), must greaterthan 8.0");
+        if (Integer.parseInt(serverVersion.substring(0, serverVersion.indexOf('.'))) < 5) {
+            throw new SQLException("Not supported serverVersion(" + serverVersion + "), must greaterthan 5.0");
         }
         threadId = MySQLs.readUB4(buffer);
         seed = MySQLs.readBytes(buffer, array);
