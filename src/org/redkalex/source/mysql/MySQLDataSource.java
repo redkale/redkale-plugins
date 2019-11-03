@@ -100,7 +100,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         }
         String sql0 = info.getInsertDollarPrepareSQL(values[0]);
         final String sql = sql0;
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql, values, true, objs));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql).thenApply(rs -> rs[0]));
     }
 
     @Override
@@ -301,31 +301,34 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
     protected <T> CompletableFuture<int[]> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String... sqls) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
-        final int[] rs = new int[sqls.length];
-        CompletableFuture<Integer> future = executeOneUpdate(info, conn, bytes, sqls[0]);
-        future.thenAccept((Integer a) -> {
-            rs[0] = a;
-            System.out.println("i = " + 0 + ", update = " + a + ", sql = " + sqls[0]);
-        });
         if (sqls.length == 1) {
-            return future.thenApply(a -> rs).whenComplete((o, t) -> {
-                if (t != null) writePool.offerConnection(conn);
+            return executeOneUpdate(info, conn, bytes, sqls[0]).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
+                if (t == null) writePool.offerConnection(conn);
             });
         }
-        for (int i = 1; i < sqls.length; i++) {
-            final int index = i;
+        //多个
+        final int[] rs = new int[sqls.length + 2];
+        CompletableFuture<Integer> future = executeOneUpdate(info, conn, bytes, "SET autocommit=0");
+        future.thenAccept((Integer a) -> rs[0] = a);
+        for (int i = 0; i < sqls.length; i++) {
+            final int index = i + 1;
             final String sql = sqls[i];
             future = future.thenCompose(a -> {
                 CompletableFuture<Integer> nextFuture = executeOneUpdate(info, conn, bytes, sql);
-                nextFuture.thenAccept(b -> {
-                    rs[index] = b;
-                    System.out.println("i = " + index + ", update = " + b + ", sql = " + sqls[index]);
+                nextFuture.thenAccept(b -> rs[index] = b);
+                nextFuture.whenComplete((o, t) -> {
+                    if (t != null) executeOneUpdate(info, conn, bytes, "ROLLBACK").join();
                 });
                 return nextFuture;
             });
         }
-        return future.thenApply(a -> rs).whenComplete((o, t) -> {
-            if (t != null) writePool.offerConnection(conn);
+        future = future.thenCompose(a -> {
+            CompletableFuture<Integer> nextFuture = executeOneUpdate(info, conn, bytes, "COMMIT");
+            nextFuture.thenAccept(b -> rs[sqls.length] = b);
+            return nextFuture;
+        });
+        return future.thenApply(a -> Arrays.copyOfRange(rs, 1, sqls.length + 1)).whenComplete((o, t) -> {
+            if (t == null) writePool.offerConnection(conn);
         });
     }
 
@@ -531,7 +534,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     @Local
     @Override
     public int directExecute(String sql) {
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(null, conn, sql, null, false)).join();
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(null, conn, sql)).join()[0];
     }
 
     @Local
