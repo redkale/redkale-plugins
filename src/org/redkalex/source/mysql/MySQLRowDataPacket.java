@@ -6,6 +6,7 @@
 package org.redkalex.source.mysql;
 
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import org.redkale.util.ByteBufferReader;
 
 /**
@@ -37,9 +38,63 @@ public class MySQLRowDataPacket extends MySQLPacket {
 
     public Serializable getObject(int i) {
         byte[] bs = values[i];
-        //MySQLColumnDesc colDesc = rowDesc.getColumn(i);
         if (bs == null) return null;
-        //return colDesc.getObject(bs);
+        final int mytype = columns[i].type;
+        if (mytype == MySQLType.FIELD_TYPE_BIT) {
+            return bs[0];
+        } else if (mytype == MySQLType.FIELD_TYPE_BLOB) {
+            return new MyBlob(bs);
+        } else if (mytype == MySQLType.FIELD_TYPE_DATE) {
+            throw new UnsupportedOperationException("FIELD_TYPE_DATE not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_DATETIME) {
+            throw new UnsupportedOperationException("FIELD_TYPE_DATETIME not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_DECIMAL) {
+            throw new UnsupportedOperationException("FIELD_TYPE_DECIMAL not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_DOUBLE) {
+            return Double.parseDouble(new String(bs));
+        } else if (mytype == MySQLType.FIELD_TYPE_ENUM) {
+            throw new UnsupportedOperationException("FIELD_TYPE_ENUM not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_FLOAT) {
+            return Float.parseFloat(new String(bs));
+        } else if (mytype == MySQLType.FIELD_TYPE_GEOMETRY) {
+            throw new UnsupportedOperationException("FIELD_TYPE_GEOMETRY not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_INT24) {
+            return Integer.parseInt(new String(bs));
+        } else if (mytype == MySQLType.FIELD_TYPE_JSON) {
+            throw new UnsupportedOperationException("FIELD_TYPE_JSON not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_LONG) {
+            return Long.parseLong(new String(bs));
+        } else if (mytype == MySQLType.FIELD_TYPE_LONGLONG) {
+            return Long.parseLong(new String(bs));
+        } else if (mytype == MySQLType.FIELD_TYPE_LONG_BLOB) {
+            throw new UnsupportedOperationException("FIELD_TYPE_LONG_BLOB not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_MEDIUM_BLOB) {
+            throw new UnsupportedOperationException("FIELD_TYPE_MEDIUM_BLOB not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_NEWDECIMAL) {
+            throw new UnsupportedOperationException("FIELD_TYPE_NEWDECIMAL not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_NULL) {
+            return null;
+        } else if (mytype == MySQLType.FIELD_TYPE_SET) {
+            throw new UnsupportedOperationException("FIELD_TYPE_SET not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_SHORT) {
+            throw new UnsupportedOperationException("FIELD_TYPE_SHORT not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_STRING) {
+            throw new UnsupportedOperationException("FIELD_TYPE_STRING not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_TIME) {
+            throw new UnsupportedOperationException("FIELD_TYPE_TIME not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_TIMESTAMP) {
+            throw new UnsupportedOperationException("FIELD_TYPE_TIMESTAMP not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_TINY) {
+            throw new UnsupportedOperationException("FIELD_TYPE_TINY not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_TINY_BLOB) {
+            throw new UnsupportedOperationException("FIELD_TYPE_TINY_BLOB not supported yet.");
+        } else if (mytype == MySQLType.FIELD_TYPE_VARCHAR) {
+            return new String(bs, StandardCharsets.UTF_8);
+        } else if (mytype == MySQLType.FIELD_TYPE_VAR_STRING) {
+            return new String(bs, StandardCharsets.UTF_8);
+        } else if (mytype == MySQLType.FIELD_TYPE_YEAR) {
+            throw new UnsupportedOperationException("FIELD_TYPE_JSON not supported yet.");
+        }
         return null;
     }
 
