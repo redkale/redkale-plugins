@@ -199,6 +199,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + realsql);
         }
+        if (!prepared) return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, realsql.getBytes(StandardCharsets.UTF_8)));
         Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
         return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, realsql.getBytes(StandardCharsets.UTF_8)));
     }
@@ -349,6 +350,14 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         if (param instanceof byte[]) {
             return (byte[]) param;
         }
+        if (param instanceof java.sql.Blob) {
+            java.sql.Blob blob = (java.sql.Blob) param;
+            try {
+                return blob.getBytes(1, (int) blob.length());
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
         return String.valueOf(param).getBytes(StandardCharsets.UTF_8);
     }
 
@@ -439,7 +448,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         readBuffs.add(attachment2);
                         final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
                         MySQLOKPacket okPacket = new MySQLOKPacket(-1, buffer, array);
-                        System.out.println("执行sql=" + new String(sqlBytes, StandardCharsets.UTF_8) + ", 结果： " + okPacket);
+                        //System.out.println("执行sql=" + new String(sqlBytes, StandardCharsets.UTF_8) + ", 结果： " + okPacket);
                         if (!okPacket.isOK()) {
                             future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode));
                             conn.dispose();
@@ -529,14 +538,14 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         MyResultSet resultSet = null;
                         if (packetLength < 4) {
                             MySQLColumnCountPacket countPacket = new MySQLColumnCountPacket(packetLength, buffer, array);
-                            System.out.println("查询sql=" + sql + ", 字段数： " + countPacket.columnCount);
-                            System.out.println("--------- column desc start  -------------");
+                            //System.out.println("查询sql=" + sql + ", 字段数： " + countPacket.columnCount);
+                            //System.out.println("--------- column desc start  -------------");
                             MySQLColumnDescPacket[] colDescs = new MySQLColumnDescPacket[countPacket.columnCount];
                             for (int i = 0; i < colDescs.length; i++) {
                                 colDescs[i] = new MySQLColumnDescPacket(buffer, array);
                             }
                             MySQLEOFPacket eofPacket = new MySQLEOFPacket(-1, buffer, array);
-                            System.out.println("字段描述EOF包： " + eofPacket);
+                            //System.out.println("字段描述EOF包： " + eofPacket);
 
                             List<MySQLRowDataPacket> rows = new ArrayList<>();
                             int colPacketLength = MySQLs.readUB3(buffer);
@@ -544,10 +553,9 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                                 MySQLRowDataPacket rowData = new MySQLRowDataPacket(colDescs, colPacketLength, buffer, countPacket.columnCount, array);
                                 rows.add(rowData);
                                 colPacketLength = MySQLs.readUB3(buffer);
-                                System.out.println("行记录: " + rowData);
                             }
                             eofPacket = new MySQLEOFPacket(colPacketLength, buffer, array);
-                            System.out.println("查询结果包解析完毕： " + eofPacket);
+                            //System.out.println("查询结果包解析完毕： " + eofPacket);
 
                             resultSet = new MyResultSet(colDescs, rows);
                             success = true;
@@ -555,7 +563,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                             futureover = true;
                         } else {
                             MySQLOKPacket okPacket = new MySQLOKPacket(packetLength, buffer, array);
-                            System.out.println("查询sql=" + sql + ", 异常： " + okPacket);
+                            //System.out.println("查询sql=" + sql + ", 异常： " + okPacket);
                             ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
                         }
 
