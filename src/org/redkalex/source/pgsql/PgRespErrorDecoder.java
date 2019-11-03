@@ -14,7 +14,7 @@ import static org.redkalex.source.pgsql.PgSQLDataSource.readUTF8String;
  *
  * @author zhangjx
  */
-public class RespErrorDecoder implements RespDecoder<SQLException> {
+public class PgRespErrorDecoder implements PgRespDecoder<SQLException> {
 
     @Override
     public byte messageid() {

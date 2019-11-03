@@ -21,13 +21,13 @@ import static org.redkalex.source.pgsql.PgSQLDataSource.*;
  *
  * @author zhangjx
  */
-public class ColumnDesc {
+public class PgColumnDesc {
 
     final String name;
 
-    final Oid type;
+    final PgOid type;
 
-    public ColumnDesc(String name, Oid type) {
+    public PgColumnDesc(String name, PgOid type) {
         this.name = name;
         this.type = type;
     }
@@ -36,7 +36,7 @@ public class ColumnDesc {
         return name;
     }
 
-    public Oid getType() {
+    public PgOid getType() {
         return type;
     }
 

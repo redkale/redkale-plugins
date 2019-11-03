@@ -12,7 +12,7 @@ import org.redkale.util.ByteBufferReader;
  * @author zhangjx
  * @param <T> 泛型
  */
-public interface RespDecoder<T> {
+public interface PgRespDecoder<T> {
 
     public byte messageid();
 

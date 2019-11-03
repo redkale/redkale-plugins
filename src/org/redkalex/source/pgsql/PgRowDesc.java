@@ -11,19 +11,19 @@ import org.redkale.convert.json.JsonConvert;
  *
  * @author zhangjx
  */
-public class RowDesc {
+public class PgRowDesc {
 
-    final ColumnDesc[] columns;
+    final PgColumnDesc[] columns;
 
-    public RowDesc(ColumnDesc[] columns) {
+    public PgRowDesc(PgColumnDesc[] columns) {
         this.columns = columns;
     }
 
-    public ColumnDesc[] getColumns() {
+    public PgColumnDesc[] getColumns() {
         return columns;
     }
 
-    public ColumnDesc getColumn(int i) {
+    public PgColumnDesc getColumn(int i) {
         return columns[i];
     }
 

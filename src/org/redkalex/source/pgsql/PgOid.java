@@ -14,11 +14,11 @@
 package org.redkalex.source.pgsql;
 
 /**
- * Object identifiers, copied from org.postgresql.core.Oid.
+ * Object identifiers, copied from org.postgresql.core.PgOid.
  *
  * @author zhangjx
  */
-public enum Oid {
+public enum PgOid {
 
     UNSPECIFIED(0),
     INT2(21),
@@ -81,16 +81,16 @@ public enum Oid {
 
     final int id;
 
-    Oid(int id) {
+    PgOid(int id) {
         this.id = id;
     }
 
-    public static Oid valueOfId(int id) {
-        for (Oid oid : values()) {
+    public static PgOid valueOfId(int id) {
+        for (PgOid oid : values()) {
             if (oid.id == id) {
                 return oid;
             }
         }
-        return Oid.UNSPECIFIED;
+        return PgOid.UNSPECIFIED;
     }
 }

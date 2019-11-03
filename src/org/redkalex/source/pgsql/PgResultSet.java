@@ -19,29 +19,29 @@ import java.util.*;
 @SuppressWarnings("deprecation")
 public class PgResultSet implements java.sql.ResultSet {
 
-    private RowDesc rowDesc;
+    private PgRowDesc rowDesc;
 
     private Map<String, Integer> colmap;
 
-    private final List<RowData> rowDatas = new ArrayList<>();
+    private final List<PgRowData> rowDatas = new ArrayList<>();
 
     private int rowIndex = -1;
 
-    private RowData currRow;
+    private PgRowData currRow;
 
     public PgResultSet() {
     }
 
-    public void setRowDesc(RowDesc rowDesc) {
+    public void setRowDesc(PgRowDesc rowDesc) {
         this.rowDesc = rowDesc;
         this.colmap = new HashMap<>(rowDesc.length());
         int i = -1;
-        for (ColumnDesc col : this.rowDesc.getColumns()) {
+        for (PgColumnDesc col : this.rowDesc.getColumns()) {
             this.colmap.put(col.getName().toLowerCase(), ++i);
         }
     }
 
-    public PgResultSet addRowData(RowData rowData) {
+    public PgResultSet addRowData(PgRowData rowData) {
         this.rowDatas.add(rowData);
         return this;
     }

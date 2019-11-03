@@ -11,7 +11,7 @@ import org.redkale.util.ByteBufferReader;
  *
  * @author zhangjx
  */
-public class RespReadyDecoder implements RespDecoder<Boolean> {
+public class PgRespReadyDecoder implements PgRespDecoder<Boolean> {
 
     @Override
     public byte messageid() {

@@ -13,7 +13,7 @@ import static org.redkalex.source.pgsql.PgSQLDataSource.readUTF8String;
  *
  * @author zhangjx
  */
-public class RespRowDescDecoder implements RespDecoder<RowDesc> {
+public class PgRespRowDescDecoder implements PgRespDecoder<PgRowDesc> {
 
     @Override
     public byte messageid() {
@@ -21,17 +21,17 @@ public class RespRowDescDecoder implements RespDecoder<RowDesc> {
     }
 
     @Override
-    public RowDesc read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
-        ColumnDesc[] columns = new ColumnDesc[buffer.getShort()];
+    public PgRowDesc read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
+        PgColumnDesc[] columns = new PgColumnDesc[buffer.getShort()];
         for (int i = 0; i < columns.length; i++) {
             String name = readUTF8String(buffer, bytes);
             //buffer.position(buffer.position() + 6);
             buffer.skip(6);
-            Oid type = Oid.valueOfId(buffer.getInt());
+            PgOid type = PgOid.valueOfId(buffer.getInt());
             //buffer.position(buffer.position() + 8);
             buffer.skip(8);
-            columns[i] = new ColumnDesc(name, type);
+            columns[i] = new PgColumnDesc(name, type);
         }
-        return new RowDesc(columns);
+        return new PgRowDesc(columns);
     }
 }

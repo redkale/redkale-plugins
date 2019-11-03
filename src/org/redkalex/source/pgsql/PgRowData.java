@@ -12,11 +12,11 @@ import java.util.Objects;
  *
  * @author zhangjx
  */
-public class RowData {
+public class PgRowData {
 
     final byte[][] values;
 
-    public RowData(byte[][] values) {
+    public PgRowData(byte[][] values) {
         Objects.requireNonNull(values);
         this.values = values;
     }
@@ -25,9 +25,9 @@ public class RowData {
         return values[i];
     }
 
-    public Serializable getObject(RowDesc rowDesc, int i) {
+    public Serializable getObject(PgRowDesc rowDesc, int i) {
         byte[] bs = values[i];
-        ColumnDesc colDesc = rowDesc.getColumn(i);
+        PgColumnDesc colDesc = rowDesc.getColumn(i);
         if (bs == null) return null;
         return colDesc.getObject(bs);
     }

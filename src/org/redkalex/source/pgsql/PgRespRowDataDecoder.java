@@ -11,7 +11,7 @@ import org.redkale.util.ByteBufferReader;
  *
  * @author zhangjx
  */
-public class RespRowDataDecoder implements RespDecoder<RowData> {
+public class PgRespRowDataDecoder implements PgRespDecoder<PgRowData> {
 
     @Override
     public byte messageid() {
@@ -19,7 +19,7 @@ public class RespRowDataDecoder implements RespDecoder<RowData> {
     }
 
     @Override
-    public RowData read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
+    public PgRowData read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
         byte[][] values = new byte[buffer.getShort()][];
         for (int i = 0; i < values.length; i++) {
             int sublength = buffer.getInt();
@@ -30,6 +30,6 @@ public class RespRowDataDecoder implements RespDecoder<RowData> {
                 values[i] = null;
             }
         }
-        return new RowData(values);
+        return new PgRowData(values);
     }
 }
