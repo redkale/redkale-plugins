@@ -11,7 +11,6 @@ import java.net.URL;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
-import org.redkalex.source.pgsql.*;
 
 /**
  *
@@ -627,7 +626,8 @@ public class MyResultSet implements java.sql.ResultSet {
 
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
-        return new PgBlob(getBytes(columnIndex));
+        byte[] bs = getBytes(columnIndex);
+        return bs == null ? null : new MyBlob(bs);
     }
 
     @Override
@@ -652,7 +652,8 @@ public class MyResultSet implements java.sql.ResultSet {
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        return new PgBlob(getBytes(columnLabel));
+        byte[] bs = getBytes(columnLabel);
+        return bs == null ? null : new MyBlob(bs);
     }
 
     @Override

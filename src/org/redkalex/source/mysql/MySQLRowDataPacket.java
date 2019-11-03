@@ -43,7 +43,7 @@ public class MySQLRowDataPacket extends MySQLPacket {
         if (mytype == MySQLType.FIELD_TYPE_BIT) {
             return bs[0];
         } else if (mytype == MySQLType.FIELD_TYPE_BLOB) {
-            return new MyBlob(bs);
+            return bs;
         } else if (mytype == MySQLType.FIELD_TYPE_DATE) {
             throw new UnsupportedOperationException("FIELD_TYPE_DATE not supported yet.");
         } else if (mytype == MySQLType.FIELD_TYPE_DATETIME) {
@@ -67,9 +67,9 @@ public class MySQLRowDataPacket extends MySQLPacket {
         } else if (mytype == MySQLType.FIELD_TYPE_LONGLONG) {
             return Long.parseLong(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_LONG_BLOB) {
-            throw new UnsupportedOperationException("FIELD_TYPE_LONG_BLOB not supported yet.");
+            return bs;
         } else if (mytype == MySQLType.FIELD_TYPE_MEDIUM_BLOB) {
-            throw new UnsupportedOperationException("FIELD_TYPE_MEDIUM_BLOB not supported yet.");
+            return bs;
         } else if (mytype == MySQLType.FIELD_TYPE_NEWDECIMAL) {
             throw new UnsupportedOperationException("FIELD_TYPE_NEWDECIMAL not supported yet.");
         } else if (mytype == MySQLType.FIELD_TYPE_NULL) {
@@ -87,7 +87,7 @@ public class MySQLRowDataPacket extends MySQLPacket {
         } else if (mytype == MySQLType.FIELD_TYPE_TINY) {
             throw new UnsupportedOperationException("FIELD_TYPE_TINY not supported yet.");
         } else if (mytype == MySQLType.FIELD_TYPE_TINY_BLOB) {
-            throw new UnsupportedOperationException("FIELD_TYPE_TINY_BLOB not supported yet.");
+            return bs;
         } else if (mytype == MySQLType.FIELD_TYPE_VARCHAR) {
             return new String(bs, StandardCharsets.UTF_8);
         } else if (mytype == MySQLType.FIELD_TYPE_VAR_STRING) {
