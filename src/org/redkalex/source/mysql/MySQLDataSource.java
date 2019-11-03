@@ -102,7 +102,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final byte[][] sqlBytesArray = new byte[values.length][];
         String presql = info.getInsertPrepareSQL(values[0]);
-        byte[] prebs = (presql.substring(0, presql.indexOf("VALUES")) + "VALUES(").getBytes(StandardCharsets.UTF_8);
+        byte[] prebs = (presql.substring(0, presql.indexOf("VALUES")) + "VALUES(").getBytes(StandardCharsets.UTF_8); //不会存在非ASCII字符
         ByteArray ba = new ByteArray();
         for (int i = 0; i < values.length; i++) {
             ba.write(prebs);
@@ -161,7 +161,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
         final byte[][] sqlBytesArray = new byte[values.length][];
-        final char[] sqlChs = info.getUpdatePrepareSQL(values[0]).toCharArray();
+        final char[] sqlChs = info.getUpdatePrepareSQL(values[0]).toCharArray(); //不会存在非ASCII字符
         ByteArray ba = new ByteArray();
         for (int i = 0; i < values.length; i++) {
             int index = -1;
@@ -200,8 +200,26 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + realsql);
         }
         if (!prepared) return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, realsql.getBytes(StandardCharsets.UTF_8)));
-        Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, realsql.getBytes(StandardCharsets.UTF_8)));
+        ByteArray ba = new ByteArray();
+        String[] subsqls = realsql.split("\\" + prepareParamSign(1).replace("1", "") + "\\d+");
+        for (int i = 0; i < params.length; i++) {
+            ba.write(subsqls[i].getBytes(StandardCharsets.UTF_8));
+            byte[] param = formatPrepareParam(params[i]);
+            if (param == null) {
+                ba.write(BYTES_NULL);
+            } else {
+                ba.write((byte) 0x27);
+                for (byte b : param) {
+                    if (b == 0x5c || b == 0x27) ba.write((byte) 0x5c);
+                    ba.write(b);
+                }
+                ba.write((byte) 0x27);
+            }
+        }
+        for (int i = params.length; i < subsqls.length; i++) {
+            ba.write(subsqls[i].getBytes(StandardCharsets.UTF_8));
+        }
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, ba.getBytes()));
     }
 
     @Override
