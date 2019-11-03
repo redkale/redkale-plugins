@@ -13,6 +13,8 @@ import org.redkale.convert.json.JsonConvert;
  */
 public abstract class MySQLPacket {
 
+    public static final byte NULL_MARK = (byte) 251;
+
     public static final byte COM_SLEEP = 0;
 
     public static final byte COM_QUIT = 1;

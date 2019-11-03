@@ -5,7 +5,6 @@
  */
 package org.redkalex.source.mysql;
 
-import java.nio.ByteBuffer;
 import org.redkale.convert.ConvertDisabled;
 import org.redkale.util.*;
 
@@ -42,16 +41,15 @@ public class MySQLOKPacket extends MySQLPacket {
 
     public long updateID = -1;
 
-    public int statusFlags;
-
     public int warningCount;
 
-    public MySQLOKPacket(ByteBuffer buffer, byte[] array) {
-        this.packetLength = MySQLs.readUB3(buffer);
+    public int statusFlags;
+
+    public MySQLOKPacket(int len, ByteBufferReader buffer, byte[] array) {
+        this.packetLength = len < 1 ? MySQLs.readUB3(buffer) : len;
         this.packetIndex = buffer.get();
         this.typeid = buffer.get() & 0xff;
         if (this.typeid == TYPE_ID_EOF) {
-            buffer.get(); // skips the 'last packet' flag (packet signature)
             this.warningCount = MySQLs.readUB2(buffer);
             this.statusFlags = MySQLs.readUB2(buffer);
         } else if (this.typeid == TYPE_ID_ERROR) {
@@ -101,10 +99,6 @@ public class MySQLOKPacket extends MySQLPacket {
                 }
             }
         }
-    }
-
-    public MySQLOKPacket(ByteBufferReader buffer, byte[] array) {
-        MySQLs.readUB3((ByteBufferReader) null);
     }
 
     @ConvertDisabled

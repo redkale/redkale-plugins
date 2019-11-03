@@ -15,8 +15,8 @@ public class MySQLColumnCountPacket extends MySQLPacket {
 
     public int columnCount;
 
-    public MySQLColumnCountPacket(ByteBufferReader buffer, byte[] array) {
-        this.packetLength = MySQLs.readUB3(buffer);
+    public MySQLColumnCountPacket(int len, ByteBufferReader buffer, byte[] array) {
+        this.packetLength = len < 1 ? MySQLs.readUB3(buffer) : len;
         this.packetIndex = buffer.get();
         this.columnCount = (int) MySQLs.readLength(buffer);
     }

@@ -19,17 +19,17 @@ public class MySQLColumnDescPacket extends MySQLPacket {
 
     private static final byte[] FILLER = {00, 00};
 
-    public byte[] catalog = DEFAULT_CATALOG;// always "def"
+    public byte[] def = DEFAULT_CATALOG;// always "def"
 
-    public byte[] schema;
+    public byte[] catalog;
 
-    public byte[] table;
+    public byte[] tableLabel;
 
-    public byte[] orgTable;
+    public byte[] tableName;
 
-    public byte[] name;
+    public String columnLabel;
 
-    public byte[] orgName;
+    public String columnName;
 
     public byte nextLength = NEXT_LENGTH;// always 0x0c
 
@@ -50,19 +50,19 @@ public class MySQLColumnDescPacket extends MySQLPacket {
     public MySQLColumnDescPacket(ByteBufferReader buffer, byte[] array) {
         this.packetLength = MySQLs.readUB3(buffer);
         this.packetIndex = buffer.get();
+        this.def = MySQLs.readBytesWithLength(buffer);
         this.catalog = MySQLs.readBytesWithLength(buffer);
-        this.schema = MySQLs.readBytesWithLength(buffer);
-        this.table = MySQLs.readBytesWithLength(buffer);
-        this.orgTable = MySQLs.readBytesWithLength(buffer);
-        this.name = MySQLs.readBytesWithLength(buffer);
-        this.orgName = MySQLs.readBytesWithLength(buffer);
-        this.nextLength = buffer.get();
+        this.tableLabel = MySQLs.readBytesWithLength(buffer);
+        this.tableName = MySQLs.readBytesWithLength(buffer);
+        this.columnLabel = new String(MySQLs.readBytesWithLength(buffer));
+        this.columnName = new String(MySQLs.readBytesWithLength(buffer));
+        int nextLength = buffer.get() & 0xff;
         this.charsetSet = MySQLs.readUB2(buffer);
         this.length = MySQLs.readUB4(buffer);
         this.type = buffer.get() & 0xff;
         this.flags = MySQLs.readUB2(buffer);
         this.decimals = buffer.get();
-        this.filler = MySQLs.readBytes(buffer, array, 2);
+        this.filler = MySQLs.readBytesWithLength(buffer);
         if (buffer.hasRemaining()) {
             this.defaultValues = MySQLs.readBytesWithLength(buffer);
         }

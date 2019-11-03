@@ -9,6 +9,6 @@ package org.redkalex.source.mysql;
  *
  * @author zhangjx
  */
-public interface ExceptionInterceptor  {
+public interface MySQLExceptionInterceptor  {
 }
 

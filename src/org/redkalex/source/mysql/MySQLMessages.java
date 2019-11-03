@@ -12,7 +12,7 @@ import java.util.*;
  *
  * @author zhangjx
  */
-public class Messages {
+public class MySQLMessages {
 
     private static final String BUNDLE_NAME = "org.redkalex.source.mysql.LocalizedErrorMessages";
 
@@ -27,7 +27,7 @@ public class Messages {
         //
 
         try {
-            temp = ResourceBundle.getBundle(BUNDLE_NAME, Locale.getDefault(), Messages.class.getClassLoader());
+            temp = ResourceBundle.getBundle(BUNDLE_NAME, Locale.getDefault(), MySQLMessages.class.getClassLoader());
         } catch (Throwable t) {
             try {
                 temp = ResourceBundle.getBundle(BUNDLE_NAME);
@@ -78,7 +78,7 @@ public class Messages {
     /**
      * Dis-allow construction ...
      */
-    private Messages() {
+    private MySQLMessages() {
     }
 }
 

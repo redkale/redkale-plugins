@@ -13,7 +13,7 @@ import java.util.*;
  *
  * @author zhangjx
  */
-public class CharsetMapping {
+public class MySQLCharsetMapping {
  
     public static final int MAP_SIZE = 2048; // Size of static maps
     public static final String[] COLLATION_INDEX_TO_COLLATION_NAME;
@@ -595,7 +595,7 @@ public class CharsetMapping {
 
     public final static String getMysqlCharsetForJavaEncoding(String javaEncoding){
 
-            List<MysqlCharset> mysqlCharsets = CharsetMapping.JAVA_ENCODING_UC_TO_MYSQL_CHARSET.get(javaEncoding.toUpperCase(Locale.ENGLISH));
+            List<MysqlCharset> mysqlCharsets = MySQLCharsetMapping.JAVA_ENCODING_UC_TO_MYSQL_CHARSET.get(javaEncoding.toUpperCase(Locale.ENGLISH));
 
             if (mysqlCharsets != null) {
                 Iterator<MysqlCharset> iter = mysqlCharsets.iterator();
@@ -821,7 +821,7 @@ class Collation {
         this.index = index;
         this.collationName = collationName;
         this.priority = priority;
-        this.mysqlCharset = CharsetMapping.CHARSET_NAME_TO_CHARSET.get(charsetName);
+        this.mysqlCharset = MySQLCharsetMapping.CHARSET_NAME_TO_CHARSET.get(charsetName);
     }
 
     @Override
