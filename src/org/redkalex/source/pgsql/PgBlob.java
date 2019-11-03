@@ -29,7 +29,7 @@ public class PgBlob implements java.sql.Blob {
     public byte[] getBytes(long pos, int length) throws SQLException {
         if (pos == 0 && length == bytes.length) return bytes;
         byte[] bs = new byte[length];
-        System.arraycopy(bytes, (int) pos, bs, 0, length);
+        System.arraycopy(bytes, (int) pos - 1, bs, 0, length);
         return bs;
     }
 

@@ -245,7 +245,7 @@ public class PgResultSet implements java.sql.ResultSet {
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-       return null;
+        return null;
     }
 
     @Override
@@ -630,7 +630,8 @@ public class PgResultSet implements java.sql.ResultSet {
 
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
-        return new PgBlob(getBytes(columnIndex));
+        byte[] bs = getBytes(columnIndex);
+        return bs == null ? null : new PgBlob(bs);
     }
 
     @Override
@@ -655,7 +656,8 @@ public class PgResultSet implements java.sql.ResultSet {
 
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
-        return new PgBlob(getBytes(columnLabel));
+        byte[] bs = getBytes(columnLabel);
+        return bs == null ? null : new PgBlob(bs);
     }
 
     @Override
