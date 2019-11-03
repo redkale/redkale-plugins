@@ -339,7 +339,11 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                 return nextFuture;
             });
         }
-        return future.thenApply(a -> rs);
+        CompletableFuture<int[]> rsFuture = future.thenApply(a -> rs);
+        rsFuture.whenComplete((o, t) -> {
+            if (t != null) writePool.offerConnection(conn);
+        });
+        return rsFuture;
 
 //        final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
 //        final String sql = sqls[0];
