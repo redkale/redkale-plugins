@@ -11,6 +11,29 @@ package org.redkalex.source.mysql;
  */
 public class MySQLType {
 
+    // Protocol field flag numbers
+    public static final int FIELD_FLAG_NOT_NULL = 1;
+
+    public static final int FIELD_FLAG_PRIMARY_KEY = 2;
+
+    public static final int FIELD_FLAG_UNIQUE_KEY = 4;
+
+    public static final int FIELD_FLAG_MULTIPLE_KEY = 8;
+
+    public static final int FIELD_FLAG_BLOB = 16;
+
+    public static final int FIELD_FLAG_UNSIGNED = 32;
+
+    public static final int FIELD_FLAG_ZEROFILL = 64;
+
+    public static final int FIELD_FLAG_BINARY = 128;
+
+    public static final int FIELD_FLAG_AUTO_INCREMENT = 512;
+
+    private static final boolean IS_DECIMAL = true;
+
+    private static final boolean IS_NOT_DECIMAL = false;
+
     // Protocol field type numbers
     public static final int FIELD_TYPE_DECIMAL = 0;
 

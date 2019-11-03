@@ -39,11 +39,13 @@ public class MySQLRowDataPacket extends MySQLPacket {
     public Serializable getObject(int i) {
         byte[] bs = values[i];
         if (bs == null) return null;
-        final int mytype = columns[i].type;
+        MySQLColumnDescPacket coldesc = columns[i];
+        final int mytype = coldesc.type;
+        final boolean binary = (coldesc.flags & MySQLType.FIELD_FLAG_BINARY) > 0;
         if (mytype == MySQLType.FIELD_TYPE_BIT) {
             return bs[0];
         } else if (mytype == MySQLType.FIELD_TYPE_BLOB) {
-            return bs;
+            return binary ? bs : new String(bs, StandardCharsets.UTF_8);
         } else if (mytype == MySQLType.FIELD_TYPE_DATE) {
             return java.sql.Date.valueOf(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_DATETIME) {
@@ -67,9 +69,9 @@ public class MySQLRowDataPacket extends MySQLPacket {
         } else if (mytype == MySQLType.FIELD_TYPE_LONGLONG) {
             return Long.parseLong(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_LONG_BLOB) {
-            return bs;
+            return binary ? bs : new String(bs, StandardCharsets.UTF_8);
         } else if (mytype == MySQLType.FIELD_TYPE_MEDIUM_BLOB) {
-            return bs;
+            return binary ? bs : new String(bs, StandardCharsets.UTF_8);
         } else if (mytype == MySQLType.FIELD_TYPE_NEWDECIMAL) {
             return Double.parseDouble(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_NULL) {
@@ -85,9 +87,9 @@ public class MySQLRowDataPacket extends MySQLPacket {
         } else if (mytype == MySQLType.FIELD_TYPE_TIMESTAMP) {
             return java.sql.Timestamp.valueOf(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_TINY) {
-            return bs.length == 1 && "1".equals((char) bs[0]);
+            return bs.length == 1 && "1".equals(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_TINY_BLOB) {
-            return bs;
+            return binary ? bs : new String(bs, StandardCharsets.UTF_8);
         } else if (mytype == MySQLType.FIELD_TYPE_VARCHAR) {
             return new String(bs, StandardCharsets.UTF_8);
         } else if (mytype == MySQLType.FIELD_TYPE_VAR_STRING) {

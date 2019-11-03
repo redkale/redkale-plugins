@@ -9,7 +9,6 @@ import java.io.Serializable;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -54,7 +53,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         prop.setProperty(DataSources.JDBC_PWD, "");
         MySQLDataSource source = new MySQLDataSource("", null, prop, prop);
         source.getReadPoolSource().poll();
-        source.directExecute("SET NAMES utf8");
+        source.directExecute("SET NAMES UTF8MB4");
         source.directExecute("UPDATE almsrecord SET createtime = 0");
     }
 
@@ -90,17 +89,26 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     @Override
     protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
-        final Object[][] objs = new Object[values.length][];
+        final StringBuilder[] sqls = new StringBuilder[values.length];
+        String presql = info.getInsertDollarPrepareSQL(values[0]);
+        presql = presql.substring(0, presql.indexOf("VALUES"));
         for (int i = 0; i < values.length; i++) {
-            final Object[] params = new Object[attrs.length];
+            StringBuilder sb = new StringBuilder();
+            sb.append(presql).append("VALUES(");
             for (int j = 0; j < attrs.length; j++) {
-                params[j] = attrs[j].get(values[i]);
+                if (j > 0) sb.append(",");
+                Object param = formatPrepareParam(attrs[j].get(values[i]));
+                if (param == null) {
+                    sb.append("NULL");
+                } else {
+                    sb.append('\'').append(param).append('\'');
+                }
             }
-            objs[i] = params;
+            sb.append(")");
+            System.out.println("sql = " + sb);
+            sqls[i] = sb;
         }
-        String sql0 = info.getInsertDollarPrepareSQL(values[0]);
-        final String sql = sql0;
-        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sql).thenApply(rs -> rs[0]));
+        return writePool.pollAsync().thenCompose((conn) -> executeUpdate(info, conn, sqls).thenApply(rs -> rs[0]));
     }
 
     @Override
@@ -289,20 +297,28 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         });
     }
 
-    protected static byte[] formatPrepareParam(Object param) {
+    protected static Object formatPrepareParam(Object param) {
         if (param == null) return null;
-        if (param instanceof byte[]) return (byte[]) param;
-        return String.valueOf(param).getBytes(UTF_8);
+        if (param instanceof CharSequence) {
+            return param.toString().replace("\\", "\\\\").replace("'", "\\'");
+        }
+        if (param instanceof Boolean) {
+            return (Boolean) param ? 1 : 0;
+        }
+        if (param instanceof byte[]) {
+            return formatPrepareParam(new String((byte[]) param));
+        }
+        return String.valueOf(param);
     }
 
     protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String sql, final T[] values, final boolean insert2, final Object[]... parameters) {
         return executeUpdate(info, conn, sql).thenApply(a -> a[0]);
     }
 
-    protected <T> CompletableFuture<int[]> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String... sqls) {
+    protected <T> CompletableFuture<int[]> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final CharSequence... sqls) {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
         if (sqls.length == 1) {
-            return executeOneUpdate(info, conn, bytes, sqls[0]).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
+            return executeOneUpdate(info, conn, bytes, "SET autocommit=1").thenCompose(o -> executeOneUpdate(info, conn, bytes, sqls[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
                 if (t == null) writePool.offerConnection(conn);
             });
         }
@@ -312,7 +328,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         future.thenAccept((Integer a) -> rs[0] = a);
         for (int i = 0; i < sqls.length; i++) {
             final int index = i + 1;
-            final String sql = sqls[i];
+            final CharSequence sql = sqls[i];
             future = future.thenCompose(a -> {
                 CompletableFuture<Integer> nextFuture = executeOneUpdate(info, conn, bytes, sql);
                 nextFuture.thenAccept(b -> rs[index] = b);
@@ -332,10 +348,10 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         });
     }
 
-    protected <T> CompletableFuture<Integer> executeOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] bytes, final String sql) {
+    protected <T> CompletableFuture<Integer> executeOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] bytes, final CharSequence sql) {
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
-            new MySQLQueryPacket(sql).writeTo(writer);
+            new MySQLQueryPacket(sql.toString()).writeTo(writer);
         }
         final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<Integer> future = new CompletableFuture();
