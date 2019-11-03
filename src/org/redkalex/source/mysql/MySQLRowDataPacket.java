@@ -45,9 +45,9 @@ public class MySQLRowDataPacket extends MySQLPacket {
         } else if (mytype == MySQLType.FIELD_TYPE_BLOB) {
             return bs;
         } else if (mytype == MySQLType.FIELD_TYPE_DATE) {
-            throw new UnsupportedOperationException("FIELD_TYPE_DATE not supported yet.");
+            return java.sql.Date.valueOf(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_DATETIME) {
-            throw new UnsupportedOperationException("FIELD_TYPE_DATETIME not supported yet.");
+            return java.sql.Timestamp.valueOf(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_DECIMAL) {
             throw new UnsupportedOperationException("FIELD_TYPE_DECIMAL not supported yet.");
         } else if (mytype == MySQLType.FIELD_TYPE_DOUBLE) {
@@ -71,21 +71,21 @@ public class MySQLRowDataPacket extends MySQLPacket {
         } else if (mytype == MySQLType.FIELD_TYPE_MEDIUM_BLOB) {
             return bs;
         } else if (mytype == MySQLType.FIELD_TYPE_NEWDECIMAL) {
-            throw new UnsupportedOperationException("FIELD_TYPE_NEWDECIMAL not supported yet.");
+            return Double.parseDouble(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_NULL) {
             return null;
         } else if (mytype == MySQLType.FIELD_TYPE_SET) {
             throw new UnsupportedOperationException("FIELD_TYPE_SET not supported yet.");
         } else if (mytype == MySQLType.FIELD_TYPE_SHORT) {
-            throw new UnsupportedOperationException("FIELD_TYPE_SHORT not supported yet.");
+            return Short.parseShort(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_STRING) {
-            throw new UnsupportedOperationException("FIELD_TYPE_STRING not supported yet.");
+            return new String(bs, StandardCharsets.UTF_8);
         } else if (mytype == MySQLType.FIELD_TYPE_TIME) {
-            throw new UnsupportedOperationException("FIELD_TYPE_TIME not supported yet.");
+            return java.sql.Time.valueOf(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_TIMESTAMP) {
-            throw new UnsupportedOperationException("FIELD_TYPE_TIMESTAMP not supported yet.");
+            return java.sql.Timestamp.valueOf(new String(bs));
         } else if (mytype == MySQLType.FIELD_TYPE_TINY) {
-            throw new UnsupportedOperationException("FIELD_TYPE_TINY not supported yet.");
+            return bs.length == 1 && "1".equals((char) bs[0]);
         } else if (mytype == MySQLType.FIELD_TYPE_TINY_BLOB) {
             return bs;
         } else if (mytype == MySQLType.FIELD_TYPE_VARCHAR) {
