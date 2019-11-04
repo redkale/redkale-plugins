@@ -347,7 +347,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         if (info == null || info.getTableStrategy() == null) return future;
         return future.exceptionally(ex -> {
             Throwable sqlex = ex;
-            while (sqlex instanceof CompletionException) sqlex = ((CompletionException) sqlex).getCause();
+            while (sqlex instanceof CompletionException) sqlex = sqlex.getCause();
             if (info.getTableStrategy() != null && sqlex instanceof SQLException && info.isTableNotExist((SQLException) sqlex)) {
                 return new MyResultSet(new MySQLColumnDescPacket[0], new ArrayList<>());
             } else {
@@ -357,21 +357,65 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         });
     }
 
-    protected <T> CompletableFuture<Integer> exceptionallyUpdateTableNotExist(CompletableFuture<Integer> future, EntityInfo<T> info, final T oneEntity) {
+    protected <T> CompletableFuture<Integer> exceptionallyUpdateTableNotExist(CompletableFuture<Integer> future,
+        EntityInfo<T> info, final AsyncConnection conn, final byte[] array, final T oneEntity, final byte[] sqlBytes) {
         final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
-        future.whenComplete((o, ex) -> {
-            if (ex == null) {
+        future.whenComplete((o, ex1) -> {
+            if (ex1 == null) {
                 newFuture.complete(o);
                 return;
             }
-            Throwable sqlex = ex;
             try {
-                while (sqlex instanceof CompletionException) sqlex = ((CompletionException) sqlex).getCause();
-                if (info.getTableStrategy() != null && sqlex instanceof SQLException && info.isTableNotExist((SQLException) sqlex)) {
-                    //待实现
-                    newFuture.completeExceptionally(sqlex);
+                while (ex1 instanceof CompletionException) ex1 = ex1.getCause();
+                if (info.getTableStrategy() != null && ex1 instanceof SQLException && info.isTableNotExist((SQLException) ex1)) {
+                    //分表分库
+                    final String newTable = info.getTable(oneEntity);
+                    final byte[] createTableSqlBytes = info.getTableCopySQL(newTable).getBytes(StandardCharsets.UTF_8);
+                    executeItemBatchUpdate(info, conn, array, createTableSqlBytes).whenComplete((o2, ex2) -> {
+                        if (ex2 == null) { //建分表成功
+                            //重新执行一遍sql语句
+                            executeItemBatchUpdate(info, conn, array, sqlBytes).whenComplete((o3, ex3) -> {
+                                if (ex3 == null) {
+                                    newFuture.complete(o3);
+                                } else {
+                                    while (ex3 instanceof CompletionException) ex3 = ex3.getCause();
+                                    newFuture.completeExceptionally(ex3);
+                                }
+                            });
+                        } else {
+                            while (ex2 instanceof CompletionException) ex2 = ex2.getCause();
+                            if (newTable.indexOf('.') > 0 && ex2 instanceof SQLException
+                                && ("HY000".equals(((SQLException) ex2).getSQLState()) || "42000".equals(((SQLException) ex2).getSQLState()))) { //可能是database不存在
+                                executeItemBatchUpdate(info, conn, array, ("CREATE DATABASE " + newTable.substring(0, newTable.indexOf('.'))).getBytes()).whenComplete((o3, ex3) -> {
+                                    if (ex3 == null) { //建库成功
+                                        executeItemBatchUpdate(info, conn, array, createTableSqlBytes).whenComplete((o4, ex4) -> { //建表
+                                            if (ex4 == null) { //建表成功
+                                                //重新执行一遍sql语句
+                                                executeItemBatchUpdate(info, conn, array, sqlBytes).whenComplete((o5, ex5) -> {
+                                                    if (ex5 == null) {
+                                                        newFuture.complete(o5);
+                                                    } else {
+                                                        while (ex5 instanceof CompletionException) ex5 = ex5.getCause();
+                                                        newFuture.completeExceptionally(ex5);
+                                                    }
+                                                });
+                                            } else {
+                                                while (ex4 instanceof CompletionException) ex4 = ex4.getCause();
+                                                newFuture.completeExceptionally(ex4);
+                                            }
+                                        });
+                                    } else {
+                                        while (ex3 instanceof CompletionException) ex3 = ex3.getCause();
+                                        newFuture.completeExceptionally(ex3);
+                                    }
+                                });
+                            } else { //不是建库的问题
+                                newFuture.completeExceptionally(ex2);
+                            }
+                        }
+                    });
                 } else {
-                    newFuture.completeExceptionally(sqlex);
+                    newFuture.completeExceptionally(ex1);
                 }
             } catch (Throwable t) {
                 newFuture.completeExceptionally(t);
@@ -409,7 +453,9 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final T oneEntity, boolean insert, final byte[]... sqlBytesArray) {
         final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
         if (sqlBytesArray.length == 1) {
-            return executeItemBatchUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o -> executeItemBatchUpdate(info, conn, array, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
+            return executeItemBatchUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o
+                -> insert ? exceptionallyUpdateTableNotExist(executeItemBatchUpdate(info, conn, array, sqlBytesArray[0]), info, conn, array, oneEntity, sqlBytesArray[0])
+                    : executeItemBatchUpdate(info, conn, array, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
                 if (t == null) {
                     writePool.offerConnection(conn);
                 } else {
@@ -427,7 +473,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             future = future.thenCompose(a -> {
                 CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, array, sqlBytes);
                 nextFuture.thenAccept(b -> rs[index] = b);
-                if (insert && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, oneEntity);
+                if (insert && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, conn, array, oneEntity, sqlBytes);
                 nextFuture.whenComplete((o, t) -> {
                     if (t != null) executeItemBatchUpdate(info, conn, array, SQL_ROLLBACK).join();
                 });
@@ -440,7 +486,11 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             return nextFuture;
         });
         return future.thenApply(a -> Arrays.copyOfRange(rs, 1, sqlBytesArray.length + 1)).whenComplete((o, t) -> {
-            if (t == null) writePool.offerConnection(conn);
+            if (t == null) {
+                writePool.offerConnection(conn);
+            } else {
+                conn.dispose();
+            }
         });
     }
 
