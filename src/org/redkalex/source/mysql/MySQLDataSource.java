@@ -13,7 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
 import java.util.function.*;
 import java.util.logging.*;
 import org.redkale.net.AsyncConnection;
@@ -23,7 +22,7 @@ import org.redkale.util.*;
 import static org.redkalex.source.mysql.MyPoolSource.CONN_ATTR_BYTESBAME;
 
 /**
- * 尚未实现
+ * MySQL数据库的DataSource实现
  *
  * @author zhangjx
  */
@@ -44,20 +43,6 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     private static final byte[] SQL_ROLLBACK = "ROLLBACK".getBytes(StandardCharsets.UTF_8);
 
     public static void main(String[] args) throws Throwable {
-        final Logger logger = Logger.getLogger(MySQLDataSource.class.getSimpleName());
-        final int capacity = 16 * 1024;
-        final ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(new AtomicLong(), new AtomicLong(), 16,
-            (Object... params) -> ByteBuffer.allocateDirect(capacity), null, (e) -> {
-                if (e == null || e.isReadOnly() || e.capacity() != capacity) return false;
-                e.clear();
-                return true;
-            });
-
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4, (Runnable r) -> {
-            Thread t = new Thread(r);
-            t.setDaemon(true);
-            return t;
-        });
         Properties prop = new Properties();
         prop.setProperty(DataSources.JDBC_URL, "jdbc:mysql://localhost:3306/platf_core?characterEncoding=utf8");
         prop.setProperty(DataSources.JDBC_USER, "root");
@@ -65,7 +50,6 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         MySQLDataSource source = new MySQLDataSource("", null, prop, prop);
         source.getReadPoolSource().poll();
         source.directExecute("SET NAMES UTF8MB4");
-        source.directExecute("UPDATE almsrecord SET createtime = 0");
     }
 
     public MySQLDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
@@ -224,7 +208,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDB(EntityInfo<T> info, String sql, FilterFuncColumn... columns) {
-        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             final Map map = new HashMap<>();
             try {
                 if (set.next()) {
@@ -264,7 +248,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDB(EntityInfo<T> info, String sql, String keyColumn) {
-        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             Map<K, N> rs = new LinkedHashMap<>();
             try {
                 while (set.next()) {
@@ -279,7 +263,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, String sql, boolean onlypk, SelectColumn selects) {
-        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             T rs = null;
             try {
                 rs = set.next() ? getEntityValue(info, selects, set) : null;
@@ -292,7 +276,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Serializable> findColumnDB(EntityInfo<T> info, String sql, boolean onlypk, String column, Serializable defValue) {
-        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             Serializable val = defValue;
             try {
                 if (set.next()) {
@@ -308,7 +292,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Boolean> existsDB(EntityInfo<T> info, String sql, boolean onlypk) {
-        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             try {
                 boolean rs = set.next() ? (set.getInt(1) > 0) : false;
                 return rs;
@@ -360,6 +344,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected CompletableFuture<ResultSet> exceptionallyQueryTableNotExist(CompletableFuture<ResultSet> future, EntityInfo info) {
+        if (info == null || info.getTableStrategy() == null) return future;
         return future.exceptionally(ex -> {
             Throwable sqlex = ex;
             while (sqlex instanceof CompletionException) sqlex = ((CompletionException) sqlex).getCause();
@@ -373,16 +358,26 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<Integer> exceptionallyUpdateTableNotExist(CompletableFuture<Integer> future, EntityInfo<T> info, final T oneEntity) {
-        return future.exceptionally(ex -> {
+        final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
+        future.whenComplete((o, ex) -> {
+            if (ex == null) {
+                newFuture.complete(o);
+                return;
+            }
             Throwable sqlex = ex;
-            while (sqlex instanceof CompletionException) sqlex = ((CompletionException) sqlex).getCause();
-            if (info.getTableStrategy() != null && sqlex instanceof SQLException && info.isTableNotExist((SQLException) sqlex)) {
-                return 0;
-            } else {
-                future.obtrudeException(sqlex);
-                return -1;
+            try {
+                while (sqlex instanceof CompletionException) sqlex = ((CompletionException) sqlex).getCause();
+                if (info.getTableStrategy() != null && sqlex instanceof SQLException && info.isTableNotExist((SQLException) sqlex)) {
+                    //待实现
+                    newFuture.completeExceptionally(sqlex);
+                } else {
+                    newFuture.completeExceptionally(sqlex);
+                }
+            } catch (Throwable t) {
+                newFuture.completeExceptionally(t);
             }
         });
+        return newFuture;
     }
 
     protected static byte[] formatPrepareParam(Object param) {
@@ -412,31 +407,35 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final T oneEntity, boolean insert, final byte[]... sqlBytesArray) {
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
         if (sqlBytesArray.length == 1) {
-            return executeItemBatchUpdate(info, conn, bytes, SQL_SET_AUTOCOMMIT_1).thenCompose(o -> executeItemBatchUpdate(info, conn, bytes, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
-                if (t == null) writePool.offerConnection(conn);
+            return executeItemBatchUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o -> executeItemBatchUpdate(info, conn, array, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
+                if (t == null) {
+                    writePool.offerConnection(conn);
+                } else {
+                    conn.dispose();
+                }
             });
         }
         //多个
         final int[] rs = new int[sqlBytesArray.length + 2];
-        CompletableFuture<Integer> future = executeItemBatchUpdate(info, conn, bytes, SQL_SET_AUTOCOMMIT_0);
+        CompletableFuture<Integer> future = executeItemBatchUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_0);
         future.thenAccept((Integer a) -> rs[0] = a);
         for (int i = 0; i < sqlBytesArray.length; i++) {
             final int index = i + 1;
             final byte[] sqlBytes = sqlBytesArray[i];
             future = future.thenCompose(a -> {
-                CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, bytes, sqlBytes);
+                CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, array, sqlBytes);
                 nextFuture.thenAccept(b -> rs[index] = b);
-                if (info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, oneEntity);
+                if (insert && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, oneEntity);
                 nextFuture.whenComplete((o, t) -> {
-                    if (t != null) executeItemBatchUpdate(info, conn, bytes, SQL_ROLLBACK).join();
+                    if (t != null) executeItemBatchUpdate(info, conn, array, SQL_ROLLBACK).join();
                 });
                 return nextFuture;
             });
         }
         future = future.thenCompose(a -> {
-            CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, bytes, SQL_COMMIT);
+            CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, array, SQL_COMMIT);
             nextFuture.thenAccept(b -> rs[sqlBytesArray.length] = b);
             return nextFuture;
         });
@@ -498,7 +497,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         //System.out.println("执行sql=" + new String(sqlBytes, StandardCharsets.UTF_8) + ", 结果： " + okPacket);
                         if (!okPacket.isOK()) {
                             future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode));
-                            conn.dispose();
+                            //不能关conn
                         } else {
                             for (ByteBuffer buf : readBuffs) {
                                 bufferPool.accept(buf);
@@ -511,7 +510,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                     public void failed(Throwable exc, ByteBuffer attachment2) {
                         conn.offerBuffer(attachment2);
                         future.completeExceptionally(exc);
-                        conn.dispose();
+                        //不能关conn
                     }
                 });
             }
