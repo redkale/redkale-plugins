@@ -8,6 +8,7 @@ package org.redkalex.source.mysql;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
@@ -62,7 +63,10 @@ public class MyResultSet implements java.sql.ResultSet {
 
     @Override
     public String getString(int columnIndex) throws SQLException {
-        return String.valueOf(this.currRow.getObject(columnIndex - 1));
+        Object obj = this.currRow.getObject(columnIndex - 1);
+        if (obj == null) return null;
+        if (obj instanceof byte[]) return new String((byte[]) obj, StandardCharsets.UTF_8);
+        return String.valueOf(obj);
     }
 
     @Override
@@ -144,7 +148,10 @@ public class MyResultSet implements java.sql.ResultSet {
 
     @Override
     public String getString(String columnLabel) throws SQLException {
-        return String.valueOf(this.currRow.getObject(colmap.get(columnLabel.toLowerCase())));
+        Object obj = this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
+        if (obj == null) return null;
+        if (obj instanceof byte[]) return new String((byte[]) obj, StandardCharsets.UTF_8);
+        return String.valueOf(obj);
     }
 
     @Override
