@@ -83,9 +83,60 @@ public class MyPoolSource extends PoolTcpSource {
                             conn.dispose();
                             return;
                         }
-                        //完成了
-                        bufferPool.accept(buffer);
-                        future.complete(conn);
+                        buffer.clear();
+                        new MySQLQueryPacket("SET NAMES UTF8MB4".getBytes()).writeTo(buffer);
+                        buffer.flip();
+                        conn.write(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
+                            @Override
+                            public void completed(Integer result, ByteBuffer attachment3) {
+                                if (result < 0) {
+                                    failed(new RuntimeException("Write Buffer Error"), attachment3);
+                                    return;
+                                }
+                                if (buffer.hasRemaining()) {
+                                    conn.write(buffer, attachment3, this);
+                                    return;
+                                }
+                                buffer.clear();
+                                conn.setReadBuffer(buffer);
+                                conn.read(new CompletionHandler<Integer, ByteBuffer>() {
+                                    @Override
+                                    public void completed(Integer result, ByteBuffer attachment4) {
+                                        if (result < 0) {
+                                            failed(new SQLException("Read Buffer Error"), attachment4);
+                                            return;
+                                        }
+                                        attachment4.flip();
+                                        MySQLOKPacket okPacket = new MySQLOKPacket(-1, ByteBufferReader.create(attachment4), bytes);
+                                        if (!okPacket.isOK()) {
+                                            conn.offerBuffer(buffer);
+                                            future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState));
+                                            conn.dispose();
+                                            return;
+                                        }
+                                        //完成了
+                                        bufferPool.accept(buffer);
+                                        future.complete(conn);
+                                    }
+
+                                    @Override
+                                    public void failed(Throwable exc, ByteBuffer attachment4) {
+                                        conn.offerBuffer(attachment4);
+                                        future.completeExceptionally(exc);
+                                        conn.dispose();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void failed(Throwable exc, ByteBuffer attachment3) {
+                                conn.offerBuffer(attachment3);
+                                future.completeExceptionally(exc);
+                                conn.dispose();
+                            }
+
+                        });
+
                     }
 
                     @Override
