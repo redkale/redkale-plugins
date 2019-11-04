@@ -247,18 +247,19 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Number> getNumberResultDB(EntityInfo<T> info, String sql, Number defVal, String column) {
-        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
-            Number rs = defVal;
-            try {
-                if (set.next()) {
-                    Object o = set.getObject(1);
-                    if (o != null) rs = (Number) o;
+        return readPool.pollAsync().thenCompose((conn) -> exceptionallyTableNotExist(executeQuery(info, conn, sql), info)
+            .thenApply((ResultSet set) -> {
+                Number rs = defVal;
+                try {
+                    if (set.next()) {
+                        Object o = set.getObject(1);
+                        if (o != null) rs = (Number) o;
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            return rs;
-        }));
+                return rs;
+            }));
     }
 
     @Override
@@ -327,17 +328,18 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             + ((where == null || where.length() == 0) ? "" : (" WHERE " + where)) + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
         if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
         if (!needtotal) {
-            return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, listsql).thenApply((ResultSet set) -> {
-                try {
-                    final List<T> list = new ArrayList();
-                    while (set.next()) {
-                        list.add(getEntityValue(info, sels, set));
+            return readPool.pollAsync().thenCompose((conn) -> exceptionallyTableNotExist(executeQuery(info, conn, listsql), info)
+                .thenApply((ResultSet set) -> {
+                    try {
+                        final List<T> list = new ArrayList();
+                        while (set.next()) {
+                            list.add(getEntityValue(info, sels, set));
+                        }
+                        return Sheet.asSheet(list);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
-                    return Sheet.asSheet(list);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }));
+                }));
         }
         final String countsql = "SELECT COUNT(*) FROM " + info.getTable(node) + " a" + (join == null ? "" : join)
             + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
@@ -354,6 +356,19 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                     throw new RuntimeException(e);
                 }
             }));
+        });
+    }
+
+    protected CompletableFuture<ResultSet> exceptionallyTableNotExist(CompletableFuture<ResultSet> future, EntityInfo info) {
+        return future.exceptionally(ex -> {
+            Throwable sqlex = ex;
+            while (sqlex instanceof CompletionException) sqlex = ((CompletionException) sqlex).getCause();
+            if (info.getTableStrategy() != null && sqlex instanceof SQLException && info.isTableNotExist((SQLException) sqlex)) {
+                return new MyResultSet(new MySQLColumnDescPacket[0], new ArrayList<>());
+            } else {
+                future.obtrudeException(sqlex);
+                return null;
+            }
         });
     }
 
