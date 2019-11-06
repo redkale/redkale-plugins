@@ -358,7 +358,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<Integer> exceptionallyUpdateTableNotExist(CompletableFuture<Integer> future,
-        EntityInfo<T> info, final AsyncConnection conn, final byte[] array, final T oneEntity, final byte[] sqlBytes) {
+        EntityInfo<T> info, final AsyncConnection conn, final byte[] array, final T oneEntity, boolean insert, final byte[] sqlBytes) {
         final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
         future.whenComplete((o, ex1) -> {
             if (ex1 == null) {
@@ -368,6 +368,10 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             try {
                 while (ex1 instanceof CompletionException) ex1 = ex1.getCause();
                 if (info.getTableStrategy() != null && ex1 instanceof SQLException && info.isTableNotExist((SQLException) ex1)) {
+                    if (!insert) { //update、delete或drop
+                        newFuture.complete(0);
+                        return;
+                    }
                     //分表分库
                     final String newTable = info.getTable(oneEntity);
                     final byte[] createTableSqlBytes = info.getTableCopySQL(newTable).getBytes(StandardCharsets.UTF_8);
@@ -454,7 +458,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
         if (sqlBytesArray.length == 1) {
             return executeItemBatchUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o
-                -> insert ? exceptionallyUpdateTableNotExist(executeItemBatchUpdate(info, conn, array, sqlBytesArray[0]), info, conn, array, oneEntity, sqlBytesArray[0])
+                -> insert ? exceptionallyUpdateTableNotExist(executeItemBatchUpdate(info, conn, array, sqlBytesArray[0]), info, conn, array, oneEntity, false, sqlBytesArray[0])
                     : executeItemBatchUpdate(info, conn, array, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
                 if (t == null) {
                     writePool.offerConnection(conn);
@@ -473,7 +477,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             future = future.thenCompose(a -> {
                 CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, array, sqlBytes);
                 nextFuture.thenAccept(b -> rs[index] = b);
-                if (insert && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, conn, array, oneEntity, sqlBytes);
+                if (insert && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, conn, array, oneEntity, insert, sqlBytes);
                 nextFuture.whenComplete((o, t) -> {
                     if (t != null) executeItemBatchUpdate(info, conn, array, SQL_ROLLBACK).join();
                 });
