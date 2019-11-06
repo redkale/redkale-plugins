@@ -11,7 +11,7 @@ import org.redkale.source.*;
  *
  * @author zhangjx
  */
-public class MySQLSourceLoader implements SourceLoader {
+public class MysqlSourceLoader implements SourceLoader {
 
     @Override
     public String dbtype() {
@@ -20,7 +20,7 @@ public class MySQLSourceLoader implements SourceLoader {
 
     @Override
     public Class<? extends DataSource> dataSourceClass() {
-        return MySQLDataSource.class;
+        return MysqlDataSource.class;
     }
 
 }

@@ -30,7 +30,7 @@ import static org.redkalex.source.mysql.MyPoolSource.CONN_ATTR_BYTESBAME;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
+public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
 
     private static final byte[] BYTES_NULL = "NULL".getBytes(StandardCharsets.UTF_8);
 
@@ -47,12 +47,12 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         prop.setProperty(DataSources.JDBC_URL, "jdbc:mysql://localhost:3306/platf_core?characterEncoding=utf8");
         prop.setProperty(DataSources.JDBC_USER, "root");
         prop.setProperty(DataSources.JDBC_PWD, "");
-        MySQLDataSource source = new MySQLDataSource("", null, prop, prop);
+        MysqlDataSource source = new MysqlDataSource("", null, prop, prop);
         source.getReadPoolSource().poll();
         source.directExecute("SET NAMES UTF8MB4");
     }
 
-    public MySQLDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
+    public MysqlDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
         super(unitName, persistxml, readprop, writeprop);
     }
 
@@ -349,7 +349,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
             Throwable sqlex = ex;
             while (sqlex instanceof CompletionException) sqlex = sqlex.getCause();
             if (info.getTableStrategy() != null && sqlex instanceof SQLException && info.isTableNotExist((SQLException) sqlex)) {
-                return new MyResultSet(new MySQLColumnDescPacket[0], new ArrayList<>());
+                return new MyResultSet(new MyColumnDescPacket[0], new ArrayList<>());
             } else {
                 future.obtrudeException(sqlex);
                 return null;
@@ -497,7 +497,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
     protected <T> CompletableFuture<Integer> executeItemBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] array, final byte[] sqlBytes) {
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
-            new MySQLQueryPacket(sqlBytes).writeTo(writer);
+            new MyQueryPacket(sqlBytes).writeTo(writer);
         }
         final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<Integer> future = new CompletableFuture();
@@ -543,7 +543,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         attachment2.flip();
                         readBuffs.add(attachment2);
                         final ByteBufferReader buffer = ByteBufferReader.create(readBuffs);
-                        MySQLOKPacket okPacket = new MySQLOKPacket(-1, buffer, array);
+                        MyOKPacket okPacket = new MyOKPacket(-1, buffer, array);
                         //System.out.println("执行sql=" + new String(sqlBytes, StandardCharsets.UTF_8) + ", 结果： " + okPacket);
                         if (!okPacket.isOK()) {
                             future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode));
@@ -581,7 +581,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
         final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
-            new MySQLQueryPacket(sql.getBytes(StandardCharsets.UTF_8)).writeTo(writer);
+            new MyQueryPacket(sql.getBytes(StandardCharsets.UTF_8)).writeTo(writer);
         }
         final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<ResultSet> future = new CompletableFuture();
@@ -630,27 +630,27 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                         boolean futureover = false;
                         boolean success = false;
                         SQLException ex = null;
-                        int packetLength = MySQLs.readUB3(buffer);
+                        int packetLength = Mysqls.readUB3(buffer);
                         MyResultSet resultSet = null;
                         if (packetLength < 4) {
-                            MySQLColumnCountPacket countPacket = new MySQLColumnCountPacket(packetLength, buffer, array);
+                            MyColumnCountPacket countPacket = new MyColumnCountPacket(packetLength, buffer, array);
                             //System.out.println("查询sql=" + sql + ", 字段数： " + countPacket.columnCount);
                             //System.out.println("--------- column desc start  -------------");
-                            MySQLColumnDescPacket[] colDescs = new MySQLColumnDescPacket[countPacket.columnCount];
+                            MyColumnDescPacket[] colDescs = new MyColumnDescPacket[countPacket.columnCount];
                             for (int i = 0; i < colDescs.length; i++) {
-                                colDescs[i] = new MySQLColumnDescPacket(buffer, array);
+                                colDescs[i] = new MyColumnDescPacket(buffer, array);
                             }
-                            MySQLEOFPacket eofPacket = new MySQLEOFPacket(-1, buffer, array);
+                            MyEOFPacket eofPacket = new MyEOFPacket(-1, buffer, array);
                             //System.out.println("字段描述EOF包： " + eofPacket);
 
-                            List<MySQLRowDataPacket> rows = new ArrayList<>();
-                            int colPacketLength = MySQLs.readUB3(buffer);
+                            List<MyRowDataPacket> rows = new ArrayList<>();
+                            int colPacketLength = Mysqls.readUB3(buffer);
                             while (colPacketLength != 5) { //EOF包
-                                MySQLRowDataPacket rowData = new MySQLRowDataPacket(colDescs, colPacketLength, buffer, countPacket.columnCount, array);
+                                MyRowDataPacket rowData = new MyRowDataPacket(colDescs, colPacketLength, buffer, countPacket.columnCount, array);
                                 rows.add(rowData);
-                                colPacketLength = MySQLs.readUB3(buffer);
+                                colPacketLength = Mysqls.readUB3(buffer);
                             }
-                            eofPacket = new MySQLEOFPacket(colPacketLength, buffer, array);
+                            eofPacket = new MyEOFPacket(colPacketLength, buffer, array);
                             //System.out.println("查询结果包解析完毕： " + eofPacket);
 
                             resultSet = new MyResultSet(colDescs, rows);
@@ -658,7 +658,7 @@ public class MySQLDataSource extends DataSqlSource<AsyncConnection> {
                             endok = true;
                             futureover = true;
                         } else {
-                            MySQLOKPacket okPacket = new MySQLOKPacket(packetLength, buffer, array);
+                            MyOKPacket okPacket = new MyOKPacket(packetLength, buffer, array);
                             //System.out.println("查询sql=" + sql + ", 异常： " + okPacket);
                             ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
                         }

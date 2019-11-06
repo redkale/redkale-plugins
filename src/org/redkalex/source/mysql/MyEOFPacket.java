@@ -6,13 +6,13 @@
 package org.redkalex.source.mysql;
 
 import org.redkale.util.ByteBufferReader;
-import static org.redkalex.source.mysql.MySQLOKPacket.TYPE_ID_EOF;
+import static org.redkalex.source.mysql.MyOKPacket.TYPE_ID_EOF;
 
 /**
  *
  * @author zhangjx
  */
-public class MySQLEOFPacket extends MySQLPacket {
+public class MyEOFPacket extends MyPacket {
 
     public int typeid;
 
@@ -20,13 +20,13 @@ public class MySQLEOFPacket extends MySQLPacket {
 
     public int statusFlags;
 
-    public MySQLEOFPacket(int len, ByteBufferReader buffer, byte[] array) {
-        this.packetLength = len < 1 ? MySQLs.readUB3(buffer) : len;
+    public MyEOFPacket(int len, ByteBufferReader buffer, byte[] array) {
+        this.packetLength = len < 1 ? Mysqls.readUB3(buffer) : len;
         this.packetIndex = buffer.get();
         this.typeid = buffer.get() & 0xff;
         if (this.typeid == TYPE_ID_EOF) {
-            this.warningCount = MySQLs.readUB2(buffer);
-            this.statusFlags = MySQLs.readUB2(buffer);
+            this.warningCount = Mysqls.readUB2(buffer);
+            this.statusFlags = Mysqls.readUB2(buffer);
         }
     }
 

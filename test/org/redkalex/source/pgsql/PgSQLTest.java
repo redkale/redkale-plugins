@@ -19,7 +19,7 @@ import org.redkale.net.AsyncConnection;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTESBAME;
-import static org.redkalex.source.pgsql.PgSQLDataSource.*;
+import static org.redkalex.source.pgsql.PgsqlLDataSource.*;
 
 /**
  *
@@ -47,7 +47,7 @@ public class PgSQLTest {
         prop.setProperty(DataSources.JDBC_USER, "postgres");
         prop.setProperty(DataSources.JDBC_PWD, "1234");
         prop.setProperty(DataSources.JDBC_CONNECTIONS_LIMIT, "32");
-        final PgSQLDataSource source = new PgSQLDataSource("", null, prop, prop);
+        final PgsqlLDataSource source = new PgsqlLDataSource("", null, prop, prop);
 
         final int count = 2000;
         final CountDownLatch cdl = new CountDownLatch(count);

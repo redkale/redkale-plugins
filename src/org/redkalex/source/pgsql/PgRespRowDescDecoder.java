@@ -6,8 +6,8 @@
 package org.redkalex.source.pgsql;
 
 import org.redkale.util.ByteBufferReader;
-import static org.redkalex.source.pgsql.PgSQLDataSource.readUTF8String;
-import static org.redkalex.source.pgsql.PgSQLDataSource.readUTF8String;
+import static org.redkalex.source.pgsql.PgsqlLDataSource.readUTF8String;
+import static org.redkalex.source.pgsql.PgsqlLDataSource.readUTF8String;
 
 /**
  *

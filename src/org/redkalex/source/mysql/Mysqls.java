@@ -15,7 +15,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
-class MySQLs {
+class Mysqls {
 
     public static final int MAX_PACKET_SIZE = 256 * 256 * 256 - 1;
 

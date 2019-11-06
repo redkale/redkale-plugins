@@ -41,9 +41,9 @@ public class MyPoolSource extends PoolTcpSource {
         final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
 
         //MySQLIO.doHandshake
-        MySQLHandshakePacket handshakePacket = null;
+        MyHandshakePacket handshakePacket = null;
         try {
-            handshakePacket = new MySQLHandshakePacket(buffer, bytes);
+            handshakePacket = new MyHandshakePacket(buffer, bytes);
         } catch (Exception ex) {
             bufferPool.accept(buffer);
             conn.dispose();
@@ -51,7 +51,7 @@ public class MyPoolSource extends PoolTcpSource {
             return;
         }
 
-        MySQLAuthPacket authPacket = new MySQLAuthPacket(handshakePacket, this.username, this.password, this.database);
+        MyAuthPacket authPacket = new MyAuthPacket(handshakePacket, this.username, this.password, this.database);
         buffer.clear();
         authPacket.writeTo(buffer);
         buffer.flip();
@@ -76,7 +76,7 @@ public class MyPoolSource extends PoolTcpSource {
                             return;
                         }
                         attachment2.flip();
-                        MySQLOKPacket okPacket = new MySQLOKPacket(-1, ByteBufferReader.create(buffer), bytes);
+                        MyOKPacket okPacket = new MyOKPacket(-1, ByteBufferReader.create(buffer), bytes);
                         if (!okPacket.isOK()) {
                             conn.offerBuffer(buffer);
                             future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState));
@@ -84,7 +84,7 @@ public class MyPoolSource extends PoolTcpSource {
                             return;
                         }
                         buffer.clear();
-                        new MySQLQueryPacket("SET NAMES UTF8MB4".getBytes()).writeTo(buffer);
+                        new MyQueryPacket("SET NAMES UTF8MB4".getBytes()).writeTo(buffer);
                         buffer.flip();
                         conn.write(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
                             @Override
@@ -107,7 +107,7 @@ public class MyPoolSource extends PoolTcpSource {
                                             return;
                                         }
                                         attachment4.flip();
-                                        MySQLOKPacket okPacket = new MySQLOKPacket(-1, ByteBufferReader.create(attachment4), bytes);
+                                        MyOKPacket okPacket = new MyOKPacket(-1, ByteBufferReader.create(attachment4), bytes);
                                         if (!okPacket.isOK()) {
                                             conn.offerBuffer(buffer);
                                             future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState));
@@ -165,9 +165,9 @@ public class MyPoolSource extends PoolTcpSource {
     @Override
     protected CompletableFuture<AsyncConnection> sendCloseCommand(AsyncConnection conn) {
         final ByteBuffer buffer = bufferPool.get();
-        MySQLs.writeUB3(buffer, 1);
+        Mysqls.writeUB3(buffer, 1);
         buffer.put((byte) 0x0);
-        buffer.put(MySQLPacket.COM_QUIT);
+        buffer.put(MyPacket.COM_QUIT);
         buffer.flip();
         CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
         conn.write(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {

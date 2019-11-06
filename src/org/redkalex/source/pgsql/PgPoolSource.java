@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 import org.redkale.net.AsyncConnection;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkalex.source.pgsql.PgSQLDataSource.*;
+import static org.redkalex.source.pgsql.PgsqlLDataSource.*;
 
 /**
  *

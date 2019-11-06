@@ -11,7 +11,7 @@ import org.redkale.convert.json.JsonConvert;
  *
  * @author zhangjx
  */
-public abstract class MySQLPacket {
+public abstract class MyPacket {
 
     public static final byte NULL_MARK = (byte) 251;
 

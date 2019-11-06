@@ -3,24 +3,24 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkalex.source.pgsql;
+package org.redkalex.source.es;
 
 import org.redkale.source.*;
 
 /**
+ * 
  *
  * @author zhangjx
  */
-public class PgSQLSourceLoader implements SourceLoader {
+public class ElasticSearchSourceLoader implements SourceLoader {
 
     @Override
     public String dbtype() {
-        return "postgresql";
+        return "es";
     }
 
     @Override
     public Class<? extends DataSource> dataSourceClass() {
-        return PgSQLDataSource.class;
+        return ElasticSearchDataSource.class;
     }
-
 }

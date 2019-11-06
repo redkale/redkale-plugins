@@ -12,7 +12,7 @@ import java.sql.SQLException;
  *
  * @author zhangjx
  */
-public class MySQLHandshakePacket extends MySQLPacket {
+public class MyHandshakePacket extends MyPacket {
 
     private static final byte[] FILLER_13 = new byte[13];
 
@@ -34,26 +34,26 @@ public class MySQLHandshakePacket extends MySQLPacket {
 
     public byte[] seed2;
 
-    public MySQLHandshakePacket(ByteBuffer buffer, byte[] array) throws SQLException {
-        packetLength = MySQLs.readUB3(buffer);
+    public MyHandshakePacket(ByteBuffer buffer, byte[] array) throws SQLException {
+        packetLength = Mysqls.readUB3(buffer);
         packetIndex = buffer.get();
         protocolVersion = buffer.get();
         if (protocolVersion < 10) {
             throw new SQLException("Not supported protocolVersion(" + protocolVersion + "), must greaterthan 10");
         }
-        serverVersion = MySQLs.readASCIIString(buffer, array);
+        serverVersion = Mysqls.readASCIIString(buffer, array);
         if (Integer.parseInt(serverVersion.substring(0, serverVersion.indexOf('.'))) < 5) {
             throw new SQLException("Not supported serverVersion(" + serverVersion + "), must greaterthan 5.0");
         }
-        threadId = MySQLs.readUB4(buffer);
-        seed = MySQLs.readBytes(buffer, array);
-        serverCapabilities = buffer.hasRemaining() ? MySQLs.readUB2(buffer) : 0;
+        threadId = Mysqls.readUB4(buffer);
+        seed = Mysqls.readBytes(buffer, array);
+        serverCapabilities = buffer.hasRemaining() ? Mysqls.readUB2(buffer) : 0;
         serverCharsetIndex = buffer.get() & 0xff;
-        serverStatus = MySQLs.readUB2(buffer);
+        serverStatus = Mysqls.readUB2(buffer);
         buffer.get(FILLER_13); //预留字节
-        seed2 = MySQLs.readBytes(buffer, array);
+        seed2 = Mysqls.readBytes(buffer, array);
         if (buffer.hasRemaining()) {
-            authPlugin = MySQLs.readBytes(buffer, array);
+            authPlugin = Mysqls.readBytes(buffer, array);
         }
     }
 }

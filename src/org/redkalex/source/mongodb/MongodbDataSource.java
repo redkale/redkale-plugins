@@ -3,1013 +3,817 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkalex.source.mysql;
+package org.redkalex.source.mongodb;
 
-import java.io.*;
-import java.math.BigDecimal;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.sql.*;
-import java.sql.Date;
+import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
+import org.redkale.service.AbstractService;
+import org.redkale.source.*;
+import org.redkale.util.*;
 
 /**
+ * Mongodb版的DataSource实现 <br>
+ * 注意: javax.persistence.jdbc.url 需要指定为 mongodb:source， 例如：mongodb:source://127.0.0.1:5005
+ *
  *
  * @author zhangjx
  */
-public class MyResultSet implements java.sql.ResultSet {
+public class MongodbDataSource extends AbstractService implements DataSource, AutoCloseable, Resourcable {
 
-    MyColumnDescPacket[] columns;
-
-    private final Map<String, Integer> colmap = new LinkedHashMap<>();
-
-    private final List<MyRowDataPacket> rowDatas;
-
-    private int rowIndex = -1;
-
-    private MyRowDataPacket currRow;
-
-    public MyResultSet(MyColumnDescPacket[] columns, List<MyRowDataPacket> rowDatas) {
-        this.columns = columns;
-        this.rowDatas = rowDatas;
-        int i = -1;
-        for (MyColumnDescPacket col : columns) {
-            this.colmap.put(col.columnLabel.toLowerCase(), ++i);
-        }
-    }
-
-    public MyResultSet addRowData(MyRowDataPacket rowData) {
-        this.rowDatas.add(rowData);
-        return this;
-    }
-
     @Override
-    public boolean next() throws SQLException {
-        if (++this.rowIndex < this.rowDatas.size()) {
-            this.currRow = this.rowDatas.get(this.rowIndex);
-            return true;
-        }
-        return false;
+    public void init(AnyValue config) {
+        super.init(config); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void close() throws SQLException {
+    public void destroy(AnyValue config) {
+        super.destroy(config); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean wasNull() throws SQLException {
+    public String getType() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public String getString(int columnIndex) throws SQLException {
-        Object obj = this.currRow.getObject(columnIndex - 1);
-        if (obj == null) return null;
-        if (obj instanceof byte[]) return new String((byte[]) obj, StandardCharsets.UTF_8);
-        return String.valueOf(obj);
-    }
-
-    @Override
-    public boolean getBoolean(int columnIndex) throws SQLException {
-        return (Boolean) this.currRow.getObject(columnIndex - 1);
-    }
-
-    @Override
-    public byte getByte(int columnIndex) throws SQLException {
-        return (Byte) this.currRow.getObject(columnIndex - 1);
-    }
-
-    @Override
-    public short getShort(int columnIndex) throws SQLException {
-        return ((Number) this.currRow.getObject(columnIndex - 1)).shortValue();
-    }
-
-    @Override
-    public int getInt(int columnIndex) throws SQLException {
-        return ((Number) this.currRow.getObject(columnIndex - 1)).intValue();
-    }
-
-    @Override
-    public long getLong(int columnIndex) throws SQLException {
-        return ((Number) this.currRow.getObject(columnIndex - 1)).longValue();
     }
 
     @Override
-    public float getFloat(int columnIndex) throws SQLException {
-        return ((Number) this.currRow.getObject(columnIndex - 1)).floatValue();
-    }
-
-    @Override
-    public double getDouble(int columnIndex) throws SQLException {
-        return ((Number) this.currRow.getObject(columnIndex - 1)).doubleValue();
-    }
-
-    @Override
-    @Deprecated
-    public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        return (BigDecimal) this.currRow.getObject(columnIndex - 1);
-    }
-
-    @Override
-    public byte[] getBytes(int columnIndex) throws SQLException {
-        return (byte[]) this.currRow.getObject(columnIndex - 1);
-    }
-
-    @Override
-    public Date getDate(int columnIndex) throws SQLException {
-        return (Date) this.currRow.getObject(columnIndex - 1);
-    }
-
-    @Override
-    public Time getTime(int columnIndex) throws SQLException {
-        return (Time) this.currRow.getObject(columnIndex - 1);
-    }
-
-    @Override
-    public Timestamp getTimestamp(int columnIndex) throws SQLException {
-        return (Timestamp) this.currRow.getObject(columnIndex - 1);
-    }
-
-    @Override
-    public InputStream getAsciiStream(int columnIndex) throws SQLException {
+    public <T> int insert(T... entitys) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    @Deprecated
-    public InputStream getUnicodeStream(int columnIndex) throws SQLException {
+    public <T> CompletableFuture<Integer> insertAsync(T... entitys) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public InputStream getBinaryStream(int columnIndex) throws SQLException {
+    public <T> int delete(T... entitys) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public String getString(String columnLabel) throws SQLException {
-        Object obj = this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
-        if (obj == null) return null;
-        if (obj instanceof byte[]) return new String((byte[]) obj, StandardCharsets.UTF_8);
-        return String.valueOf(obj);
-    }
-
-    @Override
-    public boolean getBoolean(String columnLabel) throws SQLException {
-        return (Boolean) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
-    public byte getByte(String columnLabel) throws SQLException {
-        return (Byte) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
-    }
-
-    @Override
-    public short getShort(String columnLabel) throws SQLException {
-        return ((Number) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()))).shortValue();
-    }
-
-    @Override
-    public int getInt(String columnLabel) throws SQLException {
-        return ((Number) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()))).intValue();
-    }
-
-    @Override
-    public long getLong(String columnLabel) throws SQLException {
-        return ((Number) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()))).longValue();
-    }
-
-    @Override
-    public float getFloat(String columnLabel) throws SQLException {
-        return ((Number) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()))).floatValue();
-    }
-
-    @Override
-    public double getDouble(String columnLabel) throws SQLException {
-        return ((Number) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()))).doubleValue();
-    }
-
-    @Override
-    @Deprecated
-    public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
-        return (BigDecimal) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
-    }
-
-    @Override
-    public byte[] getBytes(String columnLabel) throws SQLException {
-        return (byte[]) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
-    }
-
-    @Override
-    public Date getDate(String columnLabel) throws SQLException {
-        return (Date) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
-    }
-
-    @Override
-    public Time getTime(String columnLabel) throws SQLException {
-        return (Time) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
-    }
-
-    @Override
-    public Timestamp getTimestamp(String columnLabel) throws SQLException {
-        return (Timestamp) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
-    }
-
-    @Override
-    public InputStream getAsciiStream(String columnLabel) throws SQLException {
+    public <T> CompletableFuture<Integer> deleteAsync(T... entitys) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    @Deprecated
-    public InputStream getUnicodeStream(String columnLabel) throws SQLException {
+    public <T> int delete(Class<T> clazz, Serializable... pks) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public InputStream getBinaryStream(String columnLabel) throws SQLException {
+    public <T> CompletableFuture<Integer> deleteAsync(Class<T> clazz, Serializable... pks) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public SQLWarning getWarnings() throws SQLException {
+    public <T> int delete(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void clearWarnings() throws SQLException {
+    public <T> CompletableFuture<Integer> deleteAsync(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public String getCursorName() throws SQLException {
+    public <T> int delete(Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public ResultSetMetaData getMetaData() throws SQLException {
-        return null;
-    }
-
-    @Override
-    public Object getObject(int columnIndex) throws SQLException {
-        return this.currRow.getObject(columnIndex - 1);
-    }
-
-    @Override
-    public Object getObject(String columnLabel) throws SQLException {
-        return this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
-    }
-
-    @Override
-    public int findColumn(String columnLabel) throws SQLException {
-        return colmap.get(columnLabel.toLowerCase()) + 1;
     }
 
     @Override
-    public Reader getCharacterStream(int columnIndex) throws SQLException {
+    public <T> CompletableFuture<Integer> deleteAsync(Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Reader getCharacterStream(String columnLabel) throws SQLException {
+    public <T> int clearTable(Class<T> clazz) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-        return (BigDecimal) this.currRow.getObject(columnIndex - 1);
-    }
-
-    @Override
-    public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
-        return (BigDecimal) this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
     }
 
     @Override
-    public boolean isBeforeFirst() throws SQLException {
+    public <T> CompletableFuture<Integer> clearTableAsync(Class<T> clazz) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean isAfterLast() throws SQLException {
+    public <T> int clearTable(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean isFirst() throws SQLException {
+    public <T> CompletableFuture<Integer> clearTableAsync(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean isLast() throws SQLException {
+    public <T> int dropTable(Class<T> clazz) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void beforeFirst() throws SQLException {
+    public <T> CompletableFuture<Integer> dropTableAsync(Class<T> clazz) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void afterLast() throws SQLException {
+    public <T> int dropTable(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean first() throws SQLException {
+    public <T> CompletableFuture<Integer> dropTableAsync(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean last() throws SQLException {
+    public <T> int update(T... entitys) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public int getRow() throws SQLException {
-        return this.rowDatas.size();
+    public <T> CompletableFuture<Integer> updateAsync(T... entitys) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean absolute(int row) throws SQLException {
+    public <T> int updateColumn(Class<T> clazz, Serializable pk, String column, Serializable value) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean relative(int rows) throws SQLException {
+    public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, Serializable pk, String column, Serializable value) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean previous() throws SQLException {
+    public <T> int updateColumn(Class<T> clazz, String column, Serializable value, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void setFetchDirection(int direction) throws SQLException {
+    public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, String column, Serializable value, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public int getFetchDirection() throws SQLException {
+    public <T> int updateColumn(Class<T> clazz, Serializable pk, ColumnValue... values) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void setFetchSize(int rows) throws SQLException {
+    public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, Serializable pk, ColumnValue... values) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public int getFetchSize() throws SQLException {
+    public <T> int updateColumn(Class<T> clazz, FilterNode node, ColumnValue... values) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public int getType() throws SQLException {
+    public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, FilterNode node, ColumnValue... values) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public int getConcurrency() throws SQLException {
+    public <T> int updateColumn(Class<T> clazz, FilterNode node, Flipper flipper, ColumnValue... values) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean rowUpdated() throws SQLException {
+    public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, FilterNode node, Flipper flipper, ColumnValue... values) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean rowInserted() throws SQLException {
+    public <T> int updateColumn(T entity, String... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean rowDeleted() throws SQLException {
+    public <T> CompletableFuture<Integer> updateColumnAsync(T entity, String... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNull(int columnIndex) throws SQLException {
+    public <T> int updateColumn(T entity, FilterNode node, String... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBoolean(int columnIndex, boolean x) throws SQLException {
+    public <T> CompletableFuture<Integer> updateColumnAsync(T entity, FilterNode node, String... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateByte(int columnIndex, byte x) throws SQLException {
+    public <T> int updateColumn(T entity, SelectColumn selects) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateShort(int columnIndex, short x) throws SQLException {
+    public <T> CompletableFuture<Integer> updateColumnAsync(T entity, SelectColumn selects) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateInt(int columnIndex, int x) throws SQLException {
+    public <T> int updateColumn(T entity, FilterNode node, SelectColumn selects) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateLong(int columnIndex, long x) throws SQLException {
+    public <T> CompletableFuture<Integer> updateColumnAsync(T entity, FilterNode node, SelectColumn selects) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateFloat(int columnIndex, float x) throws SQLException {
+    public Number getNumberResult(Class entityClass, FilterFunc func, String column) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateDouble(int columnIndex, double x) throws SQLException {
+    public CompletableFuture<Number> getNumberResultAsync(Class entityClass, FilterFunc func, String column) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBigDecimal(int columnIndex, BigDecimal x) throws SQLException {
+    public Number getNumberResult(Class entityClass, FilterFunc func, String column, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateString(int columnIndex, String x) throws SQLException {
+    public CompletableFuture<Number> getNumberResultAsync(Class entityClass, FilterFunc func, String column, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBytes(int columnIndex, byte[] x) throws SQLException {
+    public Number getNumberResult(Class entityClass, FilterFunc func, String column, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateDate(int columnIndex, Date x) throws SQLException {
+    public CompletableFuture<Number> getNumberResultAsync(Class entityClass, FilterFunc func, String column, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateTime(int columnIndex, Time x) throws SQLException {
+    public Number getNumberResult(Class entityClass, FilterFunc func, Number defVal, String column) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateTimestamp(int columnIndex, Timestamp x) throws SQLException {
+    public CompletableFuture<Number> getNumberResultAsync(Class entityClass, FilterFunc func, Number defVal, String column) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateAsciiStream(int columnIndex, InputStream x, int length) throws SQLException {
+    public Number getNumberResult(Class entityClass, FilterFunc func, Number defVal, String column, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBinaryStream(int columnIndex, InputStream x, int length) throws SQLException {
+    public CompletableFuture<Number> getNumberResultAsync(Class entityClass, FilterFunc func, Number defVal, String column, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateCharacterStream(int columnIndex, Reader x, int length) throws SQLException {
+    public Number getNumberResult(Class entityClass, FilterFunc func, Number defVal, String column, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateObject(int columnIndex, Object x, int scaleOrLength) throws SQLException {
+    public CompletableFuture<Number> getNumberResultAsync(Class entityClass, FilterFunc func, Number defVal, String column, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateObject(int columnIndex, Object x) throws SQLException {
+    public <N extends Number> Map<String, N> getNumberMap(Class entityClass, FilterFuncColumn... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNull(String columnLabel) throws SQLException {
+    public <N extends Number> CompletableFuture<Map<String, N>> getNumberMapAsync(Class entityClass, FilterFuncColumn... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBoolean(String columnLabel, boolean x) throws SQLException {
+    public <N extends Number> Map<String, N> getNumberMap(Class entityClass, FilterBean bean, FilterFuncColumn... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateByte(String columnLabel, byte x) throws SQLException {
+    public <N extends Number> CompletableFuture<Map<String, N>> getNumberMapAsync(Class entityClass, FilterBean bean, FilterFuncColumn... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateShort(String columnLabel, short x) throws SQLException {
+    public <N extends Number> Map<String, N> getNumberMap(Class entityClass, FilterNode node, FilterFuncColumn... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateInt(String columnLabel, int x) throws SQLException {
+    public <N extends Number> CompletableFuture<Map<String, N>> getNumberMapAsync(Class entityClass, FilterNode node, FilterFuncColumn... columns) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateLong(String columnLabel, long x) throws SQLException {
+    public <T, K extends Serializable, N extends Number> Map<K, N> queryColumnMap(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateFloat(String columnLabel, float x) throws SQLException {
+    public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapAsync(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateDouble(String columnLabel, double x) throws SQLException {
+    public <T, K extends Serializable, N extends Number> Map<K, N> queryColumnMap(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBigDecimal(String columnLabel, BigDecimal x) throws SQLException {
+    public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapAsync(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateString(String columnLabel, String x) throws SQLException {
+    public <T, K extends Serializable, N extends Number> Map<K, N> queryColumnMap(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBytes(String columnLabel, byte[] x) throws SQLException {
+    public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapAsync(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateDate(String columnLabel, Date x) throws SQLException {
+    public <T> T find(Class<T> clazz, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateTime(String columnLabel, Time x) throws SQLException {
+    public <T> CompletableFuture<T> findAsync(Class<T> clazz, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateTimestamp(String columnLabel, Timestamp x) throws SQLException {
+    public <T> T find(Class<T> clazz, SelectColumn selects, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateAsciiStream(String columnLabel, InputStream x, int length) throws SQLException {
+    public <T> CompletableFuture<T> findAsync(Class<T> clazz, SelectColumn selects, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBinaryStream(String columnLabel, InputStream x, int length) throws SQLException {
+    public <T> T find(Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateCharacterStream(String columnLabel, Reader reader, int length) throws SQLException {
+    public <T> CompletableFuture<T> findAsync(Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateObject(String columnLabel, Object x, int scaleOrLength) throws SQLException {
+    public <T> T find(Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateObject(String columnLabel, Object x) throws SQLException {
+    public <T> CompletableFuture<T> findAsync(Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void insertRow() throws SQLException {
+    public <T> T find(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateRow() throws SQLException {
+    public <T> CompletableFuture<T> findAsync(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void deleteRow() throws SQLException {
+    public <T> T find(Class<T> clazz, SelectColumn selects, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void refreshRow() throws SQLException {
+    public <T> CompletableFuture<T> findAsync(Class<T> clazz, SelectColumn selects, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void cancelRowUpdates() throws SQLException {
+    public <T> T find(Class<T> clazz, SelectColumn selects, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void moveToInsertRow() throws SQLException {
+    public <T> CompletableFuture<T> findAsync(Class<T> clazz, SelectColumn selects, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void moveToCurrentRow() throws SQLException {
+    public <T> Serializable findColumn(Class<T> clazz, String column, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Statement getStatement() throws SQLException {
+    public <T> CompletableFuture<Serializable> findColumnAsync(Class<T> clazz, String column, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
+    public <T> Serializable findColumn(Class<T> clazz, String column, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Ref getRef(int columnIndex) throws SQLException {
+    public <T> CompletableFuture<Serializable> findColumnAsync(Class<T> clazz, String column, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Blob getBlob(int columnIndex) throws SQLException {
-        byte[] bs = getBytes(columnIndex);
-        return bs == null ? null : new MyBlob(bs);
+    public <T> Serializable findColumn(Class<T> clazz, String column, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Clob getClob(int columnIndex) throws SQLException {
+    public <T> CompletableFuture<Serializable> findColumnAsync(Class<T> clazz, String column, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Array getArray(int columnIndex) throws SQLException {
+    public <T> Serializable findColumn(Class<T> clazz, String column, Serializable defValue, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
+    public <T> CompletableFuture<Serializable> findColumnAsync(Class<T> clazz, String column, Serializable defValue, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Ref getRef(String columnLabel) throws SQLException {
+    public <T> Serializable findColumn(Class<T> clazz, String column, Serializable defValue, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Blob getBlob(String columnLabel) throws SQLException {
-        byte[] bs = getBytes(columnLabel);
-        return bs == null ? null : new MyBlob(bs);
+    public <T> CompletableFuture<Serializable> findColumnAsync(Class<T> clazz, String column, Serializable defValue, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Clob getClob(String columnLabel) throws SQLException {
+    public <T> Serializable findColumn(Class<T> clazz, String column, Serializable defValue, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Array getArray(String columnLabel) throws SQLException {
+    public <T> CompletableFuture<Serializable> findColumnAsync(Class<T> clazz, String column, Serializable defValue, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Date getDate(int columnIndex, Calendar cal) throws SQLException {
+    public <T> boolean exists(Class<T> clazz, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Date getDate(String columnLabel, Calendar cal) throws SQLException {
+    public <T> CompletableFuture<Boolean> existsAsync(Class<T> clazz, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Time getTime(int columnIndex, Calendar cal) throws SQLException {
+    public <T> boolean exists(Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Time getTime(String columnLabel, Calendar cal) throws SQLException {
+    public <T> CompletableFuture<Boolean> existsAsync(Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
+    public <T> boolean exists(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
+    public <T> CompletableFuture<Boolean> existsAsync(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public URL getURL(int columnIndex) throws SQLException {
+    public <T, V extends Serializable> HashSet<V> queryColumnSet(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public URL getURL(String columnLabel) throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<HashSet<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateRef(int columnIndex, Ref x) throws SQLException {
+    public <T, V extends Serializable> HashSet<V> queryColumnSet(String selectedColumn, Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateRef(String columnLabel, Ref x) throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<HashSet<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBlob(int columnIndex, Blob x) throws SQLException {
+    public <T, V extends Serializable> HashSet<V> queryColumnSet(String selectedColumn, Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBlob(String columnLabel, Blob x) throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<HashSet<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateClob(int columnIndex, Clob x) throws SQLException {
+    public <T, V extends Serializable> List<V> queryColumnList(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateClob(String columnLabel, Clob x) throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateArray(int columnIndex, Array x) throws SQLException {
+    public <T, V extends Serializable> List<V> queryColumnList(String selectedColumn, Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateArray(String columnLabel, Array x) throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(String selectedColumn, Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public RowId getRowId(int columnIndex) throws SQLException {
+    public <T, V extends Serializable> List<V> queryColumnList(String selectedColumn, Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public RowId getRowId(String columnLabel) throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(String selectedColumn, Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateRowId(int columnIndex, RowId x) throws SQLException {
+    public <T, V extends Serializable> List<V> queryColumnList(String selectedColumn, Class<T> clazz, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateRowId(String columnLabel, RowId x) throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public int getHoldability() throws SQLException {
+    public <T, V extends Serializable> List<V> queryColumnList(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean isClosed() throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNString(int columnIndex, String nString) throws SQLException {
+    public <T, V extends Serializable> Sheet<V> queryColumnSheet(String selectedColumn, Class<T> clazz, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNString(String columnLabel, String nString) throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<Sheet<V>> queryColumnSheetAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNClob(int columnIndex, NClob nClob) throws SQLException {
+    public <T, V extends Serializable> Sheet<V> queryColumnSheet(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNClob(String columnLabel, NClob nClob) throws SQLException {
+    public <T, V extends Serializable> CompletableFuture<Sheet<V>> queryColumnSheetAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public NClob getNClob(int columnIndex) throws SQLException {
+    public <K extends Serializable, T> Map<K, T> queryMap(Class<T> clazz, Stream<K> keyStream) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public NClob getNClob(String columnLabel) throws SQLException {
+    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, Stream<K> keyStream) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public SQLXML getSQLXML(int columnIndex) throws SQLException {
+    public <K extends Serializable, T> Map<K, T> queryMap(Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public SQLXML getSQLXML(String columnLabel) throws SQLException {
+    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException {
+    public <K extends Serializable, T> Map<K, T> queryMap(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException {
+    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public String getNString(int columnIndex) throws SQLException {
+    public <K extends Serializable, T> Map<K, T> queryMap(Class<T> clazz, SelectColumn selects, Stream<K> keyStream) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public String getNString(String columnLabel) throws SQLException {
+    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, SelectColumn selects, Stream<K> keyStream) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Reader getNCharacterStream(int columnIndex) throws SQLException {
+    public <K extends Serializable, T> Map<K, T> queryMap(Class<T> clazz, SelectColumn selects, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public Reader getNCharacterStream(String columnLabel) throws SQLException {
+    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, SelectColumn selects, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
+    public <K extends Serializable, T> Map<K, T> queryMap(Class<T> clazz, SelectColumn selects, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
+    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, SelectColumn selects, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateAsciiStream(int columnIndex, InputStream x, long length) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBinaryStream(int columnIndex, InputStream x, long length) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateAsciiStream(String columnLabel, InputStream x, long length) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBinaryStream(String columnLabel, InputStream x, long length) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBlob(int columnIndex, InputStream inputStream, long length) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, SelectColumn selects, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBlob(String columnLabel, InputStream inputStream, long length) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, SelectColumn selects, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateClob(int columnIndex, Reader reader, long length) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, SelectColumn selects, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateClob(String columnLabel, Reader reader, long length) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, SelectColumn selects, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNClob(int columnIndex, Reader reader, long length) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNClob(String columnLabel, Reader reader, long length) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNCharacterStream(int columnIndex, Reader x) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNCharacterStream(String columnLabel, Reader reader) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateAsciiStream(int columnIndex, InputStream x) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBinaryStream(int columnIndex, InputStream x) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateCharacterStream(int columnIndex, Reader x) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateAsciiStream(String columnLabel, InputStream x) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBinaryStream(String columnLabel, InputStream x) throws SQLException {
+    public <T> List<T> queryList(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateCharacterStream(String columnLabel, Reader reader) throws SQLException {
+    public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBlob(int columnIndex, InputStream inputStream) throws SQLException {
+    public <T> Sheet<T> querySheet(Class<T> clazz, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateBlob(String columnLabel, InputStream inputStream) throws SQLException {
+    public <T> CompletableFuture<Sheet<T>> querySheetAsync(Class<T> clazz, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateClob(int columnIndex, Reader reader) throws SQLException {
+    public <T> Sheet<T> querySheet(Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateClob(String columnLabel, Reader reader) throws SQLException {
+    public <T> CompletableFuture<Sheet<T>> querySheetAsync(Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNClob(int columnIndex, Reader reader) throws SQLException {
+    public <T> Sheet<T> querySheet(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void updateNClob(String columnLabel, Reader reader) throws SQLException {
+    public <T> CompletableFuture<Sheet<T>> querySheetAsync(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
+    public <T> Sheet<T> querySheet(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
+    public <T> CompletableFuture<Sheet<T>> querySheetAsync(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException {
+    public void close() throws Exception {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+    public String resourceName() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 

@@ -9,7 +9,7 @@ package org.redkalex.source.mysql;
  *
  * @author zhangjx
  */
-public class MySQLType {
+public class MysqlType {
 
     // Protocol field flag numbers
     public static final int FIELD_FLAG_NOT_NULL = 1;
@@ -91,35 +91,35 @@ public class MySQLType {
 
     public static int getBinaryEncodedLength(int type) {
         switch (type) {
-            case MySQLType.FIELD_TYPE_TINY:
+            case MysqlType.FIELD_TYPE_TINY:
                 return 1;
-            case MySQLType.FIELD_TYPE_SHORT:
-            case MySQLType.FIELD_TYPE_YEAR:
+            case MysqlType.FIELD_TYPE_SHORT:
+            case MysqlType.FIELD_TYPE_YEAR:
                 return 2;
-            case MySQLType.FIELD_TYPE_LONG:
-            case MySQLType.FIELD_TYPE_INT24:
-            case MySQLType.FIELD_TYPE_FLOAT:
+            case MysqlType.FIELD_TYPE_LONG:
+            case MysqlType.FIELD_TYPE_INT24:
+            case MysqlType.FIELD_TYPE_FLOAT:
                 return 4;
-            case MySQLType.FIELD_TYPE_LONGLONG:
-            case MySQLType.FIELD_TYPE_DOUBLE:
+            case MysqlType.FIELD_TYPE_LONGLONG:
+            case MysqlType.FIELD_TYPE_DOUBLE:
                 return 8;
-            case MySQLType.FIELD_TYPE_TIME:
-            case MySQLType.FIELD_TYPE_DATE:
-            case MySQLType.FIELD_TYPE_DATETIME:
-            case MySQLType.FIELD_TYPE_TIMESTAMP:
-            case MySQLType.FIELD_TYPE_TINY_BLOB:
-            case MySQLType.FIELD_TYPE_MEDIUM_BLOB:
-            case MySQLType.FIELD_TYPE_LONG_BLOB:
-            case MySQLType.FIELD_TYPE_BLOB:
-            case MySQLType.FIELD_TYPE_VAR_STRING:
-            case MySQLType.FIELD_TYPE_VARCHAR:
-            case MySQLType.FIELD_TYPE_STRING:
-            case MySQLType.FIELD_TYPE_DECIMAL:
-            case MySQLType.FIELD_TYPE_NEWDECIMAL:
-            case MySQLType.FIELD_TYPE_GEOMETRY:
-            case MySQLType.FIELD_TYPE_BIT:
-            case MySQLType.FIELD_TYPE_JSON:
-            case MySQLType.FIELD_TYPE_NULL:
+            case MysqlType.FIELD_TYPE_TIME:
+            case MysqlType.FIELD_TYPE_DATE:
+            case MysqlType.FIELD_TYPE_DATETIME:
+            case MysqlType.FIELD_TYPE_TIMESTAMP:
+            case MysqlType.FIELD_TYPE_TINY_BLOB:
+            case MysqlType.FIELD_TYPE_MEDIUM_BLOB:
+            case MysqlType.FIELD_TYPE_LONG_BLOB:
+            case MysqlType.FIELD_TYPE_BLOB:
+            case MysqlType.FIELD_TYPE_VAR_STRING:
+            case MysqlType.FIELD_TYPE_VARCHAR:
+            case MysqlType.FIELD_TYPE_STRING:
+            case MysqlType.FIELD_TYPE_DECIMAL:
+            case MysqlType.FIELD_TYPE_NEWDECIMAL:
+            case MysqlType.FIELD_TYPE_GEOMETRY:
+            case MysqlType.FIELD_TYPE_BIT:
+            case MysqlType.FIELD_TYPE_JSON:
+            case MysqlType.FIELD_TYPE_NULL:
                 return 0;
         }
         return -1; // unknown type

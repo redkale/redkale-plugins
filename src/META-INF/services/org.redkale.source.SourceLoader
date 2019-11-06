@@ -1,2 +1,4 @@
-org.redkalex.source.mysql.MySQLSourceLoader
-org.redkalex.source.pgsql.PgSQLSourceLoader
+org.redkalex.source.mysql.MysqlSourceLoader
+org.redkalex.source.pgsql.PgsqlSourceLoader
+org.redkalex.source.mongodb.MongodbSourceLoader
+org.redkalex.source.es.ElasticSearchSourceLoader

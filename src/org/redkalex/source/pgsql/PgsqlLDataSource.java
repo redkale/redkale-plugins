@@ -32,7 +32,7 @@ import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTESBAME;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
+public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
 
     private static final byte[] TRUE = new byte[]{'t'};
 
@@ -59,7 +59,7 @@ public class PgSQLDataSource extends DataSqlSource<AsyncConnection> {
         .appendOffset("+HH:mm", "")
         .toFormatter();
 
-    public PgSQLDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
+    public PgsqlLDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
         super(unitName, persistxml, readprop, writeprop);
     }
 

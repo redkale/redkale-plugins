@@ -11,13 +11,13 @@ import org.redkale.util.ByteBufferReader;
  *
  * @author zhangjx
  */
-public class MySQLColumnCountPacket extends MySQLPacket {
+public class MyColumnCountPacket extends MyPacket {
 
     public int columnCount;
 
-    public MySQLColumnCountPacket(int len, ByteBufferReader buffer, byte[] array) {
-        this.packetLength = len < 1 ? MySQLs.readUB3(buffer) : len;
+    public MyColumnCountPacket(int len, ByteBufferReader buffer, byte[] array) {
+        this.packetLength = len < 1 ? Mysqls.readUB3(buffer) : len;
         this.packetIndex = buffer.get();
-        this.columnCount = (int) MySQLs.readLength(buffer);
+        this.columnCount = (int) Mysqls.readLength(buffer);
     }
 }

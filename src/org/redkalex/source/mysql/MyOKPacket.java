@@ -12,7 +12,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
-public class MySQLOKPacket extends MySQLPacket {
+public class MyOKPacket extends MyPacket {
 
     public static final byte[] OK = new byte[]{7, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0};
 
@@ -45,16 +45,16 @@ public class MySQLOKPacket extends MySQLPacket {
 
     public int statusFlags;
 
-    public MySQLOKPacket(int len, ByteBufferReader buffer, byte[] array) {
-        this.packetLength = len < 1 ? MySQLs.readUB3(buffer) : len;
+    public MyOKPacket(int len, ByteBufferReader buffer, byte[] array) {
+        this.packetLength = len < 1 ? Mysqls.readUB3(buffer) : len;
         this.packetIndex = buffer.get();
         this.typeid = buffer.get() & 0xff;
         if (this.typeid == TYPE_ID_EOF) {
-            this.warningCount = MySQLs.readUB2(buffer);
-            this.statusFlags = MySQLs.readUB2(buffer);
+            this.warningCount = Mysqls.readUB2(buffer);
+            this.statusFlags = Mysqls.readUB2(buffer);
         } else if (this.typeid == TYPE_ID_ERROR) {
-            this.vendorCode = MySQLs.readUB2(buffer);
-            byte[] bs = MySQLs.readBytes(buffer, array);
+            this.vendorCode = Mysqls.readUB2(buffer);
+            byte[] bs = Mysqls.readBytes(buffer, array);
             if (bs != null) {
                 this.info = new String(bs);
                 if (this.info.charAt(0) == '#') {
@@ -62,25 +62,25 @@ public class MySQLOKPacket extends MySQLPacket {
                         this.sqlState = this.info.substring(1, 6);
                         this.info = this.info.substring(6);
                         if (this.sqlState.equals("HY000")) {
-                            this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
+                            this.sqlState = MyErrorNumbers.mysqlToSqlState(this.vendorCode);
                         }
                     } else {
-                        this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
+                        this.sqlState = MyErrorNumbers.mysqlToSqlState(this.vendorCode);
                     }
                 } else {
-                    this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
+                    this.sqlState = MyErrorNumbers.mysqlToSqlState(this.vendorCode);
                 }
             }
         } else {
             //com.mysql.cj.protocol.a.NativeProtocol
-            this.updateCount = MySQLs.readLength(buffer);
-            this.updateID = MySQLs.readLength(buffer);
-            this.statusFlags = MySQLs.readUB2(buffer);
-            this.warningCount = MySQLs.readUB2(buffer);
+            this.updateCount = Mysqls.readLength(buffer);
+            this.updateID = Mysqls.readLength(buffer);
+            this.statusFlags = Mysqls.readUB2(buffer);
+            this.warningCount = Mysqls.readUB2(buffer);
             if (buffer.hasRemaining()) {
                 //buffer.get(); // skips the 'last packet' flag (packet signature)
                 //this.vendorCode = MySQLs.readUB2(buffer);
-                byte[] bs = MySQLs.readBytes(buffer, array);
+                byte[] bs = Mysqls.readBytes(buffer, array);
                 if (bs != null) {
                     this.info = new String(bs);
                     if (this.info.charAt(0) == '#') {
@@ -88,13 +88,13 @@ public class MySQLOKPacket extends MySQLPacket {
                             this.sqlState = this.info.substring(1, 6);
                             this.info = this.info.substring(6);
                             if (this.sqlState.equals("HY000")) {
-                                this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
+                                this.sqlState = MyErrorNumbers.mysqlToSqlState(this.vendorCode);
                             }
                         } else {
-                            this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
+                            this.sqlState = MyErrorNumbers.mysqlToSqlState(this.vendorCode);
                         }
                     } else {
-                        this.sqlState = MysqlErrorNumbers.mysqlToSqlState(this.vendorCode);
+                        this.sqlState = MyErrorNumbers.mysqlToSqlState(this.vendorCode);
                     }
                 }
             }
