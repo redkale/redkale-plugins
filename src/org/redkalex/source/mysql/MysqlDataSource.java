@@ -458,7 +458,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
         if (sqlBytesArray.length == 1) {
             return executeItemBatchUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o
-                -> insert ? exceptionallyUpdateTableNotExist(executeItemBatchUpdate(info, conn, array, sqlBytesArray[0]), info, conn, array, oneEntity, false, sqlBytesArray[0])
+                -> insert ? exceptionallyUpdateTableNotExist(executeItemBatchUpdate(info, conn, array, sqlBytesArray[0]), info, conn, array, oneEntity, insert, sqlBytesArray[0])
                     : executeItemBatchUpdate(info, conn, array, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
                 if (t == null) {
                     writePool.offerConnection(conn);
