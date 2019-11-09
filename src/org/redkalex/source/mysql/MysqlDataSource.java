@@ -92,7 +92,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             ba.write(prebs);
             for (int j = 0; j < attrs.length; j++) {
                 if (j > 0) ba.write((byte) ',');
-                byte[] param = formatPrepareParam(attrs[j].get(values[i]));
+                byte[] param = formatPrepareParam(info, attrs[j], attrs[j].get(values[i]));
                 if (param == null) {
                     ba.write(BYTES_NULL);
                 } else {
@@ -155,7 +155,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                     continue;
                 }
                 index++;
-                byte[] param = index < attrs.length ? formatPrepareParam(attrs[index].get(values[i])) : formatPrepareParam(primary.get(values[i])); //最后一个是主键
+                byte[] param = index < attrs.length ? formatPrepareParam(info, attrs[index], attrs[index].get(values[i])) : formatPrepareParam(info, primary, primary.get(values[i])); //最后一个是主键
                 if (param == null) {
                     ba.write(BYTES_NULL);
                 } else {
@@ -188,7 +188,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         String[] subsqls = realsql.split("\\" + prepareParamSign(1).replace("1", "") + "\\d+");
         for (int i = 0; i < params.length; i++) {
             ba.write(subsqls[i].getBytes(StandardCharsets.UTF_8));
-            byte[] param = formatPrepareParam(params[i]);
+            byte[] param = formatPrepareParam(info, null, params[i]);
             if (param == null) {
                 ba.write(BYTES_NULL);
             } else {
@@ -428,7 +428,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         return newFuture;
     }
 
-    protected static byte[] formatPrepareParam(Object param) {
+    protected static <T> byte[] formatPrepareParam(EntityInfo<T> info, Attribute<T, Serializable> attr, Object param) {
         if (param == null) return null;
         if (param instanceof CharSequence) {
             return param.toString().getBytes(StandardCharsets.UTF_8);
@@ -446,6 +446,11 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
+        }
+        if (!(param instanceof Number) && !(param instanceof CharSequence) 
+            && !param.getClass().getName().startsWith("java.sql.") && !param.getClass().getName().startsWith("java.time.")) {
+            if (attr == null) return info.getJsonConvert().convertTo(param).getBytes(StandardCharsets.UTF_8);
+            return info.getJsonConvert().convertTo(attr.genericType(), param).getBytes(StandardCharsets.UTF_8);
         }
         return String.valueOf(param).getBytes(StandardCharsets.UTF_8);
     }
