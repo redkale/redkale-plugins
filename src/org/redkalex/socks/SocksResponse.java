@@ -55,7 +55,7 @@ public class SocksResponse extends Response<SocksContext, SocksRequest> {
     }
 
     protected ObjectPool<ByteBuffer> getBufferPool() {
-        return this.bufferPool;
+        return null;
     }
 }
 
@@ -88,7 +88,7 @@ class HttpxResponse extends HttpResponse {
     }
 
     protected ObjectPool<ByteBuffer> getBufferPool() {
-        return this.bufferPool;
+        return null;
     }
 
     @Override
