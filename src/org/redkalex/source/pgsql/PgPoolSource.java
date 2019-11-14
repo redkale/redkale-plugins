@@ -179,6 +179,11 @@ public class PgPoolSource extends PoolTcpSource {
     }
 
     @Override
+    protected CompletableFuture<AsyncConnection> sendPingCommand(AsyncConnection conn) {
+        return null;
+    }
+
+    @Override
     protected CompletableFuture<AsyncConnection> sendCloseCommand(AsyncConnection conn) {
         return null;
 //        { // CLOSE

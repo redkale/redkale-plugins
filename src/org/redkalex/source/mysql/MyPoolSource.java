@@ -23,6 +23,8 @@ public class MyPoolSource extends PoolTcpSource {
 
     protected static final String CONN_ATTR_BYTESBAME = "BYTESBAME";
 
+    protected static final byte[] PING_BYTES = "SELECT 1".getBytes();
+
     public MyPoolSource(String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop,
         Logger logger, ObjectPool<ByteBuffer> bufferPool, ThreadPoolExecutor executor) {
         super(rwtype, queue, semaphore, prop, logger, bufferPool, executor);
@@ -160,6 +162,77 @@ public class MyPoolSource extends PoolTcpSource {
     @Override
     protected int getDefaultPort() {
         return 3306;
+    }
+
+    @Override
+    protected CompletableFuture<AsyncConnection> sendPingCommand(AsyncConnection conn) {
+        final ByteBuffer buffer = bufferPool.get();
+        Mysqls.writeUB3(buffer, 1 + PING_BYTES.length);
+        buffer.put((byte) 0x0);
+        buffer.put(MyPacket.COM_QUERY);
+        buffer.put(PING_BYTES);
+        buffer.flip();
+        CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
+        conn.write(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
+            @Override
+            public void completed(Integer result, ByteBuffer attachment) {
+                if (result < 0) {
+                    failed(new RuntimeException("Write Buffer Error"), attachment);
+                    return;
+                }
+                if (buffer.hasRemaining()) {
+                    conn.write(buffer, attachment, this);
+                    return;
+                }
+                buffer.clear();
+                conn.setReadBuffer(buffer);
+                conn.read(new CompletionHandler<Integer, ByteBuffer>() {
+                    @Override
+                    public void completed(Integer result, ByteBuffer attachment) {
+                        if (result < 0) {
+                            failed(new SQLException("Read Buffer Error"), attachment);
+                            return;
+                        }
+//                        buffer.flip();
+//                        final ByteBufferReader buffers = ByteBufferReader.create(buffer);
+//                        int packetLength = Mysqls.readUB3(buffers);
+//                        final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
+//                        if (packetLength < 4) {
+//                            MyColumnCountPacket countPacket = new MyColumnCountPacket(packetLength, buffers, array);
+//                            System.out.println("PING, 字段数： " + countPacket.columnCount);
+//                            System.out.println("--------- column desc start  -------------");
+//                            MyColumnDescPacket[] colDescs = new MyColumnDescPacket[countPacket.columnCount];
+//                            for (int i = 0; i < colDescs.length; i++) {
+//                                colDescs[i] = new MyColumnDescPacket(buffers, array);
+//                            }
+//                            MyEOFPacket eofPacket = new MyEOFPacket(-1, buffers, array);
+//                            System.out.println("字段描述EOF包： " + eofPacket);
+//                        } else {
+//                            MyOKPacket okPacket = new MyOKPacket(packetLength, buffers, array);
+//                            System.out.println("PING的结果 ： " + okPacket);
+//                        }
+                        bufferPool.accept(buffer);
+                        future.complete(conn);
+                    }
+
+                    @Override
+                    public void failed(Throwable exc, ByteBuffer attachment) {
+                        bufferPool.accept(buffer);
+                        conn.dispose();
+                        future.completeExceptionally(exc);
+                    }
+
+                });
+            }
+
+            @Override
+            public void failed(Throwable exc, ByteBuffer attachment) {
+                bufferPool.accept(buffer);
+                conn.dispose();
+                future.completeExceptionally(exc);
+            }
+        });
+        return future;
     }
 
     @Override
