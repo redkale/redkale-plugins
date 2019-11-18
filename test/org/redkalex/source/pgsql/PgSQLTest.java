@@ -18,8 +18,8 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.AsyncConnection;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTESBAME;
 import static org.redkalex.source.pgsql.PgsqlLDataSource.*;
+import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTES_NAME;
 
 /**
  *
@@ -185,7 +185,7 @@ public class PgSQLTest {
     private static void singleQuery(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
         final AsyncConnection conn = poolSource.pollAsync().join();
         System.out.println("真实连接: " + conn);
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTES_NAME);
         final String sql = "SELECT a.* FROM fortune a";
         ByteBuffer wbuffer = bufferPool.get();
         {
