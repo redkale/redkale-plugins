@@ -19,7 +19,6 @@ import org.redkale.net.AsyncConnection;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkalex.source.mysql.MyPoolSource.CONN_ATTR_BYTESBAME;
 
 /**
  * MySQL数据库的DataSource实现
@@ -464,7 +463,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final T oneEntity, boolean checkExist, final byte[]... sqlBytesArray) {
-        final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final byte[] array = conn.getAttribute(MyPoolSource.CONN_ATTR_BYTES_NAME);
         if (sqlBytesArray.length == 1) {
             return executeItemBatchUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o
                 -> checkExist ? exceptionallyUpdateTableNotExist(executeItemBatchUpdate(info, conn, array, sqlBytesArray[0]), info, conn, array, oneEntity, checkExist, sqlBytesArray[0])
@@ -591,7 +590,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
 
     //info可以为null,供directQuery
     protected <T> CompletableFuture<ResultSet> executeQuery(final EntityInfo<T> info, final AsyncConnection conn, final String sql) {
-        final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final byte[] array = conn.getAttribute(MyPoolSource.CONN_ATTR_BYTES_NAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
             new MyQueryPacket(sql.getBytes(StandardCharsets.UTF_8)).writeTo(writer);

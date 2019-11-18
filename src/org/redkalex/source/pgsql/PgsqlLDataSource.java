@@ -22,7 +22,6 @@ import org.redkale.net.AsyncConnection;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTESBAME;
 
 /**
  *
@@ -357,7 +356,7 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final AsyncConnection conn, final String sql, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final byte[] bytes = conn.getAttribute(PgPoolSource.CONN_ATTR_BYTES_NAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
             writer.put((byte) 'P');
@@ -548,7 +547,7 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
 
     //info可以为null,供directQuery
     protected <T> CompletableFuture<ResultSet> executeQuery(final EntityInfo<T> info, final AsyncConnection conn, final String sql) {
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final byte[] bytes = conn.getAttribute(PgPoolSource.CONN_ATTR_BYTES_NAME);
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
             writer.put((byte) 'Q');

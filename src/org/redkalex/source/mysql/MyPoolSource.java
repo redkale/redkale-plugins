@@ -21,7 +21,7 @@ import org.redkale.util.*;
  */
 public class MyPoolSource extends PoolTcpSource {
 
-    protected static final String CONN_ATTR_BYTESBAME = "BYTESBAME";
+    protected static final String CONN_ATTR_BYTES_NAME = "BYTES_NAME";
 
     protected static final byte[] PING_BYTES = "SELECT 1".getBytes();
 
@@ -32,7 +32,7 @@ public class MyPoolSource extends PoolTcpSource {
 
     @Override
     protected ByteBuffer reqConnectBuffer(AsyncConnection conn) {
-        if (conn.getAttribute(CONN_ATTR_BYTESBAME) == null) conn.setAttribute(CONN_ATTR_BYTESBAME, new byte[1024]);
+        if (conn.getAttribute(CONN_ATTR_BYTES_NAME) == null) conn.setAttribute(CONN_ATTR_BYTES_NAME, new byte[1024]);
         return null;
     }
 
@@ -40,7 +40,7 @@ public class MyPoolSource extends PoolTcpSource {
 
     @Override
     protected void respConnectBuffer(final ByteBuffer buffer, CompletableFuture<AsyncConnection> future, AsyncConnection conn) {
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTESBAME);
+        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTES_NAME);
 
         //MySQLIO.doHandshake
         MyHandshakePacket handshakePacket = null;
@@ -196,7 +196,7 @@ public class MyPoolSource extends PoolTcpSource {
 //                        buffer.flip();
 //                        final ByteBufferReader buffers = ByteBufferReader.create(buffer);
 //                        int packetLength = Mysqls.readUB3(buffers);
-//                        final byte[] array = conn.getAttribute(CONN_ATTR_BYTESBAME);
+//                        final byte[] array = conn.getAttribute(CONN_ATTR_BYTES_NAME);
 //                        if (packetLength < 4) {
 //                            MyColumnCountPacket countPacket = new MyColumnCountPacket(packetLength, buffers, array);
 //                            System.out.println("PING, 字段数： " + countPacket.columnCount);
