@@ -28,6 +28,7 @@ public class MyPoolSource extends PoolTcpSource {
     public MyPoolSource(String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop,
         Logger logger, ObjectPool<ByteBuffer> bufferPool, ThreadPoolExecutor executor) {
         super(rwtype, queue, semaphore, prop, logger, bufferPool, executor);
+        if (this.encoding == null || this.encoding.isEmpty()) this.encoding = "UTF8MB4";
     }
 
     @Override
@@ -86,7 +87,7 @@ public class MyPoolSource extends PoolTcpSource {
                             return;
                         }
                         buffer.clear();
-                        new MyQueryPacket("SET NAMES UTF8MB4".getBytes()).writeTo(buffer);
+                        new MyQueryPacket(("SET NAMES " + encoding).getBytes()).writeTo(buffer);
                         buffer.flip();
                         conn.write(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
                             @Override
