@@ -16,7 +16,7 @@ public class MyHandshakePacket extends MyPacket {
 
     private static final byte[] FILLER_13 = new byte[13];
 
-    public byte protocolVersion;
+    public int protocolVersion;
 
     public String serverVersion;
 
@@ -37,7 +37,12 @@ public class MyHandshakePacket extends MyPacket {
     public MyHandshakePacket(ByteBuffer buffer, byte[] array) throws SQLException {
         packetLength = Mysqls.readUB3(buffer);
         packetIndex = buffer.get();
-        protocolVersion = buffer.get();
+        protocolVersion = buffer.get() & 0xff;
+        if (protocolVersion == 0xff) {
+            int vendorCode = Mysqls.readUB2(buffer);
+            String desc = Mysqls.readASCIIString(buffer, array);
+            throw new SQLException(desc + " (vendorCode=" + vendorCode + ")", null, vendorCode);
+        }
         if (protocolVersion < 10) {
             throw new SQLException("Not supported protocolVersion(" + protocolVersion + "), must greaterthan 10");
         }
