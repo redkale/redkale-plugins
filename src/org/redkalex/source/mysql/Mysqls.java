@@ -574,4 +574,46 @@ class Mysqls {
 
         return toBeXord;
     }
+
+    protected static byte[] scrambleCachingSha2(String password, byte[] seeds) {
+        if (password == null || password.isEmpty()) return null;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] passwordBytes = password.getBytes();
+            int CACHING_SHA2_DIGEST_LENGTH = 32;
+            byte[] dig1 = new byte[CACHING_SHA2_DIGEST_LENGTH];
+            byte[] dig2 = new byte[CACHING_SHA2_DIGEST_LENGTH];
+            byte[] scramble1 = new byte[CACHING_SHA2_DIGEST_LENGTH];
+            // SHA2(src) => digest_stage1
+            md.update(passwordBytes, 0, passwordBytes.length);
+            md.digest(dig1, 0, CACHING_SHA2_DIGEST_LENGTH);
+            md.reset();
+
+            // SHA2(digest_stage1) => digest_stage2
+            md.update(dig1, 0, dig1.length);
+            md.digest(dig2, 0, CACHING_SHA2_DIGEST_LENGTH);
+            md.reset();
+
+            // SHA2(digest_stage2, m_rnd) => scramble_stage1
+            md.update(dig2, 0, dig1.length);
+            md.update(seeds, 0, seeds.length);
+            md.digest(scramble1, 0, CACHING_SHA2_DIGEST_LENGTH);
+
+            // XOR(digest_stage1, scramble_stage1) => scramble
+            byte[] mysqlScrambleBuff = new byte[CACHING_SHA2_DIGEST_LENGTH];
+            xorString(dig1, mysqlScrambleBuff, scramble1, CACHING_SHA2_DIGEST_LENGTH);
+            return mysqlScrambleBuff;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void xorString(byte[] from, byte[] to, byte[] scramble, int length) {
+        int pos = 0;
+        int scrambleLength = scramble.length;
+        while (pos < length) {
+            to[pos] = (byte) (from[pos] ^ scramble[pos % scrambleLength]);
+            pos++;
+        }
+    }
 }
