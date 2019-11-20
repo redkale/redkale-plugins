@@ -374,10 +374,10 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                     //分表分库
                     final String newTable = info.getTable(oneEntity);
                     final byte[] createTableSqlBytes = info.getTableCopySQL(newTable).getBytes(StandardCharsets.UTF_8);
-                    executeItemBatchUpdate(info, conn, array, createTableSqlBytes).whenComplete((o2, ex2) -> {
+                    executeAtomicOneUpdate(info, conn, array, createTableSqlBytes).whenComplete((o2, ex2) -> {
                         if (ex2 == null) { //建分表成功
                             //重新执行一遍sql语句
-                            executeItemBatchUpdate(info, conn, array, sqlBytes).whenComplete((o3, ex3) -> {
+                            executeAtomicOneUpdate(info, conn, array, sqlBytes).whenComplete((o3, ex3) -> {
                                 if (ex3 == null) {
                                     newFuture.complete(o3);
                                 } else {
@@ -389,12 +389,12 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                             while (ex2 instanceof CompletionException) ex2 = ex2.getCause();
                             if (newTable.indexOf('.') > 0 && ex2 instanceof SQLException
                                 && ("HY000".equals(((SQLException) ex2).getSQLState()) || "42000".equals(((SQLException) ex2).getSQLState()))) { //可能是database不存在
-                                executeItemBatchUpdate(info, conn, array, ("CREATE DATABASE " + newTable.substring(0, newTable.indexOf('.'))).getBytes()).whenComplete((o3, ex3) -> {
+                                executeAtomicOneUpdate(info, conn, array, ("CREATE DATABASE " + newTable.substring(0, newTable.indexOf('.'))).getBytes()).whenComplete((o3, ex3) -> {
                                     if (ex3 == null) { //建库成功
-                                        executeItemBatchUpdate(info, conn, array, createTableSqlBytes).whenComplete((o4, ex4) -> { //建表
+                                        executeAtomicOneUpdate(info, conn, array, createTableSqlBytes).whenComplete((o4, ex4) -> { //建表
                                             if (ex4 == null) { //建表成功
                                                 //重新执行一遍sql语句
-                                                executeItemBatchUpdate(info, conn, array, sqlBytes).whenComplete((o5, ex5) -> {
+                                                executeAtomicOneUpdate(info, conn, array, sqlBytes).whenComplete((o5, ex5) -> {
                                                     if (ex5 == null) {
                                                         newFuture.complete(o5);
                                                     } else {
@@ -461,9 +461,9 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final T oneEntity, boolean checkAndCreateTable, final byte[]... sqlBytesArray) {
         final byte[] array = conn.getAttribute(MyPoolSource.CONN_ATTR_BYTES_NAME);
         if (sqlBytesArray.length == 1) {
-            return executeItemBatchUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o
-                -> checkAndCreateTable ? exceptionallyUpdateTableNotExist(executeItemBatchUpdate(info, conn, array, sqlBytesArray[0]), info, conn, array, oneEntity, checkAndCreateTable, sqlBytesArray[0])
-                    : executeItemBatchUpdate(info, conn, array, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
+            return executeAtomicOneUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o
+                -> checkAndCreateTable ? exceptionallyUpdateTableNotExist(executeAtomicOneUpdate(info, conn, array, sqlBytesArray[0]), info, conn, array, oneEntity, checkAndCreateTable, sqlBytesArray[0])
+                    : executeAtomicOneUpdate(info, conn, array, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
                 if (t == null) {
                     writePool.offerConnection(conn);
                 } else {
@@ -473,23 +473,23 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         }
         //多个
         final int[] rs = new int[sqlBytesArray.length + 2];
-        CompletableFuture<Integer> future = executeItemBatchUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_0);
+        CompletableFuture<Integer> future = executeAtomicOneUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_0);
         future.thenAccept((Integer a) -> rs[0] = a);
         for (int i = 0; i < sqlBytesArray.length; i++) {
             final int index = i + 1;
             final byte[] sqlBytes = sqlBytesArray[i];
             future = future.thenCompose(a -> {
-                CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, array, sqlBytes);
+                CompletableFuture<Integer> nextFuture = executeAtomicOneUpdate(info, conn, array, sqlBytes);
                 nextFuture.thenAccept(b -> rs[index] = b);
                 if (checkAndCreateTable && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, conn, array, oneEntity, checkAndCreateTable, sqlBytes);
                 nextFuture.whenComplete((o, t) -> {
-                    if (t != null) executeItemBatchUpdate(info, conn, array, SQL_ROLLBACK).join();
+                    if (t != null) executeAtomicOneUpdate(info, conn, array, SQL_ROLLBACK).join();
                 });
                 return nextFuture;
             });
         }
         future = future.thenCompose(a -> {
-            CompletableFuture<Integer> nextFuture = executeItemBatchUpdate(info, conn, array, SQL_COMMIT);
+            CompletableFuture<Integer> nextFuture = executeAtomicOneUpdate(info, conn, array, SQL_COMMIT);
             nextFuture.thenAccept(b -> rs[sqlBytesArray.length] = b);
             return nextFuture;
         });
@@ -502,7 +502,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         });
     }
 
-    protected <T> CompletableFuture<Integer> executeItemBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] array, final byte[] sqlBytes) {
+    protected <T> CompletableFuture<Integer> executeAtomicOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] array, final byte[] sqlBytes) {
         final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
         {
             new MyQueryPacket(sqlBytes).writeTo(writer);
