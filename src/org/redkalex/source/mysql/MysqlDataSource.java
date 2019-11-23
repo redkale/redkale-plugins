@@ -656,7 +656,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                             int colPacketLength = Mysqls.readUB3(bufferReader);
                             while (colPacketLength != 5) { //EOF包
                                 final MyRowDataPacket rowData = new MyRowDataPacket(colDescs, colPacketLength, bufferReader, countPacket.columnCount, array);
-                                while (!rowData.readColumnValue(bufferReader) || bufferReader.remaining() < 3) {
+                                while (!rowData.readColumnValue(bufferReader) || bufferReader.remaining() < 3 + 6) {
                                     final CompletableFuture<ByteBuffer> patchFuture = new CompletableFuture<>();
                                     conn.read(new CompletionHandler<Integer, ByteBuffer>() {
                                         @Override
