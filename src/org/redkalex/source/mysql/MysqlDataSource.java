@@ -655,9 +655,29 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                             List<MyRowDataPacket> rows = new ArrayList<>();
                             int colPacketLength = Mysqls.readUB3(bufferReader);
                             while (colPacketLength != 5) { //EOF包
-                                MyRowDataPacket rowData = new MyRowDataPacket(colDescs, colPacketLength, bufferReader, countPacket.columnCount, array);
-                                rows.add(rowData);
+                                final MyRowDataPacket rowData = new MyRowDataPacket(colDescs, colPacketLength, bufferReader, countPacket.columnCount, array);
+                                while (!rowData.readColumnValue(bufferReader) || bufferReader.remaining() < 3) {
+                                    final CompletableFuture<ByteBuffer> patchFuture = new CompletableFuture<>();
+                                    conn.read(new CompletionHandler<Integer, ByteBuffer>() {
+                                        @Override
+                                        public void completed(Integer result3, ByteBuffer attachment3) {
+                                            if (result3 < 0) {
+                                                failed(new SQLException("Read Buffer Error"), attachment3);
+                                                return;
+                                            }
+                                            attachment3.flip();
+                                            patchFuture.complete(attachment3);
+                                        }
+
+                                        @Override
+                                        public void failed(Throwable exc, ByteBuffer attachment3) {
+                                            patchFuture.completeExceptionally(exc);
+                                        }
+                                    });
+                                    bufferReader.append(patchFuture.join());
+                                }
                                 colPacketLength = Mysqls.readUB3(bufferReader);
+                                rows.add(rowData);
                             }
                             eofPacket = new MyEOFPacket(colPacketLength, bufferReader, array);
                             //System.out.println("查询结果包解析完毕： " + eofPacket);

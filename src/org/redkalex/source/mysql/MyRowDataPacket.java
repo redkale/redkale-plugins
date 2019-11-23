@@ -21,15 +21,36 @@ public class MyRowDataPacket extends MyPacket {
 
     public final byte[][] values;
 
+    private int currValueIndex = 0;
+
+    private int currValueLength = -2;
+
     public MyRowDataPacket(MyColumnDescPacket[] columns, int len, ByteBufferReader reader, int columnCount, byte[] array) {
         this.columns = columns;
         this.columnCount = columnCount;
         this.packetLength = len;
         this.packetIndex = reader.get();
         this.values = new byte[columnCount][];
-        for (int i = 0; i < columnCount; i++) {
-            this.values[i] = Mysqls.readBytesWithLength(reader);
+    }
+
+    //返回true表示读取完毕，返回false表示ByteBuffer数据不够
+    public boolean readColumnValue(ByteBufferReader reader) {
+        if (this.currValueIndex > columnCount) return true;
+        int start = this.currValueIndex;
+        for (int i = start; i < columnCount; i++) {
+            if (this.currValueLength == -2) {
+                if (!Mysqls.checkLength(reader)) return false;
+                this.currValueLength = (int) Mysqls.readLength(reader);
+            }
+            if (this.currValueLength > -1 && reader.remaining() < this.currValueLength) {
+                return false;
+            }
+            this.values[i] = (this.currValueLength == -1) ? null : Mysqls.readBytes(reader, this.currValueLength);
+            this.currValueIndex++;
+            this.currValueLength = -2;
         }
+        this.currValueIndex++;
+        return true;
     }
 
     public byte[] getValue(int i) {

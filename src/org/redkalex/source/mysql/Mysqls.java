@@ -387,6 +387,24 @@ class Mysqls {
         }
     }
 
+    protected static boolean checkLength(ByteBufferReader buffer) {
+        int remain = buffer.remaining();
+        if (remain < 1) return false;
+        int length = buffer.preget() & 0xff;
+        switch (length) {
+            case 251:
+                return true;
+            case 252:
+                return remain > 3; //readUB2 + 1
+            case 253:
+                return remain > 4; //readUB3 + 1
+            case 254:
+                return remain > 9; //readLong + 1
+            default:
+                return true;
+        }
+    }
+
     protected static long readLength(ByteBufferReader buffer) {
         int length = buffer.get() & 0xff;
         switch (length) {
@@ -415,6 +433,13 @@ class Mysqls {
     protected static byte[] readBytesWithLength(ByteBufferReader buffer) {
         int length = (int) readLength(buffer);
         if (length == -1) return null;
+        if (length <= 0) return new byte[0];
+        byte[] bs = new byte[length];
+        buffer.get(bs);
+        return bs;
+    }
+
+    protected static byte[] readBytes(ByteBufferReader buffer, int length) {
         if (length <= 0) return new byte[0];
         byte[] bs = new byte[length];
         buffer.get(bs);
