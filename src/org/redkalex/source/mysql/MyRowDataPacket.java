@@ -21,14 +21,14 @@ public class MyRowDataPacket extends MyPacket {
 
     public final byte[][] values;
 
-    public MyRowDataPacket(MyColumnDescPacket[] columns, int len, ByteBufferReader buffer, int columnCount, byte[] array) {
+    public MyRowDataPacket(MyColumnDescPacket[] columns, int len, ByteBufferReader reader, int columnCount, byte[] array) {
         this.columns = columns;
         this.columnCount = columnCount;
         this.packetLength = len;
-        this.packetIndex = buffer.get();
+        this.packetIndex = reader.get();
         this.values = new byte[columnCount][];
         for (int i = 0; i < columnCount; i++) {
-            this.values[i] = Mysqls.readBytesWithLength(buffer);
+            this.values[i] = Mysqls.readBytesWithLength(reader);
         }
     }
 

@@ -21,13 +21,13 @@ public class MyQueryPacket extends MyPacket {
         this.packetIndex = 0;
     }
 
-    public ByteBufferWriter writeTo(ByteBufferWriter buffer) {
+    public ByteBufferWriter writeTo(ByteBufferWriter writer) {
         int size = calcPacketSize();
-        Mysqls.writeUB3(buffer, size);
-        buffer.put(packetIndex);
-        buffer.put(COM_QUERY);
-        buffer.put(message);
-        return buffer;
+        Mysqls.writeUB3(writer, size);
+        writer.put(packetIndex);
+        writer.put(COM_QUERY);
+        writer.put(message);
+        return writer;
     }
 
     public ByteBuffer writeTo(ByteBuffer buffer) {

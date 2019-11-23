@@ -45,16 +45,16 @@ public class MyOKPacket extends MyPacket {
 
     public int statusFlags;
 
-    public MyOKPacket(int len, ByteBufferReader buffer, byte[] array) {
-        this.packetLength = len < 1 ? Mysqls.readUB3(buffer) : len;
-        this.packetIndex = buffer.get();
-        this.typeid = buffer.get() & 0xff;
+    public MyOKPacket(int len, ByteBufferReader reader, byte[] array) {
+        this.packetLength = len < 1 ? Mysqls.readUB3(reader) : len;
+        this.packetIndex = reader.get();
+        this.typeid = reader.get() & 0xff;
         if (this.typeid == TYPE_ID_EOF) {
-            this.warningCount = Mysqls.readUB2(buffer);
-            this.statusFlags = Mysqls.readUB2(buffer);
+            this.warningCount = Mysqls.readUB2(reader);
+            this.statusFlags = Mysqls.readUB2(reader);
         } else if (this.typeid == TYPE_ID_ERROR) {
-            this.vendorCode = Mysqls.readUB2(buffer);
-            byte[] bs = Mysqls.readBytes(buffer, array);
+            this.vendorCode = Mysqls.readUB2(reader);
+            byte[] bs = Mysqls.readBytes(reader, array);
             if (bs != null) {
                 this.info = new String(bs);
                 if (this.info.charAt(0) == '#') {
@@ -73,14 +73,14 @@ public class MyOKPacket extends MyPacket {
             }
         } else {
             //com.mysql.cj.protocol.a.NativeProtocol
-            this.updateCount = Mysqls.readLength(buffer);
-            this.updateID = Mysqls.readLength(buffer);
-            this.statusFlags = Mysqls.readUB2(buffer);
-            this.warningCount = Mysqls.readUB2(buffer);
-            if (buffer.hasRemaining()) {
+            this.updateCount = Mysqls.readLength(reader);
+            this.updateID = Mysqls.readLength(reader);
+            this.statusFlags = Mysqls.readUB2(reader);
+            this.warningCount = Mysqls.readUB2(reader);
+            if (reader.hasRemaining()) {
                 //buffer.get(); // skips the 'last packet' flag (packet signature)
                 //this.vendorCode = MySQLs.readUB2(buffer);
-                byte[] bs = Mysqls.readBytes(buffer, array);
+                byte[] bs = Mysqls.readBytes(reader, array);
                 if (bs != null) {
                     this.info = new String(bs);
                     if (this.info.charAt(0) == '#') {

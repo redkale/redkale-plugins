@@ -47,24 +47,24 @@ public class MyColumnDescPacket extends MyPacket {
 
     public byte[] defaultValues;
 
-    public MyColumnDescPacket(ByteBufferReader buffer, byte[] array) {
-        this.packetLength = Mysqls.readUB3(buffer);
-        this.packetIndex = buffer.get();
-        this.def = Mysqls.readBytesWithLength(buffer);
-        this.catalog = Mysqls.readBytesWithLength(buffer);
-        this.tableLabel = Mysqls.readBytesWithLength(buffer);
-        this.tableName = Mysqls.readBytesWithLength(buffer);
-        this.columnLabel = new String(Mysqls.readBytesWithLength(buffer));
-        this.columnName = new String(Mysqls.readBytesWithLength(buffer));
-        int nextLength = buffer.get() & 0xff;
-        this.charsetSet = Mysqls.readUB2(buffer);
-        this.length = Mysqls.readUB4(buffer);
-        this.type = buffer.get() & 0xff;
-        this.flags = Mysqls.readUB2(buffer);
-        this.decimals = buffer.get();
-        this.filler = Mysqls.readBytesWithLength(buffer);
-        if (buffer.hasRemaining()) {
-            this.defaultValues = Mysqls.readBytesWithLength(buffer);
+    public MyColumnDescPacket(ByteBufferReader reader, byte[] array) {
+        this.packetLength = Mysqls.readUB3(reader);
+        this.packetIndex = reader.get();
+        this.def = Mysqls.readBytesWithLength(reader);
+        this.catalog = Mysqls.readBytesWithLength(reader);
+        this.tableLabel = Mysqls.readBytesWithLength(reader);
+        this.tableName = Mysqls.readBytesWithLength(reader);
+        this.columnLabel = new String(Mysqls.readBytesWithLength(reader));
+        this.columnName = new String(Mysqls.readBytesWithLength(reader));
+        int nextLength = reader.get() & 0xff;
+        this.charsetSet = Mysqls.readUB2(reader);
+        this.length = Mysqls.readUB4(reader);
+        this.type = reader.get() & 0xff;
+        this.flags = Mysqls.readUB2(reader);
+        this.decimals = reader.get();
+        this.filler = Mysqls.readBytesWithLength(reader);
+        if (reader.hasRemaining()) {
+            this.defaultValues = Mysqls.readBytesWithLength(reader);
         }
     }
 }
