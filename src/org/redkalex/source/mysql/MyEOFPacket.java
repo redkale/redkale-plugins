@@ -20,9 +20,9 @@ public class MyEOFPacket extends MyPacket {
 
     public int statusFlags;
 
-    public MyEOFPacket(int len, ByteBufferReader reader, byte[] array) {
+    public MyEOFPacket(int len, int index, ByteBufferReader reader, byte[] array) {
         this.packetLength = len < 1 ? Mysqls.readUB3(reader) : len;
-        this.packetIndex = reader.get();
+        this.packetIndex = index < 0 ? reader.get() : (byte)index;
         this.typeid = reader.get() & 0xff;
         if (this.typeid == TYPE_ID_EOF) {
             this.warningCount = Mysqls.readUB2(reader);

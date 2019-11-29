@@ -649,13 +649,15 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                                 colDescs[i] = new MyColumnDescPacket(bufferReader, array);
                             }
                             //读取EOF包
-                            MyEOFPacket eofPacket = new MyEOFPacket(-1, bufferReader, array);
+                            MyEOFPacket eofPacket = new MyEOFPacket(-1, -1, bufferReader, array);
                             //System.out.println("字段描述EOF包： " + eofPacket);
 
                             List<MyRowDataPacket> rows = new ArrayList<>();
                             int colPacketLength = Mysqls.readUB3(bufferReader);
-                            while (colPacketLength != 5) { //EOF包
-                                final MyRowDataPacket rowData = new MyRowDataPacket(colDescs, colPacketLength, bufferReader, countPacket.columnCount, array);
+                            int packetIndex = bufferReader.get();
+                            int typeid = bufferReader.preget() & 0xff;
+                            while (typeid != Mysqls.TYPE_ID_EOF) { //EOF包
+                                final MyRowDataPacket rowData = new MyRowDataPacket(colDescs, colPacketLength, packetIndex, bufferReader, countPacket.columnCount, array);
                                 while (!rowData.readColumnValue(bufferReader) || bufferReader.remaining() < 3 + 6) {
                                     final CompletableFuture<ByteBuffer> patchFuture = new CompletableFuture<>();
                                     conn.read(new CompletionHandler<Integer, ByteBuffer>() {
@@ -677,9 +679,11 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                                     bufferReader.append(patchFuture.join());
                                 }
                                 colPacketLength = Mysqls.readUB3(bufferReader);
+                                packetIndex = bufferReader.get();
+                                typeid = bufferReader.preget() & 0xff;
                                 rows.add(rowData);
                             }
-                            eofPacket = new MyEOFPacket(colPacketLength, bufferReader, array);
+                            eofPacket = new MyEOFPacket(colPacketLength, packetIndex, bufferReader, array);
                             //System.out.println("查询结果包解析完毕： " + eofPacket);
 
                             resultSet = new MyResultSet(colDescs, rows);
