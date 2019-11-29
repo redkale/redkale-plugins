@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
-import org.redkale.service.AbstractService;
+import org.redkale.service.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
@@ -20,6 +20,10 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
+@Local
+@AutoLoad(false)
+@SuppressWarnings("unchecked")
+@ResourceType(DataSource.class)
 public class MongodbDataSource extends AbstractService implements DataSource, AutoCloseable, Resourcable {
 
     @Override
