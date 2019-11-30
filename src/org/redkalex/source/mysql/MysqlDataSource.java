@@ -649,7 +649,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                                 colDescs[i] = new MyColumnDescPacket(bufferReader, array);
                             }
                             //读取EOF包
-                            MyEOFPacket eofPacket = new MyEOFPacket(-1, -1, bufferReader, array);
+                            MyEOFPacket eofPacket = new MyEOFPacket(-1, -1000, bufferReader, array);
                             //System.out.println("字段描述EOF包： " + eofPacket);
 
                             List<MyRowDataPacket> rows = new ArrayList<>();

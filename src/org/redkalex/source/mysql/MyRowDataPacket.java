@@ -29,7 +29,7 @@ public class MyRowDataPacket extends MyPacket {
         this.columns = columns;
         this.columnCount = columnCount;
         this.packetLength = len;
-        this.packetIndex = index < 0 ? reader.get() : (byte) index;
+        this.packetIndex = index < -999 ? reader.get() : (byte) index;
         this.values = new byte[columnCount][];
     }
 
