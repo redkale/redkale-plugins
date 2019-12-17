@@ -105,6 +105,10 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             }
             ba.write((byte) ')');
             sqlBytesArray[i] = ba.getBytes();
+            if (info.isLoggable(logger, Level.FINEST)) {
+                String realsql = ba.toString(StandardCharsets.UTF_8);
+                if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " insert sql=" + realsql);
+            }
             ba.clear();
         }
         return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, values[0], true, sqlBytesArray).thenApply((int[] rs) -> {
@@ -167,6 +171,10 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                 }
             }
             sqlBytesArray[i] = ba.getBytes();
+            if (info.isLoggable(logger, Level.FINEST)) {
+                String realsql = ba.toString(StandardCharsets.UTF_8);
+                if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + realsql);
+            }
             ba.clear();
         }
         return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, null, false, sqlBytesArray).thenApply((int[] rs) -> {
