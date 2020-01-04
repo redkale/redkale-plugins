@@ -83,12 +83,14 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     @Override
     protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
-        final byte[][] sqlBytesArray = new byte[values.length][];
+        final byte[][] sqlBytesArray = new byte[1][];
         String presql = info.getInsertPrepareSQL(values[0]);
-        byte[] prebs = (presql.substring(0, presql.indexOf("VALUES")) + "VALUES(").getBytes(StandardCharsets.UTF_8); //不会存在非ASCII字符
+        byte[] prebs = (presql.substring(0, presql.indexOf("VALUES")) + "VALUES").getBytes(StandardCharsets.UTF_8); //不会存在非ASCII字符
         ByteArray ba = new ByteArray();
+        ba.write(prebs);
         for (int i = 0; i < values.length; i++) {
-            ba.write(prebs);
+            if (i > 0) ba.write((byte) ',');
+            ba.write((byte) '(');
             for (int j = 0; j < attrs.length; j++) {
                 if (j > 0) ba.write((byte) ',');
                 byte[] param = formatPrepareParam(info, attrs[j], attrs[j].get(values[i]));
@@ -104,12 +106,11 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                 }
             }
             ba.write((byte) ')');
-            sqlBytesArray[i] = ba.getBytes();
-            if (info.isLoggable(logger, Level.FINEST)) {
-                String realsql = ba.toString(StandardCharsets.UTF_8);
-                if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " insert sql=" + realsql);
-            }
-            ba.clear();
+        }
+        sqlBytesArray[0] = ba.getBytes();
+        if (info.isLoggable(logger, Level.FINEST)) {
+            String realsql = ba.toString(StandardCharsets.UTF_8);
+            if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " insert sql=" + realsql);
         }
         return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, values[0], true, sqlBytesArray).thenApply((int[] rs) -> {
             int count = 0;
