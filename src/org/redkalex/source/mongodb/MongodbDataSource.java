@@ -27,7 +27,7 @@ import org.redkale.util.*;
 public class MongodbDataSource extends AbstractService implements DataSource, AutoCloseable, Resourcable {
 
     @Override
-    public void init(AnyValue config) {
+    public void init(AnyValue config) { 
         super.init(config); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -512,32 +512,52 @@ public class MongodbDataSource extends AbstractService implements DataSource, Au
     }
 
     @Override
-    public <T, V extends Serializable> HashSet<V> queryColumnSet(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
+    public <T, V extends Serializable> Set<V> queryColumnSet(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public <T, V extends Serializable> CompletableFuture<HashSet<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
+    public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public <T, V extends Serializable> HashSet<V> queryColumnSet(String selectedColumn, Class<T> clazz, FilterBean bean) {
+    public <T, V extends Serializable> Set<V> queryColumnSet(String selectedColumn, Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public <T, V extends Serializable> CompletableFuture<HashSet<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, FilterBean bean) {
+    public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, FilterBean bean) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public <T, V extends Serializable> HashSet<V> queryColumnSet(String selectedColumn, Class<T> clazz, FilterNode node) {
+    public <T, V extends Serializable> Set<V> queryColumnSet(String selectedColumn, Class<T> clazz, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public <T, V extends Serializable> CompletableFuture<HashSet<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, FilterNode node) {
+    public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T, V extends Serializable> Set<V> queryColumnSet(String selectedColumn, Class<T> clazz, Flipper flipper, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T, V extends Serializable> Set<V> queryColumnSet(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -668,6 +688,106 @@ public class MongodbDataSource extends AbstractService implements DataSource, Au
 
     @Override
     public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, SelectColumn selects, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, String column, Serializable colval) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, String column, Serializable colval) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, SelectColumn selects, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, SelectColumn selects, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, SelectColumn selects, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, SelectColumn selects, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, Flipper flipper, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, Flipper flipper, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, Flipper flipper, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, Flipper flipper, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterBean bean) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> Set<T> querySet(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterNode node) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, SelectColumn selects, Flipper flipper, FilterNode node) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
