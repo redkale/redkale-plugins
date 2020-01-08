@@ -48,7 +48,27 @@ public class ElasticSearchDataSource extends AbstractService implements DataSour
     }
 
     @Override
+    public <T> int insert(Collection<T> entitys) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> int insert(Stream<T> entitys) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
     public <T> CompletableFuture<Integer> insertAsync(T... entitys) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Integer> insertAsync(Collection<T> entitys) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Integer> insertAsync(Stream<T> entitys) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -941,5 +961,5 @@ public class ElasticSearchDataSource extends AbstractService implements DataSour
     public String resourceName() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
-
+    
 }
