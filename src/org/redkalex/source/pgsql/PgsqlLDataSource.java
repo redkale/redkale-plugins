@@ -256,6 +256,30 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDB(EntityInfo<T> info, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns) {
+        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+            Map rs = new LinkedHashMap<>();
+            try {
+                while (set.next()) {
+                    int index = 0;
+                    Serializable[] keys = new Serializable[groupByColumns.length];
+                    for (int i = 0; i < keys.length; i++) {
+                        keys[i] = (Serializable) set.getObject(++index);
+                    }
+                    Number[] vals = new Number[funcNodes.length];
+                    for (int i = 0; i < vals.length; i++) {
+                        vals[i] = (Number) set.getObject(++index);
+                    }
+                    rs.put(keys, vals);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return rs;
+        }));
+    }
+    
+    @Override
     protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, String sql, boolean onlypk, SelectColumn selects) {
         return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
             T rs = null;
