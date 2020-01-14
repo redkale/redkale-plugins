@@ -23,6 +23,10 @@ public class MyPoolSource extends PoolTcpSource {
 
     protected static final String CONN_ATTR_BYTES_NAME = "BYTES_NAME";
 
+    protected static final String CONN_ATTR_CURR_DBNAME = "CURR_DBNAME";
+
+    protected static final byte[] CURRDBNAME_BYTES = "SELECT DATABASE()".getBytes();
+    
     protected static final byte[] PING_BYTES = "SELECT 1".getBytes();
 
     public MyPoolSource(String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop,

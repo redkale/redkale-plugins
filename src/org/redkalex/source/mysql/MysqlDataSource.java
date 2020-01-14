@@ -129,7 +129,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, String sql) {
+    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, final String table, String sql) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sql);
         }
@@ -137,7 +137,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, String sql) {
+    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, final String table, String sql) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sql);
         }
@@ -409,6 +409,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                     final byte[] createTableSqlBytes = info.getTableCopySQL(newTable).getBytes(StandardCharsets.UTF_8);
                     executeAtomicOneUpdate(info, conn, array, createTableSqlBytes).whenComplete((o2, ex2) -> {
                         if (ex2 == null) { //建分表成功
+                            info.addDisTable(newTable);
                             //重新执行一遍sql语句
                             executeAtomicOneUpdate(info, conn, array, sqlBytes).whenComplete((o3, ex3) -> {
                                 if (ex3 == null) {
@@ -426,6 +427,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                                     if (ex3 == null) { //建库成功
                                         executeAtomicOneUpdate(info, conn, array, createTableSqlBytes).whenComplete((o4, ex4) -> { //建表
                                             if (ex4 == null) { //建表成功
+                                                info.addDisTable(newTable);
                                                 //重新执行一遍sql语句
                                                 executeAtomicOneUpdate(info, conn, array, sqlBytes).whenComplete((o5, ex5) -> {
                                                     if (ex5 == null) {
