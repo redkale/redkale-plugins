@@ -258,7 +258,9 @@ public class MyResultSet implements java.sql.ResultSet {
 
     @Override
     public Object getObject(String columnLabel) throws SQLException {
-        return this.currRow.getObject(colmap.get(columnLabel.toLowerCase()));
+        Integer index = colmap.get(columnLabel.toLowerCase());
+        if (index == null) throw new SQLException("Not found column " + columnLabel);
+        return this.currRow.getObject(index);
     }
 
     @Override
