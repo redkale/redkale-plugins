@@ -48,7 +48,7 @@ public class UnionPayService extends AbstractPayService {
             Class clazz = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
             Class<? extends java.security.Provider> providerClazz = (Class<? extends java.security.Provider>) clazz;
             if (Security.getProvider("BC") != null) Security.removeProvider("BC");
-            Security.addProvider(providerClazz.newInstance());
+            Security.addProvider(providerClazz.getDeclaredConstructor().newInstance());
         } catch (Exception ex) {
         }
     }

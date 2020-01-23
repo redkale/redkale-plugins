@@ -61,7 +61,7 @@ public class NodeSocksServer extends NodeServer {
         for (FilterEntry<? extends Servlet> en : filter.getFilterEntrys()) {
             Class<SocksServlet> clazz = (Class<SocksServlet>) en.getType();
             if (Modifier.isAbstract(clazz.getModifiers())) continue;
-            final SocksServlet servlet = clazz.newInstance();
+            final SocksServlet servlet = clazz.getDeclaredConstructor().newInstance();
             resourceFactory.inject(servlet);
             DefaultAnyValue servletConf = (DefaultAnyValue) en.getProperty();
             this.socksServer.addServlet(servlet, null, servletConf);
