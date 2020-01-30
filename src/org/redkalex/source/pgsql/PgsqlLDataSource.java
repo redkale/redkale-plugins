@@ -278,7 +278,7 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
             return rs;
         }));
     }
-    
+
     @Override
     protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, String sql, boolean onlypk, SelectColumn selects) {
         return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
@@ -365,6 +365,7 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected static <T> byte[] formatPrepareParam(EntityInfo<T> info, Attribute<T, Serializable> attr, Object param) {
+        if (param == null && info.isNotNullJson(attr)) return new byte[0];
         if (param == null) return null;
         if (param instanceof byte[]) return (byte[]) param;
         if (param instanceof Boolean) return (Boolean) param ? TRUE : FALSE;

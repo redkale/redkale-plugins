@@ -463,6 +463,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected static <T> byte[] formatPrepareParam(EntityInfo<T> info, Attribute<T, Serializable> attr, Object param) {
+        if (param == null && info.isNotNullJson(attr)) return new byte[0];
         if (param == null) return null;
         if (param instanceof CharSequence) {
             return param.toString().getBytes(StandardCharsets.UTF_8);
