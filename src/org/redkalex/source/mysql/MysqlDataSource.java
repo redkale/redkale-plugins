@@ -112,7 +112,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             String realsql = ba.toString(StandardCharsets.UTF_8);
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " insert sql=" + realsql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, values[0], true, sqlBytesArray).thenApply((int[] rs) -> {
+        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.INSERT, values[0], true, sqlBytesArray).thenApply((int[] rs) -> {
             int count = 0;
             for (int i : rs) count += i;
             return count;
@@ -125,7 +125,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " delete sql=" + realsql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, realsql.getBytes(StandardCharsets.UTF_8)));
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.DELETE, realsql.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -133,7 +133,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, sql.getBytes(StandardCharsets.UTF_8)));
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.CLEAR, sql.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -141,7 +141,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, sql.getBytes(StandardCharsets.UTF_8)));
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.DROP, sql.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -178,7 +178,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             }
             ba.clear();
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, null, false, sqlBytesArray).thenApply((int[] rs) -> {
+        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.UPDATE, null, false, sqlBytesArray).thenApply((int[] rs) -> {
             int count = 0;
             for (int i : rs) count += i;
             return count;
@@ -191,7 +191,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + realsql);
         }
-        if (!prepared) return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, realsql.getBytes(StandardCharsets.UTF_8)));
+        if (!prepared) return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.UPDATE, realsql.getBytes(StandardCharsets.UTF_8)));
         ByteArray ba = new ByteArray();
         String[] subsqls = realsql.split("\\" + prepareParamSign(1).replace("1", "") + "\\d+");
         for (int i = 0; i < params.length; i++) {
@@ -211,7 +211,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         for (int i = params.length; i < subsqls.length; i++) {
             ba.write(subsqls[i].getBytes(StandardCharsets.UTF_8));
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, ba.getBytes()));
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.UPDATE, ba.getBytes()));
     }
 
     @Override
@@ -390,7 +390,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<Integer> exceptionallyUpdateTableNotExist(CompletableFuture<Integer> future,
-        EntityInfo<T> info, final AsyncConnection conn, final byte[] array, final T oneEntity, boolean checkAndCreateTable, final byte[] sqlBytes) {
+        EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final byte[] array, final T oneEntity, boolean checkAndCreateTable, final byte[] sqlBytes) {
         final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
         future.whenComplete((o, ex1) -> {
             if (ex1 == null) {
@@ -400,8 +400,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             try {
                 while (ex1 instanceof CompletionException) ex1 = ex1.getCause();
                 if (info.getTableStrategy() != null && ex1 instanceof SQLException && info.isTableNotExist((SQLException) ex1)) {
-                    if (!checkAndCreateTable) { //update、delete或drop
-                        newFuture.complete(0);
+                    if (!checkAndCreateTable) { //update、delete、clear或drop
+                        newFuture.complete((mode == UpdateMode.DROP || mode == UpdateMode.CLEAR) ? -1 : 0);
                         return;
                     }
                     //分表分库
@@ -490,15 +490,15 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         return String.valueOf(param).getBytes(StandardCharsets.UTF_8);
     }
 
-    protected <T> CompletableFuture<Integer> executeOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] sqlBytes) {
-        return executeBatchUpdate(info, conn, null, false, sqlBytes).thenApply(a -> a[0]);
+    protected <T> CompletableFuture<Integer> executeOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final byte[] sqlBytes) {
+        return executeBatchUpdate(info, conn, mode, null, false, sqlBytes).thenApply(a -> a[0]);
     }
 
-    protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final T oneEntity, boolean checkAndCreateTable, final byte[]... sqlBytesArray) {
+    protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final T oneEntity, boolean checkAndCreateTable, final byte[]... sqlBytesArray) {
         final byte[] array = conn.getAttribute(MyPoolSource.CONN_ATTR_BYTES_NAME);
         if (sqlBytesArray.length == 1) {
             return executeAtomicOneUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o
-                -> checkAndCreateTable ? exceptionallyUpdateTableNotExist(executeAtomicOneUpdate(info, conn, array, sqlBytesArray[0]), info, conn, array, oneEntity, checkAndCreateTable, sqlBytesArray[0])
+                -> checkAndCreateTable ? exceptionallyUpdateTableNotExist(executeAtomicOneUpdate(info, conn, array, sqlBytesArray[0]), info, conn, mode, array, oneEntity, checkAndCreateTable, sqlBytesArray[0])
                     : executeAtomicOneUpdate(info, conn, array, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
                 if (t == null) {
                     writePool.offerConnection(conn);
@@ -517,7 +517,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             future = future.thenCompose(a -> {
                 CompletableFuture<Integer> nextFuture = executeAtomicOneUpdate(info, conn, array, sqlBytes);
                 nextFuture.thenAccept(b -> rs[index] = b);
-                if (checkAndCreateTable && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, conn, array, oneEntity, checkAndCreateTable, sqlBytes);
+                if (checkAndCreateTable && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, conn, mode, array, oneEntity, checkAndCreateTable, sqlBytes);
                 nextFuture.whenComplete((o, t) -> {
                     if (t != null) executeAtomicOneUpdate(info, conn, array, SQL_ROLLBACK).join();
                 });
@@ -764,7 +764,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     @Local
     @Override
     public int directExecute(String sql) {
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(null, conn, sql.getBytes(StandardCharsets.UTF_8))).join();
+        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(null, conn, UpdateMode.OTHER, sql.getBytes(StandardCharsets.UTF_8))).join();
     }
 
     @Local
@@ -775,7 +775,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             sqlBytesArray[i] = sqls[i].getBytes(StandardCharsets.UTF_8);
 
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(null, conn, null, false, sqlBytesArray)).join();
+        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(null, conn, UpdateMode.OTHER, null, false, sqlBytesArray)).join();
     }
 
     @Local
