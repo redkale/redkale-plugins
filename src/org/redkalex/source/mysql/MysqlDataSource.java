@@ -112,7 +112,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             String realsql = ba.toString(StandardCharsets.UTF_8);
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " insert sql=" + realsql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.INSERT, values[0], true, sqlBytesArray).thenApply((int[] rs) -> {
+        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.INSERT, values[0], sqlBytesArray).thenApply((int[] rs) -> {
             int count = 0;
             for (int i : rs) count += i;
             return count;
@@ -133,7 +133,27 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.CLEAR, sql.getBytes(StandardCharsets.UTF_8)));
+        return writePool.pollAsync().thenCompose((conn) -> {
+            CompletableFuture<Integer> future = executeOneUpdate(info, conn, UpdateMode.CLEAR, sql.getBytes(StandardCharsets.UTF_8));
+            final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
+            future.whenComplete((o, ex1) -> {
+                if (ex1 == null) {
+                    newFuture.complete(o);
+                    return;
+                }
+                try {
+                    while (ex1 instanceof CompletionException) ex1 = ex1.getCause();
+                    if (info.isTableNotExist((SQLException) ex1)) {
+                        newFuture.complete(-1);
+                    } else {
+                        newFuture.completeExceptionally(ex1);
+                    }
+                } catch (Throwable e) {
+                    newFuture.completeExceptionally(ex1);
+                }
+            });
+            return newFuture;
+        });
     }
 
     @Override
@@ -141,7 +161,27 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.DROP, sql.getBytes(StandardCharsets.UTF_8)));
+        return writePool.pollAsync().thenCompose((conn) -> {
+            CompletableFuture<Integer> future = executeOneUpdate(info, conn, UpdateMode.DROP, sql.getBytes(StandardCharsets.UTF_8));
+            final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
+            future.whenComplete((o, ex1) -> {
+                if (ex1 == null) {
+                    newFuture.complete(o);
+                    return;
+                }
+                try {
+                    while (ex1 instanceof CompletionException) ex1 = ex1.getCause();
+                    if (info.isTableNotExist((SQLException) ex1)) {
+                        newFuture.complete(-1);
+                    } else {
+                        newFuture.completeExceptionally(ex1);
+                    }
+                } catch (Throwable e) {
+                    newFuture.completeExceptionally(ex1);
+                }
+            });
+            return newFuture;
+        });
     }
 
     @Override
@@ -178,7 +218,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             }
             ba.clear();
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.UPDATE, null, false, sqlBytesArray).thenApply((int[] rs) -> {
+        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.UPDATE, null, sqlBytesArray).thenApply((int[] rs) -> {
             int count = 0;
             for (int i : rs) count += i;
             return count;
@@ -390,7 +430,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<Integer> exceptionallyUpdateTableNotExist(CompletableFuture<Integer> future,
-        EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final byte[] array, final T oneEntity, boolean checkAndCreateTable, final byte[] sqlBytes) {
+        EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final byte[] array, final T oneEntity, final byte[] sqlBytes) {
         final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
         future.whenComplete((o, ex1) -> {
             if (ex1 == null) {
@@ -400,7 +440,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             try {
                 while (ex1 instanceof CompletionException) ex1 = ex1.getCause();
                 if (info.getTableStrategy() != null && ex1 instanceof SQLException && info.isTableNotExist((SQLException) ex1)) {
-                    if (!checkAndCreateTable) { //update、delete、clear或drop
+                    if (mode != UpdateMode.INSERT) { //update、delete、clear或drop
                         newFuture.complete((mode == UpdateMode.DROP || mode == UpdateMode.CLEAR) ? -1 : 0);
                         return;
                     }
@@ -491,14 +531,14 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<Integer> executeOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final byte[] sqlBytes) {
-        return executeBatchUpdate(info, conn, mode, null, false, sqlBytes).thenApply(a -> a[0]);
+        return executeBatchUpdate(info, conn, mode, null, sqlBytes).thenApply(a -> a[0]);
     }
 
-    protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final T oneEntity, boolean checkAndCreateTable, final byte[]... sqlBytesArray) {
+    protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final T oneEntity, final byte[]... sqlBytesArray) {
         final byte[] array = conn.getAttribute(MyPoolSource.CONN_ATTR_BYTES_NAME);
         if (sqlBytesArray.length == 1) {
             return executeAtomicOneUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o
-                -> checkAndCreateTable ? exceptionallyUpdateTableNotExist(executeAtomicOneUpdate(info, conn, array, sqlBytesArray[0]), info, conn, mode, array, oneEntity, checkAndCreateTable, sqlBytesArray[0])
+                -> mode == UpdateMode.INSERT ? exceptionallyUpdateTableNotExist(executeAtomicOneUpdate(info, conn, array, sqlBytesArray[0]), info, conn, mode, array, oneEntity, sqlBytesArray[0])
                     : executeAtomicOneUpdate(info, conn, array, sqlBytesArray[0])).thenApply(a -> new int[]{a}).whenComplete((o, t) -> {
                 if (t == null) {
                     writePool.offerConnection(conn);
@@ -517,7 +557,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             future = future.thenCompose(a -> {
                 CompletableFuture<Integer> nextFuture = executeAtomicOneUpdate(info, conn, array, sqlBytes);
                 nextFuture.thenAccept(b -> rs[index] = b);
-                if (checkAndCreateTable && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, conn, mode, array, oneEntity, checkAndCreateTable, sqlBytes);
+                if (mode == UpdateMode.INSERT && info != null && info.getTableStrategy() != null) nextFuture = exceptionallyUpdateTableNotExist(nextFuture, info, conn, mode, array, oneEntity, sqlBytes);
                 nextFuture.whenComplete((o, t) -> {
                     if (t != null) executeAtomicOneUpdate(info, conn, array, SQL_ROLLBACK).join();
                 });
@@ -775,7 +815,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             sqlBytesArray[i] = sqls[i].getBytes(StandardCharsets.UTF_8);
 
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(null, conn, UpdateMode.OTHER, null, false, sqlBytesArray)).join();
+        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(null, conn, UpdateMode.OTHER, null, sqlBytesArray)).join();
     }
 
     @Local
