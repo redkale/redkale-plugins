@@ -26,7 +26,7 @@ class Mysqls {
     static final int COMP_HEADER_LENGTH = 3;
 
     static final int MIN_COMPRESS_LEN = 50;
-
+ 
     static final int HEADER_LENGTH = 4;
 
     static final int AUTH_411_OVERHEAD = 33;
