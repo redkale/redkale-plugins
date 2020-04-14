@@ -62,6 +62,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
 
     protected Map<SocketAddress, byte[]> passwords;
 
+    protected int db;
+
     protected Transport transport;
 
     @Override
@@ -93,6 +95,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
             addresses.add(addr);
             String password = node.getValue("password", "").trim();
             if (!password.isEmpty()) passwords0.put(addr, password.getBytes(UTF8));
+            String db0 = node.getValue("db", "").trim();
+            if (!db0.isEmpty()) this.db = Integer.valueOf(db0);
         }
         if (!passwords0.isEmpty()) this.passwords = passwords0;
         TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity, readTimeoutSeconds, writeTimeoutSeconds);
@@ -1029,100 +1033,19 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                 if (conn.getSubobject() != null) return CompletableFuture.completedFuture(conn);
                 byte[] password = passwords.get(conn.getRemoteAddress());
                 if (password == null) return CompletableFuture.completedFuture(conn);
-                final CompletableFuture<AsyncConnection> rsfuture = new CompletableFuture();
-                try {
-                    final BsonByteBufferWriter authwriter = new BsonByteBufferWriter(transport.getBufferSupplier());
-                    authwriter.writeTo(ASTERISK_BYTE);
-                    authwriter.writeTo((byte) '2');
-                    authwriter.writeTo((byte) '\r', (byte) '\n');
-                    authwriter.writeTo(DOLLAR_BYTE);
-                    authwriter.writeTo((byte) '4');
-                    authwriter.writeTo((byte) '\r', (byte) '\n');
-                    authwriter.writeTo("AUTH".getBytes(UTF8));
-                    authwriter.writeTo((byte) '\r', (byte) '\n');
-
-                    authwriter.writeTo(DOLLAR_BYTE);
-                    authwriter.writeTo(String.valueOf(password.length).getBytes(UTF8));
-                    authwriter.writeTo((byte) '\r', (byte) '\n');
-                    authwriter.writeTo(password);
-                    authwriter.writeTo((byte) '\r', (byte) '\n');
-
-                    final ByteBuffer[] authbuffers = authwriter.toBuffers();
-                    conn.write(authbuffers, authbuffers, new CompletionHandler<Integer, ByteBuffer[]>() {
-                        @Override
-                        public void completed(Integer result, ByteBuffer[] attachments) {
-                            int index = -1;
-                            try {
-                                for (int i = 0; i < attachments.length; i++) {
-                                    if (attachments[i].hasRemaining()) {
-                                        index = i;
-                                        break;
-                                    } else {
-                                        transport.offerBuffer(attachments[i]);
-                                    }
-                                }
-                                if (index == 0) {
-                                    conn.write(attachments, attachments, this);
-                                    return;
-                                } else if (index > 0) {
-                                    ByteBuffer[] newattachs = new ByteBuffer[attachments.length - index];
-                                    System.arraycopy(attachments, index, newattachs, 0, newattachs.length);
-                                    conn.write(newattachs, newattachs, this);
-                                    return;
-                                }
-                                //----------------------- 读取返回结果 -------------------------------------
-                                conn.read(new ReplyCompletionHandler(conn) {
-                                    @Override
-                                    public void completed(Integer result, ByteBuffer buffer) {
-                                        buffer.flip();
-                                        try {
-                                            final byte sign = buffer.get();
-                                            if (sign == PLUS_BYTE) { // +
-                                                byte[] bs = readBytes(buffer);
-                                                if ("OK".equalsIgnoreCase(new String(bs))) {
-                                                    conn.setSubobject("authed");
-                                                    rsfuture.complete(conn);
-                                                } else {
-                                                    transport.offerConnection(false, conn);
-                                                    rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
-                                                }
-                                            } else if (sign == MINUS_BYTE) { // -   异常
-                                                String bs = readString(buffer);
-                                                transport.offerConnection(false, conn);
-                                                rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
-                                            } else {
-                                                String exstr = "Unknown reply: " + (char) sign;
-                                                transport.offerConnection(false, conn);
-                                                rsfuture.completeExceptionally(new RuntimeException(exstr));
-                                            }
-                                        } catch (Exception e) {
-                                            failed(e, buffer);
-                                        }
-                                    }
-
-                                    @Override
-                                    public void failed(Throwable exc, ByteBuffer buffer) {
-                                        conn.offerBuffer(buffer);
-                                        transport.offerConnection(true, conn);
-                                        rsfuture.completeExceptionally(exc);
-                                    }
-
-                                });
-                            } catch (Exception e) {
-                                failed(e, attachments);
-                            }
-                        }
-
-                        @Override
-                        public void failed(Throwable exc, ByteBuffer[] attachments) {
-                            transport.offerConnection(true, conn);
-                            rsfuture.completeExceptionally(exc);
-                        }
+                CompletableFuture<AsyncConnection> rs = auth(conn, password, command);
+                if (db > 0) {
+                    rs = rs.thenCompose(conn2 -> {
+                        if (conn2.getSubobject() != null) return CompletableFuture.completedFuture(conn2);
+                        return selectdb(conn2, db, command);
                     });
-                } catch (Exception e) {
-                    rsfuture.completeExceptionally(e);
                 }
-                return rsfuture;
+                return rs;
+            });
+        } else if (db > 0) {
+            connFuture = connFuture.thenCompose(conn2 -> {
+                if (conn2.getSubobject() != null) return CompletableFuture.completedFuture(conn2);
+                return selectdb(conn2, db, command);
             });
         }
         connFuture.whenComplete((conn, ex) -> {
@@ -1283,6 +1206,199 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         return future;
     }
 
+    private CompletableFuture<AsyncConnection> selectdb(final AsyncConnection conn, final int db, final String command) {
+        final CompletableFuture<AsyncConnection> rsfuture = new CompletableFuture();
+        try {
+            final BsonByteBufferWriter dbwriter = new BsonByteBufferWriter(transport.getBufferSupplier());
+            dbwriter.writeTo(ASTERISK_BYTE);
+            dbwriter.writeTo((byte) '2');
+            dbwriter.writeTo((byte) '\r', (byte) '\n');
+            dbwriter.writeTo(DOLLAR_BYTE);
+            dbwriter.writeTo((byte) '6');
+            dbwriter.writeTo((byte) '\r', (byte) '\n');
+            dbwriter.writeTo("SELECT".getBytes(UTF8));
+            dbwriter.writeTo((byte) '\r', (byte) '\n');
+
+            dbwriter.writeTo(DOLLAR_BYTE);
+            dbwriter.writeTo(String.valueOf(String.valueOf(db).length()).getBytes(UTF8));
+            dbwriter.writeTo((byte) '\r', (byte) '\n');
+            dbwriter.writeTo(String.valueOf(db).getBytes(UTF8));
+            dbwriter.writeTo((byte) '\r', (byte) '\n');
+
+            final ByteBuffer[] authbuffers = dbwriter.toBuffers();
+            conn.write(authbuffers, authbuffers, new CompletionHandler<Integer, ByteBuffer[]>() {
+                @Override
+                public void completed(Integer result, ByteBuffer[] attachments) {
+                    int index = -1;
+                    try {
+                        for (int i = 0; i < attachments.length; i++) {
+                            if (attachments[i].hasRemaining()) {
+                                index = i;
+                                break;
+                            } else {
+                                transport.offerBuffer(attachments[i]);
+                            }
+                        }
+                        if (index == 0) {
+                            conn.write(attachments, attachments, this);
+                            return;
+                        } else if (index > 0) {
+                            ByteBuffer[] newattachs = new ByteBuffer[attachments.length - index];
+                            System.arraycopy(attachments, index, newattachs, 0, newattachs.length);
+                            conn.write(newattachs, newattachs, this);
+                            return;
+                        }
+                        //----------------------- 读取返回结果 -------------------------------------
+                        conn.read(new ReplyCompletionHandler(conn) {
+                            @Override
+                            public void completed(Integer result, ByteBuffer buffer) {
+                                buffer.flip();
+                                try {
+                                    final byte sign = buffer.get();
+                                    if (sign == PLUS_BYTE) { // +
+                                        byte[] bs = readBytes(buffer);
+                                        if ("OK".equalsIgnoreCase(new String(bs))) {
+                                            conn.setSubobject("authed+db");
+                                            rsfuture.complete(conn);
+                                        } else {
+                                            transport.offerConnection(false, conn);
+                                            rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
+                                        }
+                                    } else if (sign == MINUS_BYTE) { // -   异常
+                                        String bs = readString(buffer);
+                                        transport.offerConnection(false, conn);
+                                        rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
+                                    } else {
+                                        String exstr = "Unknown reply: " + (char) sign;
+                                        transport.offerConnection(false, conn);
+                                        rsfuture.completeExceptionally(new RuntimeException(exstr));
+                                    }
+                                } catch (Exception e) {
+                                    failed(e, buffer);
+                                }
+                            }
+
+                            @Override
+                            public void failed(Throwable exc, ByteBuffer buffer) {
+                                conn.offerBuffer(buffer);
+                                transport.offerConnection(true, conn);
+                                rsfuture.completeExceptionally(exc);
+                            }
+
+                        });
+                    } catch (Exception e) {
+                        failed(e, attachments);
+                    }
+                }
+
+                @Override
+                public void failed(Throwable exc, ByteBuffer[] attachments) {
+                    transport.offerConnection(true, conn);
+                    rsfuture.completeExceptionally(exc);
+                }
+            });
+        } catch (Exception e) {
+            rsfuture.completeExceptionally(e);
+        }
+        return rsfuture;
+    }
+
+    private CompletableFuture<AsyncConnection> auth(final AsyncConnection conn, final byte[] password, final String command) {
+        final CompletableFuture<AsyncConnection> rsfuture = new CompletableFuture();
+        try {
+            final BsonByteBufferWriter authwriter = new BsonByteBufferWriter(transport.getBufferSupplier());
+            authwriter.writeTo(ASTERISK_BYTE);
+            authwriter.writeTo((byte) '2');
+            authwriter.writeTo((byte) '\r', (byte) '\n');
+            authwriter.writeTo(DOLLAR_BYTE);
+            authwriter.writeTo((byte) '4');
+            authwriter.writeTo((byte) '\r', (byte) '\n');
+            authwriter.writeTo("AUTH".getBytes(UTF8));
+            authwriter.writeTo((byte) '\r', (byte) '\n');
+
+            authwriter.writeTo(DOLLAR_BYTE);
+            authwriter.writeTo(String.valueOf(password.length).getBytes(UTF8));
+            authwriter.writeTo((byte) '\r', (byte) '\n');
+            authwriter.writeTo(password);
+            authwriter.writeTo((byte) '\r', (byte) '\n');
+
+            final ByteBuffer[] authbuffers = authwriter.toBuffers();
+            conn.write(authbuffers, authbuffers, new CompletionHandler<Integer, ByteBuffer[]>() {
+                @Override
+                public void completed(Integer result, ByteBuffer[] attachments) {
+                    int index = -1;
+                    try {
+                        for (int i = 0; i < attachments.length; i++) {
+                            if (attachments[i].hasRemaining()) {
+                                index = i;
+                                break;
+                            } else {
+                                transport.offerBuffer(attachments[i]);
+                            }
+                        }
+                        if (index == 0) {
+                            conn.write(attachments, attachments, this);
+                            return;
+                        } else if (index > 0) {
+                            ByteBuffer[] newattachs = new ByteBuffer[attachments.length - index];
+                            System.arraycopy(attachments, index, newattachs, 0, newattachs.length);
+                            conn.write(newattachs, newattachs, this);
+                            return;
+                        }
+                        //----------------------- 读取返回结果 -------------------------------------
+                        conn.read(new ReplyCompletionHandler(conn) {
+                            @Override
+                            public void completed(Integer result, ByteBuffer buffer) {
+                                buffer.flip();
+                                try {
+                                    final byte sign = buffer.get();
+                                    if (sign == PLUS_BYTE) { // +
+                                        byte[] bs = readBytes(buffer);
+                                        if ("OK".equalsIgnoreCase(new String(bs))) {
+                                            conn.setSubobject("authed");
+                                            rsfuture.complete(conn);
+                                        } else {
+                                            transport.offerConnection(false, conn);
+                                            rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
+                                        }
+                                    } else if (sign == MINUS_BYTE) { // -   异常
+                                        String bs = readString(buffer);
+                                        transport.offerConnection(false, conn);
+                                        rsfuture.completeExceptionally(new RuntimeException("command : " + command + ", error: " + bs));
+                                    } else {
+                                        String exstr = "Unknown reply: " + (char) sign;
+                                        transport.offerConnection(false, conn);
+                                        rsfuture.completeExceptionally(new RuntimeException(exstr));
+                                    }
+                                } catch (Exception e) {
+                                    failed(e, buffer);
+                                }
+                            }
+
+                            @Override
+                            public void failed(Throwable exc, ByteBuffer buffer) {
+                                conn.offerBuffer(buffer);
+                                transport.offerConnection(true, conn);
+                                rsfuture.completeExceptionally(exc);
+                            }
+
+                        });
+                    } catch (Exception e) {
+                        failed(e, attachments);
+                    }
+                }
+
+                @Override
+                public void failed(Throwable exc, ByteBuffer[] attachments) {
+                    transport.offerConnection(true, conn);
+                    rsfuture.completeExceptionally(exc);
+                }
+            });
+        } catch (Exception e) {
+            rsfuture.completeExceptionally(e);
+        }
+        return rsfuture;
+    }
 }
 
 abstract class ReplyCompletionHandler implements CompletionHandler<Integer, ByteBuffer> {
