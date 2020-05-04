@@ -6,12 +6,11 @@
 package org.redkalex.convert.pson;
 
 import java.io.*;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.nio.ByteBuffer;
 import java.util.function.*;
 import org.redkale.convert.*;
 import org.redkale.util.*;
-import static org.redkalex.convert.pson.ProtobufFactory.wireTypeString;
 
 /**
  * protobuf的Convert实现  <br>
@@ -93,25 +92,43 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         if (out != null) writerPool.accept(out);
     }
 
-    public <T> String getProtoDescriptor(Class<T> clazz) {
+    public <T> String getProtoDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
+        Class clazz = TypeToken.typeToClass(type);
         sb.append("//java ").append(clazz.isArray() ? (clazz.getComponentType().getName() + "[]") : clazz.getName()).append("\r\n\r\n");
         sb.append("option java_package = \"").append(clazz.getPackage().getName()).append("\";\r\n\r\n");
         sb.append("syntax = \"proto3\";\r\n\r\n");
-        defineProtoDescriptor(clazz, sb, "");
+        defineProtoDescriptor(type, sb, "");
         return sb.toString();
     }
 
     protected void defineProtoDescriptor(Type type, StringBuilder sb, String prefix) {
         Encodeable encoder = factory.loadEncoder(type);
         if (encoder instanceof ObjectEncoder) {
-            sb.append(prefix).append("message ").append(((Class) type).getSimpleName().replace("[]", "_Array")).append(" {\r\n");
+            sb.append(prefix).append("message ").append(defineTypeName(type)).append(" {\r\n");
             for (EnMember member : ((ObjectEncoder) encoder).getMembers()) {
-                sb.append(prefix).append("    ").append(wireTypeString(member.getEncoder().getType()))
+                sb.append(prefix).append("    ").append(ProtobufFactory.wireTypeString(member.getEncoder().getType()))
                     .append(" ").append(member.getAttribute().field()).append(" = ").append(member.getPosition()).append(";\r\n");
             }
             sb.append(prefix).append("}\r\n");
         }
+    }
+
+    protected StringBuilder defineTypeName(Type type) {
+        StringBuilder sb = new StringBuilder();
+        if (type instanceof Class) {
+            sb.append(((Class) type).getSimpleName().replace("[]", "_Array"));
+        } else if (type instanceof ParameterizedType) {
+            Type raw = ((ParameterizedType) type).getRawType();
+            sb.append(((Class) raw).getSimpleName().replace("[]", "_Array"));
+            Type[] ts = ((ParameterizedType) type).getActualTypeArguments();
+            if (ts != null) {
+                for (Type t : ts) {
+                    if (t != null) sb.append('_').append(defineTypeName(t));
+                }
+            }
+        }
+        return sb;
     }
 
     //------------------------------ convertFrom -----------------------------------------------------------
