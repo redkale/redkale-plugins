@@ -96,7 +96,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         StringBuilder sb = new StringBuilder();
         Class clazz = TypeToken.typeToClass(type);
         sb.append("//java ").append(clazz.isArray() ? (clazz.getComponentType().getName() + "[]") : clazz.getName()).append("\r\n\r\n");
-        sb.append("option java_package = \"").append(clazz.getPackage().getName()).append("\";\r\n\r\n");
+        if (type instanceof Class) sb.append("option java_package = \"").append(clazz.getPackage().getName()).append("\";\r\n\r\n");
         sb.append("syntax = \"proto3\";\r\n\r\n");
         defineProtoDescriptor(type, sb, "");
         return sb.toString();
