@@ -5,12 +5,14 @@
  */
 package org.redkalex.test.protobuf;
 
+import org.redkalex.convert.pbuf.ProtobufReader;
+import org.redkalex.convert.pbuf.ProtobufConvert;
 import com.google.protobuf.*;
 import java.util.*;
 import org.redkale.convert.ConvertColumn;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.util.Utility;
-import org.redkalex.convert.pson.*;
+import org.redkale.service.RetResult;
+import org.redkale.util.*;
 
 /**
  *
@@ -107,7 +109,14 @@ public class TestBean {
         System.out.println("结果2： " + reader.readInt());
     }
 
+    private static java.lang.reflect.Type  retstring = new TypeToken<RetResult<Map<String,String>>>() {
+    }.getType();
+    
     public static void main(String[] args) throws Throwable {
+        System.out.println(ProtobufConvert.root().getProtoDescriptor(retstring));
+    }
+    
+    public static void main33(String[] args) throws Throwable {
         //System.out.println(ProtobufConvert.root().getProtoDescriptor(TestBean.class));
         //System.out.println(Integer.toHexString(14<<3|2));
         TestBean bean = new TestBean();
