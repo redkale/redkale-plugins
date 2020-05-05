@@ -61,6 +61,11 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @Override
+    protected ObjectEncoder createObjectEncoder(Type type) {
+        return new ProtobufObjectEncoder(type);
+    }
+
+    @Override
     protected <E> Decodeable<ProtobufReader, E> createMapDecoder(Type type) {
         return new ProtobufMapDecoder(this, type);
     }
