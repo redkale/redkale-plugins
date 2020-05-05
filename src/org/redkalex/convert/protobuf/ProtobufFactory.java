@@ -213,7 +213,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
             if (javaClazz.isArray()) return "repeated " + wireTypeString(javaClazz.getComponentType());
             if (javaClazz.isEnum()) return javaClazz.getSimpleName();
             if (CharSequence.class.isAssignableFrom(javaClazz)) return "string";
-            return javaClazz.getSimpleName();
+            return javaClazz == Object.class ? "Any" : javaClazz.getSimpleName();
         } else if (javaType instanceof ParameterizedType) { //Collection、Stream、Map 必须是泛型
             final ParameterizedType pt = (ParameterizedType) javaType;
             final Class rawType = (Class) pt.getRawType();
