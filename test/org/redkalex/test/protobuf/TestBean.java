@@ -5,8 +5,8 @@
  */
 package org.redkalex.test.protobuf;
 
-import org.redkalex.convert.pbuf.ProtobufReader;
-import org.redkalex.convert.pbuf.ProtobufConvert;
+import org.redkalex.convert.protobuf.ProtobufReader;
+import org.redkalex.convert.protobuf.ProtobufConvert;
 import com.google.protobuf.*;
 import java.util.*;
 import org.redkale.convert.ConvertColumn;

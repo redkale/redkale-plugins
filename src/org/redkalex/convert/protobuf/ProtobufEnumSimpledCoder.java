@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkalex.convert.pbuf;
+package org.redkalex.convert.protobuf;
 
 import java.lang.reflect.Method;
 import java.util.*;

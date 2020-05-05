@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkalex.convert.pbuf;
+package org.redkalex.convert.protobuf;
 
 import java.io.Serializable;
 import java.lang.reflect.*;
@@ -123,7 +123,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     @Override
     public ConvertType getConvertType() {
-        return ConvertType.PBUF;
+        return ConvertType.PROTOBUF;
     }
 
     @Override
