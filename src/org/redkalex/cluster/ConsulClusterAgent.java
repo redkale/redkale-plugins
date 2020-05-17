@@ -16,6 +16,12 @@ import org.redkale.service.Service;
 import org.redkale.util.*;
 
 /**
+ * <blockquote><pre>
+ *  &lt;cluster value="org.redkalex.cluster.ConsulClusterAgent"&gt;
+ *      &lt;property name="apiurl" value="http://localhost:8500/v1"/&gt;
+ *      &lt;property name="ttls" value="10"/&gt;
+ *  &lt;/cluster&gt;
+ * </pre></blockquote>
  *
  * @author zhangjx
  */
