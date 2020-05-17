@@ -35,7 +35,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     @Override
-    public List<InetSocketAddress> queryAddress(NodeServer ns, String protocol, Service service) {
+    protected List<InetSocketAddress> queryAddress(NodeServer ns, String protocol, Service service) {
         String serviceid = generateServiceId(ns, protocol, service);
         String servicetype = generateServiceType(ns, protocol, service);
         InetSocketAddress address = ns.getSncpAddress();
@@ -50,7 +50,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     @Override
-    public void register(NodeServer ns, String protocol, Service service) {
+    protected void register(NodeServer ns, String protocol, Service service) {
         String serviceid = generateServiceId(ns, protocol, service);
         String servicetype = generateServiceType(ns, protocol, service);
         InetSocketAddress address = ns.getSncpAddress();
@@ -64,7 +64,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     @Override
-    public void deregister(NodeServer ns, String protocol, Service service) {
+    protected void deregister(NodeServer ns, String protocol, Service service) {
         String serviceid = generateServiceId(ns, protocol, service);
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
