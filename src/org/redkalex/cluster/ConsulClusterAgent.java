@@ -8,7 +8,8 @@ package org.redkalex.cluster;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.*;
 import org.redkale.boot.*;
 import org.redkale.service.Service;
@@ -26,6 +27,8 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected String apiurl;
 
+    protected int ttls = 10; //定时检查的秒数
+
     protected ScheduledThreadPoolExecutor scheduler;
 
     @Override
@@ -36,6 +39,9 @@ public class ConsulClusterAgent extends ClusterAgent {
             if ("apiurl".equalsIgnoreCase(property.getValue("name"))) {
                 this.apiurl = property.getValue("value", "").trim();
                 if (this.apiurl.endsWith("/")) this.apiurl = this.apiurl.substring(0, this.apiurl.length() - 1);
+            } else if ("ttls".equalsIgnoreCase(property.getValue("name"))) {
+                this.ttls = Integer.parseInt(property.getValue("value", "").trim());
+                if (this.ttls < 2) this.ttls = 2;
             }
         }
     }
@@ -53,6 +59,21 @@ public class ConsulClusterAgent extends ClusterAgent {
                 t.setDaemon(true);
                 return t;
             });
+            AtomicInteger offset = new AtomicInteger();
+            for (final ClusterEntry entry : localEntrys.values()) {
+                this.scheduler.scheduleAtFixedRate(() -> {
+                    check(entry);
+                }, offset.incrementAndGet() * 100, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
+            }
+        }
+    }
+
+    protected void check(final ClusterEntry entry) {
+        try {
+            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + entry.checkid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            if (!rs.isEmpty()) logger.log(Level.SEVERE, entry.checkid + " check error: " + rs);
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, entry.checkid + " check error", ex);
         }
     }
 
@@ -71,10 +92,10 @@ public class ConsulClusterAgent extends ClusterAgent {
         String servicename = generateServiceName(ns, protocol, service);
         InetSocketAddress address = ns.getSncpAddress();
         String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + address.getHostString() + "\",\"Port\": " + address.getPort()
-            + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"10s\",\"Notes\":\"Interval Check\"}}";
+            + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval Check\"}}";
         try {
-            String s = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/register", httpHeaders, json).toString(StandardCharsets.UTF_8);
-            System.out.println(s);
+            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/register", httpHeaders, json).toString(StandardCharsets.UTF_8);
+            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " register error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " register error", ex);
         }
@@ -84,7 +105,8 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected void deregister(NodeServer ns, String protocol, Service service) {
         String serviceid = generateServiceId(ns, protocol, service);
         try {
-            Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error", ex);
         }
