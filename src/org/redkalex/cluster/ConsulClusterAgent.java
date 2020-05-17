@@ -98,7 +98,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         String servicename = generateServiceName(ns, protocol, service);
         InetSocketAddress address = ns.getSncpAddress();
         String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + address.getHostString() + "\",\"Port\": " + address.getPort()
-            + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval Check\"}}";
+            + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/register", httpHeaders, json).toString(StandardCharsets.UTF_8);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " register error: " + rs);
