@@ -26,7 +26,7 @@ import java.util.logging.*;
  *
  * @author zhangjx
  */
-@NodeProtocol({"SOCKS"})
+@NodeProtocol("SOCKS")
 public class NodeSocksServer extends NodeServer {
 
     private final SocksServer socksServer;
