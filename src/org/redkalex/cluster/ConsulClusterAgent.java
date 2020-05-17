@@ -52,7 +52,7 @@ public class ConsulClusterAgent extends ClusterAgent {
                 if (this.apiurl.endsWith("/")) this.apiurl = this.apiurl.substring(0, this.apiurl.length() - 1);
             } else if ("ttls".equalsIgnoreCase(property.getValue("name"))) {
                 this.ttls = Integer.parseInt(property.getValue("value", "").trim());
-                if (this.ttls < 2) this.ttls = 2;
+                if (this.ttls < 5) this.ttls = 10;
             }
         }
     }
@@ -73,13 +73,19 @@ public class ConsulClusterAgent extends ClusterAgent {
             AtomicInteger offset = new AtomicInteger();
             for (final ClusterEntry entry : localEntrys.values()) {
                 this.scheduler.scheduleAtFixedRate(() -> {
-                    checkHealth(entry);
+                    checkLocalHealth(entry);
                 }, offset.incrementAndGet() * 100, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
+            }
+
+            for (final ClusterEntry entry : remoteEntrys.values()) {
+                this.scheduler.scheduleAtFixedRate(() -> {
+                    updateTransport(entry);
+                }, offset.incrementAndGet() * 100, ttls * 1000, TimeUnit.MILLISECONDS);
             }
         }
     }
 
-    protected void checkHealth(final ClusterEntry entry) {
+    protected void checkLocalHealth(final ClusterEntry entry) {
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + entry.checkid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, entry.checkid + " check error: " + rs);
@@ -89,8 +95,8 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     @Override
-    protected Collection<InetSocketAddress> queryAddress(NodeServer ns, String protocol, Service service) {
-        final String servicename = generateServiceName(ns, protocol, service);
+    protected Collection<InetSocketAddress> queryAddress(final ClusterEntry entry) {
+        final String servicename = entry.servicename;
         final HashSet<InetSocketAddress> set = new HashSet<>();
         String rs = null;
         try {
