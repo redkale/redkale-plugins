@@ -5,13 +5,15 @@
  */
 package org.redkalex.cluster;
 
-import java.net.InetSocketAddress;
+import java.lang.reflect.Type;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.*;
 import org.redkale.boot.*;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Service;
 import org.redkale.util.*;
 
@@ -28,6 +30,9 @@ import org.redkale.util.*;
 public class ConsulClusterAgent extends ClusterAgent {
 
     protected static final Map<String, String> httpHeaders = Utility.ofMap("Content-Type", "application/json");
+
+    protected static final Type MAP_STRING_ADDRESSENTRY = new TypeToken<Map<String, AddressEntry>>() {
+    }.getType();
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -68,13 +73,13 @@ public class ConsulClusterAgent extends ClusterAgent {
             AtomicInteger offset = new AtomicInteger();
             for (final ClusterEntry entry : localEntrys.values()) {
                 this.scheduler.scheduleAtFixedRate(() -> {
-                    check(entry);
+                    checkHealth(entry);
                 }, offset.incrementAndGet() * 100, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
             }
         }
     }
 
-    protected void check(final ClusterEntry entry) {
+    protected void checkHealth(final ClusterEntry entry) {
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + entry.checkid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, entry.checkid + " check error: " + rs);
@@ -84,16 +89,35 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     @Override
-    protected List<InetSocketAddress> queryAddress(NodeServer ns, String protocol, Service service) {
-        String serviceid = generateServiceId(ns, protocol, service);
-        String servicename = generateServiceName(ns, protocol, service);
-        InetSocketAddress address = ns.getSncpAddress();
-
-        return new ArrayList<>();
+    protected Collection<InetSocketAddress> queryAddress(NodeServer ns, String protocol, Service service) {
+        final String servicename = generateServiceName(ns, protocol, service);
+        final HashSet<InetSocketAddress> set = new HashSet<>();
+        String rs = null;
+        try {
+            rs = Utility.remoteHttpContent("GET", this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + servicename + "\"", StandardCharsets.UTF_8), httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, rs);
+            map.forEach((serviceid, en) -> {
+                try {
+                    String irs = Utility.remoteHttpContent("GET", this.apiurl + "/agent/health/service/id/" + serviceid + "?format=text", httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+                    if ("passing".equalsIgnoreCase(irs)) {
+                        set.add(en.createSocketAddress());
+                    } else {
+                        logger.log(Level.WARNING, serviceid + " health result: " + irs);
+                    }
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, serviceid + " health format=text error", e);
+                }
+            });
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, servicename + " queryAddress error, result=" + rs, ex);
+        }
+        return set;
     }
 
     @Override
     protected void register(NodeServer ns, String protocol, Service service) {
+        deregister(ns, protocol, service);
+        //
         String serviceid = generateServiceId(ns, protocol, service);
         String servicename = generateServiceName(ns, protocol, service);
         InetSocketAddress address = ns.getSncpAddress();
@@ -118,4 +142,14 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
+    public static class AddressEntry {
+
+        public String Address;
+
+        public int Port;
+
+        public InetSocketAddress createSocketAddress() {
+            return new InetSocketAddress(Address, Port);
+        }
+    }
 }
