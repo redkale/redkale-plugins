@@ -66,12 +66,9 @@ public class ConsulClusterAgent extends ClusterAgent {
     @Override
     public void deregister(NodeServer ns, String protocol, Service service) {
         String serviceid = generateServiceId(ns, protocol, service);
-        String servicetype = generateServiceType(ns, protocol, service);
-        InetSocketAddress address = ns.getSncpAddress();
-        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicetype + "\",\"Address\": \"" + address.getHostString() + "\",\"Port\": " + address.getPort() + "}";
         try {
-            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister", httpHeaders, json).toString(StandardCharsets.UTF_8);
-            System.out.println("注销:" + json + ", 结果：" + rs);
+            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            System.out.println("注销:" + serviceid + ", 结果：" + rs);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
