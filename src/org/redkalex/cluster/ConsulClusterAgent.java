@@ -29,7 +29,7 @@ import org.redkale.util.*;
  */
 public class ConsulClusterAgent extends ClusterAgent {
 
-    protected static final Map<String, String> httpHeaders = Utility.ofMap("Content-Type", "application/json");
+    protected static final Map<String, String> httpHeaders = Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
 
     protected static final Type MAP_STRING_ADDRESSENTRY = new TypeToken<Map<String, AddressEntry>>() {
     }.getType();
