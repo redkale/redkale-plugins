@@ -34,8 +34,6 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected static final Type MAP_STRING_ADDRESSENTRY = new TypeToken<Map<String, AddressEntry>>() {
     }.getType();
 
-    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-
     protected String apiurl;
 
     protected int ttls = 10; //定时检查的秒数
