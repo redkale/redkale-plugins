@@ -19,7 +19,7 @@ public class MessageRecordDeserializer implements org.apache.kafka.common.serial
     public MessageRecord deserialize(String topic, byte[] data) {
         if (data == null) return null;
         ByteBuffer buffer = ByteBuffer.wrap(data);
-        long seqno = buffer.getLong();
+        long seqid = buffer.getLong();
         int flag = buffer.getInt();
         int userid = buffer.getInt();
 
@@ -50,7 +50,7 @@ public class MessageRecordDeserializer implements org.apache.kafka.common.serial
             content = new byte[contentlen];
             buffer.get(content);
         }
-        return new MessageRecord(seqno, flag, userid,
+        return new MessageRecord(seqid, flag, userid,
             groupid == null ? null : new String(groupid, StandardCharsets.UTF_8),
             stopics == null ? null : new String(stopics, StandardCharsets.UTF_8),
             dtopics == null ? null : new String(dtopics, StandardCharsets.UTF_8),
