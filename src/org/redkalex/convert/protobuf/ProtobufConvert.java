@@ -216,6 +216,16 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     }
 
     @Override
+    public byte[] convertToBytes(final Object value) {
+        return convertTo(value);
+    }
+
+    @Override
+    public byte[] convertToBytes(final Type type, final Object value) {
+        return convertTo(type, value);
+    }
+
+    @Override
     public byte[] convertMapTo(final Object... values) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
         if (values == null) return null;
