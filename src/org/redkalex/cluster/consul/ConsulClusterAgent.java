@@ -3,8 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkalex.cluster;
+package org.redkalex.cluster.consul;
 
+import org.redkale.cluster.ClusterAgent;
 import java.lang.reflect.Type;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -19,7 +20,7 @@ import org.redkale.util.*;
 
 /**
  * <blockquote><pre>
- *  &lt;cluster value="org.redkalex.cluster.ConsulClusterAgent"&gt;
+ *  &lt;cluster value="org.redkalex.cluster.consul.ConsulClusterAgent"&gt;
  *      &lt;property name="apiurl" value="http://localhost:8500/v1"/&gt;
  *      &lt;property name="ttls" value="10"/&gt;
  *  &lt;/cluster&gt;

@@ -17,20 +17,19 @@ import org.redkale.util.*;
  * @author zhangjx
  */
 public class KafkaMessageAgent extends MessageAgent {
-    
+
     protected String servers;
-    
+
     protected Properties consumerConfig = new Properties();
-    
+
     protected Properties producerConfig = new Properties();
-    
+
     protected Properties streamsConfig = new Properties();
-    
+
     protected KafkaAdminClient adminClient;
-    
+
     @Override
     public void init(AnyValue config) {
-        this.name = checkName(config.getValue("name"));
         this.servers = config.getAnyValue("servers").getValue("value");
         {
             AnyValue consumerAnyValue = config.getAnyValue("consumer");
@@ -57,12 +56,12 @@ public class KafkaMessageAgent extends MessageAgent {
             }
         }
     }
-    
+
     @Override
     public void destroy(AnyValue config) {
-        
+
     }
-    
+
     @Override
     public boolean createTopic(String... topics) {
         if (topics == null || topics.length < 1) return true;
@@ -73,12 +72,12 @@ public class KafkaMessageAgent extends MessageAgent {
             }
             adminClient.createTopics(newTopics, new CreateTopicsOptions().timeoutMs(3000)).all().get(3, TimeUnit.SECONDS);
             return true;
-        } catch (Exception ex) { 
+        } catch (Exception ex) {
             logger.log(Level.SEVERE, "createTopic error: " + Arrays.toString(topics), ex);
             return false;
         }
     }
-    
+
     @Override
     public boolean deleteTopic(String... topics) {
         if (topics == null || topics.length < 1) return true;
@@ -90,7 +89,7 @@ public class KafkaMessageAgent extends MessageAgent {
             return false;
         }
     }
-    
+
     @Override
     public List<String> queryTopic() {
         try {
