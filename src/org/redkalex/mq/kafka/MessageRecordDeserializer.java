@@ -7,6 +7,7 @@ package org.redkalex.mq.kafka;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import org.redkale.convert.ConvertType;
 import org.redkale.mq.MessageRecord;
 
 /**
@@ -20,7 +21,7 @@ public class MessageRecordDeserializer implements org.apache.kafka.common.serial
         if (data == null) return null;
         ByteBuffer buffer = ByteBuffer.wrap(data);
         long seqid = buffer.getLong();
-        byte format = buffer.get();
+        ConvertType format = ConvertType.find(buffer.getInt());
         int flag = buffer.getInt();
         int userid = buffer.getInt();
 

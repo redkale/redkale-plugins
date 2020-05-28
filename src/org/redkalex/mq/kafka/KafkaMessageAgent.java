@@ -17,17 +17,17 @@ import org.redkale.util.*;
  * @author zhangjx
  */
 public class KafkaMessageAgent extends MessageAgent {
-
+    
     protected String servers;
-
+    
     protected Properties consumerConfig = new Properties();
-
+    
     protected Properties producerConfig = new Properties();
-
+    
     protected Properties streamsConfig = new Properties();
-
+    
     protected KafkaAdminClient adminClient;
-
+    
     @Override
     public void init(AnyValue config) {
         this.name = checkName(config.getValue("name"));
@@ -57,12 +57,12 @@ public class KafkaMessageAgent extends MessageAgent {
             }
         }
     }
-
+    
     @Override
     public void destroy(AnyValue config) {
-
+        
     }
-
+    
     @Override
     public boolean createTopic(String... topics) {
         if (topics == null || topics.length < 1) return true;
@@ -71,30 +71,30 @@ public class KafkaMessageAgent extends MessageAgent {
             for (String t : topics) {
                 newTopics.add(new NewTopic(t, Optional.empty(), Optional.empty()));
             }
-            adminClient.createTopics(newTopics).all().get(3, TimeUnit.SECONDS);
+            adminClient.createTopics(newTopics, new CreateTopicsOptions().timeoutMs(3000)).all().get(3, TimeUnit.SECONDS);
             return true;
-        } catch (Exception ex) {
+        } catch (Exception ex) { 
             logger.log(Level.SEVERE, "createTopic error: " + Arrays.toString(topics), ex);
             return false;
         }
     }
-
+    
     @Override
     public boolean deleteTopic(String... topics) {
         if (topics == null || topics.length < 1) return true;
         try {
-            adminClient.deleteTopics(Utility.ofList(topics)).all().get(3, TimeUnit.SECONDS);
+            adminClient.deleteTopics(Utility.ofList(topics), new DeleteTopicsOptions().timeoutMs(3000)).all().get(3, TimeUnit.SECONDS);
             return true;
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "deleteTopic error: " + Arrays.toString(topics), ex);
             return false;
         }
     }
-
+    
     @Override
     public List<String> queryTopic() {
         try {
-            Collection<TopicListing> list = adminClient.listTopics().listings().get(3, TimeUnit.SECONDS);
+            Collection<TopicListing> list = adminClient.listTopics(new ListTopicsOptions().timeoutMs(3000)).listings().get(3, TimeUnit.SECONDS);
             List<String> result = new ArrayList<>(list.size());
             for (TopicListing t : list) {
                 if (!t.isInternal()) result.add(t.name());
