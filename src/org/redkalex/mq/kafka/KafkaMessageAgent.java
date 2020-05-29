@@ -26,35 +26,23 @@ public class KafkaMessageAgent extends MessageAgent {
 
     protected Properties producerConfig = new Properties();
 
-    protected Properties streamsConfig = new Properties();
-
     protected KafkaAdminClient adminClient;
 
     @Override
     public void init(AnyValue config) {
         this.servers = config.getAnyValue("servers").getValue("value");
-        {
-            AnyValue consumerAnyValue = config.getAnyValue("consumer");
-            if (consumerAnyValue != null) {
-                for (AnyValue val : consumerAnyValue.getAnyValues("property")) {
-                    this.consumerConfig.put(val.getValue("name"), val.getValue("value"));
-                }
+
+        AnyValue consumerAnyValue = config.getAnyValue("consumer");
+        if (consumerAnyValue != null) {
+            for (AnyValue val : consumerAnyValue.getAnyValues("property")) {
+                this.consumerConfig.put(val.getValue("name"), val.getValue("value"));
             }
         }
-        {
-            AnyValue producerAnyValue = config.getAnyValue("producer");
-            if (producerAnyValue != null) {
-                for (AnyValue val : producerAnyValue.getAnyValues("property")) {
-                    this.producerConfig.put(val.getValue("name"), val.getValue("value"));
-                }
-            }
-        }
-        {
-            AnyValue streamsAnyValue = config.getAnyValue("streams");
-            if (streamsAnyValue != null) {
-                for (AnyValue val : streamsAnyValue.getAnyValues("property")) {
-                    this.streamsConfig.put(val.getValue("name"), val.getValue("value"));
-                }
+
+        AnyValue producerAnyValue = config.getAnyValue("producer");
+        if (producerAnyValue != null) {
+            for (AnyValue val : producerAnyValue.getAnyValues("property")) {
+                this.producerConfig.put(val.getValue("name"), val.getValue("value"));
             }
         }
     }
