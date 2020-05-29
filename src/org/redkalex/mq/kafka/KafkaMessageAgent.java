@@ -7,13 +7,10 @@ package org.redkalex.mq.kafka;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.logging.Level;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.StreamsConfig;
 import org.redkale.mq.*;
 import org.redkale.util.*;
 
@@ -137,15 +134,4 @@ public class KafkaMessageAgent extends MessageAgent {
         return new KafkaMessageProducer(props);
     }
 
-    @Override //创建指定topic的流处理器
-    public MessageStreams createStreams(String topic, Function<MessageRecord, MessageRecord> processor) {
-        final Properties props = new Properties();
-        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, Runtime.getRuntime().availableProcessors());
-        props.putAll(this.streamsConfig);
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-" + topic);
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, MessageRecordSerde.class);
-        return new KafkaMessageStreams(topic, processor, props);
-    }
 }
