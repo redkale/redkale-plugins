@@ -21,7 +21,7 @@ public class KafkaMessageConsumer extends MessageConsumer {
 
     protected KafkaConsumer<String, MessageRecord> consumer;
 
-    public KafkaMessageConsumer(String topic, MessageProcessor processor, Properties config) {
+    public KafkaMessageConsumer(String topic, java.util.function.Consumer<MessageRecord> processor, Properties config) {
         super(topic, processor);
         this.config = config;
     }
@@ -37,7 +37,7 @@ public class KafkaMessageConsumer extends MessageConsumer {
                 if (exp != null) logger.log(Level.SEVERE, topic + " consumer error: " + map, exp);
             });
             for (ConsumerRecord<String, MessageRecord> r : records) {
-                processor.process(r.value());
+                processor.accept(r.value());
             }
         }
     }
