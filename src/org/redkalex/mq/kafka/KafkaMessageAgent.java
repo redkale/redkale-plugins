@@ -99,9 +99,9 @@ public class KafkaMessageAgent extends MessageAgent {
     public MessageConsumer createConsumer(String topic, java.util.function.Consumer<MessageRecord> processor) {
         final Properties props = new Properties();
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false"); //可以被自定义覆盖
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "consumer-" + topic);
         props.putAll(this.consumerConfig);
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "consumer-" + topic);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, MessageRecordDeserializer.class);
         return new KafkaMessageConsumer(topic, processor, props);
