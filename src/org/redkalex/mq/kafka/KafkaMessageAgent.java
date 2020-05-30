@@ -108,7 +108,7 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override //创建指定topic的生产处理器
-    public MessageProducer createProducer() {
+    protected MessageProducer createProducer() {
         final Properties props = new Properties();
         props.put(ProducerConfig.RETRIES_CONFIG, 0);
         props.put(ProducerConfig.BATCH_SIZE_CONFIG, 16384);
