@@ -21,8 +21,10 @@ public class MessageRecordDeserializer implements org.apache.kafka.common.serial
         if (data == null) return null;
         ByteBuffer buffer = ByteBuffer.wrap(data);
         long seqid = buffer.getLong();
+        int version = buffer.getInt();
         ConvertType format = ConvertType.find(buffer.getInt());
         int flag = buffer.getInt();
+        long createtime = buffer.getLong();
         int userid = buffer.getInt();
 
         byte[] groupid = null;
@@ -52,7 +54,7 @@ public class MessageRecordDeserializer implements org.apache.kafka.common.serial
             content = new byte[contentlen];
             buffer.get(content);
         }
-        return new MessageRecord(seqid, format, flag, userid,
+        return new MessageRecord(seqid, version, format, flag, createtime, userid,
             groupid == null ? null : new String(groupid, StandardCharsets.UTF_8),
             stopics == null ? null : new String(stopics, StandardCharsets.UTF_8),
             dtopics == null ? null : new String(dtopics, StandardCharsets.UTF_8),

@@ -6,7 +6,7 @@
 package org.redkalex.mq.kafka;
 
 import java.util.Properties;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
 import org.apache.kafka.clients.producer.*;
 import org.redkale.mq.*;
 
@@ -18,6 +18,8 @@ public class KafkaMessageProducer extends MessageProducer {
 
     protected Properties config;
 
+    protected CountDownLatch cdl = new CountDownLatch(1);
+
     protected KafkaProducer<String, MessageRecord> producer;
 
     public KafkaMessageProducer(Properties config) {
@@ -27,7 +29,9 @@ public class KafkaMessageProducer extends MessageProducer {
     @Override
     public void run() {
         this.producer = new KafkaProducer<>(this.config);
+        cdl.countDown();
     }
+
     @Override
     public CompletableFuture apply(MessageRecord message) {
         if (closed) throw new IllegalStateException(this.getClass().getSimpleName() + " is closed when send " + message);
@@ -41,6 +45,15 @@ public class KafkaMessageProducer extends MessageProducer {
             }
         });
         return future;
+    }
+
+    @Override
+    public void waitFor() {
+        try {
+            this.cdl.await(3, TimeUnit.SECONDS);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Override

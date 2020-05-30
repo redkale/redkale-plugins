@@ -23,12 +23,14 @@ public class MessageRecordSerializer implements org.apache.kafka.common.serializ
         byte[] stopics = data.getTopic() == null ? EMPTY_BYTES : data.getTopic().getBytes(StandardCharsets.UTF_8);
         byte[] dtopics = data.getResptopic() == null ? EMPTY_BYTES : data.getResptopic().getBytes(StandardCharsets.UTF_8);
         byte[] groupid = data.getGroupid() == null ? EMPTY_BYTES : data.getGroupid().getBytes(StandardCharsets.UTF_8);
-        int count = 8 + 4 + 4 + 4 + 2 + stopics.length + 2 + dtopics.length + 2 + groupid.length + 4 + (data.getContent() == null ? 0 : data.getContent().length);
+        int count = 8 + 4 + 4 + 4 + 8 + 4 + 2 + stopics.length + 2 + dtopics.length + 2 + groupid.length + 4 + (data.getContent() == null ? 0 : data.getContent().length);
         final byte[] bs = new byte[count];
         ByteBuffer buffer = ByteBuffer.wrap(bs);
         buffer.putLong(data.getSeqid());
+        buffer.putInt(data.getVersion());
         buffer.putInt(data.getFormat() == null ? 0 : data.getFormat().getValue());
         buffer.putInt(data.getFlag());
+        buffer.putLong(data.getCreatetime());
         buffer.putInt(data.getUserid());
         buffer.putChar((char) groupid.length);
         if (groupid.length > 0) buffer.put(groupid);

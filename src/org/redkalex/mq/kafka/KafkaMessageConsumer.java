@@ -7,6 +7,7 @@ package org.redkalex.mq.kafka;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.logging.Level;
 import org.apache.kafka.clients.consumer.*;
 import org.redkale.mq.*;
@@ -19,6 +20,8 @@ public class KafkaMessageConsumer extends MessageConsumer {
 
     protected Properties config;
 
+    protected CountDownLatch cdl = new CountDownLatch(1);
+
     protected KafkaConsumer<String, MessageRecord> consumer;
 
     public KafkaMessageConsumer(String topic, java.util.function.Consumer<MessageRecord> processor, Properties config) {
@@ -30,6 +33,7 @@ public class KafkaMessageConsumer extends MessageConsumer {
     public void run() {
         this.consumer = new KafkaConsumer<>(this.config);
         consumer.subscribe(Arrays.asList(this.topic));
+        cdl.countDown();
         while (!this.closed) {
             ConsumerRecords<String, MessageRecord> records = consumer.poll(Duration.ofMillis(10));
             if (records.count() == 0) continue;
@@ -39,6 +43,15 @@ public class KafkaMessageConsumer extends MessageConsumer {
             for (ConsumerRecord<String, MessageRecord> r : records) {
                 processor.accept(r.value());
             }
+        }
+    }
+
+    @Override
+    public void waitFor() {
+        try {
+            this.cdl.await(3, TimeUnit.SECONDS);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
         }
     }
 
