@@ -77,6 +77,7 @@ public class KafkaMessageConsumer extends MessageConsumer {
     @Override
     public void close() {
         if (!this.closed) return;
+        this.closed = true;
         if (this.consumer != null) this.consumer.close();
     }
 

@@ -62,6 +62,8 @@ public class KafkaMessageProducer extends MessageProducer {
 
     @Override
     public void close() {
+        if (!this.closed) return;
+        this.closed = true;
         if (this.producer != null) this.producer.close();
     }
 
