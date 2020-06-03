@@ -30,6 +30,7 @@ public class KafkaMessageAgent extends MessageAgent {
 
     @Override
     public void init(AnyValue config) {
+        super.init(config);
         this.name = checkName(config.getValue("name", ""));
         this.servers = config.getAnyValue("servers").getValue("value");
 
@@ -50,7 +51,7 @@ public class KafkaMessageAgent extends MessageAgent {
 
     @Override
     public void destroy(AnyValue config) {
-
+        super.destroy(config);
     }
 
     @Override
