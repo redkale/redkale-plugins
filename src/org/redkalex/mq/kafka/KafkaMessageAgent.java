@@ -105,7 +105,7 @@ public class KafkaMessageAgent extends MessageAgent {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, MessageRecordDeserializer.class);
         props.putAll(this.consumerConfig);
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
-        return new KafkaMessageConsumer(topic, processor, props);
+        return new KafkaMessageConsumer(this, topic, processor, props);
     }
 
     @Override //创建指定topic的生产处理器
@@ -120,7 +120,7 @@ public class KafkaMessageAgent extends MessageAgent {
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, MessageRecordSerializer.class);
         props.putAll(this.producerConfig);
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
-        return new KafkaMessageProducer(props);
+        return new KafkaMessageProducer(this, props);
     }
 
 }

@@ -5,7 +5,7 @@
  */
 package org.redkalex.mq.kafka;
 
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.*;
 import org.apache.kafka.clients.producer.*;
 import org.redkale.mq.*;
@@ -16,13 +16,17 @@ import org.redkale.mq.*;
  */
 public class KafkaMessageProducer extends MessageProducer {
 
+    protected MessageAgent agent;
+
     protected Properties config;
 
     protected CountDownLatch cdl = new CountDownLatch(1);
 
     protected KafkaProducer<String, MessageRecord> producer;
 
-    public KafkaMessageProducer(Properties config) {
+    public KafkaMessageProducer(MessageAgent agent, Properties config) {
+        Objects.requireNonNull(agent);
+        this.agent = agent;
         this.config = config;
     }
 
