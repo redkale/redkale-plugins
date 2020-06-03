@@ -37,7 +37,7 @@ public class KafkaMessageProducer extends MessageProducer {
     }
 
     @Override
-    public CompletableFuture apply(MessageRecord message) {
+    public CompletableFuture<Void> apply(MessageRecord message) {
         if (closed) throw new IllegalStateException(this.getClass().getSimpleName() + " is closed when send " + message);
         if (this.producer == null) throw new IllegalStateException(this.getClass().getSimpleName() + " not started when send " + message);
         final CompletableFuture future = new CompletableFuture();
