@@ -97,7 +97,7 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override //创建指定topic的消费处理器
-    public MessageConsumer createConsumer(String topic, java.util.function.Consumer<MessageRecord> processor) {
+    public MessageConsumer createConsumer(String topic, MessageProcessor processor) {
         final Properties props = new Properties();
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false"); //可以被自定义覆盖
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "consumer-" + topic);
