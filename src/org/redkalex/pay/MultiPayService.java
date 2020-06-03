@@ -19,7 +19,7 @@ import static org.redkalex.pay.Pays.*;
  */
 @Local
 @AutoLoad(false)
-public class PayService extends AbstractPayService {
+public class MultiPayService extends AbstractPayService {
 
     @Resource
     private UnionPayService unionPayService;
