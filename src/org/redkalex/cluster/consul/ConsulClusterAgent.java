@@ -71,13 +71,13 @@ public class ConsulClusterAgent extends ClusterAgent {
             });
             AtomicInteger offset = new AtomicInteger();
             for (final ClusterEntry entry : localEntrys.values()) {
-                this.scheduler.scheduleAtFixedRate(() -> {
+                entry.checkScheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
                     checkLocalHealth(entry);
                 }, offset.incrementAndGet() * 100, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
             }
 
             for (final ClusterEntry entry : remoteEntrys.values()) {
-                this.scheduler.scheduleAtFixedRate(() -> {
+                entry.checkScheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
                     updateTransport(entry);
                 }, offset.incrementAndGet() * 88, ttls * 1000, TimeUnit.MILLISECONDS);  //88错开delay
             }
@@ -139,8 +139,24 @@ public class ConsulClusterAgent extends ClusterAgent {
     @Override
     protected void deregister(NodeServer ns, String protocol, Service service) {
         String serviceid = generateServiceId(ns, protocol, service);
+        ClusterEntry currEntry = null;
+        for (final ClusterEntry entry : localEntrys.values()) {
+            if (entry.serviceid.equals(serviceid)) {
+                currEntry = entry;
+                break;
+            }
+        }
+        if (currEntry == null) {
+            for (final ClusterEntry entry : remoteEntrys.values()) {
+                if (entry.serviceid.equals(serviceid)) {
+                    currEntry = entry;
+                    break;
+                }
+            }
+        }
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            if (currEntry != null && currEntry.checkScheduledFuture != null) currEntry.checkScheduledFuture.cancel(true);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error", ex);
