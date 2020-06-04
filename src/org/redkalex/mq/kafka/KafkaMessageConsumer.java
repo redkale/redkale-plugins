@@ -54,15 +54,19 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     processor.process(r.value());
                 }
             }
-            while (!this.closed) {
-                ConsumerRecords<String, MessageRecord> records = consumer.poll(Duration.ofMillis(10));
-                if (records.count() == 0) continue;
-                consumer.commitAsync((map, exp) -> {
-                    if (exp != null) logger.log(Level.SEVERE, topic + " consumer error: " + map, exp);
-                });
-                for (ConsumerRecord<String, MessageRecord> r : records) {
-                    processor.process(r.value());
+            try {
+                while (!this.closed) {
+                    ConsumerRecords<String, MessageRecord> records = consumer.poll(Duration.ofMillis(10));
+                    if (records.count() == 0) continue;
+                    consumer.commitAsync((map, exp) -> {
+                        if (exp != null) logger.log(Level.SEVERE, topic + " consumer error: " + map, exp);
+                    });
+                    for (ConsumerRecord<String, MessageRecord> r : records) {
+                        processor.process(r.value());
+                    }
                 }
+            } finally {
+                consumer.close();
             }
             if (this.closeFuture != null) this.closeFuture.complete(null);
         } catch (Throwable t) {
@@ -86,7 +90,6 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         if (this.closeFuture != null) return this.closeFuture;
         this.closeFuture = new CompletableFuture<>();
         this.closed = true;
-        if (this.consumer != null) this.consumer.close();
         return this.closeFuture;
     }
 
