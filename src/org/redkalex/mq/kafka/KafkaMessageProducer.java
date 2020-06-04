@@ -14,13 +14,15 @@ import org.redkale.mq.*;
  *
  * @author zhangjx
  */
-public class KafkaMessageProducer extends MessageProducer {
+public class KafkaMessageProducer extends MessageProducer implements Runnable {
 
     protected MessageAgent agent;
 
     protected Properties config;
 
-    protected CountDownLatch cdl = new CountDownLatch(1);
+    protected Thread thread;
+
+    protected CompletableFuture<Void> startFuture;
 
     protected KafkaProducer<String, MessageRecord> producer;
 
@@ -33,7 +35,7 @@ public class KafkaMessageProducer extends MessageProducer {
     @Override
     public void run() {
         this.producer = new KafkaProducer<>(this.config);
-        cdl.countDown();
+        this.startFuture.complete(null);
     }
 
     @Override
@@ -52,19 +54,21 @@ public class KafkaMessageProducer extends MessageProducer {
     }
 
     @Override
-    public void waitFor() {
-        try {
-            this.cdl.await(3, TimeUnit.SECONDS);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
+    public synchronized CompletableFuture<Void> startup() {
+        if (this.startFuture != null) return this.startFuture;
+        this.thread = new Thread(this);
+        this.thread.setName("MQ-Producer-Thread");
+        this.startFuture = new CompletableFuture<>();
+        this.thread.start();
+        return this.startFuture;
     }
 
     @Override
-    public void close() {
-        if (!this.closed) return;
+    public synchronized CompletableFuture<Void> shutdown() {
+        if (!this.closed) return CompletableFuture.completedFuture(null);
         this.closed = true;
         if (this.producer != null) this.producer.close();
+        return CompletableFuture.completedFuture(null);
     }
 
 }
