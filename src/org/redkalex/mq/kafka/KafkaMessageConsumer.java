@@ -25,6 +25,8 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     protected CompletableFuture<Void> startFuture;
 
+    protected CompletableFuture<Void> closeFuture;
+
     protected KafkaConsumer<String, MessageRecord> consumer;
 
     public KafkaMessageConsumer(MessageAgent agent, String topic, MessageProcessor processor, Properties config) {
@@ -62,7 +64,9 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     processor.process(r.value());
                 }
             }
+            if (this.closeFuture != null) this.closeFuture.complete(null);
         } catch (Throwable t) {
+            if (this.closeFuture != null && !this.closeFuture.isDone()) this.closeFuture.complete(null);
             logger.log(Level.SEVERE, MessageConsumer.class.getSimpleName() + "(" + topic + ") occur error", t);
         }
     }
@@ -79,10 +83,11 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     @Override
     public synchronized CompletableFuture<Void> shutdown() {
-        if (!this.closed) return CompletableFuture.completedFuture(null);
+        if (this.closeFuture != null) return this.closeFuture;
+        this.closeFuture = new CompletableFuture<>();
         this.closed = true;
         if (this.consumer != null) this.consumer.close();
-        return CompletableFuture.completedFuture(null);
+        return this.closeFuture;
     }
 
 }
