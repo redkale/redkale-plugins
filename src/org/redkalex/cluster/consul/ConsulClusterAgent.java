@@ -64,6 +64,14 @@ public class ConsulClusterAgent extends ClusterAgent {
     @Override
     public void destroy(AnyValue config) {
         if (scheduler != null) scheduler.shutdownNow();
+        long wait = this.closeEndMaxTime - System.currentTimeMillis();
+        if (wait > 0) {
+            try {
+                Thread.sleep(wait);
+            } catch (InterruptedException ex) {
+            }
+            logger.info(this.getClass().getSimpleName() + " wait " + wait + "ms for all deregisters");
+        }
     }
 
     @Override
