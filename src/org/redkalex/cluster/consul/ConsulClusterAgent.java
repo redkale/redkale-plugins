@@ -89,11 +89,6 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
-    @Override
-    public void stop() {
-        super.stop();
-    }
-
     protected void checkLocalHealth(final ClusterEntry entry) {
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + entry.checkid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
