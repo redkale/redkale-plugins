@@ -64,6 +64,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     @Override
     protected void afterRegister(NodeServer ns, String protocol) {
         if (this.scheduler == null) {
+            final boolean sncp = ns.isSNCP();
             this.scheduler = new ScheduledThreadPoolExecutor(3, (Runnable r) -> {
                 final Thread t = new Thread(r, ConsulClusterAgent.class.getSimpleName() + "-Task-Thread");
                 t.setDaemon(true);
@@ -75,11 +76,12 @@ public class ConsulClusterAgent extends ClusterAgent {
                     checkLocalHealth(entry);
                 }, offset.incrementAndGet() * 100, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
             }
-
-            for (final ClusterEntry entry : remoteEntrys.values()) {
-                entry.checkScheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
-                    updateTransport(entry);
-                }, offset.incrementAndGet() * 88, ttls * 1000, TimeUnit.MILLISECONDS);  //88错开delay
+            if (sncp) {
+                for (final ClusterEntry entry : remoteEntrys.values()) {
+                    entry.checkScheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
+                        updateSncpTransport(entry);
+                    }, offset.incrementAndGet() * 88, ttls * 1000, TimeUnit.MILLISECONDS);  //88错开delay
+                }
             }
         }
     }
