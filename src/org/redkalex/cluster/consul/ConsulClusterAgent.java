@@ -13,7 +13,9 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.*;
+import javax.annotation.Resource;
 import org.redkale.boot.*;
+import static org.redkale.boot.Application.RESNAME_APP_ADDR;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Service;
 import org.redkale.util.*;
@@ -34,6 +36,9 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected static final Type MAP_STRING_ADDRESSENTRY = new TypeToken<Map<String, AddressEntry>>() {
     }.getType();
+
+    @Resource(name = RESNAME_APP_ADDR)
+    protected String localAddress;
 
     protected String apiurl;
 
@@ -62,9 +67,8 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     @Override
-    protected void afterRegister(NodeServer ns, String protocol) {
+    public void start() {
         if (this.scheduler == null) {
-            final boolean sncp = ns.isSNCP();
             this.scheduler = new ScheduledThreadPoolExecutor(3, (Runnable r) -> {
                 final Thread t = new Thread(r, ConsulClusterAgent.class.getSimpleName() + "-Task-Thread");
                 t.setDaemon(true);
@@ -76,14 +80,18 @@ public class ConsulClusterAgent extends ClusterAgent {
                     checkLocalHealth(entry);
                 }, offset.incrementAndGet() * 100, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
             }
-            if (sncp) {
-                for (final ClusterEntry entry : remoteEntrys.values()) {
-                    entry.checkScheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
-                        updateSncpTransport(entry);
-                    }, offset.incrementAndGet() * 88, ttls * 1000, TimeUnit.MILLISECONDS);  //88错开delay
-                }
+            for (final ClusterEntry entry : remoteEntrys.values()) {
+                if (!"SNCP".equalsIgnoreCase(entry.protocol)) continue;
+                entry.checkScheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
+                    updateSncpTransport(entry);
+                }, offset.incrementAndGet() * 88, ttls * 1000, TimeUnit.MILLISECONDS);  //88错开delay
             }
         }
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
     }
 
     protected void checkLocalHealth(final ClusterEntry entry) {
@@ -127,8 +135,10 @@ public class ConsulClusterAgent extends ClusterAgent {
         //
         String serviceid = generateServiceId(ns, protocol, service);
         String servicename = generateServiceName(ns, protocol, service);
-        InetSocketAddress address = ns.getSncpAddress();
-        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + address.getHostString() + "\",\"Port\": " + address.getPort()
+        InetSocketAddress address = ns.isSNCP() ? ns.getSncpAddress() : ns.getServer().getSocketAddress();
+        String host = address.getHostString();
+        if ("0.0.0.0".equals(host)) host = localAddress;
+        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + host + "\",\"Port\": " + address.getPort()
             + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/register", httpHeaders, json).toString(StandardCharsets.UTF_8);
