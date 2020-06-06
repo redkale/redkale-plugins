@@ -66,6 +66,17 @@ public class ConsulClusterAgent extends ClusterAgent {
         if (scheduler != null) scheduler.shutdownNow();
     }
 
+    @Override //ServiceLoader时判断配置是否符合当前实现类
+    public boolean match(AnyValue config) {
+        if (config == null) return false;
+        AnyValue[] properties = config.getAnyValues("property");
+        if (properties == null || properties.length == 0) return false;
+        for (AnyValue property : properties) {
+            if ("apiurl".equalsIgnoreCase(property.getValue("name"))) return true;
+        }
+        return false;
+    }
+
     @Override
     public void start() {
         if (this.scheduler == null) {

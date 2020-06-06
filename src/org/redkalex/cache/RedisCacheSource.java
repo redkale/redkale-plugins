@@ -105,6 +105,17 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
 
     }
 
+    @Override //ServiceLoader时判断配置是否符合当前实现类
+    public boolean match(AnyValue config) {
+        if (config == null) return false;
+        AnyValue[] nodes = config.getAnyValues("node");
+        if (nodes == null || nodes.length == 0) return false;
+        for (AnyValue node : nodes) {
+            if (node.getValue("addr") != null && node.getValue("port") != null) return true;
+        }
+        return false;
+    }
+
     public void updateRemoteAddresses(final Collection<InetSocketAddress> addresses) {
         this.transport.updateRemoteAddresses(addresses);
     }

@@ -52,6 +52,15 @@ public class KafkaMessageAgent extends MessageAgent {
         super.destroy(config);
     }
 
+    @Override //ServiceLoader时判断配置是否符合当前实现类
+    public boolean match(AnyValue config) {
+        if (config == null) return false;
+        AnyValue ser = config.getAnyValue("servers");
+        if (ser == null) return false;
+        if (ser.getValue("value") != null) return true;
+        return false;
+    }
+
     @Override
     public boolean createTopic(String... topics) {
         if (topics == null || topics.length < 1) return true;
