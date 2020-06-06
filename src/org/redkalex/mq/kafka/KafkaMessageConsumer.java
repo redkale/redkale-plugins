@@ -50,7 +50,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         try {
             records0 = consumer.poll(Duration.ofMillis(1));
         } catch (InvalidTopicException e) {
-            agent.createTopic(this.topic);
+            messageAgent.createTopic(this.topic);
         }
         this.startFuture.complete(null);
         try {
