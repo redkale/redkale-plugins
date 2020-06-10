@@ -104,8 +104,8 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override //创建指定topic的消费处理器
-    public MessageConsumer createConsumer(String topic, MessageProcessor processor) {
-        return new KafkaMessageConsumer(this, topic, processor, servers, this.consumerConfig);
+    public MessageConsumer createConsumer(String topic, String consumerid, MessageProcessor processor) {
+        return new KafkaMessageConsumer(this, topic, consumerid, processor, servers, this.consumerConfig);
     }
 
     @Override //创建指定topic的生产处理器
