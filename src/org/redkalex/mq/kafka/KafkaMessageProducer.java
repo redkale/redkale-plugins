@@ -8,6 +8,7 @@ package org.redkalex.mq.kafka;
 import java.util.*;
 import java.util.concurrent.*;
 import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.serialization.Serializer;
 import org.redkale.mq.*;
 
 /**
@@ -80,6 +81,15 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         this.closed = true;
         if (this.producer != null) this.producer.close();
         return CompletableFuture.completedFuture(null);
+    }
+
+    public static class MessageRecordSerializer implements Serializer<MessageRecord> {
+
+        @Override
+        public byte[] serialize(String topic, MessageRecord data) {
+            return MessageRecordCoder.getInstance().encode(data);
+        }
+
     }
 
 }

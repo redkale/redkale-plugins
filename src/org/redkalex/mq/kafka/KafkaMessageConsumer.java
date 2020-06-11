@@ -11,6 +11,7 @@ import java.util.concurrent.*;
 import java.util.logging.Level;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.errors.InvalidTopicException;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.redkale.mq.*;
 
 /**
@@ -101,4 +102,12 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         return this.closeFuture;
     }
 
+    public static class MessageRecordDeserializer implements Deserializer<MessageRecord> {
+
+        @Override
+        public MessageRecord deserialize(String topic, byte[] data) {
+            return MessageRecordCoder.getInstance().decode(data);
+        }
+
+    }
 }
