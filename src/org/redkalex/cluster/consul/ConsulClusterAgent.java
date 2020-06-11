@@ -38,7 +38,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     }.getType();
 
     @Resource(name = RESNAME_APP_ADDR)
-    protected String localAddress;
+    protected InetSocketAddress localAddress;
 
     protected String apiurl;
 
@@ -85,6 +85,11 @@ public class ConsulClusterAgent extends ClusterAgent {
                 t.setDaemon(true);
                 return t;
             });
+
+            this.scheduler.scheduleAtFixedRate(() -> {
+                checkApplicationHealth();
+            }, 0, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
+
             AtomicInteger offset = new AtomicInteger();
             for (final ClusterEntry entry : localEntrys.values()) {
                 entry.checkScheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
@@ -135,6 +140,58 @@ public class ConsulClusterAgent extends ClusterAgent {
         return set;
     }
 
+    protected boolean isApplicationHealth() {
+        String serviceid = generateApplicationServiceId();
+        try {
+            String irs = Utility.remoteHttpContent("GET", this.apiurl + "/agent/health/service/id/" + serviceid + "?format=text", httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            return "passing".equalsIgnoreCase(irs);
+        } catch (java.io.FileNotFoundException ex) {
+            return false;
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, serviceid + " health format=text error", e);
+            return true;
+        }
+    }
+
+    protected void checkApplicationHealth() {
+        String checkid = generateApplicationCheckId();
+        try {
+            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + checkid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            if (!rs.isEmpty()) logger.log(Level.SEVERE, checkid + " check error: " + rs);
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, checkid + " check error", ex);
+        }
+    }
+
+    @Override
+    public void register(Application application) {
+        if (isApplicationHealth()) throw new RuntimeException("application.nodeid=" + nodeid + " exists in cluster");
+        deregister(application);
+
+        String serviceid = generateApplicationServiceId();
+        String servicename = generateApplicationServiceName();
+        String host = this.localAddress.getHostString();
+        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + host + "\",\"Port\": " + this.localAddress.getPort()
+            + ",\"Check\":{\"CheckID\": \"" + generateApplicationCheckId() + "\",\"Name\": \"" + generateApplicationCheckName() + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
+        try {
+            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/register", httpHeaders, json).toString(StandardCharsets.UTF_8);
+            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " register error: " + rs);
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, serviceid + " register error", ex);
+        }
+    }
+
+    @Override
+    public void deregister(Application application) {
+        String serviceid = generateApplicationServiceId();
+        try {
+            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, serviceid + " deregister error", ex);
+        }
+    }
+
     @Override
     protected void register(NodeServer ns, String protocol, Service service) {
         deregister(ns, protocol, service);
@@ -143,7 +200,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         String servicename = generateServiceName(ns, protocol, service);
         InetSocketAddress address = ns.isSNCP() ? ns.getSncpAddress() : ns.getServer().getSocketAddress();
         String host = address.getHostString();
-        if ("0.0.0.0".equals(host)) host = localAddress;
+        if ("0.0.0.0".equals(host)) host = localAddress.getHostString();
         String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + host + "\",\"Port\": " + address.getPort()
             + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
