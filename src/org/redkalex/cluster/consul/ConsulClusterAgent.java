@@ -13,9 +13,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.*;
-import javax.annotation.Resource;
 import org.redkale.boot.*;
-import static org.redkale.boot.Application.RESNAME_APP_ADDR;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Service;
 import org.redkale.util.*;
@@ -36,9 +34,6 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected static final Type MAP_STRING_ADDRESSENTRY = new TypeToken<Map<String, AddressEntry>>() {
     }.getType();
-
-    @Resource(name = RESNAME_APP_ADDR)
-    protected InetSocketAddress localAddress;
 
     protected String apiurl;
 
@@ -170,8 +165,8 @@ public class ConsulClusterAgent extends ClusterAgent {
 
         String serviceid = generateApplicationServiceId();
         String servicename = generateApplicationServiceName();
-        String host = this.localAddress.getHostString();
-        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + host + "\",\"Port\": " + this.localAddress.getPort()
+        String host = this.appAddress.getHostString();
+        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + host + "\",\"Port\": " + this.appAddress.getPort()
             + ",\"Check\":{\"CheckID\": \"" + generateApplicationCheckId() + "\",\"Name\": \"" + generateApplicationCheckName() + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/register", httpHeaders, json).toString(StandardCharsets.UTF_8);
@@ -200,7 +195,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         String servicename = generateServiceName(ns, protocol, service);
         InetSocketAddress address = ns.isSNCP() ? ns.getSncpAddress() : ns.getServer().getSocketAddress();
         String host = address.getHostString();
-        if ("0.0.0.0".equals(host)) host = localAddress.getHostString();
+        if ("0.0.0.0".equals(host)) host = appAddress.getHostString();
         String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + host + "\",\"Port\": " + address.getPort()
             + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
