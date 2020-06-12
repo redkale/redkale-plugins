@@ -34,12 +34,12 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         MessageProcessor processor, String servers, Properties consumerConfig) {
         super(agent, topics, group, processor);
         final Properties props = new Properties();
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false"); //可以被自定义覆盖
         props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerid);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, MessageRecordDeserializer.class);
         props.putAll(consumerConfig);
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
         this.config = props;
     }
 
