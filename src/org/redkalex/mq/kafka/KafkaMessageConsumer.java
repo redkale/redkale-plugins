@@ -79,7 +79,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                             processor.process(msg);
                         }
                     } catch (Throwable e) {
-                        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProcessor.class.getSimpleName() + " process " + msg + " error");
+                        logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
                     }
                 }
             } finally {
