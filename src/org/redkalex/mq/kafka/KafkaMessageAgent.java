@@ -8,6 +8,7 @@ package org.redkalex.mq.kafka;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.*;
 import org.redkale.mq.*;
 import org.redkale.util.*;
@@ -24,7 +25,7 @@ public class KafkaMessageAgent extends MessageAgent {
 
     protected Properties producerConfig = new Properties();
 
-    protected KafkaAdminClient adminClient;
+    protected AdminClient adminClient;
 
     @Override
     public void init(AnyValue config) {
@@ -44,11 +45,15 @@ public class KafkaMessageAgent extends MessageAgent {
                 this.producerConfig.put(val.getValue("name"), val.getValue("value"));
             }
         }
+        Properties props = new Properties();
+        props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, servers);
+        this.adminClient = KafkaAdminClient.create(props);
     }
 
     @Override
     public void destroy(AnyValue config) {
         super.destroy(config);
+        if (this.adminClient != null) this.adminClient.close();
     }
 
     @Override //ServiceLoader时判断配置是否符合当前实现类
