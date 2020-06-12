@@ -50,13 +50,13 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
     public void run() {
         this.producer = new KafkaProducer<>(this.config);
         this.startFuture.complete(null);
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] startuped");
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + "(name=" + this.name + ") startuped");
     }
 
     @Override
     public CompletableFuture<Void> apply(MessageRecord message) {
-        if (closed) throw new IllegalStateException(this.getClass().getSimpleName() + " is closed when send " + message);
-        if (this.producer == null) throw new IllegalStateException(this.getClass().getSimpleName() + " not started when send " + message);
+        if (closed) throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") is closed when send " + message);
+        if (this.producer == null) throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") not started when send " + message);
         final CompletableFuture future = new CompletableFuture();
         producer.send(new ProducerRecord<>(message.getTopic(), null, message), (metadata, exp) -> {
             if (exp != null) {
