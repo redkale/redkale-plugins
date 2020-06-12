@@ -101,7 +101,7 @@ public class KafkaMessageAgent extends MessageAgent {
             logger.log(Level.SEVERE, "queryTopic error ", ex);
         }
         return null;
-    } 
+    }
 
     @Override //创建指定topic的消费处理器
     public MessageConsumer createConsumer(String[] topics, String consumerid, MessageProcessor processor) {
@@ -109,8 +109,8 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override //创建指定topic的生产处理器
-    protected MessageProducer createProducer() {
-        return new KafkaMessageProducer(this, servers, this.producerConfig);
+    protected MessageProducer createProducer(String name) {
+        return new KafkaMessageProducer(name, this, servers, this.producerConfig);
     }
 
 }

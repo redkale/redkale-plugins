@@ -7,6 +7,7 @@ package org.redkalex.mq.kafka;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.logging.Level;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.Serializer;
 import org.redkale.mq.*;
@@ -17,7 +18,7 @@ import org.redkale.mq.*;
  */
 public class KafkaMessageProducer extends MessageProducer implements Runnable {
 
-    protected MessageAgent agent;
+    protected MessageAgent messageAgent;
 
     protected Properties config;
 
@@ -27,9 +28,10 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
 
     protected KafkaProducer<String, MessageRecord> producer;
 
-    public KafkaMessageProducer(MessageAgent agent, String servers, Properties producerConfig) {
-        Objects.requireNonNull(agent);
-        this.agent = agent;
+    public KafkaMessageProducer(String name, MessageAgent messageAgent, String servers, Properties producerConfig) {
+        super(name, messageAgent.getLogger());
+        Objects.requireNonNull(messageAgent);
+        this.messageAgent = messageAgent;
 
         final Properties props = new Properties();
         props.put(ProducerConfig.RETRIES_CONFIG, 0);
@@ -48,6 +50,7 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
     public void run() {
         this.producer = new KafkaProducer<>(this.config);
         this.startFuture.complete(null);
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] startuped");
     }
 
     @Override
@@ -71,6 +74,7 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         this.thread = new Thread(this);
         this.thread.setName("MQ-Producer-Thread");
         this.startFuture = new CompletableFuture<>();
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] startuping");
         this.thread.start();
         return this.startFuture;
     }
@@ -79,7 +83,9 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
     public synchronized CompletableFuture<Void> shutdown() {
         if (!this.closed) return CompletableFuture.completedFuture(null);
         this.closed = true;
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] shutdowning");
         if (this.producer != null) this.producer.close();
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] shutdowned");
         return CompletableFuture.completedFuture(null);
     }
 

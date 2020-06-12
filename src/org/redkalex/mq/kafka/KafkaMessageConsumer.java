@@ -54,6 +54,8 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
             messageAgent.createTopic(this.topics);
         }
         this.startFuture.complete(null);
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuped");
+
         try {
             if (records0 != null && records0.count() > 0) {
                 consumer.commitAsync((map, exp) -> {
@@ -77,9 +79,15 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
             } finally {
                 consumer.close();
             }
-            if (this.closeFuture != null) this.closeFuture.complete(null);
+            if (this.closeFuture != null) {
+                this.closeFuture.complete(null);
+                if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
+            }
         } catch (Throwable t) {
-            if (this.closeFuture != null && !this.closeFuture.isDone()) this.closeFuture.complete(null);
+            if (this.closeFuture != null && !this.closeFuture.isDone()) {
+                this.closeFuture.complete(null);
+                if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
+            }
             logger.log(Level.SEVERE, MessageConsumer.class.getSimpleName() + "(" + Arrays.toString(this.topics) + ") occur error", t);
         }
     }
@@ -90,6 +98,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         this.thread = new Thread(this);
         this.thread.setName("MQ-" + consumerid + "-Thread");
         this.startFuture = new CompletableFuture<>();
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuping");
         this.thread.start();
         return this.startFuture;
     }
@@ -98,6 +107,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
     public synchronized CompletableFuture<Void> shutdown() {
         if (this.closeFuture != null) return this.closeFuture;
         this.closeFuture = new CompletableFuture<>();
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdownling");
         this.closed = true;
         return this.closeFuture;
     }
