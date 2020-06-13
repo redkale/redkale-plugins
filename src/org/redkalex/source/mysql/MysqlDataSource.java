@@ -630,7 +630,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                         MyOKPacket okPacket = new MyOKPacket(-1, bufferReader, array);
                         //System.out.println("执行sql=" + new String(sqlBytes, StandardCharsets.UTF_8) + ", 结果： " + okPacket);
                         if (!okPacket.isOK()) {
-                            future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode));
+                            future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success") + " sql=" + new String(sqlBytes, StandardCharsets.UTF_8), okPacket.sqlState, okPacket.vendorCode));
                             //不能关conn
                         } else {
                             for (ByteBuffer buf : readBuffs) {
