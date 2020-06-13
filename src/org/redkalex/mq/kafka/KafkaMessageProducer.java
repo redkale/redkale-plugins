@@ -8,7 +8,9 @@ package org.redkalex.mq.kafka;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
+import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.TopicPartitionInfo;
 import org.apache.kafka.common.serialization.Serializer;
 import org.redkale.mq.*;
 
@@ -27,6 +29,8 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
     protected CompletableFuture<Void> startFuture;
 
     protected KafkaProducer<String, MessageRecord> producer;
+
+    protected final ConcurrentHashMap<String, Integer[]> partionsMap = new ConcurrentHashMap<>();
 
     public KafkaMessageProducer(String name, MessageAgent messageAgent, String servers, Properties producerConfig) {
         super(name, messageAgent.getLogger());
@@ -58,7 +62,15 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         if (closed) throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") is closed when send " + message);
         if (this.producer == null) throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") not started when send " + message);
         final CompletableFuture future = new CompletableFuture();
-        producer.send(new ProducerRecord<>(message.getTopic(), null, message), (metadata, exp) -> {
+        Integer partition = null;
+        if (message.getGroupid() != null && !message.getGroupid().isEmpty()) {
+            Integer[] partins = loadTopicPartins(message.getTopic());
+            if (partins.length > 0) partition = partins[message.getGroupid().hashCode() % partins.length];
+        } else if (message.getUserid() != 0) {
+            Integer[] partins = loadTopicPartins(message.getTopic());
+            if (partins.length > 0) partition = partins[Math.abs(message.getUserid()) % partins.length];
+        }
+        producer.send(new ProducerRecord<>(message.getTopic(), partition, null, message), (metadata, exp) -> {
             if (exp != null) {
                 future.completeExceptionally(exp);
             } else {
@@ -66,6 +78,26 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
             }
         });
         return future;
+    }
+
+    private Integer[] loadTopicPartins(String topic0) {
+        return partionsMap.computeIfAbsent(topic0, topic -> {
+            try {
+                AdminClient adminClient = ((KafkaMessageAgent) messageAgent).adminClient;
+                DescribeTopicsResult rs = adminClient.describeTopics(Arrays.asList(topic));
+                List<TopicPartitionInfo> list = rs.values().get(topic).get(6, TimeUnit.SECONDS).partitions();
+                Integer[] parts = new Integer[list.size()];
+                for (int i = 0; i < parts.length; i++) {
+                    parts[i] = list.get(i).partition();
+                }
+                Arrays.sort(parts);
+                if (logger.isLoggable(Level.FINER)) logger.log(Level.FINER, "Topic(" + topic + ") load partitions = " + list);
+                return parts;
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "Topic(" + topic + ")  load partitions error", ex);
+                return new Integer[0];
+            }
+        });
     }
 
     @Override
