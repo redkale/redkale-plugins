@@ -63,13 +63,14 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         if (this.producer == null) throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") not started when send " + message);
         final CompletableFuture future = new CompletableFuture();
         Integer partition = null;
-        if (message.getGroupid() != null && !message.getGroupid().isEmpty()) {
-            Integer[] partins = loadTopicPartins(message.getTopic());
-            if (partins.length > 0) partition = partins[message.getGroupid().hashCode() % partins.length];
-        } else if (message.getUserid() != 0) {
-            Integer[] partins = loadTopicPartins(message.getTopic());
-            if (partins.length > 0) partition = partins[Math.abs(message.getUserid()) % partins.length];
-        }
+        //暂时屏蔽
+//        if (message.getGroupid() != null && !message.getGroupid().isEmpty()) {
+//            Integer[] partins = loadTopicPartition(message.getTopic());
+//            if (partins.length > 0) partition = partins[message.getGroupid().hashCode() % partins.length];
+//        } else if (message.getUserid() != 0) {
+//            Integer[] partins = loadTopicPartition(message.getTopic());
+//            if (partins.length > 0) partition = partins[Math.abs(message.getUserid()) % partins.length];
+//        }
         producer.send(new ProducerRecord<>(message.getTopic(), partition, null, message), (metadata, exp) -> {
             if (exp != null) {
                 future.completeExceptionally(exp);
@@ -80,7 +81,7 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         return future;
     }
 
-    private Integer[] loadTopicPartins(String topic0) {
+    protected Integer[] loadTopicPartition(String topic0) {
         return partionsMap.computeIfAbsent(topic0, topic -> {
             try {
                 AdminClient adminClient = ((KafkaMessageAgent) messageAgent).adminClient;
