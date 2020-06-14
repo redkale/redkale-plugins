@@ -591,7 +591,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
             List list = (List) r;
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
-                map.put(keys[i], list.get(i));
+                Object obj = list.get(i);
+                if (obj != null) map.put(keys[i], list.get(i));
             }
             return map;
         });
@@ -607,7 +608,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
             List list = (List) r;
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
-                map.put(keys[i], list.get(i));
+                Object obj = list.get(i);
+                if (obj != null) map.put(keys[i], list.get(i));
             }
             return map;
         });
@@ -623,7 +625,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
             List list = (List) r;
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
-                map.put(keys[i], list.get(i));
+                Object obj = list.get(i);
+                if (obj != null) map.put(keys[i], list.get(i));
             }
             return map;
         });
