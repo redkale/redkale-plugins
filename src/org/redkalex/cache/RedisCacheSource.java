@@ -21,7 +21,7 @@ import org.redkale.convert.json.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.*;
 import org.redkale.service.*;
-import org.redkale.source.CacheSource;
+import org.redkale.source.*;
 import org.redkale.util.*;
 import org.redkale.util.AnyValue.DefaultAnyValue;
 
@@ -136,7 +136,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
 
     public static void main(String[] args) throws Exception {
         DefaultAnyValue conf = new DefaultAnyValue();
-        conf.addValue("node", new DefaultAnyValue().addValue("addr", "127.0.0.1").addValue("port", "6379"));
+        conf.addValue("node", new DefaultAnyValue().addValue("addr", "127.0.0.1").addValue("port", "6363"));
 
         RedisCacheSource source = new RedisCacheSource();
         source.defaultConvert = JsonFactory.root().getConvert();
@@ -145,6 +145,22 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 7788);
 
         System.out.println("------------------------------------");
+        source.remove("stritem1");
+        source.remove("stritem2");
+        source.setString("stritem1", "value1");
+        source.setString("stritem2", "value2");
+        System.out.println("[有值] MGET : " + source.getStringMap("stritem1", "stritem2"));
+        source.remove("intitem1");
+        source.remove("intitem2");
+        source.setLong("intitem1", 333);
+        source.setLong("intitem2", 444);
+        System.out.println("[有值] MGET : " + source.getStringMap("intitem1", "intitem2"));
+        source.remove("objitem1");
+        source.remove("objitem2");
+        source.set("objitem1", Flipper.class, new Flipper(10));
+        source.set("objitem2", Flipper.class, new Flipper(20));
+        System.out.println("[有值] MGET : " + source.getMap(Flipper.class, "objitem1", "objitem2"));
+
         source.remove("key1");
         source.remove("key2");
         source.remove("300");
@@ -566,6 +582,54 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
+    public CompletableFuture<Map<String, Long>> getLongMapAsync(String... keys) {
+        byte[][] bs = new byte[keys.length][];
+        for (int i = 0; i < bs.length; i++) {
+            bs[i] = keys[i].getBytes(UTF8);
+        }
+        return (CompletableFuture) send("MGET", CacheEntryType.LONG, null, false, keys[0], bs).thenApply(r -> {
+            List list = (List) r;
+            Map map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                map.put(keys[i], list.get(i));
+            }
+            return map;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Map<String, String>> getStringMapAsync(String... keys) {
+        byte[][] bs = new byte[keys.length][];
+        for (int i = 0; i < bs.length; i++) {
+            bs[i] = keys[i].getBytes(UTF8);
+        }
+        return (CompletableFuture) send("MGET", CacheEntryType.STRING, null, false, keys[0], bs).thenApply(r -> {
+            List list = (List) r;
+            Map map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                map.put(keys[i], list.get(i));
+            }
+            return map;
+        });
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, T>> getMapAsync(final Type componentType, String... keys) {
+        byte[][] bs = new byte[keys.length][];
+        for (int i = 0; i < bs.length; i++) {
+            bs[i] = keys[i].getBytes(UTF8);
+        }
+        return (CompletableFuture) send("MGET", CacheEntryType.OBJECT, componentType, false, keys[0], bs).thenApply(r -> {
+            List list = (List) r;
+            Map map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                map.put(keys[i], list.get(i));
+            }
+            return map;
+        });
+    }
+
+    @Override
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<T>> map = new HashMap<>();
@@ -611,6 +675,21 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     @Override
     public <T> Collection<T> getCollection(String key, final Type componentType) {
         return (Collection) getCollectionAsync(key, componentType).join();
+    }
+
+    @Override
+    public Map<String, Long> getLongMap(final String... keys) {
+        return getLongMapAsync(keys).join();
+    }
+
+    @Override
+    public Map<String, String> getStringMap(final String... keys) {
+        return getStringMapAsync(keys).join();
+    }
+
+    @Override
+    public <T> Map<String, T> getMap(final Type componentType, final String... keys) {
+        return (Map) getMapAsync(componentType, keys).join();
     }
 
     @Override
