@@ -154,7 +154,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         source.remove("intitem2");
         source.setLong("intitem1", 333);
         source.setLong("intitem2", 444);
-        System.out.println("[有值] MGET : " + source.getStringMap("intitem1", "intitem2"));
+        System.out.println("[有值] MGET : " + source.getStringMap("intitem1", "intitem22", "intitem2"));
         source.remove("objitem1");
         source.remove("objitem2");
         source.set("objitem1", Flipper.class, new Flipper(10));
@@ -1280,9 +1280,15 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                         } else {
                                             Collection rs = set ? new HashSet() : new ArrayList();
                                             boolean keys = "KEYS".equals(command);
+                                            boolean mget = !keys && "MGET".equals(command);
                                             Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                             for (int i = 0; i < len; i++) {
-                                                if (readInt(buffer) > 0) rs.add(keys ? new String(readBytes(buffer), UTF8) : convert.convertFrom(ct, new String(readBytes(buffer), UTF8)));
+                                                int l = readInt(buffer);
+                                                if (l > 0) {
+                                                    rs.add(keys ? new String(readBytes(buffer), UTF8) : convert.convertFrom(ct, new String(readBytes(buffer), UTF8)));
+                                                } else if (mget) {
+                                                    rs.add(null);
+                                                }
                                             }
                                             if (future == null) {
                                                 transport.offerConnection(false, conn);
