@@ -102,6 +102,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         if (!passwords0.isEmpty()) this.passwords = passwords0;
         TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity, readTimeoutSeconds, writeTimeoutSeconds);
         this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
 
     }
 
