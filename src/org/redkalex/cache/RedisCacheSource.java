@@ -1266,10 +1266,10 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                         Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                         if (future == null) {
                                             transport.offerConnection(false, conn);
-                                            callback.completed(("GET".equals(command) || rs == null) ? convert.convertFrom(ct, new String(rs, UTF8)) : null, key);
+                                            callback.completed(ct == String.class ? new String(rs, UTF8) : (("GET".equals(command) || rs == null) ? convert.convertFrom(ct, new String(rs, UTF8)) : null), key);
                                         } else {
                                             transport.offerConnection(false, conn);
-                                            future.complete("GET".equals(command) ? convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8)) : rs);
+                                            future.complete(ct == String.class ? new String(rs, UTF8) : ("GET".equals(command) ? convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8)) : rs));
                                         }
                                     } else if (sign == ASTERISK_BYTE) { // *
                                         final int len = readInt(buffer);
