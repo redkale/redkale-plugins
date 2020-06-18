@@ -151,11 +151,13 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         source.setString("stritem1", "value1");
         source.setString("stritem2", "value2");
         System.out.println("[有值] MGET : " + source.getStringMap("stritem1", "stritem2"));
+        System.out.println("[有值] MGET : " + Arrays.toString(source.getStringArray("stritem1", "stritem2")));
         source.remove("intitem1");
         source.remove("intitem2");
         source.setLong("intitem1", 333);
         source.setLong("intitem2", 444);
         System.out.println("[有值] MGET : " + source.getStringMap("intitem1", "intitem22", "intitem2"));
+        System.out.println("[有值] MGET : " + Arrays.toString(source.getStringArray("intitem1", "intitem22", "intitem2")));
         source.remove("objitem1");
         source.remove("objitem2");
         source.set("objitem1", Flipper.class, new Flipper(10));
@@ -210,6 +212,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         System.out.println("sets3&sets4:  " + source.getStringCollectionMap(true, "sets3", "sets4"));
         System.out.println("------------------------------------");
         source.set("myaddr", InetSocketAddress.class, addr);
+        System.out.println("myaddrstr:  " + source.getString("myaddr"));
         System.out.println("myaddr:  " + source.get("myaddr", InetSocketAddress.class));
         source.remove("myaddrs");
         source.remove("myaddrs2");
@@ -600,6 +603,40 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
+    public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
+        byte[][] bs = new byte[keys.length][];
+        for (int i = 0; i < bs.length; i++) {
+            bs[i] = keys[i].getBytes(UTF8);
+        }
+        return (CompletableFuture) send("MGET", CacheEntryType.LONG, null, false, keys[0], bs).thenApply(r -> {
+            List list = (List) r;
+            Long[] rs = new Long[keys.length];
+            for (int i = 0; i < keys.length; i++) {
+                Number obj = (Number) list.get(i);
+                rs[i] = obj == null ? null : obj.longValue();
+            }
+            return rs;
+        });
+    }
+
+    @Override
+    public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
+        byte[][] bs = new byte[keys.length][];
+        for (int i = 0; i < bs.length; i++) {
+            bs[i] = keys[i].getBytes(UTF8);
+        }
+        return (CompletableFuture) send("MGET", CacheEntryType.STRING, null, false, keys[0], bs).thenApply(r -> {
+            List list = (List) r;
+            String[] rs = new String[keys.length];
+            for (int i = 0; i < keys.length; i++) {
+                Object obj = list.get(i);
+                rs[i] = obj == null ? null : obj.toString();
+            }
+            return rs;
+        });
+    }
+
+    @Override
     public CompletableFuture<Map<String, String>> getStringMapAsync(String... keys) {
         byte[][] bs = new byte[keys.length][];
         for (int i = 0; i < bs.length; i++) {
@@ -687,8 +724,18 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     }
 
     @Override
+    public Long[] getLongArray(final String... keys) {
+        return getLongArrayAsync(keys).join();
+    }
+
+    @Override
     public Map<String, String> getStringMap(final String... keys) {
         return getStringMapAsync(keys).join();
+    }
+
+    @Override
+    public String[] getStringArray(final String... keys) {
+        return getStringArrayAsync(keys).join();
     }
 
     @Override
@@ -1266,10 +1313,10 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                         Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                         if (future == null) {
                                             transport.offerConnection(false, conn);
-                                            callback.completed(ct == String.class ? (rs == null ? null : new String(rs, UTF8)) : (("GET".equals(command) || rs == null) ? convert.convertFrom(ct, new String(rs, UTF8)) : null), key);
+                                            callback.completed((("GET".equals(command) || rs == null) ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, new String(rs, UTF8))) : null), key);
                                         } else {
                                             transport.offerConnection(false, conn);
-                                            future.complete(ct == String.class ? (rs == null ? null : new String(rs, UTF8)) : ("GET".equals(command) ? convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8)) : rs));
+                                            future.complete(("GET".equals(command) ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8))) : rs));
                                         }
                                     } else if (sign == ASTERISK_BYTE) { // *
                                         final int len = readInt(buffer);
