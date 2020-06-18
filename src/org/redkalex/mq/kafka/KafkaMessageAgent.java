@@ -27,6 +27,8 @@ public class KafkaMessageAgent extends MessageAgent {
 
     protected AdminClient adminClient;
 
+    protected int partitions;
+
     @Override
     public void init(AnyValue config) {
         super.init(config);
@@ -41,6 +43,7 @@ public class KafkaMessageAgent extends MessageAgent {
 
         AnyValue producerAnyValue = config.getAnyValue("producer");
         if (producerAnyValue != null) {
+            this.partitions = producerAnyValue.getIntValue("partitions", 0);
             for (AnyValue val : producerAnyValue.getAnyValues("property")) {
                 this.producerConfig.put(val.getValue("name"), val.getValue("value"));
             }
@@ -115,7 +118,7 @@ public class KafkaMessageAgent extends MessageAgent {
 
     @Override //创建指定topic的生产处理器
     protected MessageProducer createProducer(String name) {
-        return new KafkaMessageProducer(name, this, servers, this.producerConfig);
+        return new KafkaMessageProducer(name, this, servers, this.partitions, this.producerConfig);
     }
 
 }
