@@ -123,7 +123,7 @@ public class ConsulClusterAgent extends ClusterAgent {
                     if ("passing".equalsIgnoreCase(irs)) {
                         set.add(en.createSocketAddress());
                     } else {
-                        logger.log(Level.WARNING, serviceid + " health result: " + irs);
+                        logger.log(Level.INFO, serviceid + " bad result: " + irs);
                     }
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, serviceid + " health format=text error", e);
