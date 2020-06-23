@@ -1646,7 +1646,7 @@ abstract class ReplyCompletionHandler implements CompletionHandler<Integer, Byte
         }
         //说明数据还没读取完
         buffer.clear();
-        conn.read(buffer);
+        conn.readableByteChannel().read(buffer);
         buffer.flip();
         readLine(buffer);
     }
