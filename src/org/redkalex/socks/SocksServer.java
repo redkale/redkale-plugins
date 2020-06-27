@@ -57,7 +57,7 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
         final HttpContext.HttpContextConfig contextConfig = new HttpContext.HttpContextConfig();
         contextConfig.serverStartTime = this.serverStartTime;
         contextConfig.logger = this.logger;
-        contextConfig.executor = this.executor;
+        contextConfig.executor = this.workExecutor;
         contextConfig.sslContext = this.sslContext;
         contextConfig.bufferCapacity = rcapacity;
         contextConfig.maxbody = this.maxbody;
