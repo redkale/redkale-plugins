@@ -109,6 +109,11 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
+    @Override //获取HTTP远程服务的可用ip列表
+    public Collection<InetSocketAddress> queryHttpAddress(String protocol, String module, String resname) {
+        return null; //待实现
+    }
+
     @Override
     protected Collection<InetSocketAddress> queryAddress(final ClusterEntry entry) {
         final String servicename = entry.servicename;
