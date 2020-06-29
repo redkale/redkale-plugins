@@ -41,6 +41,9 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected ScheduledThreadPoolExecutor scheduler;
 
+    //可能被HttpMessageClient用到的服务
+    protected final ConcurrentHashMap<String, Collection<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
+
     @Override
     public void init(AnyValue config) {
         super.init(config);
@@ -83,6 +86,7 @@ public class ConsulClusterAgent extends ClusterAgent {
 
             this.scheduler.scheduleAtFixedRate(() -> {
                 checkApplicationHealth();
+                checkHttpAddressHealth();
             }, 0, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
 
             AtomicInteger offset = new AtomicInteger();
@@ -100,6 +104,16 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
+    protected void checkHttpAddressHealth() {
+        try {
+            this.httpAddressMap.keySet().stream().forEach(servicename -> {
+                this.httpAddressMap.put(servicename, queryAddress(servicename));
+            });
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "checkHttpAddressHealth check error", ex);
+        }
+    }
+
     protected void checkLocalHealth(final ClusterEntry entry) {
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + entry.checkid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
@@ -111,12 +125,16 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     @Override //获取HTTP远程服务的可用ip列表
     public Collection<InetSocketAddress> queryHttpAddress(String protocol, String module, String resname) {
-        return null; //待实现
+        String servicename = generateHttpServiceName(protocol, module, resname);
+        return httpAddressMap.computeIfAbsent(servicename, n -> queryAddress(n));
     }
 
     @Override
     protected Collection<InetSocketAddress> queryAddress(final ClusterEntry entry) {
-        final String servicename = entry.servicename;
+        return queryAddress(entry.servicename);
+    }
+
+    private Collection<InetSocketAddress> queryAddress(final String servicename) {
         final HashSet<InetSocketAddress> set = new HashSet<>();
         String rs = null;
         try {
