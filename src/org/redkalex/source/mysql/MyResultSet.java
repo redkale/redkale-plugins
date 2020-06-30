@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
+import org.redkale.source.EntityInfo;
 
 /**
  *
@@ -21,6 +22,8 @@ public class MyResultSet implements java.sql.ResultSet {
 
     MyColumnDescPacket[] columns;
 
+    private final EntityInfo info;
+
     private final Map<String, Integer> colmap = new LinkedHashMap<>();
 
     private final List<MyRowDataPacket> rowDatas;
@@ -29,7 +32,8 @@ public class MyResultSet implements java.sql.ResultSet {
 
     private MyRowDataPacket currRow;
 
-    public MyResultSet(MyColumnDescPacket[] columns, List<MyRowDataPacket> rowDatas) {
+    public MyResultSet(EntityInfo info, MyColumnDescPacket[] columns, List<MyRowDataPacket> rowDatas) {
+        this.info = info;
         this.columns = columns;
         this.rowDatas = rowDatas;
         int i = -1;
@@ -259,7 +263,7 @@ public class MyResultSet implements java.sql.ResultSet {
     @Override
     public Object getObject(String columnLabel) throws SQLException {
         Integer index = colmap.get(columnLabel.toLowerCase());
-        if (index == null) throw new SQLException("Not found column " + columnLabel);
+        if (index == null) throw new SQLException(info.getType().getSimpleName() + " not found column " + columnLabel);
         return this.currRow.getObject(index);
     }
 

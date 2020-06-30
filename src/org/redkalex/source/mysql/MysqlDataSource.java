@@ -421,7 +421,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             Throwable sqlex = ex;
             while (sqlex instanceof CompletionException) sqlex = sqlex.getCause();
             if (info.getTableStrategy() != null && sqlex instanceof SQLException && info.isTableNotExist((SQLException) sqlex)) {
-                return new MyResultSet(new MyColumnDescPacket[0], new ArrayList<>());
+                return new MyResultSet(info, new MyColumnDescPacket[0], new ArrayList<>());
             } else {
                 future.obtrudeException(sqlex);
                 return null;
@@ -762,7 +762,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                             eofPacket = new MyEOFPacket(colPacketLength, packetIndex, bufferReader, array);
                             //System.out.println("查询结果包解析完毕： " + eofPacket);
 
-                            resultSet = new MyResultSet(colDescs, rows);
+                            resultSet = new MyResultSet(info, colDescs, rows);
                             success = true;
                             endok = true;
                             futureover = true;
