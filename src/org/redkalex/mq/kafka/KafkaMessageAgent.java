@@ -6,7 +6,7 @@
 package org.redkalex.mq.kafka;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.logging.Level;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.*;
@@ -21,6 +21,8 @@ public class KafkaMessageAgent extends MessageAgent {
 
     protected String servers;
 
+    protected int checkIntervals = 10;
+
     protected Properties consumerConfig = new Properties();
 
     protected Properties producerConfig = new Properties();
@@ -29,10 +31,15 @@ public class KafkaMessageAgent extends MessageAgent {
 
     protected int partitions;
 
+    protected ScheduledFuture reconnectFuture;
+
+    protected boolean reconnecting;
+
     @Override
     public void init(AnyValue config) {
         super.init(config);
         this.servers = config.getAnyValue("servers").getValue("value");
+        this.checkIntervals = config.getAnyValue("servers").getIntValue("checkintervals", 10);
 
         AnyValue consumerAnyValue = config.getAnyValue("consumer");
         if (consumerAnyValue != null) {
@@ -57,6 +64,35 @@ public class KafkaMessageAgent extends MessageAgent {
     public void destroy(AnyValue config) {
         super.destroy(config);
         if (this.adminClient != null) this.adminClient.close();
+    }
+
+    public synchronized void startReconnect() {
+        if (this.reconnecting) return;
+        this.reconnectFuture = this.timeoutExecutor.scheduleAtFixedRate(() -> retryConnect(), 0, this.checkIntervals, TimeUnit.SECONDS);
+    }
+
+    private void retryConnect() {
+        if (this.adminClient != null) this.adminClient.close();
+        Properties props = new Properties();
+        props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, servers);
+        this.adminClient = KafkaAdminClient.create(props);
+        if (queryTopic() != null) {
+            this.reconnecting = false;
+            if (this.reconnectFuture != null) {
+                this.reconnectFuture.cancel(true);
+                this.reconnectFuture = null;
+            }
+            this.getAllMessageConsumer().forEach(c -> ((KafkaMessageConsumer) c).retryConnect());
+            this.getAllMessageProducer().forEach(c -> ((KafkaMessageProducer) c).retryConnect());
+        }
+    }
+
+    public int getCheckIntervals() {
+        return checkIntervals;
+    }
+
+    public ScheduledThreadPoolExecutor getTimeoutExecutor() {
+        return timeoutExecutor;
     }
 
     @Override //ServiceLoader时判断配置是否符合当前实现类

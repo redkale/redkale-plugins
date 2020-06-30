@@ -52,6 +52,10 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         this.config = props;
     }
+    
+    public void retryConnect() {
+        
+    }
 
     @Override
     public void run() {
