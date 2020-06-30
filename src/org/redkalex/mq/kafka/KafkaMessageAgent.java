@@ -77,6 +77,7 @@ public class KafkaMessageAgent extends MessageAgent {
         props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, servers);
         this.adminClient = KafkaAdminClient.create(props);
         if (queryTopic() != null) {
+            logger.log(Level.INFO, getClass().getSimpleName() + " resume connect");
             this.reconnecting = false;
             if (this.reconnectFuture != null) {
                 this.reconnectFuture.cancel(true);
