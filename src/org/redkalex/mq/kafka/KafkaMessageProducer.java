@@ -34,6 +34,10 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
 
     protected int partitions;
 
+    protected boolean reconnecting;
+
+    protected final Object resumeLock = new Object();
+
     public KafkaMessageProducer(String name, MessageAgent messageAgent, String servers, int partitions, Properties producerConfig) {
         super(name, messageAgent.getLogger());
         this.partitions = partitions;
@@ -52,9 +56,9 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         this.config = props;
     }
-    
+
     public void retryConnect() {
-        
+
     }
 
     @Override
