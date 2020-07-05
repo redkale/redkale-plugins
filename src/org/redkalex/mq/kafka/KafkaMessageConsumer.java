@@ -141,6 +141,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     @Override
     public synchronized CompletableFuture<Void> shutdown() {
+        if (this.consumer == null) return CompletableFuture.completedFuture(null);
         if (this.closeFuture != null) return this.closeFuture;
         this.closeFuture = new CompletableFuture<>();
         if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdownling");
