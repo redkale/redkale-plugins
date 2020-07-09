@@ -191,6 +191,11 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         System.out.println("[一值] keys3 VALUES : " + source.getCollection("keys3"));
         source.getCollectionAndRefresh("keys3", 3000);
 
+        source.remove("stringmap");
+        source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
+        source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));
+        System.out.println("[两值] stringmap VALUES : " + source.getCollectionAsync("stringmap",JsonConvert.TYPE_MAP_STRING_STRING).join());
+
         source.remove("sets3");
         source.remove("sets4");
         source.appendSetItem("sets3", "setvals1");
@@ -233,6 +238,27 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         map.put("b", 2);
         source.set("mapvals", mapType, map);
         System.out.println("mapvals:  " + source.get("mapvals", mapType));
+        //清除
+        source.remove("stritem1");
+        source.remove("stritem2");
+        source.remove("intitem1");
+        source.remove("intitem2");
+        source.remove("keylong1");
+        source.remove("keystr1");
+        source.remove("mapvals");
+        source.remove("myaddr");
+        source.remove("myaddrs2");
+        source.remove("newnum");
+        source.remove("objitem1");
+        source.remove("objitem2");
+        source.remove("key1");
+        source.remove("key2");
+        source.remove("keys3");
+        source.remove("sets3");
+        source.remove("sets4");
+        source.remove("myaddrs");
+        source.remove("300");
+        source.remove("stringmap");
         System.out.println("------------------------------------");
 
     }
