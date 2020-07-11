@@ -8,6 +8,7 @@ package org.redkalex.pay;
 import java.io.*;
 import java.security.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
 import java.util.regex.*;
 import javax.annotation.Resource;
@@ -82,6 +83,7 @@ public class WeiXinPayService extends AbstractPayService {
         this.elements.putAll(elements);
     }
 
+    @Override
     public WeixinPayElement getPayElement(String appid) {
         return this.elements.get(appid);
     }
@@ -102,12 +104,17 @@ public class WeiXinPayService extends AbstractPayService {
      * @return PayPreResponse
      */
     @Override
-    public PayPreResponse prepay(final PayPreRequest request) {
+    public PayPreResponse prepay(PayPreRequest request) {
+        return prepayAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayPreResponse> prepayAsync(PayPreRequest request) {
         request.checkVaild();
         final PayPreResponse result = new PayPreResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             result.setAppid(element.appid);
             final TreeMap<String, String> map = new TreeMap<>();
             if (request.getAttach() != null) map.putAll(request.getAttach());
@@ -123,45 +130,47 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("notify_url", ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl));
             map.put("trade_type", request.getPayway() == PAYWAY_WEB ? "JSAPI" : "APP");
             //trade_type=JSAPI，openid参数必传，用户在商户appid下的唯一标识
-            if (request.getPayway() == PAYWAY_WEB && !map.containsKey("openid")) return result.retcode(RETPAY_OPENID_ERROR);
+            if (request.getPayway() == PAYWAY_WEB && !map.containsKey("openid")) return result.retcode(RETPAY_OPENID_ERROR).toFuture();
             map.put("sign", createSign(element, map));
 
-            final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map));
-            result.setResponsetext(responseText);
+            return postHttpContentAsync("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map)).thenApply(responseText -> {
+                result.setResponsetext(responseText);
 
-            Map<String, String> resultmap = formatXMLToMap(responseText);
-            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            /**
-             * "appId" : "wx2421b1c4370ec43b", //公众号名称，由商户传入 "timeStamp":" 1395712654", //时间戳，自1970年以来的秒数 "nonceStr" : "e61463f8efa94090b1f366cccfbbb444", //随机串 "package" :
-             * "prepay_id=u802345jgfjsdfgsdg888", "signType" : "MD5", //微信签名方式: "paySign" : "70EA570631E4BB79628FBCA90534C63FF7FADD89" //微信签名
-             */
-            final String timestamp = Long.toString(System.currentTimeMillis() / 1000);
-            final String noncestr = Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime());
-            final Map<String, String> retmap = new TreeMap<>();
-            if (request.getPayway() == PAYWAY_WEB) {
-                retmap.put("appId", element.appid);
-                retmap.put("timeStamp", timestamp);
-                retmap.put("nonceStr", noncestr);
-                retmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
-                retmap.put("signType", "MD5");
-                retmap.put("paySign", createSign(element, retmap));
-            } else {
-                retmap.put("appid", element.appid);
-                retmap.put("partnerid", element.merchno);
-                retmap.put("prepayid", resultmap.get("prepay_id"));
-                retmap.put("timestamp", timestamp);
-                retmap.put("noncestr", noncestr);
-                retmap.put("package", "Sign=WXPay"); //固定值            
-                retmap.put("sign", createSign(element, retmap));
-            }
-            result.setResult(retmap);
-
+                Map<String, String> resultmap = formatXMLToMap(responseText);
+                if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                /**
+                 * "appId" : "wx2421b1c4370ec43b", //公众号名称，由商户传入 "timeStamp":" 1395712654", //时间戳，自1970年以来的秒数 "nonceStr" : "e61463f8efa94090b1f366cccfbbb444", //随机串 "package" :
+                 * "prepay_id=u802345jgfjsdfgsdg888", "signType" : "MD5", //微信签名方式: "paySign" : "70EA570631E4BB79628FBCA90534C63FF7FADD89" //微信签名
+                 */
+                final String timestamp = Long.toString(System.currentTimeMillis() / 1000);
+                final String noncestr = Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime());
+                final Map<String, String> retmap = new TreeMap<>();
+                if (request.getPayway() == PAYWAY_WEB) {
+                    retmap.put("appId", element.appid);
+                    retmap.put("timeStamp", timestamp);
+                    retmap.put("nonceStr", noncestr);
+                    retmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
+                    retmap.put("signType", "MD5");
+                    retmap.put("paySign", createSign(element, retmap));
+                } else {
+                    retmap.put("appid", element.appid);
+                    retmap.put("partnerid", element.merchno);
+                    retmap.put("prepayid", resultmap.get("prepay_id"));
+                    retmap.put("timestamp", timestamp);
+                    retmap.put("noncestr", noncestr);
+                    retmap.put("package", "Sign=WXPay"); //固定值            
+                    retmap.put("sign", createSign(element, retmap));
+                }
+                result.setResult(retmap);
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responsetext, e);
+
+            return result.toFuture();
         }
-        return result;
     }
 
     /**
@@ -191,6 +200,11 @@ public class WeiXinPayService extends AbstractPayService {
      */
     @Override
     public PayNotifyResponse notify(PayNotifyRequest request) {
+        return notifyAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayNotifyResponse> notifyAsync(PayNotifyRequest request) {
         request.checkVaild();
         final PayNotifyResponse result = new PayNotifyResponse();
         result.setPaytype(request.getPaytype());
@@ -199,20 +213,20 @@ public class WeiXinPayService extends AbstractPayService {
         String appid = request.getAppid();
         if (appid == null || appid.isEmpty()) appid = map.getOrDefault("appid", "");
         final WeixinPayElement element = elements.get(appid);
-        if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+        if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
         result.setPayno(map.getOrDefault("out_trade_no", ""));
         result.setThirdpayno(map.getOrDefault("transaction_id", ""));
-        if ("NOTPAY".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(rstext);
-        if (!"SUCCESS".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext);
+        if ("NOTPAY".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(rstext).toFuture();
+        if (!"SUCCESS".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext).toFuture();
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
-        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR).notifytext(rstext);
+        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR).notifytext(rstext).toFuture();
         String state = map.get("trade_state");
         if (state == null && "SUCCESS".equals(map.get("result_code")) && Long.parseLong(map.get("total_fee")) > 0) {
             state = "SUCCESS";
             result.setPayedmoney(Long.parseLong(map.get("total_fee")));
         }
-        if (!"SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext);
-        return result.notifytext(rstext);
+        if (!"SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext).toFuture();
+        return result.notifytext(rstext).toFuture();
     }
 
     /**
@@ -223,12 +237,17 @@ public class WeiXinPayService extends AbstractPayService {
      * @return PayCreatResponse
      */
     @Override
-    public PayCreatResponse create(final PayCreatRequest request) {
+    public PayCreatResponse create(PayCreatRequest request) {
+        return createAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayCreatResponse> createAsync(PayCreatRequest request) {
         request.checkVaild();
         final PayCreatResponse result = new PayCreatResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final TreeMap<String, String> map = new TreeMap<>();
             if (request.getAttach() != null) map.putAll(request.getAttach());
             map.put("appid", element.appid);
@@ -242,30 +261,32 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getPaytimeout() * 1000));
             map.put("notify_url", element.notifyurl);
             map.put("sign", createSign(element, map));
+            return postHttpContentAsync("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map)).thenApply(responseText -> {
+                result.setResponsetext(responseText);
 
-            final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/unifiedorder", formatMapToXML(map));
-            result.setResponsetext(responseText);
-
-            Map<String, String> resultmap = formatXMLToMap(responseText);
-            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            /**
-             * "appId" : "wx2421b1c4370ec43b", //公众号名称，由商户传入 "timeStamp":" 1395712654", //时间戳，自1970年以来的秒数 "nonceStr" : "e61463f8efa94090b1f366cccfbbb444", //随机串 "package" :
-             * "prepay_id=u802345jgfjsdfgsdg888", "signType" : "MD5", //微信签名方式: "paySign" : "70EA570631E4BB79628FBCA90534C63FF7FADD89" //微信签名
-             */
-            final Map<String, String> rmap = new TreeMap<>();
-            result.setResult(rmap);
-            rmap.put("appId", element.appid);
-            rmap.put("timeStamp", Long.toString(System.currentTimeMillis() / 1000));
-            rmap.put("nonceStr", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
-            rmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
-            rmap.put("signType", "MD5");
-            rmap.put("paySign", createSign(element, rmap));
+                Map<String, String> resultmap = formatXMLToMap(responseText);
+                if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                /**
+                 * "appId" : "wx2421b1c4370ec43b", //公众号名称，由商户传入 "timeStamp":" 1395712654", //时间戳，自1970年以来的秒数 "nonceStr" : "e61463f8efa94090b1f366cccfbbb444", //随机串 "package" :
+                 * "prepay_id=u802345jgfjsdfgsdg888", "signType" : "MD5", //微信签名方式: "paySign" : "70EA570631E4BB79628FBCA90534C63FF7FADD89" //微信签名
+                 */
+                final Map<String, String> rmap = new TreeMap<>();
+                result.setResult(rmap);
+                rmap.put("appId", element.appid);
+                rmap.put("timeStamp", Long.toString(System.currentTimeMillis() / 1000));
+                rmap.put("nonceStr", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
+                rmap.put("package", "prepay_id=" + resultmap.get("prepay_id"));
+                rmap.put("signType", "MD5");
+                rmap.put("paySign", createSign(element, rmap));
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responsetext, e);
+
+            return result.toFuture();
         }
-        return result;
     }
 
     /**
@@ -296,95 +317,112 @@ public class WeiXinPayService extends AbstractPayService {
      * @return PayQueryResponse
      */
     @Override
-    public PayQueryResponse query(final PayRequest request) {
+    public PayQueryResponse query(PayRequest request) {
+        return queryAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayQueryResponse> queryAsync(PayRequest request) {
         request.checkVaild();
         final PayQueryResponse result = new PayQueryResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final Map<String, String> map = new TreeMap<>();
             map.put("appid", element.appid);
             map.put("mch_id", element.merchno);
             map.put("out_trade_no", request.getPayno());
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("sign", createSign(element, map));
+            return postHttpContentAsync("https://api.mch.weixin.qq.com/pay/orderquery", formatMapToXML(map)).thenApply(responseText -> {
+                result.setResponsetext(responseText);
 
-            final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/orderquery", formatMapToXML(map));
-            result.setResponsetext(responseText);
+                final Map<String, String> resultmap = formatXMLToMap(responseText);
+                result.setResult(resultmap);
 
-            final Map<String, String> resultmap = formatXMLToMap(responseText);
-            result.setResult(resultmap);
+                String state = resultmap.getOrDefault("trade_state", "");
+                if (state.isEmpty() && "SUCCESS".equals(resultmap.get("result_code")) && Long.parseLong(resultmap.get("total_fee")) > 0) {
+                    state = "SUCCESS";
+                }
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (state.isEmpty()) logger.warning("weixin.pay.query = " + resultmap);
 
-            String state = resultmap.getOrDefault("trade_state", "");
-            if (state.isEmpty() && "SUCCESS".equals(resultmap.get("result_code")) && Long.parseLong(resultmap.get("total_fee")) > 0) {
-                state = "SUCCESS";
-            }
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            if (state.isEmpty()) logger.warning("weixin.pay.query = " + resultmap);
-
-            //trade_state 支付状态: SUCCESS—支付成功 REFUND—转入退款 NOTPAY—未支付 CLOSED—已关闭 REVOKED—已撤销（刷卡支付） USERPAYING--用户支付中 PAYERROR--支付失败(其他原因，如银行返回失败)
-            short paystatus = PAYSTATUS_PAYNO;
-            switch (state) {
-                case "SUCCESS": paystatus = PAYSTATUS_PAYOK;
-                    break;
-                case "NOTPAY": paystatus = PAYSTATUS_UNPAY;
-                    break;
-                case "CLOSED": paystatus = PAYSTATUS_CLOSED;
-                    break;
-                case "REVOKED": paystatus = PAYSTATUS_CANCELED;
-                    break;
-                case "USERPAYING": paystatus = PAYSTATUS_PAYING;
-                    break;
-                case "PAYERROR": paystatus = PAYSTATUS_PAYNO;
-                    break;
-            }
-            result.setPaystatus(paystatus);
-            result.setThirdpayno(resultmap.getOrDefault("transaction_id", ""));
-            result.setPayedmoney(Long.parseLong(resultmap.getOrDefault("total_fee", "0")));
+                //trade_state 支付状态: SUCCESS—支付成功 REFUND—转入退款 NOTPAY—未支付 CLOSED—已关闭 REVOKED—已撤销（刷卡支付） USERPAYING--用户支付中 PAYERROR--支付失败(其他原因，如银行返回失败)
+                short paystatus = PAYSTATUS_PAYNO;
+                switch (state) {
+                    case "SUCCESS": paystatus = PAYSTATUS_PAYOK;
+                        break;
+                    case "NOTPAY": paystatus = PAYSTATUS_UNPAY;
+                        break;
+                    case "CLOSED": paystatus = PAYSTATUS_CLOSED;
+                        break;
+                    case "REVOKED": paystatus = PAYSTATUS_CANCELED;
+                        break;
+                    case "USERPAYING": paystatus = PAYSTATUS_PAYING;
+                        break;
+                    case "PAYERROR": paystatus = PAYSTATUS_PAYNO;
+                        break;
+                }
+                result.setPaystatus(paystatus);
+                result.setThirdpayno(resultmap.getOrDefault("transaction_id", ""));
+                result.setPayedmoney(Long.parseLong(resultmap.getOrDefault("total_fee", "0")));
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
     }
 
     @Override
-    public PayResponse close(final PayCloseRequest request) {
+    public PayResponse close(PayCloseRequest request) {
+        return closeAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayResponse> closeAsync(PayCloseRequest request) {
         request.checkVaild();
         final PayResponse result = new PayResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             Map<String, String> map = new TreeMap<>();
             map.put("appid", element.appid);
             map.put("mch_id", element.merchno);
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("out_trade_no", request.getPayno());
             map.put("sign", createSign(element, map));
+            return postHttpContentAsync("https://api.mch.weixin.qq.com/pay/closeorder", formatMapToXML(map)).thenApply(responseText -> {
+                result.setResponsetext(responseText);
 
-            final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/closeorder", formatMapToXML(map));
-            result.setResponsetext(responseText);
-
-            Map<String, String> resultmap = formatXMLToMap(responseText);
-            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            result.setResult(resultmap);
-
+                Map<String, String> resultmap = formatXMLToMap(responseText);
+                if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                result.setResult(resultmap);
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
+
+    }
+
+    @Override
+    public PayRefundResponse refund(PayRefundRequest request) {
+        return refundAsync(request).join();
     }
 
     //https://pay.weixin.qq.com/wiki/doc/api/micropay.php?chapter=9_4
     @Override
-    public PayRefundResponse refund(PayRefundRequest request) {
+    public CompletableFuture<PayRefundResponse> refundAsync(PayRefundRequest request) {
         request.checkVaild();
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("appid", element.appid);
             map.put("mch_id", element.merchno);
@@ -395,63 +433,75 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("refund_fee", "" + request.getRefundmoney());
             map.put("op_user_id", element.merchno);
             map.put("sign", createSign(element, map));
+            return postHttpContentAsync(element.paySSLContext, "https://api.mch.weixin.qq.com/secapi/pay/refund", formatMapToXML(map)).thenApply(responseText -> {
+                result.setResponsetext(responseText);
 
-            final String responseText = Utility.postHttpContent(element.paySSLContext, "https://api.mch.weixin.qq.com/secapi/pay/refund", formatMapToXML(map));
-            result.setResponsetext(responseText);
-
-            Map<String, String> resultmap = formatXMLToMap(responseText);
-            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_REFUND_ERROR);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            result.setRefundedmoney(Long.parseLong(resultmap.get("refund_fee")));
+                Map<String, String> resultmap = formatXMLToMap(responseText);
+                if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_REFUND_ERROR);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                result.setRefundedmoney(Long.parseLong(resultmap.get("refund_fee")));
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_REFUND_ERROR);
             logger.log(Level.WARNING, "refund_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
     }
 
     @Override
     public PayRefundResponse queryRefund(PayRequest request) {
+        return queryRefundAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRequest request) {
         request.checkVaild();
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final Map<String, String> map = new TreeMap<>();
             map.put("appid", element.appid);
             map.put("mch_id", element.merchno);
             map.put("out_trade_no", request.getPayno());
             map.put("nonce_str", Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime()));
             map.put("sign", createSign(element, map));
+            return postHttpContentAsync("https://api.mch.weixin.qq.com/pay/refundquery", formatMapToXML(map)).thenApply(responseText -> {
+                result.setResponsetext(responseText);
 
-            final String responseText = Utility.postHttpContent("https://api.mch.weixin.qq.com/pay/refundquery", formatMapToXML(map));
-            result.setResponsetext(responseText);
+                final Map<String, String> resultmap = formatXMLToMap(responseText);
+                result.setResult(resultmap);
 
-            final Map<String, String> resultmap = formatXMLToMap(responseText);
-            result.setResult(resultmap);
+                if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                //trade_state SUCCESS—退款成功 FAIL—退款失败 PROCESSING—退款处理中 NOTSURE—未确定，需要商户原退款单号重新发起 
+                //CHANGE—转入代发，退款到银行发现用户的卡作废或者冻结了，导致原路退款银行卡失败，资金回流到商户的现金帐号，需要商户人工干预，通过线下或者财付通转账的方式进行退款。
 
-            if (!"SUCCESS".equals(resultmap.get("return_code"))) return result.retcode(RETPAY_PAY_ERROR);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            //trade_state SUCCESS—退款成功 FAIL—退款失败 PROCESSING—退款处理中 NOTSURE—未确定，需要商户原退款单号重新发起 
-            //CHANGE—转入代发，退款到银行发现用户的卡作废或者冻结了，导致原路退款银行卡失败，资金回流到商户的现金帐号，需要商户人工干预，通过线下或者财付通转账的方式进行退款。
-
-            result.setResult(resultmap);
-            result.setRefundedmoney(Long.parseLong(resultmap.get("refund_fee_$n")));
+                result.setResult(resultmap);
+                result.setRefundedmoney(Long.parseLong(resultmap.get("refund_fee_$n")));
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
+
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, ?> map) throws Exception { //计算签名
+    protected String createSign(final PayElement element, Map<String, ?> map) { //计算签名
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> {
             if (!((String) y).isEmpty()) sb.append(x).append('=').append(y).append('&');
         });
         sb.append("key=").append(((WeixinPayElement) element).signkey);
-        return Utility.binToHexString(MessageDigest.getInstance("MD5").digest(sb.toString().getBytes())).toUpperCase();
+        try {
+            return Utility.binToHexString(MessageDigest.getInstance("MD5").digest(sb.toString().getBytes())).toUpperCase();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Override

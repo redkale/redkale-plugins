@@ -11,6 +11,7 @@ import java.nio.charset.Charset;
 import java.security.*;
 import java.security.spec.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redkale.util.*;
@@ -82,6 +83,7 @@ public class AliPayService extends AbstractPayService {
         this.elements.putAll(elements);
     }
 
+    @Override
     public AliPayElement getPayElement(String appid) {
         return this.elements.get(appid);
     }
@@ -96,12 +98,17 @@ public class AliPayService extends AbstractPayService {
 
     @Override
     public PayPreResponse prepay(final PayPreRequest request) {
+        return prepayAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayPreResponse> prepayAsync(final PayPreRequest request) {
         request.checkVaild();
         //参数说明： https://doc.open.alipay.com/doc2/detail.htm?spm=a219a.7629140.0.0.lMJkw3&treeId=59&articleId=103663&docType=1
         final PayPreResponse result = new PayPreResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             result.setAppid(element.appid);
             // 签约合作者身份ID
             String param = "partner=" + "\"" + element.merchno + "\"";
@@ -139,42 +146,51 @@ public class AliPayService extends AbstractPayService {
             final Map<String, String> rmap = new TreeMap<>();
             rmap.put("content", param);
             result.setResult(rmap);
-
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responsetext, e);
         }
-        return result;
+        return result.toFuture();
+    }
+
+    @Override
+    public PayNotifyResponse notify(final PayNotifyRequest request) {
+        return notifyAsync(request).join();
     }
 
     //手机支付回调  
     // https://doc.open.alipay.com/doc2/detail.htm?spm=a219a.7629140.0.0.UywIMY&treeId=59&articleId=103666&docType=1
     @Override
-    public PayNotifyResponse notify(PayNotifyRequest request) {
+    public CompletableFuture<PayNotifyResponse> notifyAsync(PayNotifyRequest request) {
         request.checkVaild();
         final PayNotifyResponse result = new PayNotifyResponse();
         result.setPaytype(request.getPaytype());
         final String rstext = "success";
         Map<String, String> map = request.getAttach();
         final AliPayElement element = elements.get(request.getAppid());
-        if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+        if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
         result.setPayno(map.getOrDefault("out_trade_no", ""));
         result.setThirdpayno(map.getOrDefault("trade_no", ""));
-        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR);
+        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
         String state = map.getOrDefault("trade_status", "");
-        if ("WAIT_BUYER_PAY".equals(state)) return result.retcode(RETPAY_PAY_WAITING);
-        if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED);
+        if ("WAIT_BUYER_PAY".equals(state)) return result.retcode(RETPAY_PAY_WAITING).toFuture();
+        if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).toFuture();
         result.setPayedmoney((long) (Float.parseFloat(map.get("total_fee")) * 100));
-        return result.notifytext(rstext);
+        return result.notifytext(rstext).toFuture();
     }
 
     @Override
     public PayCreatResponse create(PayCreatRequest request) {
+        return createAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayCreatResponse> createAsync(PayCreatRequest request) {
         request.checkVaild();
         final PayCreatResponse result = new PayCreatResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("method", "alipay.trade.create");
@@ -196,32 +212,39 @@ public class AliPayService extends AbstractPayService {
 
             map.put("sign", createSign(element, map));
 
-            final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map));
-            //{"alipay_trade_create_response":{"code":"40002","msg":"Invalid Arguments","sub_code":"isv.invalid-signature","sub_msg":"无效签名"},"sign":"xxxxxxxxxxxx"}
-            result.setResponsetext(responseText);
-            final InnerCreateResponse resp = convert.convertFrom(InnerCreateResponse.class, responseText);
-            resp.responseText = responseText; //原始的返回内容            
-            if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            final Map<String, String> resultmap = resp.alipay_trade_create_response;
-            result.setResult(resultmap);
-            if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
-                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
-            }
-            result.setThirdpayno(resultmap.getOrDefault("trade_no", ""));
+            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
+                //{"alipay_trade_create_response":{"code":"40002","msg":"Invalid Arguments","sub_code":"isv.invalid-signature","sub_msg":"无效签名"},"sign":"xxxxxxxxxxxx"}
+                result.setResponsetext(responseText);
+                final InnerCreateResponse resp = convert.convertFrom(InnerCreateResponse.class, responseText);
+                resp.responseText = responseText; //原始的返回内容            
+                if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                final Map<String, String> resultmap = resp.alipay_trade_create_response;
+                result.setResult(resultmap);
+                if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
+                    return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
+                }
+                result.setThirdpayno(resultmap.getOrDefault("trade_no", ""));
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
     }
 
     @Override
     public PayQueryResponse query(PayRequest request) {
+        return queryAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayQueryResponse> queryAsync(PayRequest request) {
         request.checkVaild();
         final PayQueryResponse result = new PayQueryResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("sign_type", "RSA");
@@ -238,46 +261,53 @@ public class AliPayService extends AbstractPayService {
 
             map.put("sign", createSign(element, map));
 
-            final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map));
+            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
 
-            result.setResponsetext(responseText);
-            final InnerQueryResponse resp = convert.convertFrom(InnerQueryResponse.class, responseText);
-            resp.responseText = responseText; //原始的返回内容            
-            if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            final Map<String, String> resultmap = resp.alipay_trade_query_response;
-            result.setResult(resultmap);
-            if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
-                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
-            }
-            //trade_status 交易状态：WAIT_BUYER_PAY（交易创建，等待买家付款）、TRADE_CLOSED（未付款交易超时关闭，或支付完成后全额退款）、TRADE_SUCCESS（交易支付成功）、TRADE_FINISHED（交易结束，不可退款）
-            short paystatus = PAYSTATUS_PAYNO;
-            switch (resultmap.get("trade_status")) {
-                case "TRADE_SUCCESS": paystatus = PAYSTATUS_PAYOK;
-                    break;
-                case "WAIT_BUYER_PAY": paystatus = PAYSTATUS_UNPAY;
-                    break;
-                case "TRADE_CLOSED": paystatus = PAYSTATUS_CLOSED;
-                    break;
-                case "TRADE_FINISHED": paystatus = PAYSTATUS_PAYOK;
-                    break;
-            }
-            result.setPaystatus(paystatus);
-            result.setThirdpayno(resultmap.getOrDefault("trade_no", ""));
-            result.setPayedmoney((long) (Double.parseDouble(resultmap.get("receipt_amount")) * 100));
+                result.setResponsetext(responseText);
+                final InnerQueryResponse resp = convert.convertFrom(InnerQueryResponse.class, responseText);
+                resp.responseText = responseText; //原始的返回内容            
+                if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                final Map<String, String> resultmap = resp.alipay_trade_query_response;
+                result.setResult(resultmap);
+                if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
+                    return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
+                }
+                //trade_status 交易状态：WAIT_BUYER_PAY（交易创建，等待买家付款）、TRADE_CLOSED（未付款交易超时关闭，或支付完成后全额退款）、TRADE_SUCCESS（交易支付成功）、TRADE_FINISHED（交易结束，不可退款）
+                short paystatus = PAYSTATUS_PAYNO;
+                switch (resultmap.get("trade_status")) {
+                    case "TRADE_SUCCESS": paystatus = PAYSTATUS_PAYOK;
+                        break;
+                    case "WAIT_BUYER_PAY": paystatus = PAYSTATUS_UNPAY;
+                        break;
+                    case "TRADE_CLOSED": paystatus = PAYSTATUS_CLOSED;
+                        break;
+                    case "TRADE_FINISHED": paystatus = PAYSTATUS_PAYOK;
+                        break;
+                }
+                result.setPaystatus(paystatus);
+                result.setThirdpayno(resultmap.getOrDefault("trade_no", ""));
+                result.setPayedmoney((long) (Double.parseDouble(resultmap.get("receipt_amount")) * 100));
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
     }
 
     @Override
     public PayResponse close(PayCloseRequest request) {
+        return closeAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayResponse> closeAsync(PayCloseRequest request) {
         request.checkVaild();
         final PayResponse result = new PayResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("sign_type", "RSA");
@@ -294,32 +324,39 @@ public class AliPayService extends AbstractPayService {
 
             map.put("sign", createSign(element, map));
 
-            final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map));
+            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
 
-            result.setResponsetext(responseText);
-            final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
-            resp.responseText = responseText; //原始的返回内容            
-            if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            final Map<String, String> resultmap = resp.alipay_trade_close_response;
-            result.setResult(resultmap);
-            if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
-                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
-            }
+                result.setResponsetext(responseText);
+                final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
+                resp.responseText = responseText; //原始的返回内容            
+                if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                final Map<String, String> resultmap = resp.alipay_trade_close_response;
+                result.setResult(resultmap);
+                if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
+                    return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
+                }
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
+    }
+
+    @Override
+    public PayRefundResponse refund(PayRefundRequest request) {
+        return refundAsync(request).join();
     }
 
     //https://doc.open.alipay.com/docs/api.htm?spm=a219a.7629065.0.0.wavZ99&apiId=759&docType=4
     @Override
-    public PayRefundResponse refund(PayRefundRequest request) {
+    public CompletableFuture<PayRefundResponse> refundAsync(PayRefundRequest request) {
         request.checkVaild();
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("sign_type", "RSA");
@@ -336,27 +373,34 @@ public class AliPayService extends AbstractPayService {
 
             map.put("sign", createSign(element, map));
 
-            final String responseText = Utility.postHttpContent("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map));
+            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
 
-            result.setResponsetext(responseText);
-            final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
-            resp.responseText = responseText; //原始的返回内容            
-            if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            final Map<String, String> resultmap = resp.alipay_trade_close_response;
-            result.setResult(resultmap);
-            if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
-                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
-            }
-            result.setRefundedmoney((long) (Double.parseDouble(resultmap.get("refund_fee")) * 100));
+                result.setResponsetext(responseText);
+                final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
+                resp.responseText = responseText; //原始的返回内容            
+                if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                final Map<String, String> resultmap = resp.alipay_trade_close_response;
+                result.setResult(resultmap);
+                if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
+                    return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
+                }
+                result.setRefundedmoney((long) (Double.parseDouble(resultmap.get("refund_fee")) * 100));
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "refund_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
     }
 
     @Override
     public PayRefundResponse queryRefund(PayRequest request) {
+        return queryRefundAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRequest request) {
         PayQueryResponse queryResponse = query(request);
         final PayRefundResponse response = new PayRefundResponse();
         response.setRetcode(queryResponse.getRetcode());
@@ -366,26 +410,35 @@ public class AliPayService extends AbstractPayService {
         if (queryResponse.isSuccess()) {
             response.setRefundedmoney((long) (Double.parseDouble(response.getResult().get("receipt_amount")) * 100));
         }
-        return response;
+        return response.toFuture();
     }
 
-    protected boolean checkSign(final PayElement element, InnerResponse response) throws Exception {
+    protected boolean checkSign(final PayElement element, InnerResponse response) {
         if (((AliPayElement) element).pubKey == null) return true;
-        String text = response.responseText;
-        text = text.substring(text.indexOf(':') + 1, text.indexOf(",\"sign\""));
+        try {
+            String text = response.responseText;
+            text = text.substring(text.indexOf(':') + 1, text.indexOf(",\"sign\""));
 
-        Signature signature = Signature.getInstance("SHA1WithRSA");
-        signature.initVerify(((AliPayElement) element).pubKey);
-        signature.update(text.getBytes(((AliPayElement) element).charset));
-        return signature.verify(Base64.getDecoder().decode(response.sign.getBytes()));
+            Signature signature = Signature.getInstance("SHA1WithRSA");
+            signature.initVerify(((AliPayElement) element).pubKey);
+            signature.update(text.getBytes(((AliPayElement) element).charset));
+            return signature.verify(Base64.getDecoder().decode(response.sign.getBytes()));
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "checkSign error: element =" + element + ", response =" + response);
+            return false;
+        }
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, ?> map) throws Exception {
-        Signature signature = Signature.getInstance("SHA1WithRSA");
-        signature.initSign(((AliPayElement) element).priKey);
-        signature.update(joinMap(map).getBytes(((AliPayElement) element).charset));
-        return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8");
+    protected String createSign(final PayElement element, Map<String, ?> map) {
+        try {
+            Signature signature = Signature.getInstance("SHA1WithRSA");
+            signature.initSign(((AliPayElement) element).priKey);
+            signature.update(joinMap(map).getBytes(((AliPayElement) element).charset));
+            return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Override

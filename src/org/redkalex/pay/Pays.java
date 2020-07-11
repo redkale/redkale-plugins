@@ -30,9 +30,6 @@ public abstract class Pays {
     //支付宝支付
     public static final short PAYTYPE_ALIPAY = 14;
 
-    //易宝支付
-    public static final short PAYTYPE_EHKING = 15;
-
     //自定义的支付服务的paytype最小值, 50以下被框架占用
     public static final short MIN_DIY_PAYTYPE = 50;
 

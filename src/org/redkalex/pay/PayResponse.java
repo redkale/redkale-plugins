@@ -6,6 +6,7 @@
 package org.redkalex.pay;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import org.redkale.convert.*;
 import org.redkale.convert.json.JsonFactory;
 import org.redkale.service.RetResult;
@@ -38,6 +39,11 @@ public class PayResponse extends RetResult<Map<String, String>> {
 
     public PayResponse(int retcode, String retinfo, Map<String, String> result) {
         super(retcode, retinfo, result);
+    }
+
+    @Override
+    public CompletableFuture toFuture() {
+        return CompletableFuture.completedFuture(this);
     }
 
     @Override

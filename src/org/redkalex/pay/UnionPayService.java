@@ -10,6 +10,7 @@ import java.net.URLEncoder;
 import java.security.*;
 import java.security.cert.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redkale.util.*;
@@ -137,13 +138,18 @@ public class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    public PayPreResponse prepay(final PayPreRequest request) {
+    public PayPreResponse prepay(PayPreRequest request) {
+        return prepayAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayPreResponse> prepayAsync(PayPreRequest request) {
         request.checkVaild();
         //参数说明： https://open.unionpay.com/ajweb/help/file/techFile?productId=3
         final PayPreResponse result = new PayPreResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             result.setAppid(element.appid);
             TreeMap<String, String> map = new TreeMap<>();
             if (request.getAttach() != null) map.putAll(request.getAttach());
@@ -170,26 +176,34 @@ public class UnionPayService extends AbstractPayService {
             map.put("backUrl", ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl));
             map.put("signature", createSign(element, map));
 
-            result.responsetext = Utility.postHttpContent(element.createurl, joinMap(map));
-            Map<String, String> resultmap = formatTextToMap(result.responsetext);
-            result.setResult(resultmap);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
-                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
-            }
+            return postHttpContentAsync(element.createurl, joinMap(map)).thenApply(responsetext -> {
+                result.responsetext = responsetext;
+                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+                result.setResult(resultmap);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
+                    return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
+                }
 
-            final Map<String, String> rmap = new TreeMap<>();
-            rmap.put("content", resultmap.getOrDefault("tn", ""));
-            result.setResult(rmap);
+                final Map<String, String> rmap = new TreeMap<>();
+                rmap.put("content", resultmap.getOrDefault("tn", ""));
+                result.setResult(rmap);
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
     }
 
     @Override
     public PayNotifyResponse notify(PayNotifyRequest request) {
+        return notifyAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayNotifyResponse> notifyAsync(PayNotifyRequest request) {
         request.checkVaild();
         final PayNotifyResponse result = new PayNotifyResponse();
         result.setPaytype(request.getPaytype());
@@ -198,24 +212,29 @@ public class UnionPayService extends AbstractPayService {
         result.setPayno(map.getOrDefault("orderId", ""));
         result.setThirdpayno(map.getOrDefault("queryId", ""));
         final UnionPayElement element = elements.get(request.getAppid());
-        if (element == null) return result.retcode(RETPAY_CONF_ERROR);
-        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR);
+        if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
         //https://open.unionpay.com/upload/download/%E5%B9%B3%E5%8F%B0%E6%8E%A5%E5%85%A5%E6%8E%A5%E5%8F%A3%E8%A7%84%E8%8C%83-%E7%AC%AC5%E9%83%A8%E5%88%86-%E9%99%84%E5%BD%95V2.0.pdf
-        if ("70".equals(map.get("respCode"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(map.getOrDefault("respMsg", "unpay"));
+        if ("70".equals(map.get("respCode"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(map.getOrDefault("respMsg", "unpay")).toFuture();
         if (!"00".equalsIgnoreCase(map.get("respCode")) || Long.parseLong(map.getOrDefault("txnAmt", "0")) < 1) {
-            return result.retcode(RETPAY_PAY_ERROR).retinfo(map.getOrDefault("respMsg", null));
+            return result.retcode(RETPAY_PAY_ERROR).retinfo(map.getOrDefault("respMsg", null)).toFuture();
         }
         result.setPayedmoney(Long.parseLong(map.get("txnAmt")));
-        return result.notifytext(rstext);
+        return result.notifytext(rstext).toFuture();
     }
 
     @Override
     public PayCreatResponse create(PayCreatRequest request) {
+        return createAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayCreatResponse> createAsync(PayCreatRequest request) {
         request.checkVaild();
         final PayCreatResponse result = new PayCreatResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             TreeMap<String, String> map = new TreeMap<>();
             if (request.getAttach() != null) map.putAll(request.getAttach());
 
@@ -247,28 +266,37 @@ public class UnionPayService extends AbstractPayService {
             if (!element.notifyurl.isEmpty()) map.put("backUrl", element.notifyurl);
             map.put("signature", createSign(element, map));
 
-            result.responsetext = Utility.postHttpContent(element.createurl, joinMap(map));
-            Map<String, String> resultmap = formatTextToMap(result.responsetext);
-            result.setResult(resultmap);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
-                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
-            }
-            result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
+            return postHttpContentAsync(element.createurl, joinMap(map)).thenApply(responsetext -> {
+                result.responsetext = responsetext;
+                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+                result.setResult(resultmap);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
+                    return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
+                }
+                result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
+
     }
 
     @Override
     public PayQueryResponse query(PayRequest request) {
+        return queryAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayQueryResponse> queryAsync(PayRequest request) {
         request.checkVaild();
         final PayQueryResponse result = new PayQueryResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             TreeMap<String, String> map = new TreeMap<>();
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
@@ -290,42 +318,51 @@ public class UnionPayService extends AbstractPayService {
 
             map.put("signature", createSign(element, map));
 
-            result.responsetext = Utility.postHttpContent(element.queryurl, joinMap(map));
-            Map<String, String> resultmap = formatTextToMap(result.responsetext);
-            result.setResult(resultmap);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
-                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
-            }
-            //trade_status 交易状态：WAIT_BUYER_PAY（交易创建，等待买家付款）、TRADE_CLOSED（未付款交易超时关闭，或支付完成后全额退款）、TRADE_SUCCESS（交易支付成功）、TRADE_FINISHED（交易结束，不可退款）
-            short paystatus = PAYSTATUS_PAYNO;
-            switch (resultmap.get("origRespCode")) {
-                case "00": paystatus = PAYSTATUS_PAYOK;
-                    break;
-                case "WAIT_BUYER_PAY": paystatus = PAYSTATUS_UNPAY;
-                    break;
-                case "TRADE_CLOSED": paystatus = PAYSTATUS_CLOSED;
-                    break;
-                case "TRADE_FINISHED": paystatus = PAYSTATUS_PAYOK;
-                    break;
-            }
-            result.setPaystatus(paystatus);
-            result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
-            result.setPayedmoney((long) (Double.parseDouble(resultmap.getOrDefault("txnAmt", "0.0")) * 100));
+            return postHttpContentAsync(element.queryurl, joinMap(map)).thenApply(responsetext -> {
+                result.responsetext = responsetext;
+                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+                result.setResult(resultmap);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
+                    return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
+                }
+                //trade_status 交易状态：WAIT_BUYER_PAY（交易创建，等待买家付款）、TRADE_CLOSED（未付款交易超时关闭，或支付完成后全额退款）、TRADE_SUCCESS（交易支付成功）、TRADE_FINISHED（交易结束，不可退款）
+                short paystatus = PAYSTATUS_PAYNO;
+                switch (resultmap.get("origRespCode")) {
+                    case "00": paystatus = PAYSTATUS_PAYOK;
+                        break;
+                    case "WAIT_BUYER_PAY": paystatus = PAYSTATUS_UNPAY;
+                        break;
+                    case "TRADE_CLOSED": paystatus = PAYSTATUS_CLOSED;
+                        break;
+                    case "TRADE_FINISHED": paystatus = PAYSTATUS_PAYOK;
+                        break;
+                }
+                result.setPaystatus(paystatus);
+                result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
+                result.setPayedmoney((long) (Double.parseDouble(resultmap.getOrDefault("txnAmt", "0.0")) * 100));
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
+
     }
 
     @Override
     public PayResponse close(PayCloseRequest request) {
+        return closeAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayResponse> closeAsync(PayCloseRequest request) {
         request.checkVaild();
         final PayResponse result = new PayResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             TreeMap<String, String> map = new TreeMap<>();
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
@@ -353,27 +390,35 @@ public class UnionPayService extends AbstractPayService {
 
             map.put("signature", createSign(element, map));
 
-            result.responsetext = Utility.postHttpContent(element.closeurl, joinMap(map));
-            Map<String, String> resultmap = formatTextToMap(result.responsetext);
-            result.setResult(resultmap);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
-                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
-            }
+            return postHttpContentAsync(element.closeurl, joinMap(map)).thenApply(responsetext -> {
+                result.responsetext = responsetext;
+                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+                result.setResult(resultmap);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
+                    return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
+                }
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
     }
 
     @Override
     public PayRefundResponse refund(PayRefundRequest request) {
+        return refundAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayRefundResponse> refundAsync(PayRefundRequest request) {
         request.checkVaild();
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR);
+            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             TreeMap<String, String> map = new TreeMap<>();
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
@@ -399,23 +444,31 @@ public class UnionPayService extends AbstractPayService {
             if (!element.notifyurl.isEmpty()) map.put("backUrl", element.notifyurl);
 
             map.put("signature", createSign(element, map));
-
-            result.responsetext = Utility.postHttpContent(element.closeurl, joinMap(map));
-            Map<String, String> resultmap = formatTextToMap(result.responsetext);
-            result.setResult(resultmap);
-            if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
-            if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
-                return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
-            }
+            return postHttpContentAsync(element.refundurl, joinMap(map)).thenApply(responsetext -> {
+                result.responsetext = responsetext;
+                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+                result.setResult(resultmap);
+                if (!checkSign(element, resultmap)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
+                    return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
+                }
+                return result;
+            });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            return result.toFuture();
         }
-        return result;
+
     }
 
     @Override
     public PayRefundResponse queryRefund(PayRequest request) {
+        return queryRefundAsync(request).join();
+    }
+
+    @Override
+    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRequest request) {
         PayQueryResponse queryResponse = query(request);
         final PayRefundResponse response = new PayRefundResponse();
         response.setRetcode(queryResponse.getRetcode());
@@ -425,7 +478,7 @@ public class UnionPayService extends AbstractPayService {
         if (queryResponse.isSuccess()) {
             response.setRefundedmoney(Long.parseLong(response.getResult().get("txnAmt")));
         }
-        return response;
+        return response.toFuture();
     }
 
     protected Map<String, String> formatTextToMap(String responseText) {
@@ -439,13 +492,17 @@ public class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, ?> map) throws Exception { //计算签名
-        byte[] digest = MessageDigest.getInstance("SHA-1").digest(joinMap(map).getBytes("UTF-8"));
+    protected String createSign(final PayElement element, Map<String, ?> map) { //计算签名
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-1").digest(joinMap(map).getBytes("UTF-8"));
 
-        Signature signature = Signature.getInstance("SHA1WithRSA");
-        signature.initSign(((UnionPayElement) element).priKey);
-        signature.update(Utility.binToHexString(digest).getBytes("UTF-8"));
-        return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8");
+            Signature signature = Signature.getInstance("SHA1WithRSA");
+            signature.initSign(((UnionPayElement) element).priKey);
+            signature.update(Utility.binToHexString(digest).getBytes("UTF-8"));
+            return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Override
