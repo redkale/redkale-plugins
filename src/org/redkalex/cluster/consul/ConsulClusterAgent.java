@@ -9,6 +9,7 @@ import org.redkale.cluster.ClusterAgent;
 import java.lang.reflect.Type;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,6 +38,8 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected String apiurl;
 
+    protected Object httpClient; //JDK11里面的HttpClient
+
     protected int ttls = 10; //定时检查的秒数
 
     protected ScheduledThreadPoolExecutor scheduler;
@@ -56,6 +59,12 @@ public class ConsulClusterAgent extends ClusterAgent {
                 this.ttls = Integer.parseInt(property.getValue("value", "").trim());
                 if (this.ttls < 5) this.ttls = 10;
             }
+        }
+        try {
+            Class httpClientClass = Class.forName("java.net.http.HttpClient");
+            this.httpClient = httpClientClass.getMethod("newHttpClient").invoke(null);
+        } catch (Exception e) {
+            //不是JDK11+
         }
     }
 
@@ -107,7 +116,11 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected void checkHttpAddressHealth() {
         try {
             this.httpAddressMap.keySet().stream().forEach(servicename -> {
-                this.httpAddressMap.put(servicename, queryAddress(servicename));
+                try {
+                    this.httpAddressMap.put(servicename, queryAddress(servicename).get(10, TimeUnit.SECONDS));
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "checkHttpAddressHealth check " + servicename + " error", e);
+                }
             });
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "checkHttpAddressHealth check error", ex);
@@ -124,17 +137,51 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     @Override //获取HTTP远程服务的可用ip列表
-    public Collection<InetSocketAddress> queryHttpAddress(String protocol, String module, String resname) {
-        String servicename = generateHttpServiceName(protocol, module, resname);
-        return httpAddressMap.computeIfAbsent(servicename, n -> queryAddress(n));
+    public CompletableFuture<Collection<InetSocketAddress>> queryHttpAddress(String protocol, String module, String resname) {
+        final String servicename = generateHttpServiceName(protocol, module, resname);
+        Collection<InetSocketAddress> rs = httpAddressMap.get(servicename);
+        if (rs != null) return CompletableFuture.completedFuture(rs);
+        return queryAddress(servicename).thenApply(t -> {
+            httpAddressMap.put(servicename, t);
+            return t;
+        });
     }
 
     @Override
-    protected Collection<InetSocketAddress> queryAddress(final ClusterEntry entry) {
+    protected CompletableFuture<Collection<InetSocketAddress>> queryAddress(final ClusterEntry entry) {
         return queryAddress(entry.servicename);
     }
 
-    private Collection<InetSocketAddress> queryAddress(final String servicename) {
+    //JDK11+版本以上的纯异步方法
+    private CompletableFuture<Collection<InetSocketAddress>> queryAddress11(final String servicename) {
+        final java.net.http.HttpClient client = (java.net.http.HttpClient) httpClient;
+        String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + servicename + "\"", StandardCharsets.UTF_8);
+        java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofMillis(6000));
+        httpHeaders.forEach((n, v) -> builder.header(n, v));
+        final Set<InetSocketAddress> set = new CopyOnWriteArraySet<>();
+        return client.sendAsync(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenCompose(content -> {
+            final Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, (String) content);
+            if (map.isEmpty()) return CompletableFuture.completedFuture(set);
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            for (Map.Entry<String, AddressEntry> en : map.entrySet()) {
+                String url0 = this.apiurl + "/agent/health/service/id/" + en.getKey() + "?format=text";
+                java.net.http.HttpRequest.Builder builder0 = java.net.http.HttpRequest.newBuilder().uri(URI.create(url0)).timeout(Duration.ofMillis(6000));
+                httpHeaders.forEach((n, v) -> builder0.header(n, v));
+                futures.add(client.sendAsync(builder0.build(), java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenApply(irs -> {
+                    if ("passing".equalsIgnoreCase(irs)) {
+                        set.add(en.getValue().createSocketAddress());
+                    } else {
+                        logger.log(Level.INFO, en.getKey() + " bad result: " + irs);
+                    }
+                    return null;
+                }));
+            }
+            return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).thenApply(v -> set);
+        });
+    }
+
+    private CompletableFuture<Collection<InetSocketAddress>> queryAddress(final String servicename) {
+        if (httpClient != null) return queryAddress11(servicename);
         final HashSet<InetSocketAddress> set = new HashSet<>();
         String rs = null;
         try {
@@ -155,7 +202,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         } catch (Exception ex) {
             logger.log(Level.SEVERE, servicename + " queryAddress error, result=" + rs, ex);
         }
-        return set;
+        return CompletableFuture.completedFuture(set);
     }
 
     protected boolean isApplicationHealth() {
