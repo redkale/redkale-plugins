@@ -136,6 +136,15 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
+    @Override //获取MQTP的HTTP远程服务的可用ip列表, key = servicename
+    public CompletableFuture<Map<String, Collection<InetSocketAddress>>> queryMqtpAddress(String protocol, String module, String resname) {
+        final Map<String, Collection<InetSocketAddress>> rsmap = new HashMap<>();
+        final String servicenamprefix = generateHttpServiceName(protocol, module, null) + ":";
+        httpAddressMap.keySet().stream().filter(k -> k.startsWith(servicenamprefix))
+            .forEach(sn -> rsmap.put(sn, httpAddressMap.get(sn)));
+        return CompletableFuture.completedFuture(rsmap);
+    }
+
     @Override //获取HTTP远程服务的可用ip列表
     public CompletableFuture<Collection<InetSocketAddress>> queryHttpAddress(String protocol, String module, String resname) {
         final String servicename = generateHttpServiceName(protocol, module, resname);
