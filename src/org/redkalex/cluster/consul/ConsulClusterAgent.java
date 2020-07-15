@@ -36,6 +36,9 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected static final Type MAP_STRING_ADDRESSENTRY = new TypeToken<Map<String, AddressEntry>>() {
     }.getType();
 
+    protected static final Type MAP_STRING_SERVICEENTRY = new TypeToken<Map<String, ServiceEntry>>() {
+    }.getType();
+
     protected String apiurl;
 
     protected Object httpClient; //JDK11里面的HttpClient
@@ -44,8 +47,11 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected ScheduledThreadPoolExecutor scheduler;
 
-    //可能被HttpMessageClient用到的服务
+    //可能被HttpMessageClient用到的服务 key: servicename
     protected final ConcurrentHashMap<String, Collection<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
+
+    //可能被mqtp用到的服务 key: servicename
+    protected final ConcurrentHashMap<String, Collection<InetSocketAddress>> mqtpAddressMap = new ConcurrentHashMap<>();
 
     @Override
     public void init(AnyValue config) {
@@ -87,7 +93,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     @Override
     public void start() {
         if (this.scheduler == null) {
-            this.scheduler = new ScheduledThreadPoolExecutor(3, (Runnable r) -> {
+            this.scheduler = new ScheduledThreadPoolExecutor(4, (Runnable r) -> {
                 final Thread t = new Thread(r, ConsulClusterAgent.class.getSimpleName() + "-Task-Thread");
                 t.setDaemon(true);
                 return t;
@@ -97,6 +103,10 @@ public class ConsulClusterAgent extends ClusterAgent {
                 checkApplicationHealth();
                 checkHttpAddressHealth();
             }, 0, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
+
+            this.scheduler.scheduleAtFixedRate(() -> {
+                loadMqtpAddressHealth();
+            }, 0, ttls * 1000, TimeUnit.MILLISECONDS);
 
             AtomicInteger offset = new AtomicInteger();
             for (final ClusterEntry entry : localEntrys.values()) {
@@ -110,6 +120,26 @@ public class ConsulClusterAgent extends ClusterAgent {
                     updateSncpTransport(entry);
                 }, offset.incrementAndGet() * 88, ttls * 1000, TimeUnit.MILLISECONDS);  //88错开delay
             }
+        }
+    }
+
+    protected void loadMqtpAddressHealth() {
+        try {
+            String content = Utility.remoteHttpContent("GET", this.apiurl + "/agent/services", httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            final Map<String, ServiceEntry> map = JsonConvert.root().convertFrom(MAP_STRING_SERVICEENTRY, content);
+            Set<String> mqtpkeys = new HashSet<>();
+            map.forEach((key, en) -> {
+                if (en.Service.startsWith("mqtp:")) mqtpkeys.add(en.Service);
+            });
+            mqtpkeys.forEach(servicename -> {
+                try {
+                    this.mqtpAddressMap.put(servicename, queryAddress(servicename).get(10, TimeUnit.SECONDS));
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "loadMqtpAddressHealth check " + servicename + " error", e);
+                }
+            });
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "loadMqtpAddressHealth check error", ex);
         }
     }
 
@@ -138,10 +168,10 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     @Override //获取MQTP的HTTP远程服务的可用ip列表, key = servicename的后半段
     public CompletableFuture<Map<String, Collection<InetSocketAddress>>> queryMqtpAddress(String protocol, String module, String resname) {
-        final Map<String, Collection<InetSocketAddress>> rsmap = new HashMap<>();
+        final Map<String, Collection<InetSocketAddress>> rsmap = new ConcurrentHashMap<>();
         final String servicenamprefix = generateHttpServiceName(protocol, module, null) + ":";
-        httpAddressMap.keySet().stream().filter(k -> k.startsWith(servicenamprefix))
-            .forEach(sn -> rsmap.put(sn.substring(servicenamprefix.length()), httpAddressMap.get(sn)));
+        mqtpAddressMap.keySet().stream().filter(k -> k.startsWith(servicenamprefix))
+            .forEach(sn -> rsmap.put(sn.substring(servicenamprefix.length()), mqtpAddressMap.get(sn)));
         return CompletableFuture.completedFuture(rsmap);
     }
 
@@ -159,6 +189,10 @@ public class ConsulClusterAgent extends ClusterAgent {
     @Override
     protected CompletableFuture<Collection<InetSocketAddress>> queryAddress(final ClusterEntry entry) {
         return queryAddress(entry.servicename);
+    }
+
+    private CompletableFuture<Collection<InetSocketAddress>> queryAddress(final String servicename) {
+        return (httpClient != null) ? queryAddress11(servicename) : queryAddress8(servicename);
     }
 
     //JDK11+版本以上的纯异步方法
@@ -189,8 +223,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         });
     }
 
-    private CompletableFuture<Collection<InetSocketAddress>> queryAddress(final String servicename) {
-        if (httpClient != null) return queryAddress11(servicename);
+    private CompletableFuture<Collection<InetSocketAddress>> queryAddress8(final String servicename) {
         final HashSet<InetSocketAddress> set = new HashSet<>();
         String rs = null;
         try {
@@ -310,6 +343,13 @@ public class ConsulClusterAgent extends ClusterAgent {
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error", ex);
         }
+    }
+
+    public static class ServiceEntry {
+
+        public String ID;  //serviceid
+
+        public String Service; //servicename
     }
 
     public static class AddressEntry {
