@@ -158,11 +158,12 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     protected void checkLocalHealth(final ClusterEntry entry) {
+        String url = this.apiurl + "/agent/check/pass/" + entry.checkid;
         try {
-            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + entry.checkid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            String rs = Utility.remoteHttpContent("PUT", url, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, entry.checkid + " check error: " + rs);
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, entry.checkid + " check error", ex);
+            logger.log(Level.SEVERE, entry.checkid + " check error: " + url, ex);
         }
     }
 
@@ -214,7 +215,7 @@ public class ConsulClusterAgent extends ClusterAgent {
                     if ("passing".equalsIgnoreCase(irs)) {
                         set.add(en.getValue().createSocketAddress());
                     } else {
-                        logger.log(Level.INFO, en.getKey() + " bad result: " + irs);
+                        logger.log(Level.INFO, en.getKey() + " (url=" + url + ") bad result: " + irs);
                     }
                     return null;
                 }));
@@ -226,8 +227,9 @@ public class ConsulClusterAgent extends ClusterAgent {
     private CompletableFuture<Collection<InetSocketAddress>> queryAddress8(final String servicename) {
         final HashSet<InetSocketAddress> set = new HashSet<>();
         String rs = null;
+        String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + servicename + "\"", StandardCharsets.UTF_8);
         try {
-            rs = Utility.remoteHttpContent("GET", this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + servicename + "\"", StandardCharsets.UTF_8), httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            rs = Utility.remoteHttpContent("GET", url, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
             Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, rs);
             map.forEach((serviceid, en) -> {
                 try {
@@ -235,7 +237,7 @@ public class ConsulClusterAgent extends ClusterAgent {
                     if ("passing".equalsIgnoreCase(irs)) {
                         set.add(en.createSocketAddress());
                     } else {
-                        logger.log(Level.INFO, serviceid + " bad result: " + irs);
+                        logger.log(Level.INFO, serviceid + " (url=" + url + ") bad result: " + irs);
                     }
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, serviceid + " health format=text error", e);
