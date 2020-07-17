@@ -63,6 +63,8 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     protected Map<SocketAddress, byte[]> passwords;
 
+    protected List<InetSocketAddress> nodeAddrs;
+
     protected int db;
 
     protected Transport transport;
@@ -100,6 +102,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
             if (!db0.isEmpty()) this.db = Integer.valueOf(db0);
         }
         if (!passwords0.isEmpty()) this.passwords = passwords0;
+        this.nodeAddrs = addresses;
         TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity, readTimeoutSeconds, writeTimeoutSeconds);
         this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
         if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
@@ -265,7 +268,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.remove("hmapstrmap");
         source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
         source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
-        System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10,"key2*"));
+        System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*"));
 
         //清除
         source.remove("stritem1");
@@ -304,7 +307,12 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     public String resourceName() {
         Resource res = this.getClass().getAnnotation(Resource.class);
-        return res == null ? null : res.name();
+        return res == null ? "" : res.name();
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{addrs = " + this.nodeAddrs + ", db=" + this.db + "}";
     }
 
     @Override
