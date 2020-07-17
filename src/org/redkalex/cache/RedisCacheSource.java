@@ -238,7 +238,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         map.put("b", 2);
         source.set("mapvals", mapType, map);
         System.out.println("mapvals:  " + source.get("mapvals", mapType));
-        
+
         //h
         source.remove("hmap");
         source.hincr("hmap", "key1");
@@ -265,7 +265,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.remove("hmapstrmap");
         source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
         source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
-        System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10));
+        System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10,"key2*"));
 
         //清除
         source.remove("stritem1");
@@ -673,6 +673,11 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit, String pattern) {
+        return (Map) hmapAsync(key, type, offset, limit, pattern).join();
+    }
+
+    @Override
     public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit) {
         return (Map) hmapAsync(key, type, offset, limit).join();
     }
@@ -780,7 +785,22 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, int offset, int limit) {
-        return (CompletableFuture) send("HSCAN", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), String.valueOf(offset).getBytes(UTF8), "COUNT".getBytes(UTF8), String.valueOf(limit).getBytes(UTF8));
+        return hmapAsync(key, type, offset, limit, null);
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, int offset, int limit, String pattern) {
+        byte[][] bs = new byte[pattern == null || pattern.isEmpty() ? 4 : 6][limit];
+        int index = -1;
+        bs[++index] = key.getBytes(UTF8);
+        bs[++index] = String.valueOf(offset).getBytes(UTF8);
+        if (pattern != null && !pattern.isEmpty()) {
+            bs[++index] = "MATCH".getBytes(UTF8);
+            bs[++index] = pattern.getBytes(UTF8);
+        }
+        bs[++index] = "COUNT".getBytes(UTF8);
+        bs[++index] = String.valueOf(limit).getBytes(UTF8);
+        return (CompletableFuture) send("HSCAN", CacheEntryType.MAP, (Type) null, key, bs);
     }
 
     @Override
