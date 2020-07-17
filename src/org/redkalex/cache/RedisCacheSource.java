@@ -808,7 +808,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         }
         bs[++index] = "COUNT".getBytes(UTF8);
         bs[++index] = String.valueOf(limit).getBytes(UTF8);
-        return (CompletableFuture) send("HSCAN", CacheEntryType.MAP, (Type) null, key, bs);
+        return (CompletableFuture) send("HSCAN", CacheEntryType.MAP, type, key, bs);
     }
 
     @Override
