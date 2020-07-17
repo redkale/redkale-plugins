@@ -238,7 +238,8 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         map.put("b", 2);
         source.set("mapvals", mapType, map);
         System.out.println("mapvals:  " + source.get("mapvals", mapType));
-
+        
+        //h
         source.remove("hmap");
         source.hincr("hmap", "key1");
         System.out.println("hmap.key1 值 : " + source.hgetLong("hmap", "key1", -1));
@@ -250,6 +251,21 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.hremove("hmap", "key1", "key3");
         System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
         System.out.println("hmap.key2 值 : " + source.hgetString("hmap", "key2"));
+
+        source.remove("hmaplong");
+        source.hincr("hmaplong", "key1", 10);
+        source.hsetLong("hmaplong", "key2", 30);
+        System.out.println("hmaplong.所有值 : " + source.hmap("hmaplong", long.class, 0, 10));
+
+        source.remove("hmapstr");
+        source.hsetString("hmapstr", "key1", "str10");
+        source.hsetString("hmapstr", "key2", null);
+        System.out.println("hmapstr.所有值 : " + source.hmap("hmapstr", String.class, 0, 10));
+
+        source.remove("hmapstrmap");
+        source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
+        source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
+        System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10));
 
         //清除
         source.remove("stritem1");
@@ -273,6 +289,9 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.remove("300");
         source.remove("stringmap");
         source.remove("hmap");
+        source.remove("hmaplong");
+        source.remove("hmapstr");
+        source.remove("hmapstrmap");
         System.out.println("------------------------------------");
 
     }
@@ -654,6 +673,11 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit) {
+        return (Map) hmapAsync(key, type, offset, limit).join();
+    }
+
+    @Override
     public <T> T hget(final String key, final String field, final Type type) {
         return (T) hgetAsync(key, field, type).join();
     }
@@ -752,6 +776,11 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
             bs[i + 1] = fields[i].getBytes(UTF8);
         }
         return (CompletableFuture) send("HMGET", CacheEntryType.MAP, (Type) null, key, bs);
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, int offset, int limit) {
+        return (CompletableFuture) send("HSCAN", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), String.valueOf(offset).getBytes(UTF8), "COUNT".getBytes(UTF8), String.valueOf(limit).getBytes(UTF8));
     }
 
     @Override
@@ -1562,24 +1591,48 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                 future.complete((byte[]) null);
                                             }
                                         } else {
-                                            Collection rs = set ? new HashSet() : new ArrayList();
-                                            boolean keys = "KEYS".equals(command) || "HKEYS".equals(command);
-                                            boolean mget = !keys && ("MGET".equals(command) || "HMGET".equals(command));
-                                            Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
-                                            for (int i = 0; i < len; i++) {
-                                                int l = readInt(buffer);
-                                                if (l > 0) {
-                                                    rs.add(keys ? new String(readBytes(buffer), UTF8) : (ct == String.class ? new String(readBytes(buffer), UTF8) : convert.convertFrom(ct, new String(readBytes(buffer), UTF8))));
-                                                } else if (mget) {
-                                                    rs.add(null);
+                                            Object rsobj;
+                                            if (command.endsWith("SCAN")) {
+                                                LinkedHashMap rs = new LinkedHashMap();
+                                                rsobj = rs;
+                                                for (int i = 0; i < len; i++) {
+                                                    int l = readInt(buffer);
+                                                    if (l > 0) {
+                                                        readBytes(buffer);
+                                                    } else {
+                                                        while (buffer.hasRemaining()) {
+                                                            readBytes(buffer);
+                                                            String field = new String(readBytes(buffer), UTF8);
+                                                            String value = null;
+                                                            if (readInt(buffer) > 0) {
+                                                                value = new String(readBytes(buffer), UTF8);
+                                                            }
+                                                            Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
+                                                            rs.put(field, value == null ? null : (ct == String.class ? value : convert.convertFrom(ct, value)));
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                Collection rs = set ? new HashSet() : new ArrayList();
+                                                rsobj = rs;
+                                                boolean keys = "KEYS".equals(command) || "HKEYS".equals(command);
+                                                boolean mget = !keys && ("MGET".equals(command) || "HMGET".equals(command));
+                                                Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
+                                                for (int i = 0; i < len; i++) {
+                                                    int l = readInt(buffer);
+                                                    if (l > 0) {
+                                                        rs.add(keys ? new String(readBytes(buffer), UTF8) : (ct == String.class ? new String(readBytes(buffer), UTF8) : convert.convertFrom(ct, new String(readBytes(buffer), UTF8))));
+                                                    } else if (mget) {
+                                                        rs.add(null);
+                                                    }
                                                 }
                                             }
                                             if (future == null) {
                                                 transport.offerConnection(false, conn);
-                                                callback.completed(rs, key);
+                                                callback.completed(rsobj, key);
                                             } else {
                                                 transport.offerConnection(false, conn);
-                                                future.complete((Serializable) rs);
+                                                future.complete((Serializable) rsobj);
                                             }
                                         }
                                     } else {
