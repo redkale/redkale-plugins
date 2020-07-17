@@ -35,7 +35,7 @@ import org.redkale.util.AnyValue.DefaultAnyValue;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public class RedisCacheSource<V extends Object> extends AbstractService implements CacheSource<V>, Service, AutoCloseable, Resourcable {
+public final class RedisCacheSource<V extends Object> extends AbstractService implements CacheSource<V>, Service, AutoCloseable, Resourcable {
 
     protected static final String UTF8_NAME = "UTF-8";
 
@@ -194,7 +194,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         source.remove("stringmap");
         source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
         source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));
-        System.out.println("[两值] stringmap VALUES : " + source.getCollectionAsync("stringmap",JsonConvert.TYPE_MAP_STRING_STRING).join());
+        System.out.println("[两值] stringmap VALUES : " + source.getCollectionAsync("stringmap", JsonConvert.TYPE_MAP_STRING_STRING).join());
 
         source.remove("sets3");
         source.remove("sets4");
@@ -238,6 +238,19 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         map.put("b", 2);
         source.set("mapvals", mapType, map);
         System.out.println("mapvals:  " + source.get("mapvals", mapType));
+
+        source.remove("hmap");
+        source.hincr("hmap", "key1");
+        System.out.println("hmap.key1 值 : " + source.hgetLong("hmap", "key1", -1));
+        source.hmset("hmap", "key2", "haha", "key3", 333);
+        source.hmset("hmap", "sm", (HashMap) Utility.ofMap("a", "aa", "b", "bb"));
+        System.out.println("hmap.sm 值 : " + source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING));
+        System.out.println("hmap.[key1,key2,key3] 值 : " + source.hmget("hmap", "key1", "key2", "key3"));
+        System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
+        source.hremove("hmap", "key1", "key3");
+        System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
+        System.out.println("hmap.key2 值 : " + source.hgetString("hmap", "key2"));
+
         //清除
         source.remove("stritem1");
         source.remove("stritem2");
@@ -259,6 +272,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
         source.remove("myaddrs");
         source.remove("300");
         source.remove("stringmap");
+        source.remove("hmap");
         System.out.println("------------------------------------");
 
     }
@@ -567,6 +581,192 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     @Override
     public CompletableFuture<Long> decrAsync(final String key, long num) {
         return (CompletableFuture) send("DECRBY", CacheEntryType.ATOMIC, (Type) null, key, key.getBytes(UTF8), String.valueOf(num).getBytes(UTF8));
+    }
+
+    @Override
+    public int hremove(final String key, String... fields) {
+        return hremoveAsync(key, fields).join();
+    }
+
+    @Override
+    public List<String> hkeys(final String key) {
+        return hkeysAsync(key).join();
+    }
+
+    @Override
+    public long hincr(final String key, String field) {
+        return hincrAsync(key, field).join();
+    }
+
+    @Override
+    public long hincr(final String key, String field, long num) {
+        return hincrAsync(key, field, num).join();
+    }
+
+    @Override
+    public long hdecr(final String key, String field) {
+        return hdecrAsync(key, field).join();
+    }
+
+    @Override
+    public long hdecr(final String key, String field, long num) {
+        return hdecrAsync(key, field, num).join();
+    }
+
+    @Override
+    public boolean hexists(final String key, String field) {
+        return hexistsAsync(key, field).join();
+    }
+
+    @Override
+    public <T> void hset(final String key, final String field, final Convert convert, final T value) {
+        hsetAsync(key, field, convert, value).join();
+    }
+
+    @Override
+    public <T> void hset(final String key, final String field, final Type type, final T value) {
+        hsetAsync(key, field, type, value).join();
+    }
+
+    @Override
+    public <T> void hset(final String key, final String field, final Convert convert, final Type type, final T value) {
+        hsetAsync(key, field, convert, type, value).join();
+    }
+
+    @Override
+    public void hsetString(final String key, final String field, final String value) {
+        hsetStringAsync(key, field, value).join();
+    }
+
+    @Override
+    public void hsetLong(final String key, final String field, final long value) {
+        hsetLongAsync(key, field, value).join();
+    }
+
+    @Override
+    public void hmset(final String key, final Serializable... values) {
+        hmsetAsync(key, values).join();
+    }
+
+    @Override
+    public List<Serializable> hmget(final String key, final String... fields) {
+        return hmgetAsync(key, fields).join();
+    }
+
+    @Override
+    public <T> T hget(final String key, final String field, final Type type) {
+        return (T) hgetAsync(key, field, type).join();
+    }
+
+    @Override
+    public String hgetString(final String key, final String field) {
+        return hgetStringAsync(key, field).join();
+    }
+
+    @Override
+    public long hgetLong(final String key, final String field, long defValue) {
+        return hgetLongAsync(key, field, defValue).join();
+    }
+
+    @Override
+    public CompletableFuture<Integer> hremoveAsync(final String key, String... fields) {
+        byte[][] bs = new byte[fields.length + 1][];
+        bs[0] = key.getBytes(UTF8);
+        for (int i = 0; i < fields.length; i++) {
+            bs[i + 1] = fields[i].getBytes(UTF8);
+        }
+        return (CompletableFuture) send("HDEL", CacheEntryType.MAP, (Type) null, key, bs);
+    }
+
+    @Override
+    public CompletableFuture<List<String>> hkeysAsync(final String key) {
+        return (CompletableFuture) send("HKEYS", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8));
+    }
+
+    @Override
+    public CompletableFuture<Long> hincrAsync(final String key, String field) {
+        return hincrAsync(key, field, 1);
+    }
+
+    @Override
+    public CompletableFuture<Long> hincrAsync(final String key, String field, long num) {
+        return (CompletableFuture) send("HINCRBY", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8), String.valueOf(num).getBytes(UTF8));
+    }
+
+    @Override
+    public CompletableFuture<Long> hdecrAsync(final String key, String field) {
+        return hincrAsync(key, field, -1);
+    }
+
+    @Override
+    public CompletableFuture<Long> hdecrAsync(final String key, String field, long num) {
+        return hincrAsync(key, field, -num);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> hexistsAsync(final String key, String field) {
+        return (CompletableFuture) send("HEXISTS", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final T value) {
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.MAP, convert, null, value));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Type type, final T value) {
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, type, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.MAP, null, type, value));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, type, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.MAP, convert, type, value));
+    }
+
+    @Override
+    public CompletableFuture<Void> hsetStringAsync(final String key, final String field, final String value) {
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.STRING, null, null, value));
+    }
+
+    @Override
+    public CompletableFuture<Void> hsetLongAsync(final String key, final String field, final long value) {
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.LONG, null, null, value));
+    }
+
+    @Override
+    public CompletableFuture<Void> hmsetAsync(final String key, final Serializable... values) {
+        byte[][] bs = new byte[values.length + 1][];
+        bs[0] = key.getBytes(UTF8);
+        for (int i = 0; i < values.length; i += 2) {
+            bs[i + 1] = String.valueOf(values[i]).getBytes(UTF8);
+            bs[i + 2] = formatValue(CacheEntryType.MAP, null, null, values[i + 1]);
+        }
+        return (CompletableFuture) send("HMSET", CacheEntryType.MAP, (Type) null, key, bs);
+    }
+
+    @Override
+    public CompletableFuture<List<Serializable>> hmgetAsync(final String key, final String... fields) {
+        byte[][] bs = new byte[fields.length + 1][];
+        bs[0] = key.getBytes(UTF8);
+        for (int i = 0; i < fields.length; i++) {
+            bs[i + 1] = fields[i].getBytes(UTF8);
+        }
+        return (CompletableFuture) send("HMGET", CacheEntryType.MAP, (Type) null, key, bs);
+    }
+
+    @Override
+    public <T> CompletableFuture<T> hgetAsync(final String key, final String field, final Type type) {
+        return (CompletableFuture) send("HGET", CacheEntryType.OBJECT, type, key, key.getBytes(UTF8), field.getBytes(UTF8));
+    }
+
+    @Override
+    public CompletableFuture<String> hgetStringAsync(final String key, final String field) {
+        return (CompletableFuture) send("HGET", CacheEntryType.STRING, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8));
+    }
+
+    @Override
+    public CompletableFuture<Long> hgetLongAsync(final String key, final String field, long defValue) {
+        return (CompletableFuture) send("HGET", CacheEntryType.LONG, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8)).thenApplyAsync(v -> v == null ? defValue : v);
     }
 
     //--------------------- collection ------------------------------  
@@ -1201,6 +1401,13 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
     private byte[] formatValue(CacheEntryType cacheType, Convert convert0, Type resultType, Object value) {
         if (value == null) return "null".getBytes(UTF8);
         if (convert0 == null) convert0 = convert;
+        if (cacheType == CacheEntryType.MAP) {
+            if ((value instanceof CharSequence) || (value instanceof Number)) {
+                return String.valueOf(value).getBytes(UTF8);
+            }
+            if (objValueType == String.class && !(value instanceof CharSequence)) resultType = value.getClass();
+            return convert0.convertToBytes(resultType == null ? objValueType : resultType, value);
+        }
         if (cacheType == CacheEntryType.LONG || cacheType == CacheEntryType.ATOMIC) return String.valueOf(value).getBytes(UTF8);
         if (cacheType == CacheEntryType.STRING) return convert0.convertToBytes(String.class, value);
         return convert0.convertToBytes(resultType == null ? objValueType : resultType, value);
@@ -1303,7 +1510,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                             callback.completed(null, key);
                                         } else {
                                             transport.offerConnection(false, conn);
-                                            future.complete("SET".equals(command) ? null : bs);
+                                            future.complete(("SET".equals(command) || "HSET".equals(command)) ? null : bs);
                                         }
                                     } else if (sign == MINUS_BYTE) { // -
                                         String bs = readString(buffer);
@@ -1317,20 +1524,20 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                     } else if (sign == COLON_BYTE) { // :
                                         long rs = readLong(buffer);
                                         if (future == null) {
-                                            if (command.startsWith("INCR") || command.startsWith("DECR")) {
+                                            if (command.startsWith("INCR") || command.startsWith("DECR") || command.startsWith("HINCR")) {
                                                 transport.offerConnection(false, conn);
                                                 callback.completed(rs, key);
                                             } else {
                                                 transport.offerConnection(false, conn);
-                                                callback.completed(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
+                                                callback.completed(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
                                             }
                                         } else {
-                                            if (command.startsWith("INCR") || command.startsWith("DECR")) {
+                                            if (command.startsWith("INCR") || command.startsWith("DECR") || command.startsWith("HINCR") || command.startsWith("HGET")) {
                                                 transport.offerConnection(false, conn);
                                                 future.complete(rs);
                                             } else {
                                                 transport.offerConnection(false, conn);
-                                                future.complete(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
+                                                future.complete(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
                                             }
                                         }
                                     } else if (sign == DOLLAR_BYTE) { // $
@@ -1339,10 +1546,10 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                         Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                         if (future == null) {
                                             transport.offerConnection(false, conn);
-                                            callback.completed((("GET".equals(command) || rs == null) ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, new String(rs, UTF8))) : null), key);
+                                            callback.completed(((command.endsWith("GET") || rs == null) ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, new String(rs, UTF8))) : null), key);
                                         } else {
                                             transport.offerConnection(false, conn);
-                                            future.complete(("GET".equals(command) ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8))) : rs));
+                                            future.complete((command.endsWith("GET") ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8))) : rs));
                                         }
                                     } else if (sign == ASTERISK_BYTE) { // *
                                         final int len = readInt(buffer);
@@ -1356,8 +1563,8 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                                             }
                                         } else {
                                             Collection rs = set ? new HashSet() : new ArrayList();
-                                            boolean keys = "KEYS".equals(command);
-                                            boolean mget = !keys && "MGET".equals(command);
+                                            boolean keys = "KEYS".equals(command) || "HKEYS".equals(command);
+                                            boolean mget = !keys && ("MGET".equals(command) || "HMGET".equals(command));
                                             Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                             for (int i = 0; i < len; i++) {
                                                 int l = readInt(buffer);
@@ -1418,7 +1625,7 @@ public class RedisCacheSource<V extends Object> extends AbstractService implemen
                 }
             });
         });
-        return future;
+        return future; //.orTimeout(3, TimeUnit.SECONDS)  JDK9以上才支持
     }
 
     private CompletableFuture<AsyncConnection> selectdb(final AsyncConnection conn, final int db, final String command) {
