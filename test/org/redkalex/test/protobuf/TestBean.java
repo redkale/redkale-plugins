@@ -112,11 +112,11 @@ public class TestBean {
     private static java.lang.reflect.Type  retstring = new TypeToken<RetResult<Map<String,String>>>() {
     }.getType();
     
-    public static void main(String[] args) throws Throwable {
+    public static void main2(String[] args) throws Throwable {
         System.out.println(ProtobufConvert.root().getProtoDescriptor(retstring));
     }
     
-    public static void main33(String[] args) throws Throwable {
+    public static void main(String[] args) throws Throwable {
         //System.out.println(ProtobufConvert.root().getProtoDescriptor(TestBean.class));
         //System.out.println(Integer.toHexString(14<<3|2));
         TestBean bean = new TestBean();
@@ -137,6 +137,7 @@ public class TestBean {
         bean.end = "over";
 
         //-------------------------------
+        byte[] jsonbs =JsonConvert.root().convertToBytes(bean); 
         byte[] bs = ProtobufConvert.root().convertTo(bean);
         Utility.println("pconvert ", bs);
         PTestBeanOuterClass.PTestBean.Builder builder = PTestBeanOuterClass.PTestBean.newBuilder();
@@ -149,6 +150,7 @@ public class TestBean {
 
         System.out.println(bean);
         System.out.println(ProtobufConvert.root().convertFrom(TestBean.class, bs).toString());
+        System.out.println(JsonConvert.root().convertFrom(TestBean.class, jsonbs).toString());
 
         int count = 100000;
         long s, e;
@@ -159,6 +161,13 @@ public class TestBean {
         e = System.currentTimeMillis() - s;
         System.out.println("redkale-protobuf耗时-------" + e);
 
+        s = System.currentTimeMillis();
+        for (int z = 0; z < count; z++) {
+            JsonConvert.root().convertToBytes(bean); 
+        }
+        e = System.currentTimeMillis() - s;
+        System.out.println("redkale-json文本耗时-------" + e);
+        
         s = System.currentTimeMillis();
         for (int z = 0; z < count; z++) {
             createPTestBean(bean, builder).toByteArray();
