@@ -215,7 +215,7 @@ public class ConsulClusterAgent extends ClusterAgent {
                     if ("passing".equalsIgnoreCase(irs)) {
                         set.add(en.getValue().createSocketAddress());
                     } else {
-                        logger.log(Level.INFO, en.getKey() + " (url=" + url + ") bad result: " + irs);
+                        logger.log(Level.INFO, en.getKey() + " (url=" + url0 + ") bad result: " + irs);
                     }
                     return null;
                 }));
