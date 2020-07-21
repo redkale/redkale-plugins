@@ -120,11 +120,11 @@ public abstract class AbstractPayService implements Service {
 
     //待实现
     protected CompletableFuture<String> postHttpContentAsync(SSLContext ssl, String url, Charset charset, String body) {
-        return CompletableFuture.completedFuture(postHttpContent(ssl, url, charset, body));
+        return CompletableFuture.supplyAsync(() -> postHttpContent(ssl, url, charset, body));
     }
 
     protected CompletableFuture<String> postHttpContentAsync(SSLContext ssl, String url, String body) {
-        return CompletableFuture.completedFuture(postHttpContent(ssl, url, StandardCharsets.UTF_8, body));
+        return CompletableFuture.supplyAsync(() -> postHttpContent(ssl, url, StandardCharsets.UTF_8, body));
     }
 
     protected CompletableFuture<String> postHttpContentAsync(String url, Charset charset, String body) {
