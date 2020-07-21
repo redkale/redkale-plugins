@@ -249,7 +249,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.hmset("hmap", "key2", "haha", "key3", 333);
         source.hmset("hmap", "sm", (HashMap) Utility.ofMap("a", "aa", "b", "bb"));
         System.out.println("hmap.sm 值 : " + source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING));
-        System.out.println("hmap.[key1,key2,key3] 值 : " + source.hmget("hmap", "key1", "key2", "key3"));
+        System.out.println("hmap.[key1,key2,key3] 值 : " + source.hmget("hmap", String.class, "key1", "key2", "key3"));
         System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
         source.hremove("hmap", "key1", "key3");
         System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
@@ -676,8 +676,8 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
-    public List<Serializable> hmget(final String key, final String... fields) {
-        return hmgetAsync(key, fields).join();
+    public List<Serializable> hmget(final String key, final Type type, final String... fields) {
+        return hmgetAsync(key, type, fields).join();
     }
 
     @Override
@@ -782,13 +782,13 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
-    public CompletableFuture<List<Serializable>> hmgetAsync(final String key, final String... fields) {
+    public CompletableFuture<List<Serializable>> hmgetAsync(final String key, final Type type, final String... fields) {
         byte[][] bs = new byte[fields.length + 1][];
         bs[0] = key.getBytes(UTF8);
         for (int i = 0; i < fields.length; i++) {
             bs[i + 1] = fields[i].getBytes(UTF8);
         }
-        return (CompletableFuture) send("HMGET", CacheEntryType.MAP, (Type) null, key, bs);
+        return (CompletableFuture) send("HMGET", CacheEntryType.MAP, type, key, bs);
     }
 
     @Override
