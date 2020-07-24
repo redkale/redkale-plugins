@@ -388,7 +388,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                 .thenApply((ResultSet set) -> {
                     try {
                         final List<T> list = new ArrayList();
-                        while (set.next()) {
+                        while (set != null && set.next()) {
                             list.add(getEntityValue(info, sels, set));
                         }
                         return Sheet.asSheet(list);
