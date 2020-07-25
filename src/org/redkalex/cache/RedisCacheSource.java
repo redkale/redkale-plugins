@@ -271,7 +271,8 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*"));
 
         //清除
-        source.remove("stritem1");
+        int rs = source.remove("stritem1");
+        System.out.println("删除stritem1个数: " + rs);
         source.remove("stritem2");
         source.remove("intitem1");
         source.remove("intitem2");
@@ -559,13 +560,13 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- remove ------------------------------    
     @Override
-    public CompletableFuture<Void> removeAsync(String key) {
+    public CompletableFuture<Integer> removeAsync(String key) {
         return (CompletableFuture) send("DEL", null, (Type) null, key, key.getBytes(UTF8));
     }
 
     @Override
-    public void remove(String key) {
-        removeAsync(key).join();
+    public int remove(String key) {
+        return removeAsync(key).join();
     }
 
     //--------------------- incr ------------------------------    
@@ -1276,43 +1277,43 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- removeListItem ------------------------------  
     @Override
-    public CompletableFuture<Void> removeListItemAsync(String key, V value) {
+    public CompletableFuture<Integer> removeListItemAsync(String key, V value) {
         return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
 
     @Override
-    public <T> CompletableFuture<Void> removeListItemAsync(String key, final Type componentType, T value) {
+    public <T> CompletableFuture<Integer> removeListItemAsync(String key, final Type componentType, T value) {
         return (CompletableFuture) send("LREM", null, componentType, key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
     }
 
     @Override
-    public void removeListItem(String key, V value) {
-        removeListItemAsync(key, value).join();
+    public int removeListItem(String key, V value) {
+        return removeListItemAsync(key, value).join();
     }
 
     @Override
-    public <T> void removeListItem(String key, final Type componentType, T value) {
-        removeListItemAsync(key, componentType, value).join();
+    public <T> int removeListItem(String key, final Type componentType, T value) {
+        return removeListItemAsync(key, componentType, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> removeStringListItemAsync(String key, String value) {
+    public CompletableFuture<Integer> removeStringListItemAsync(String key, String value) {
         return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
     }
 
     @Override
-    public void removeStringListItem(String key, String value) {
-        removeStringListItemAsync(key, value).join();
+    public int removeStringListItem(String key, String value) {
+        return removeStringListItemAsync(key, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> removeLongListItemAsync(String key, long value) {
+    public CompletableFuture<Integer> removeLongListItemAsync(String key, long value) {
         return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
     }
 
     @Override
-    public void removeLongListItem(String key, long value) {
-        removeLongListItemAsync(key, value).join();
+    public int removeLongListItem(String key, long value) {
+        return removeLongListItemAsync(key, value).join();
     }
 
     //--------------------- appendSetItem ------------------------------  
@@ -1358,43 +1359,43 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- removeSetItem ------------------------------  
     @Override
-    public CompletableFuture<Void> removeSetItemAsync(String key, V value) {
+    public CompletableFuture<Integer> removeSetItemAsync(String key, V value) {
         return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
 
     @Override
-    public <T> CompletableFuture<Void> removeSetItemAsync(String key, final Type componentType, T value) {
+    public <T> CompletableFuture<Integer> removeSetItemAsync(String key, final Type componentType, T value) {
         return (CompletableFuture) send("SREM", null, componentType, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
     }
 
     @Override
-    public void removeSetItem(String key, V value) {
-        removeSetItemAsync(key, value).join();
+    public int removeSetItem(String key, V value) {
+        return removeSetItemAsync(key, value).join();
     }
 
     @Override
-    public <T> void removeSetItem(String key, final Type componentType, T value) {
-        removeSetItemAsync(key, componentType, value).join();
+    public <T> int removeSetItem(String key, final Type componentType, T value) {
+        return removeSetItemAsync(key, componentType, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> removeStringSetItemAsync(String key, String value) {
+    public CompletableFuture<Integer> removeStringSetItemAsync(String key, String value) {
         return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
     }
 
     @Override
-    public void removeStringSetItem(String key, String value) {
-        removeStringSetItemAsync(key, value).join();
+    public int removeStringSetItem(String key, String value) {
+        return removeStringSetItemAsync(key, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> removeLongSetItemAsync(String key, long value) {
+    public CompletableFuture<Integer> removeLongSetItemAsync(String key, long value) {
         return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
     }
 
     @Override
-    public void removeLongSetItem(String key, long value) {
-        removeLongSetItemAsync(key, value).join();
+    public int removeLongSetItem(String key, long value) {
+        return removeLongSetItemAsync(key, value).join();
     }
 
     //--------------------- queryKeys ------------------------------  
@@ -1586,7 +1587,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                 callback.completed(rs, key);
                                             } else {
                                                 transport.offerConnection(false, conn);
-                                                callback.completed(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
+                                                callback.completed(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
                                             }
                                         } else {
                                             if (command.startsWith("INCR") || command.startsWith("DECR") || command.startsWith("HINCR") || command.startsWith("HGET")) {
@@ -1594,7 +1595,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                 future.complete(rs);
                                             } else {
                                                 transport.offerConnection(false, conn);
-                                                future.complete(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
+                                                future.complete(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
                                             }
                                         }
                                     } else if (sign == DOLLAR_BYTE) { // $
