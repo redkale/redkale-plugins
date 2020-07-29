@@ -270,9 +270,29 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
         System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*"));
 
+        source.remove("popset");
+        source.appendStringSetItem("popset", "111");
+        source.appendStringSetItem("popset", "222");
+        source.appendStringSetItem("popset", "333");
+        source.appendStringSetItem("popset", "444");
+        source.appendStringSetItem("popset", "555");
+        System.out.println("SPOP一个元素：" + source.spopStringSetItem("popset"));
+        System.out.println("SPOP两个元素：" + source.spopStringSetItem("popset", 2));
+        System.out.println("SPOP五个元素：" + source.spopStringSetItem("popset", 5));
+        source.appendLongSetItem("popset", 111);
+        source.appendLongSetItem("popset", 222);
+        source.appendLongSetItem("popset", 333);
+        source.appendLongSetItem("popset", 444);
+        source.appendLongSetItem("popset", 555);
+        System.out.println("SPOP一个元素：" + source.spopLongSetItem("popset"));
+        System.out.println("SPOP两个元素：" + source.spopLongSetItem("popset", 2));
+        System.out.println("SPOP五个元素：" + source.spopLongSetItem("popset", 5));
+        System.out.println("SPOP一个元素：" + source.spopLongSetItem("popset"));
+
         //清除
         int rs = source.remove("stritem1");
         System.out.println("删除stritem1个数: " + rs);
+        source.remove("popset");
         source.remove("stritem2");
         source.remove("intitem1");
         source.remove("intitem2");
@@ -1328,6 +1348,36 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    public <T> CompletableFuture<T> spopSetItemAsync(String key, Type componentType) {
+        return (CompletableFuture) send("SPOP", CacheEntryType.OBJECT, componentType, key, key.getBytes(UTF8));
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> spopSetItemAsync(String key, int count, Type componentType) {
+        return (CompletableFuture) send("SPOP", CacheEntryType.OBJECT, componentType, key, key.getBytes(UTF8), String.valueOf(count).getBytes(UTF8));
+    }
+
+    @Override
+    public CompletableFuture<String> spopStringSetItemAsync(String key) {
+        return (CompletableFuture) send("SPOP", CacheEntryType.STRING, String.class, key, key.getBytes(UTF8));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> spopStringSetItemAsync(String key, int count) {
+        return (CompletableFuture) send("SPOP", CacheEntryType.STRING, String.class, key, key.getBytes(UTF8), String.valueOf(count).getBytes(UTF8));
+    }
+
+    @Override
+    public CompletableFuture<Long> spopLongSetItemAsync(String key) {
+        return (CompletableFuture) send("SPOP", CacheEntryType.LONG, long.class, key, key.getBytes(UTF8));
+    }
+
+    @Override
+    public CompletableFuture<List<Long>> spopLongSetItemAsync(String key, int count) {
+        return (CompletableFuture) send("SPOP", CacheEntryType.LONG, long.class, key, key.getBytes(UTF8), String.valueOf(count).getBytes(UTF8));
+    }
+
+    @Override
     public void appendSetItem(String key, V value) {
         appendSetItemAsync(key, value).join();
     }
@@ -1335,6 +1385,36 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     public <T> void appendSetItem(String key, final Type componentType, T value) {
         appendSetItemAsync(key, componentType, value).join();
+    }
+
+    @Override
+    public <T> T spopSetItem(String key, final Type componentType) {
+        return (T) spopSetItemAsync(key, componentType).join();
+    }
+
+    @Override
+    public <T> List<T> spopSetItem(String key, int count, final Type componentType) {
+        return (List) spopSetItemAsync(key, count, componentType).join();
+    }
+
+    @Override
+    public String spopStringSetItem(String key) {
+        return spopStringSetItemAsync(key).join();
+    }
+
+    @Override
+    public List<String> spopStringSetItem(String key, int count) {
+        return spopStringSetItemAsync(key, count).join();
+    }
+
+    @Override
+    public Long spopLongSetItem(String key) {
+        return spopLongSetItemAsync(key).join();
+    }
+
+    @Override
+    public List<Long> spopLongSetItem(String key, int count) {
+        return spopLongSetItemAsync(key, count).join();
     }
 
     @Override
@@ -1604,10 +1684,10 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                         Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                         if (future == null) {
                                             transport.offerConnection(false, conn);
-                                            callback.completed(((command.endsWith("GET") || rs == null) ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, new String(rs, UTF8))) : null), key);
+                                            callback.completed((("SPOP".equals(command) || command.endsWith("GET") || rs == null) ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, new String(rs, UTF8))) : null), key);
                                         } else {
                                             transport.offerConnection(false, conn);
-                                            future.complete((command.endsWith("GET") ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8))) : rs));
+                                            future.complete(("SPOP".equals(command) || command.endsWith("GET") ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8))) : rs));
                                         }
                                     } else if (sign == ASTERISK_BYTE) { // *
                                         final int len = readInt(buffer);
