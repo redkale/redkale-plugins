@@ -1613,7 +1613,6 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                 }
                 return;
             }
-            System.out.println("连接: " + conn);
             conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
                 @Override
                 public void completed(Integer result, ByteBuffer[] attachments) {
