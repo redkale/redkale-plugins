@@ -85,7 +85,6 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                 }
             }
         }
-
         final int bufferCapacity = conf.getIntValue("bufferCapacity", 8 * 1024);
         final int bufferPoolSize = conf.getIntValue("bufferPoolSize", Runtime.getRuntime().availableProcessors() * 8);
         final int threads = conf.getIntValue("threads", Runtime.getRuntime().availableProcessors() * 8);
@@ -105,6 +104,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         this.nodeAddrs = addresses;
         TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity, readTimeoutSeconds, writeTimeoutSeconds);
         this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
+        this.transport.setSemaphore(new Semaphore(conf.getIntValue("maxconns", threads)));
         if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
 
     }
@@ -139,9 +139,9 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     public static void main(String[] args) throws Exception {
-        DefaultAnyValue conf = new DefaultAnyValue();
+        DefaultAnyValue conf = new DefaultAnyValue().addValue("maxconns", "1");
         conf.addValue("node", new DefaultAnyValue().addValue("addr", "127.0.0.1").addValue("port", "6363"));
-
+ 
         RedisCacheSource source = new RedisCacheSource();
         source.defaultConvert = JsonFactory.root().getConvert();
         source.initValueType(String.class); //value用String类型
@@ -149,12 +149,13 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 7788);
 
         System.out.println("------------------------------------");
-        source.remove("stritem1");
-        source.remove("stritem2");
-        source.setString("stritem1", "value1");
-        source.setString("stritem2", "value2");
+        source.removeAsync("stritem1");
+        source.removeAsync("stritem2");
+        source.setStringAsync("stritem1", "value1");
+        source.setStringAsync("stritem2", "value2");
         System.out.println("[有值] MGET : " + source.getStringMap("stritem1", "stritem2"));
         System.out.println("[有值] MGET : " + Arrays.toString(source.getStringArray("stritem1", "stritem2")));
+
         source.remove("intitem1");
         source.remove("intitem2");
         source.setLong("intitem1", 333);
@@ -1612,6 +1613,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                 }
                 return;
             }
+            System.out.println("连接: " + conn);
             conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
                 @Override
                 public void completed(Integer result, ByteBuffer[] attachments) {
