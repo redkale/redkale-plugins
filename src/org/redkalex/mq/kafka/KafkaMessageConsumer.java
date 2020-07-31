@@ -75,8 +75,16 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                 consumer.commitAsync((map, exp) -> {
                     if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
                 });
-                for (ConsumerRecord<String, MessageRecord> r : records0) {
-                    processor.process(r.value(), null);
+                MessageRecord msg = null;
+                try {
+                    processor.begin(records0.count());
+                    for (ConsumerRecord<String, MessageRecord> r : records0) {
+                        msg = r.value();
+                        processor.process(msg, null);
+                    }
+                    processor.commit();
+                } catch (Throwable e) {
+                    logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
                 }
             }
             ConsumerRecords<String, MessageRecord> records;
