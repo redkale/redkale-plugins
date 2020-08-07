@@ -141,7 +141,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     public static void main(String[] args) throws Exception {
         DefaultAnyValue conf = new DefaultAnyValue().addValue("maxconns", "1");
         conf.addValue("node", new DefaultAnyValue().addValue("addr", "127.0.0.1").addValue("port", "6363"));
- 
+
         RedisCacheSource source = new RedisCacheSource();
         source.defaultConvert = JsonFactory.root().getConvert();
         source.initValueType(String.class); //value用String类型
@@ -851,7 +851,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     //--------------------- collection ------------------------------  
     @Override
     public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
-        return (CompletableFuture) send("OBJECT", null, (Type) null, key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
                 return send("LLEN", null, (Type) null, key, key.getBytes(UTF8));
@@ -868,7 +868,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Collection<V>> getCollectionAsync(String key) {
-        return (CompletableFuture) send("OBJECT", null, (Type) null, key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
                 return send("LRANGE", CacheEntryType.OBJECT, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
@@ -880,7 +880,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
-        return (CompletableFuture) send("OBJECT", null, componentType, key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, componentType, key, key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
                 return send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
@@ -1055,7 +1055,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
-        return (CompletableFuture) send("OBJECT", null, (Type) null, key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
                 return send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
@@ -1115,7 +1115,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
-        return (CompletableFuture) send("OBJECT", null, (Type) null, key, "ENCODING".getBytes(UTF8), key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
                 return send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
@@ -1668,7 +1668,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                 callback.completed(rs, key);
                                             } else {
                                                 transport.offerConnection(false, conn);
-                                                callback.completed(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
+                                                callback.completed((command.endsWith("EXISTS") || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
                                             }
                                         } else {
                                             if (command.startsWith("INCR") || command.startsWith("DECR") || command.startsWith("HINCR") || command.startsWith("HGET")) {
@@ -1676,7 +1676,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                 future.complete(rs);
                                             } else {
                                                 transport.offerConnection(false, conn);
-                                                future.complete(("EXISTS".equals(command) || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
+                                                future.complete((command.endsWith("EXISTS") || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
                                             }
                                         }
                                     } else if (sign == DOLLAR_BYTE) { // $
