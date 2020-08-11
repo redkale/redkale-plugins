@@ -255,6 +255,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.hremove("hmap", "key1", "key3");
         System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
         System.out.println("hmap.key2 值 : " + source.hgetString("hmap", "key2"));
+        System.out.println("hmap列表大小 : " + source.hsize("hmap"));
 
         source.remove("hmaplong");
         source.hincr("hmaplong", "key1", 10);
@@ -638,6 +639,11 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    public int hsize(final String key) {
+        return hsizeAsync(key).join();
+    }
+
+    @Override
     public List<String> hkeys(final String key) {
         return hkeysAsync(key).join();
     }
@@ -735,6 +741,11 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
             bs[i + 1] = fields[i].getBytes(UTF8);
         }
         return (CompletableFuture) send("HDEL", CacheEntryType.MAP, (Type) null, key, bs);
+    }
+
+    @Override
+    public CompletableFuture<Integer> hsizeAsync(final String key) {
+        return (CompletableFuture) send("HLEN", CacheEntryType.LONG, (Type) null, key, key.getBytes(UTF8));
     }
 
     @Override
@@ -1668,7 +1679,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                 callback.completed(rs, key);
                                             } else {
                                                 transport.offerConnection(false, conn);
-                                                callback.completed((command.endsWith("EXISTS") || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
+                                                callback.completed((command.endsWith("EXISTS") || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "HLEN".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null), key);
                                             }
                                         } else {
                                             if (command.startsWith("INCR") || command.startsWith("DECR") || command.startsWith("HINCR") || command.startsWith("HGET")) {
@@ -1676,7 +1687,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                 future.complete(rs);
                                             } else {
                                                 transport.offerConnection(false, conn);
-                                                future.complete((command.endsWith("EXISTS") || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
+                                                future.complete((command.endsWith("EXISTS") || "SISMEMBER".equals(command)) ? (rs > 0) : (("LLEN".equals(command) || "SCARD".equals(command) || "SREM".equals(command) || "LREM".equals(command) || "DEL".equals(command) || "HDEL".equals(command) || "HLEN".equals(command) || "DBSIZE".equals(command)) ? (int) rs : null));
                                             }
                                         }
                                     } else if (sign == DOLLAR_BYTE) { // $
