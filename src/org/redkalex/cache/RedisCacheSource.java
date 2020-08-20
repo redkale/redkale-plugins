@@ -356,6 +356,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- get ------------------------------
     @Override
+    @Deprecated
     public CompletableFuture<V> getAsync(String key) {
         return (CompletableFuture) send("GET", CacheEntryType.OBJECT, (Type) null, key, key.getBytes(UTF8));
     }
@@ -376,6 +377,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public V get(String key) {
         return getAsync(key).join();
     }
@@ -397,6 +399,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- getAndRefresh ------------------------------
     @Override
+    @Deprecated
     public CompletableFuture<V> getAndRefreshAsync(String key, int expireSeconds) {
         return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getAsync(key));
     }
@@ -407,6 +410,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public V getAndRefresh(String key, final int expireSeconds) {
         return getAndRefreshAsync(key, expireSeconds).join();
     }
@@ -449,26 +453,32 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- set ------------------------------
     @Override
+    @Deprecated
     public CompletableFuture<Void> setAsync(String key, V value) {
-        return (CompletableFuture) send("SET", CacheEntryType.OBJECT, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        CacheEntryType cet = this.objValueType == String.class ? CacheEntryType.STRING : CacheEntryType.OBJECT;
+        return (CompletableFuture) send("SET", cet, (Type) null, key, key.getBytes(UTF8), formatValue(cet, (Convert) null, (Type) null, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, T value) {
-        return (CompletableFuture) send("SET", CacheEntryType.OBJECT, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, convert, (Type) null, value));
+        CacheEntryType cet = value instanceof CharSequence ? CacheEntryType.STRING : CacheEntryType.OBJECT;
+        return (CompletableFuture) send("SET", cet, (Type) null, key, key.getBytes(UTF8), formatValue(cet, convert, (Type) null, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, final Type type, T value) {
-        return (CompletableFuture) send("SET", CacheEntryType.OBJECT, type, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, type, value));
+        CacheEntryType cet = type == String.class ? CacheEntryType.STRING : CacheEntryType.OBJECT;
+        return (CompletableFuture) send("SET", cet, type, key, key.getBytes(UTF8), formatValue(cet, (Convert) null, type, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, final Type type, T value) {
-        return (CompletableFuture) send("SET", CacheEntryType.OBJECT, type, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, convert, type, value));
+        CacheEntryType cet = type == String.class ? CacheEntryType.STRING : CacheEntryType.OBJECT;
+        return (CompletableFuture) send("SET", cet, type, key, key.getBytes(UTF8), formatValue(cet, convert, type, value));
     }
 
     @Override
+    @Deprecated
     public void set(final String key, V value) {
         setAsync(key, value).join();
     }
@@ -510,6 +520,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- set ------------------------------    
     @Override
+    @Deprecated
     public CompletableFuture<Void> setAsync(int expireSeconds, String key, V value) {
         return (CompletableFuture) setAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
     }
@@ -530,6 +541,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public void set(int expireSeconds, String key, V value) {
         setAsync(expireSeconds, key, value).join();
     }
@@ -878,6 +890,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public CompletableFuture<Collection<V>> getCollectionAsync(String key) {
         return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(UTF8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
@@ -1025,6 +1038,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public Collection<V> getCollection(String key) {
         return getCollectionAsync(key).join();
     }
@@ -1559,7 +1573,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
             return convert0.convertToBytes(resultType == null ? objValueType : resultType, value);
         }
         if (cacheType == CacheEntryType.LONG || cacheType == CacheEntryType.ATOMIC) return String.valueOf(value).getBytes(UTF8);
-        if (cacheType == CacheEntryType.STRING) return convert0.convertToBytes(String.class, value);
+        if (cacheType == CacheEntryType.STRING) return String.valueOf(value).getBytes(UTF8);
         return convert0.convertToBytes(resultType == null ? objValueType : resultType, value);
     }
 
@@ -1729,7 +1743,15 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                                 value = new String(readBytes(buffer), UTF8);
                                                             }
                                                             Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
-                                                            rs.put(field, value == null ? null : (ct == String.class ? value : convert.convertFrom(ct, value)));
+                                                            try {
+                                                                rs.put(field, value == null ? null : (ct == String.class ? value : convert.convertFrom(ct, value)));
+                                                            } catch (RuntimeException e) {
+                                                                buffer.flip();
+                                                                byte[] bsss = new byte[buffer.remaining()];
+                                                                buffer.get(bsss);
+                                                                logger.log(Level.SEVERE, "异常: " + new String(bsss));
+                                                                throw e;
+                                                            }
                                                         }
                                                     }
                                                 }
