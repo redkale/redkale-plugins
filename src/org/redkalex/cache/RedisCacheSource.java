@@ -10,7 +10,7 @@ import java.lang.reflect.Type;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
@@ -36,10 +36,6 @@ import org.redkale.util.AnyValue.DefaultAnyValue;
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
 public final class RedisCacheSource<V extends Object> extends AbstractService implements CacheSource<V>, Service, AutoCloseable, Resourcable {
-
-    protected static final String UTF8_NAME = "UTF-8";
-
-    protected static final Charset UTF8 = Charset.forName(UTF8_NAME);
 
     protected static final byte DOLLAR_BYTE = '$';
 
@@ -96,7 +92,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
             InetSocketAddress addr = new InetSocketAddress(node.getValue("addr"), node.getIntValue("port"));
             addresses.add(addr);
             String password = node.getValue("password", "").trim();
-            if (!password.isEmpty()) passwords0.put(addr, password.getBytes(UTF8));
+            if (!password.isEmpty()) passwords0.put(addr, password.getBytes(StandardCharsets.UTF_8));
             String db0 = node.getValue("db", "").trim();
             if (!db0.isEmpty()) this.db = Integer.valueOf(db0);
         }
@@ -125,11 +121,13 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public final void initValueType(Type valueType) {
         this.objValueType = valueType == null ? String.class : valueType;
     }
 
     @Override
+    @Deprecated
     public final void initTransient(boolean flag) {
     }
 
@@ -346,7 +344,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     //--------------------- exists ------------------------------
     @Override
     public CompletableFuture<Boolean> existsAsync(String key) {
-        return (CompletableFuture) send("EXISTS", null, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("EXISTS", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -358,22 +356,22 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     @Deprecated
     public CompletableFuture<V> getAsync(String key) {
-        return (CompletableFuture) send("GET", CacheEntryType.OBJECT, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("GET", CacheEntryType.OBJECT, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public <T> CompletableFuture<T> getAsync(String key, Type type) {
-        return (CompletableFuture) send("GET", CacheEntryType.OBJECT, type, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("GET", CacheEntryType.OBJECT, type, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<String> getStringAsync(String key) {
-        return (CompletableFuture) send("GET", CacheEntryType.STRING, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("GET", CacheEntryType.STRING, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<Long> getLongAsync(String key, long defValue) {
-        return ((CompletableFuture) send("GET", CacheEntryType.LONG, (Type) null, key, key.getBytes(UTF8))).thenApplyAsync(v -> v == null ? defValue : v);
+        return ((CompletableFuture) send("GET", CacheEntryType.LONG, (Type) null, key, key.getBytes(StandardCharsets.UTF_8))).thenApplyAsync(v -> v == null ? defValue : v);
     }
 
     @Override
@@ -456,25 +454,25 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Deprecated
     public CompletableFuture<Void> setAsync(String key, V value) {
         CacheEntryType cet = this.objValueType == String.class ? CacheEntryType.STRING : CacheEntryType.OBJECT;
-        return (CompletableFuture) send("SET", cet, (Type) null, key, key.getBytes(UTF8), formatValue(cet, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SET", cet, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(cet, (Convert) null, (Type) null, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, T value) {
         CacheEntryType cet = value instanceof CharSequence ? CacheEntryType.STRING : CacheEntryType.OBJECT;
-        return (CompletableFuture) send("SET", cet, (Type) null, key, key.getBytes(UTF8), formatValue(cet, convert, (Type) null, value));
+        return (CompletableFuture) send("SET", cet, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(cet, convert, (Type) null, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, final Type type, T value) {
         CacheEntryType cet = type == String.class ? CacheEntryType.STRING : CacheEntryType.OBJECT;
-        return (CompletableFuture) send("SET", cet, type, key, key.getBytes(UTF8), formatValue(cet, (Convert) null, type, value));
+        return (CompletableFuture) send("SET", cet, type, key, key.getBytes(StandardCharsets.UTF_8), formatValue(cet, (Convert) null, type, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, final Type type, T value) {
         CacheEntryType cet = type == String.class ? CacheEntryType.STRING : CacheEntryType.OBJECT;
-        return (CompletableFuture) send("SET", cet, type, key, key.getBytes(UTF8), formatValue(cet, convert, type, value));
+        return (CompletableFuture) send("SET", cet, type, key, key.getBytes(StandardCharsets.UTF_8), formatValue(cet, convert, type, value));
     }
 
     @Override
@@ -500,7 +498,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Void> setStringAsync(String key, String value) {
-        return (CompletableFuture) send("SET", CacheEntryType.STRING, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SET", CacheEntryType.STRING, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -510,7 +508,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Void> setLongAsync(String key, long value) {
-        return (CompletableFuture) send("SET", CacheEntryType.LONG, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SET", CacheEntryType.LONG, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -584,7 +582,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     //--------------------- setExpireSeconds ------------------------------    
     @Override
     public CompletableFuture<Void> setExpireSecondsAsync(String key, int expireSeconds) {
-        return (CompletableFuture) send("EXPIRE", null, (Type) null, key, key.getBytes(UTF8), String.valueOf(expireSeconds).getBytes(UTF8));
+        return (CompletableFuture) send("EXPIRE", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -595,7 +593,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     //--------------------- remove ------------------------------    
     @Override
     public CompletableFuture<Integer> removeAsync(String key) {
-        return (CompletableFuture) send("DEL", null, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("DEL", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -611,7 +609,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Long> incrAsync(final String key) {
-        return (CompletableFuture) send("INCR", CacheEntryType.ATOMIC, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("INCR", CacheEntryType.ATOMIC, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -621,7 +619,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Long> incrAsync(final String key, long num) {
-        return (CompletableFuture) send("INCRBY", CacheEntryType.ATOMIC, (Type) null, key, key.getBytes(UTF8), String.valueOf(num).getBytes(UTF8));
+        return (CompletableFuture) send("INCRBY", CacheEntryType.ATOMIC, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(num).getBytes(StandardCharsets.UTF_8));
     }
 
     //--------------------- decr ------------------------------    
@@ -632,7 +630,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Long> decrAsync(final String key) {
-        return (CompletableFuture) send("DECR", CacheEntryType.ATOMIC, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("DECR", CacheEntryType.ATOMIC, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -642,7 +640,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Long> decrAsync(final String key, long num) {
-        return (CompletableFuture) send("DECRBY", CacheEntryType.ATOMIC, (Type) null, key, key.getBytes(UTF8), String.valueOf(num).getBytes(UTF8));
+        return (CompletableFuture) send("DECRBY", CacheEntryType.ATOMIC, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(num).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -748,21 +746,21 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     public CompletableFuture<Integer> hremoveAsync(final String key, String... fields) {
         byte[][] bs = new byte[fields.length + 1][];
-        bs[0] = key.getBytes(UTF8);
+        bs[0] = key.getBytes(StandardCharsets.UTF_8);
         for (int i = 0; i < fields.length; i++) {
-            bs[i + 1] = fields[i].getBytes(UTF8);
+            bs[i + 1] = fields[i].getBytes(StandardCharsets.UTF_8);
         }
         return (CompletableFuture) send("HDEL", CacheEntryType.MAP, (Type) null, key, bs);
     }
 
     @Override
     public CompletableFuture<Integer> hsizeAsync(final String key) {
-        return (CompletableFuture) send("HLEN", CacheEntryType.LONG, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("HLEN", CacheEntryType.LONG, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<List<String>> hkeysAsync(final String key) {
-        return (CompletableFuture) send("HKEYS", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("HKEYS", CacheEntryType.MAP, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -772,7 +770,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Long> hincrAsync(final String key, String field, long num) {
-        return (CompletableFuture) send("HINCRBY", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8), String.valueOf(num).getBytes(UTF8));
+        return (CompletableFuture) send("HINCRBY", CacheEntryType.MAP, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), String.valueOf(num).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -787,40 +785,40 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Boolean> hexistsAsync(final String key, String field) {
-        return (CompletableFuture) send("HEXISTS", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8));
+        return (CompletableFuture) send("HEXISTS", CacheEntryType.MAP, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final T value) {
-        return (CompletableFuture) send("HSET", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.MAP, convert, null, value));
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.MAP, convert, null, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Type type, final T value) {
-        return (CompletableFuture) send("HSET", CacheEntryType.MAP, type, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.MAP, null, type, value));
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, type, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.MAP, null, type, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
-        return (CompletableFuture) send("HSET", CacheEntryType.MAP, type, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.MAP, convert, type, value));
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, type, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.MAP, convert, type, value));
     }
 
     @Override
     public CompletableFuture<Void> hsetStringAsync(final String key, final String field, final String value) {
-        return (CompletableFuture) send("HSET", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.STRING, null, null, value));
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.STRING, null, null, value));
     }
 
     @Override
     public CompletableFuture<Void> hsetLongAsync(final String key, final String field, final long value) {
-        return (CompletableFuture) send("HSET", CacheEntryType.MAP, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8), formatValue(CacheEntryType.LONG, null, null, value));
+        return (CompletableFuture) send("HSET", CacheEntryType.MAP, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.LONG, null, null, value));
     }
 
     @Override
     public CompletableFuture<Void> hmsetAsync(final String key, final Serializable... values) {
         byte[][] bs = new byte[values.length + 1][];
-        bs[0] = key.getBytes(UTF8);
+        bs[0] = key.getBytes(StandardCharsets.UTF_8);
         for (int i = 0; i < values.length; i += 2) {
-            bs[i + 1] = String.valueOf(values[i]).getBytes(UTF8);
+            bs[i + 1] = String.valueOf(values[i]).getBytes(StandardCharsets.UTF_8);
             bs[i + 2] = formatValue(CacheEntryType.MAP, null, null, values[i + 1]);
         }
         return (CompletableFuture) send("HMSET", CacheEntryType.MAP, (Type) null, key, bs);
@@ -829,9 +827,9 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     public CompletableFuture<List<Serializable>> hmgetAsync(final String key, final Type type, final String... fields) {
         byte[][] bs = new byte[fields.length + 1][];
-        bs[0] = key.getBytes(UTF8);
+        bs[0] = key.getBytes(StandardCharsets.UTF_8);
         for (int i = 0; i < fields.length; i++) {
-            bs[i + 1] = fields[i].getBytes(UTF8);
+            bs[i + 1] = fields[i].getBytes(StandardCharsets.UTF_8);
         }
         return (CompletableFuture) send("HMGET", CacheEntryType.MAP, type, key, bs);
     }
@@ -845,41 +843,41 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, int offset, int limit, String pattern) {
         byte[][] bs = new byte[pattern == null || pattern.isEmpty() ? 4 : 6][limit];
         int index = -1;
-        bs[++index] = key.getBytes(UTF8);
-        bs[++index] = String.valueOf(offset).getBytes(UTF8);
+        bs[++index] = key.getBytes(StandardCharsets.UTF_8);
+        bs[++index] = String.valueOf(offset).getBytes(StandardCharsets.UTF_8);
         if (pattern != null && !pattern.isEmpty()) {
-            bs[++index] = "MATCH".getBytes(UTF8);
-            bs[++index] = pattern.getBytes(UTF8);
+            bs[++index] = "MATCH".getBytes(StandardCharsets.UTF_8);
+            bs[++index] = pattern.getBytes(StandardCharsets.UTF_8);
         }
-        bs[++index] = "COUNT".getBytes(UTF8);
-        bs[++index] = String.valueOf(limit).getBytes(UTF8);
+        bs[++index] = "COUNT".getBytes(StandardCharsets.UTF_8);
+        bs[++index] = String.valueOf(limit).getBytes(StandardCharsets.UTF_8);
         return (CompletableFuture) send("HSCAN", CacheEntryType.MAP, type, key, bs);
     }
 
     @Override
     public <T> CompletableFuture<T> hgetAsync(final String key, final String field, final Type type) {
-        return (CompletableFuture) send("HGET", CacheEntryType.OBJECT, type, key, key.getBytes(UTF8), field.getBytes(UTF8));
+        return (CompletableFuture) send("HGET", CacheEntryType.OBJECT, type, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<String> hgetStringAsync(final String key, final String field) {
-        return (CompletableFuture) send("HGET", CacheEntryType.STRING, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8));
+        return (CompletableFuture) send("HGET", CacheEntryType.STRING, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<Long> hgetLongAsync(final String key, final String field, long defValue) {
-        return (CompletableFuture) send("HGET", CacheEntryType.LONG, (Type) null, key, key.getBytes(UTF8), field.getBytes(UTF8)).thenApplyAsync(v -> v == null ? defValue : v);
+        return (CompletableFuture) send("HGET", CacheEntryType.LONG, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8)).thenApplyAsync(v -> v == null ? defValue : v);
     }
 
     //--------------------- collection ------------------------------  
     @Override
     public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
-        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LLEN", null, (Type) null, key, key.getBytes(UTF8));
+                return send("LLEN", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
             } else {
-                return send("SCARD", null, (Type) null, key, key.getBytes(UTF8));
+                return send("SCARD", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
             }
         });
     }
@@ -892,24 +890,24 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     @Deprecated
     public CompletableFuture<Collection<V>> getCollectionAsync(String key) {
-        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.OBJECT, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
+                return send("LRANGE", CacheEntryType.OBJECT, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
-                return send("SMEMBERS", CacheEntryType.OBJECT, (Type) null, true, key, key.getBytes(UTF8));
+                return send("SMEMBERS", CacheEntryType.OBJECT, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8));
             }
         });
     }
 
     @Override
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
-        return (CompletableFuture) send("TYPE", null, componentType, key, key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, componentType, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
+                return send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
-                return send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(UTF8));
+                return send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(StandardCharsets.UTF_8));
             }
         });
     }
@@ -918,7 +916,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     public CompletableFuture<Map<String, Long>> getLongMapAsync(String... keys) {
         byte[][] bs = new byte[keys.length][];
         for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(UTF8);
+            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
         }
         return (CompletableFuture) send("MGET", CacheEntryType.LONG, null, false, keys[0], bs).thenApply(r -> {
             List list = (List) r;
@@ -935,7 +933,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
         byte[][] bs = new byte[keys.length][];
         for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(UTF8);
+            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
         }
         return (CompletableFuture) send("MGET", CacheEntryType.LONG, null, false, keys[0], bs).thenApply(r -> {
             List list = (List) r;
@@ -952,7 +950,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
         byte[][] bs = new byte[keys.length][];
         for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(UTF8);
+            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
         }
         return (CompletableFuture) send("MGET", CacheEntryType.STRING, null, false, keys[0], bs).thenApply(r -> {
             List list = (List) r;
@@ -969,7 +967,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     public CompletableFuture<Map<String, String>> getStringMapAsync(String... keys) {
         byte[][] bs = new byte[keys.length][];
         for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(UTF8);
+            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
         }
         return (CompletableFuture) send("MGET", CacheEntryType.STRING, null, false, keys[0], bs).thenApply(r -> {
             List list = (List) r;
@@ -986,7 +984,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     public <T> CompletableFuture<Map<String, T>> getMapAsync(final Type componentType, String... keys) {
         byte[][] bs = new byte[keys.length][];
         for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(UTF8);
+            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
         }
         return (CompletableFuture) send("MGET", CacheEntryType.OBJECT, componentType, false, keys[0], bs).thenApply(r -> {
             List list = (List) r;
@@ -1007,7 +1005,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         if (!set) { //list        
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
+                futures[i] = send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
                     if (c != null) {
                         synchronized (map) {
                             map.put(key, (Collection) c);
@@ -1018,7 +1016,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         } else {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(UTF8)).thenAccept(c -> {
+                futures[i] = send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(StandardCharsets.UTF_8)).thenAccept(c -> {
                     if (c != null) {
                         synchronized (map) {
                             map.put(key, (Collection) c);
@@ -1080,12 +1078,12 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
-        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
+                return send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
-                return send("SMEMBERS", CacheEntryType.STRING, (Type) null, true, key, key.getBytes(UTF8));
+                return send("SMEMBERS", CacheEntryType.STRING, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8));
             }
         });
     }
@@ -1098,7 +1096,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         if (!set) { //list        
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
+                futures[i] = send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
                     if (c != null) {
                         synchronized (map) {
                             map.put(key, (Collection) c);
@@ -1109,7 +1107,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         } else {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("SMEMBERS", CacheEntryType.STRING, (Type) null, true, key, key.getBytes(UTF8)).thenAccept(c -> {
+                futures[i] = send("SMEMBERS", CacheEntryType.STRING, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8)).thenAccept(c -> {
                     if (c != null) {
                         synchronized (map) {
                             map.put(key, (Collection) c);
@@ -1140,12 +1138,12 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
-        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(UTF8)).thenCompose(t -> {
+        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
             if (t == null) return CompletableFuture.completedFuture(null);
             if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'});
+                return send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'});
             } else {
-                return send("SMEMBERS", CacheEntryType.LONG, (Type) null, true, key, key.getBytes(UTF8));
+                return send("SMEMBERS", CacheEntryType.LONG, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8));
             }
         });
     }
@@ -1158,7 +1156,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         if (!set) { //list        
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(UTF8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
+                futures[i] = send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
                     if (c != null) {
                         synchronized (map) {
                             map.put(key, (Collection) c);
@@ -1169,7 +1167,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         } else {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("SMEMBERS", CacheEntryType.LONG, (Type) null, true, key, key.getBytes(UTF8)).thenAccept(c -> {
+                futures[i] = send("SMEMBERS", CacheEntryType.LONG, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8)).thenAccept(c -> {
                     if (c != null) {
                         synchronized (map) {
                             map.put(key, (Collection) c);
@@ -1256,12 +1254,12 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     @Deprecated
     public CompletableFuture<Boolean> existsSetItemAsync(String key, V value) {
-        return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
 
     @Override
     public <T> CompletableFuture<Boolean> existsSetItemAsync(String key, final Type componentType, T value) {
-        return (CompletableFuture) send("SISMEMBER", null, componentType, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        return (CompletableFuture) send("SISMEMBER", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
     }
 
     @Override
@@ -1271,7 +1269,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Boolean> existsStringSetItemAsync(String key, String value) {
-        return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -1281,19 +1279,19 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Boolean> existsLongSetItemAsync(String key, long value) {
-        return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
     }
 
     //--------------------- appendListItem ------------------------------  
     @Override
     @Deprecated
     public CompletableFuture<Void> appendListItemAsync(String key, V value) {
-        return (CompletableFuture) send("RPUSH", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("RPUSH", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> appendListItemAsync(String key, final Type componentType, T value) {
-        return (CompletableFuture) send("RPUSH", null, componentType, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        return (CompletableFuture) send("RPUSH", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
     }
 
     @Override
@@ -1309,7 +1307,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Void> appendStringListItemAsync(String key, String value) {
-        return (CompletableFuture) send("RPUSH", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("RPUSH", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -1319,7 +1317,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Void> appendLongListItemAsync(String key, long value) {
-        return (CompletableFuture) send("RPUSH", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("RPUSH", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -1331,12 +1329,12 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     @Deprecated
     public CompletableFuture<Integer> removeListItemAsync(String key, V value) {
-        return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
 
     @Override
     public <T> CompletableFuture<Integer> removeListItemAsync(String key, final Type componentType, T value) {
-        return (CompletableFuture) send("LREM", null, componentType, key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        return (CompletableFuture) send("LREM", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
     }
 
     @Override
@@ -1352,7 +1350,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Integer> removeStringListItemAsync(String key, String value) {
-        return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -1362,7 +1360,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Integer> removeLongListItemAsync(String key, long value) {
-        return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -1374,42 +1372,42 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     @Deprecated
     public CompletableFuture<Void> appendSetItemAsync(String key, V value) {
-        return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
 
     @Override
     public <T> CompletableFuture<Void> appendSetItemAsync(String key, Type componentType, T value) {
-        return (CompletableFuture) send("SADD", null, componentType, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        return (CompletableFuture) send("SADD", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
     }
 
     @Override
     public <T> CompletableFuture<T> spopSetItemAsync(String key, Type componentType) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.OBJECT, componentType, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("SPOP", CacheEntryType.OBJECT, componentType, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public <T> CompletableFuture<List<T>> spopSetItemAsync(String key, int count, Type componentType) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.OBJECT, componentType, key, key.getBytes(UTF8), String.valueOf(count).getBytes(UTF8));
+        return (CompletableFuture) send("SPOP", CacheEntryType.OBJECT, componentType, key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(count).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<String> spopStringSetItemAsync(String key) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.STRING, String.class, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("SPOP", CacheEntryType.STRING, String.class, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<List<String>> spopStringSetItemAsync(String key, int count) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.STRING, String.class, key, key.getBytes(UTF8), String.valueOf(count).getBytes(UTF8));
+        return (CompletableFuture) send("SPOP", CacheEntryType.STRING, String.class, key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(count).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<Long> spopLongSetItemAsync(String key) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.LONG, long.class, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("SPOP", CacheEntryType.LONG, long.class, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<List<Long>> spopLongSetItemAsync(String key, int count) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.LONG, long.class, key, key.getBytes(UTF8), String.valueOf(count).getBytes(UTF8));
+        return (CompletableFuture) send("SPOP", CacheEntryType.LONG, long.class, key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(count).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -1455,7 +1453,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Void> appendStringSetItemAsync(String key, String value) {
-        return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -1465,7 +1463,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Void> appendLongSetItemAsync(String key, long value) {
-        return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -1477,12 +1475,12 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     @Override
     @Deprecated
     public CompletableFuture<Integer> removeSetItemAsync(String key, V value) {
-        return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
 
     @Override
     public <T> CompletableFuture<Integer> removeSetItemAsync(String key, final Type componentType, T value) {
-        return (CompletableFuture) send("SREM", null, componentType, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        return (CompletableFuture) send("SREM", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
     }
 
     @Override
@@ -1498,7 +1496,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Integer> removeStringSetItemAsync(String key, String value) {
-        return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -1508,7 +1506,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<Integer> removeLongSetItemAsync(String key, long value) {
-        return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
     }
 
     @Override
@@ -1541,14 +1539,14 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     public CompletableFuture<List<String>> queryKeysStartsWithAsync(String startsWith) {
         if (startsWith == null) return queryKeysAsync();
         String key = startsWith + "*";
-        return (CompletableFuture) send("KEYS", null, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("KEYS", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public CompletableFuture<List<String>> queryKeysEndsWithAsync(String endsWith) {
         if (endsWith == null) return queryKeysAsync();
         String key = "*" + endsWith;
-        return (CompletableFuture) send("KEYS", null, (Type) null, key, key.getBytes(UTF8));
+        return (CompletableFuture) send("KEYS", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
     }
 
     //--------------------- getKeySize ------------------------------  
@@ -1575,17 +1573,17 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- send ------------------------------  
     private byte[] formatValue(CacheEntryType cacheType, Convert convert0, Type resultType, Object value) {
-        if (value == null) return "null".getBytes(UTF8);
+        if (value == null) return "null".getBytes(StandardCharsets.UTF_8);
         if (convert0 == null) convert0 = convert;
         if (cacheType == CacheEntryType.MAP) {
             if ((value instanceof CharSequence) || (value instanceof Number)) {
-                return String.valueOf(value).getBytes(UTF8);
+                return String.valueOf(value).getBytes(StandardCharsets.UTF_8);
             }
             if (objValueType == String.class && !(value instanceof CharSequence)) resultType = value.getClass();
             return convert0.convertToBytes(resultType == null ? objValueType : resultType, value);
         }
-        if (cacheType == CacheEntryType.LONG || cacheType == CacheEntryType.ATOMIC) return String.valueOf(value).getBytes(UTF8);
-        if (cacheType == CacheEntryType.STRING) return String.valueOf(value).getBytes(UTF8);
+        if (cacheType == CacheEntryType.LONG || cacheType == CacheEntryType.ATOMIC) return String.valueOf(value).getBytes(StandardCharsets.UTF_8);
+        if (cacheType == CacheEntryType.STRING) return String.valueOf(value).getBytes(StandardCharsets.UTF_8);
         return convert0.convertToBytes(resultType == null ? objValueType : resultType, value);
     }
 
@@ -1600,17 +1598,17 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final CacheEntryType cacheType, final Type resultType, final boolean set, final String key, final byte[]... args) {
         final BsonByteBufferWriter writer = new BsonByteBufferWriter(transport.getBufferSupplier());
         writer.writeTo(ASTERISK_BYTE);
-        writer.writeTo(String.valueOf(args.length + 1).getBytes(UTF8));
+        writer.writeTo(String.valueOf(args.length + 1).getBytes(StandardCharsets.UTF_8));
         writer.writeTo((byte) '\r', (byte) '\n');
         writer.writeTo(DOLLAR_BYTE);
-        writer.writeTo(String.valueOf(command.length()).getBytes(UTF8));
+        writer.writeTo(String.valueOf(command.length()).getBytes(StandardCharsets.UTF_8));
         writer.writeTo((byte) '\r', (byte) '\n');
-        writer.writeTo(command.getBytes(UTF8));
+        writer.writeTo(command.getBytes(StandardCharsets.UTF_8));
         writer.writeTo((byte) '\r', (byte) '\n');
 
         for (final byte[] arg : args) {
             writer.writeTo(DOLLAR_BYTE);
-            writer.writeTo(String.valueOf(arg.length).getBytes(UTF8));
+            writer.writeTo(String.valueOf(arg.length).getBytes(StandardCharsets.UTF_8));
             writer.writeTo((byte) '\r', (byte) '\n');
             writer.writeTo(arg);
             writer.writeTo((byte) '\r', (byte) '\n');
@@ -1722,10 +1720,10 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                         Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                         if (future == null) {
                                             transport.offerConnection(false, conn);
-                                            callback.completed((("SPOP".equals(command) || command.endsWith("GET") || rs == null) ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, new String(rs, UTF8))) : null), key);
+                                            callback.completed((("SPOP".equals(command) || command.endsWith("GET") || rs == null) ? (ct == String.class && rs != null ? new String(rs, StandardCharsets.UTF_8) : convert.convertFrom(ct, new String(rs, StandardCharsets.UTF_8))) : null), key);
                                         } else {
                                             transport.offerConnection(false, conn);
-                                            future.complete(("SPOP".equals(command) || command.endsWith("GET") ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8))) : rs));
+                                            future.complete(("SPOP".equals(command) || command.endsWith("GET") ? (ct == String.class && rs != null ? new String(rs, StandardCharsets.UTF_8) : convert.convertFrom(ct, rs == null ? null : new String(rs, StandardCharsets.UTF_8))) : rs));
                                         }
                                     } else if (sign == ASTERISK_BYTE) { // *
                                         final int len = readInt(buffer);
@@ -1749,10 +1747,10 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                     } else {
                                                         while (buffer.hasRemaining()) {
                                                             readBytes(buffer);
-                                                            String field = new String(readBytes(buffer), UTF8);
+                                                            String field = new String(readBytes(buffer), StandardCharsets.UTF_8);
                                                             String value = null;
                                                             if (readInt(buffer) > 0) {
-                                                                value = new String(readBytes(buffer), UTF8);
+                                                                value = new String(readBytes(buffer), StandardCharsets.UTF_8);
                                                             }
                                                             Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                                             try {
@@ -1776,7 +1774,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                                 for (int i = 0; i < len; i++) {
                                                     int l = readInt(buffer);
                                                     if (l > 0) {
-                                                        rs.add(keys ? new String(readBytes(buffer), UTF8) : (ct == String.class ? new String(readBytes(buffer), UTF8) : convert.convertFrom(ct, new String(readBytes(buffer), UTF8))));
+                                                        rs.add(keys ? new String(readBytes(buffer), StandardCharsets.UTF_8) : (ct == String.class ? new String(readBytes(buffer), StandardCharsets.UTF_8) : convert.convertFrom(ct, new String(readBytes(buffer), StandardCharsets.UTF_8))));
                                                     } else if (mget) {
                                                         rs.add(null);
                                                     }
@@ -1846,13 +1844,13 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
             dbwriter.writeTo(DOLLAR_BYTE);
             dbwriter.writeTo((byte) '6');
             dbwriter.writeTo((byte) '\r', (byte) '\n');
-            dbwriter.writeTo("SELECT".getBytes(UTF8));
+            dbwriter.writeTo("SELECT".getBytes(StandardCharsets.UTF_8));
             dbwriter.writeTo((byte) '\r', (byte) '\n');
 
             dbwriter.writeTo(DOLLAR_BYTE);
-            dbwriter.writeTo(String.valueOf(String.valueOf(db).length()).getBytes(UTF8));
+            dbwriter.writeTo(String.valueOf(String.valueOf(db).length()).getBytes(StandardCharsets.UTF_8));
             dbwriter.writeTo((byte) '\r', (byte) '\n');
-            dbwriter.writeTo(String.valueOf(db).getBytes(UTF8));
+            dbwriter.writeTo(String.valueOf(db).getBytes(StandardCharsets.UTF_8));
             dbwriter.writeTo((byte) '\r', (byte) '\n');
 
             final ByteBuffer[] authbuffers = dbwriter.toBuffers();
@@ -1943,11 +1941,11 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
             authwriter.writeTo(DOLLAR_BYTE);
             authwriter.writeTo((byte) '4');
             authwriter.writeTo((byte) '\r', (byte) '\n');
-            authwriter.writeTo("AUTH".getBytes(UTF8));
+            authwriter.writeTo("AUTH".getBytes(StandardCharsets.UTF_8));
             authwriter.writeTo((byte) '\r', (byte) '\n');
 
             authwriter.writeTo(DOLLAR_BYTE);
-            authwriter.writeTo(String.valueOf(password.length).getBytes(UTF8));
+            authwriter.writeTo(String.valueOf(password.length).getBytes(StandardCharsets.UTF_8));
             authwriter.writeTo((byte) '\r', (byte) '\n');
             authwriter.writeTo(password);
             authwriter.writeTo((byte) '\r', (byte) '\n');
@@ -2048,7 +2046,7 @@ abstract class ReplyCompletionHandler implements CompletionHandler<Integer, Byte
 
     protected String readString(ByteBuffer buffer) throws IOException {
         readLine(buffer);
-        return out.toStringAndClear(null);//传null则表示使用UTF8 
+        return out.toStringAndClear(null);//传null则表示使用StandardCharsets.UTF_8 
     }
 
     protected int readInt(ByteBuffer buffer) throws IOException {
@@ -2074,7 +2072,7 @@ abstract class ReplyCompletionHandler implements CompletionHandler<Integer, Byte
         if (lasted == '\n' && !out.isEmpty() && out.getLastByte() == '\r') {
             out.removeLastByte();//读掉 \r
             buffer.get();//读掉 \n
-            return;//传null则表示使用UTF8
+            return;//传null则表示使用StandardCharsets.UTF_8
         }
         if (has) out.write(lasted);
         while (buffer.hasRemaining()) {
