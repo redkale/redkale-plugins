@@ -1200,6 +1200,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- getCollectionAndRefresh ------------------------------  
     @Override
+    @Deprecated
     public CompletableFuture<Collection<V>> getCollectionAndRefreshAsync(String key, int expireSeconds) {
         return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key));
     }
@@ -1210,6 +1211,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public Collection<V> getCollectionAndRefresh(String key, final int expireSeconds) {
         return getCollectionAndRefreshAsync(key, expireSeconds).join();
     }
@@ -1241,6 +1243,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- existsItem ------------------------------  
     @Override
+    @Deprecated
     public boolean existsSetItem(String key, V value) {
         return existsSetItemAsync(key, value).join();
     }
@@ -1251,6 +1254,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public CompletableFuture<Boolean> existsSetItemAsync(String key, V value) {
         return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
@@ -1282,6 +1286,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- appendListItem ------------------------------  
     @Override
+    @Deprecated
     public CompletableFuture<Void> appendListItemAsync(String key, V value) {
         return (CompletableFuture) send("RPUSH", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
@@ -1292,6 +1297,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public void appendListItem(String key, V value) {
         appendListItemAsync(key, value).join();
     }
@@ -1323,6 +1329,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- removeListItem ------------------------------  
     @Override
+    @Deprecated
     public CompletableFuture<Integer> removeListItemAsync(String key, V value) {
         return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(UTF8), new byte[]{'0'}, formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
@@ -1333,6 +1340,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public int removeListItem(String key, V value) {
         return removeListItemAsync(key, value).join();
     }
@@ -1364,6 +1372,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- appendSetItem ------------------------------  
     @Override
+    @Deprecated
     public CompletableFuture<Void> appendSetItemAsync(String key, V value) {
         return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
@@ -1404,6 +1413,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public void appendSetItem(String key, V value) {
         appendSetItemAsync(key, value).join();
     }
@@ -1465,6 +1475,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     //--------------------- removeSetItem ------------------------------  
     @Override
+    @Deprecated
     public CompletableFuture<Integer> removeSetItemAsync(String key, V value) {
         return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(UTF8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
     }
@@ -1475,6 +1486,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    @Deprecated
     public int removeSetItem(String key, V value) {
         return removeSetItemAsync(key, value).join();
     }
