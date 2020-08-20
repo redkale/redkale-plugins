@@ -1696,10 +1696,10 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                         Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                         if (future == null) {
                                             transport.offerConnection(false, conn);
-                                            callback.completed((("SPOP".equals(command) || command.endsWith("GET") || rs == null) ? convert.convertFrom(ct, new String(rs, UTF8)) : null), key);
+                                            callback.completed((("SPOP".equals(command) || command.endsWith("GET") || rs == null) ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, new String(rs, UTF8))) : null), key);
                                         } else {
                                             transport.offerConnection(false, conn);
-                                            future.complete(("SPOP".equals(command) || command.endsWith("GET") ? convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8)) : rs));
+                                            future.complete(("SPOP".equals(command) || command.endsWith("GET") ? (ct == String.class && rs != null ? new String(rs, UTF8) : convert.convertFrom(ct, rs == null ? null : new String(rs, UTF8))) : rs));
                                         }
                                     } else if (sign == ASTERISK_BYTE) { // *
                                         final int len = readInt(buffer);
