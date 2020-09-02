@@ -101,7 +101,7 @@ public class KafkaMessageAgent extends MessageAgent {
         if (config == null) return false;
         AnyValue ser = config.getAnyValue("servers");
         if (ser == null) return false;
-        if (ser.getValue("value") != null) return true;
+        if (ser.getValue("value") != null && !ser.getValue("value").contains("pulsar")) return true;
         return false;
     }
 
