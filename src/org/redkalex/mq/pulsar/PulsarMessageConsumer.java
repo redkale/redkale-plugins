@@ -66,10 +66,10 @@ public class PulsarMessageConsumer extends MessageConsumer implements Runnable {
             this.startFuture.complete(null);
             if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuped");
 
-            Message<MessageRecord> pulsarmsg;
+            Messages<MessageRecord> pulsarmsgs;
             while (!this.closed) {
                 try {
-                    pulsarmsg = this.consumer.receive();
+                    pulsarmsgs = this.consumer.batchReceive();
                 } catch (Exception ex) {
                     logger.log(Level.WARNING, getClass().getSimpleName() + " poll error", ex);
                     this.consumer.close();
@@ -84,16 +84,18 @@ public class PulsarMessageConsumer extends MessageConsumer implements Runnable {
                     continue;
                 }
                 if (this.reconnecting) this.reconnecting = false;
-                if (pulsarmsg == null) continue;
-                final Message<MessageRecord> localmsg = pulsarmsg;
-                this.consumer.acknowledgeAsync(pulsarmsg).whenComplete((r, exp) -> {
+                if (pulsarmsgs == null || pulsarmsgs.size() < 1) continue;
+                final Messages<MessageRecord> localmsg = pulsarmsgs;
+                this.consumer.acknowledgeAsync(pulsarmsgs).whenComplete((r, exp) -> {
                     if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + localmsg, exp);
                 });
                 MessageRecord msg = null;
                 try {
-                    processor.begin(1);
-                    msg = pulsarmsg.getValue();
-                    processor.process(msg, null);
+                    processor.begin(pulsarmsgs.size());
+                    for (Message<MessageRecord> mmr : pulsarmsgs) {
+                        msg = mmr.getValue();
+                        processor.process(msg, null);
+                    }
                     processor.commit();
                 } catch (Throwable e) {
                     logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
