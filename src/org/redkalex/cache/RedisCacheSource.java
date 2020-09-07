@@ -1574,6 +1574,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     //--------------------- send ------------------------------  
     private byte[] formatValue(CacheEntryType cacheType, Convert convert0, Type resultType, Object value) {
         if (value == null) return "null".getBytes(StandardCharsets.UTF_8);
+        if (value instanceof byte[]) return (byte[]) value;
         if (convert0 == null) convert0 = convert;
         if (cacheType == CacheEntryType.MAP) {
             if ((value instanceof CharSequence) || (value instanceof Number)) {
