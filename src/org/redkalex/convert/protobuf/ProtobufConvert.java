@@ -18,6 +18,7 @@ import org.redkale.util.*;
  * 1、 只实现proto3版本 <br>
  * 2、 int统一使用sint32, long统一使用sint64 <br>
  * 3、 集合统一 packed repeated <br>
+ * 4、 目前使用的基础数据类型为：bool、sint32、sint64、float、double、bytes、string、map、Any <br>
  *
  * @author zhangjx
  */
