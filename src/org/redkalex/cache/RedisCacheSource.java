@@ -142,7 +142,6 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
         RedisCacheSource source = new RedisCacheSource();
         source.defaultConvert = JsonFactory.root().getConvert();
-        source.initValueType(String.class); //value用String类型
         source.init(conf);
         InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 7788);
 
@@ -169,29 +168,29 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.remove("key1");
         source.remove("key2");
         source.remove("300");
-        source.set(1000, "key1", "value1");
-        source.set("key1", "value1");
+        source.set(1000, "key1", String.class, "value1");
+        source.set("key1", String.class, "value1");
         source.setString("keystr1", "strvalue1");
         source.setLong("keylong1", 333L);
-        source.set("300", "4000");
-        source.getAndRefresh("key1", 3500);
-        System.out.println("[有值] 300 GET : " + source.get("300"));
-        System.out.println("[有值] key1 GET : " + source.get("key1"));
-        System.out.println("[无值] key2 GET : " + source.get("key2"));
+        source.set("300", String.class, "4000");
+        source.getAndRefresh("key1", 3500, String.class);
+        System.out.println("[有值] 300 GET : " + source.get("300", String.class));
+        System.out.println("[有值] key1 GET : " + source.get("key1", String.class));
+        System.out.println("[无值] key2 GET : " + source.get("key2", String.class));
         System.out.println("[有值] keystr1 GET : " + source.getString("keystr1"));
         System.out.println("[有值] keylong1 GET : " + source.getLong("keylong1", 0L));
         System.out.println("[有值] key1 EXISTS : " + source.exists("key1"));
         System.out.println("[无值] key2 EXISTS : " + source.exists("key2"));
 
         source.remove("keys3");
-        source.appendListItem("keys3", "vals1");
-        source.appendListItem("keys3", "vals2");
+        source.appendListItem("keys3", String.class, "vals1");
+        source.appendListItem("keys3", String.class, "vals2");
         System.out.println("-------- keys3 追加了两个值 --------");
-        System.out.println("[两值] keys3 VALUES : " + source.getCollection("keys3"));
+        System.out.println("[两值] keys3 VALUES : " + source.getCollection("keys3", String.class));
         System.out.println("[有值] keys3 EXISTS : " + source.exists("keys3"));
-        source.removeListItem("keys3", "vals1");
-        System.out.println("[一值] keys3 VALUES : " + source.getCollection("keys3"));
-        source.getCollectionAndRefresh("keys3", 3000);
+        source.removeListItem("keys3", String.class, "vals1");
+        System.out.println("[一值] keys3 VALUES : " + source.getCollection("keys3", String.class));
+        source.getCollectionAndRefresh("keys3", 3000, String.class);
 
         source.remove("stringmap");
         source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
@@ -200,17 +199,17 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
         source.remove("sets3");
         source.remove("sets4");
-        source.appendSetItem("sets3", "setvals1");
-        source.appendSetItem("sets3", "setvals2");
-        source.appendSetItem("sets3", "setvals1");
-        source.appendSetItem("sets4", "setvals2");
-        source.appendSetItem("sets4", "setvals1");
-        System.out.println("[两值] sets3 VALUES : " + source.getCollection("sets3"));
+        source.appendSetItem("sets3", String.class, "setvals1");
+        source.appendSetItem("sets3", String.class, "setvals2");
+        source.appendSetItem("sets3", String.class, "setvals1");
+        source.appendSetItem("sets4", String.class, "setvals2");
+        source.appendSetItem("sets4", String.class, "setvals1");
+        System.out.println("[两值] sets3 VALUES : " + source.getCollection("sets3", String.class));
         System.out.println("[有值] sets3 EXISTS : " + source.exists("sets3"));
-        System.out.println("[有值] sets3-setvals2 EXISTSITEM : " + source.existsSetItem("sets3", "setvals2"));
-        System.out.println("[有值] sets3-setvals3 EXISTSITEM : " + source.existsSetItem("sets3", "setvals3"));
-        source.removeSetItem("sets3", "setvals1");
-        System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3"));
+        System.out.println("[有值] sets3-setvals2 EXISTSITEM : " + source.existsSetItem("sets3", String.class, "setvals2"));
+        System.out.println("[有值] sets3-setvals3 EXISTSITEM : " + source.existsSetItem("sets3", String.class, "setvals3"));
+        source.removeSetItem("sets3", String.class, "setvals1");
+        System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3", String.class));
         System.out.println("sets3 大小 : " + source.getCollectionSize("sets3"));
         System.out.println("all keys: " + source.queryKeys());
         System.out.println("key startkeys: " + source.queryKeysStartsWith("key"));
@@ -317,7 +316,23 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.remove("hmapstr");
         source.remove("hmapstrmap");
         System.out.println("------------------------------------");
-
+//        System.out.println("--------------测试大文本---------------");
+//        HashMap<String, String> bigmap = new HashMap<>();
+//        StringBuilder sb = new StringBuilder();
+//        sb.append("起始");
+//        for (int i = 0; i < 1024 * 1024; i++) {
+//            sb.append("abcde");
+//        }
+//        sb.append("结束");
+//        bigmap.put("val", sb.toString());
+//        System.out.println("文本长度: " + sb.length());
+//        source.set("bigmap", JsonConvert.TYPE_MAP_STRING_STRING, bigmap);
+//        System.out.println("写入完成");
+//        for (int i = 0; i < 1; i++) {
+//            HashMap<String, String> fs = (HashMap) source.get("bigmap", JsonConvert.TYPE_MAP_STRING_STRING);
+//            System.out.println("内容长度: " + fs.get("val").length());
+//        }
+        source.remove("bigmap");
     }
 
     @Override
