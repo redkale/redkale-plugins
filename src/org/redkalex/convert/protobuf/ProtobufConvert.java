@@ -92,6 +92,37 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         if (out != null) writerPool.accept(out);
     }
 
+    public <T> String getJsonDescriptor(Type type) {
+        StringBuilder sb = new StringBuilder();
+        defineJsonDescriptor(type, sb, "");
+        return sb.toString();
+    }
+
+    protected <T> void subJsonDescriptor(Type type, StringBuilder sb, String prefix) {
+        defineJsonDescriptor(type, sb, prefix);
+    }
+
+    protected void defineJsonDescriptor(Type type, StringBuilder sb, String prefix) {
+        Encodeable encoder = factory.loadEncoder(type);
+        if (encoder instanceof ObjectEncoder) {
+            sb.append(prefix).append("\"message ").append(defineTypeName(type)).append("\" : {\r\n");
+            EnMember[] ems = ((ObjectEncoder) encoder).getMembers();
+            for (EnMember member : ems) {
+                if (member.getEncoder().getType() instanceof Class
+                    && !((Class) member.getEncoder().getType()).isArray()
+                    && !((Class) member.getEncoder().getType()).getName().startsWith("java")) {
+                    subJsonDescriptor(member.getEncoder().getType(), sb, prefix + "    ");
+                }
+            }
+            for (int i = 0; i < ems.length; i++) {
+                EnMember member = ems[i];
+                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(member.getEncoder().getType()))
+                    .append(" ").append(member.getAttribute().field()).append("\" : ").append(member.getPosition()).append(i == ems.length - 1 ? "\r\n" : ",\r\n");
+            }
+            sb.append(prefix).append("}\r\n");
+        }
+    }
+
     public <T> String getProtoDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
         Class clazz = TypeToken.typeToClass(type);
