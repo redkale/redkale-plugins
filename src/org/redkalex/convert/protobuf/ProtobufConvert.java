@@ -95,32 +95,33 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     public <T> String getJsonDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
-        defineJsonDescriptor(type, sb, "");
+        defineJsonDescriptor(type, sb, false, "");
         return sb.toString();
     }
 
-    protected <T> void subJsonDescriptor(Type type, StringBuilder sb, String prefix) {
-        defineJsonDescriptor(type, sb, prefix);
-    }
-
-    protected void defineJsonDescriptor(Type type, StringBuilder sb, String prefix) {
+    protected void defineJsonDescriptor(Type type, StringBuilder sb, boolean dot, String prefix) {
         Encodeable encoder = factory.loadEncoder(type);
         if (encoder instanceof ObjectEncoder) {
             sb.append(prefix).append("\"message ").append(defineTypeName(type)).append("\" : {\r\n");
             EnMember[] ems = ((ObjectEncoder) encoder).getMembers();
+            boolean flag = false;
             for (EnMember member : ems) {
-                if (member.getEncoder().getType() instanceof Class
-                    && !((Class) member.getEncoder().getType()).isArray()
-                    && !((Class) member.getEncoder().getType()).getName().startsWith("java")) {
-                    subJsonDescriptor(member.getEncoder().getType(), sb, prefix + "    ");
+                Type mtype = member.getEncoder().getType();
+                if (!(mtype instanceof Class)) continue;
+                Class mclz = (Class) member.getEncoder().getType();
+                if (!mclz.isArray() && !mclz.getName().startsWith("java")) {
+                    defineJsonDescriptor(mclz, sb, flag, prefix + "    ");
+                } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")) {
+                    defineJsonDescriptor(mclz.getComponentType(), sb, flag, prefix + "    ");
                 }
+                flag = true;
             }
             for (int i = 0; i < ems.length; i++) {
                 EnMember member = ems[i];
                 sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(member.getEncoder().getType()))
                     .append(" ").append(member.getAttribute().field()).append("\" : ").append(member.getPosition()).append(i == ems.length - 1 ? "\r\n" : ",\r\n");
             }
-            sb.append(prefix).append("}\r\n");
+            sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
         }
     }
 

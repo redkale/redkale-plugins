@@ -22,8 +22,6 @@ import org.redkale.convert.*;
  */
 public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E extends Enum> extends SimpledCoder<R, W, E> {
 
-    private final Class<E> type;
-
     private final Map<E, Integer> values1 = new HashMap<>();
 
     private final Map<Integer, E> values2 = new HashMap<>();
@@ -47,21 +45,21 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
         if (value == null) {
             out.writeNull();
         } else {
-            ((ProtobufWriter)out).writeUInt32(values1.getOrDefault(value, -1));
+            ((ProtobufWriter) out).writeUInt32(values1.getOrDefault(value, -1));
         }
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public E convertFrom(final R in) {
-        int value = ((ProtobufReader)in).readRawVarint32();
+        int value = ((ProtobufReader) in).readRawVarint32();
         if (value == -1) return null;
         return values2.get(value);
     }
 
     @Override
     public Class<E> getType() {
-        return type;
+        return (Class)type;
     }
 
 }
