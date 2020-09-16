@@ -178,7 +178,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         in.setBytes(bytes, start, len);
         @SuppressWarnings("unchecked")
         Decodeable decoder = factory.loadDecoder(type);
-        if (!(decoder instanceof ObjectDecoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
+        if (!(decoder instanceof ObjectDecoder) && !(decoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
         T rs = (T) decoder.convertFrom(in);
         readerPool.accept(in);
         return rs;
@@ -241,7 +241,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         if (type == null) return null;
         final ProtobufWriter out = pollProtobufWriter();
         Encodeable encoder = factory.loadEncoder(type);
-        if (!(encoder instanceof ObjectEncoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
+        if (!(encoder instanceof ObjectEncoder) && !(encoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
         encoder.convertTo(out, value);
         byte[] result = out.toArray();
         writerPool.accept(out);
