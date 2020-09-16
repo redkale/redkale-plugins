@@ -171,11 +171,12 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         return convertFrom(type, bytes, 0, bytes.length);
     }
 
+    @Override
     @SuppressWarnings("unchecked")
-    public <T> T convertFrom(final Type type, final byte[] bytes, final int start, final int len) {
+    public <T> T convertFrom(final Type type, final byte[] bytes, final int offset, final int len) {
         if (type == null) return null;
         final ProtobufReader in = readerPool.get();
-        in.setBytes(bytes, start, len);
+        in.setBytes(bytes, offset, len);
         @SuppressWarnings("unchecked")
         Decodeable decoder = factory.loadDecoder(type);
         if (!(decoder instanceof ObjectDecoder) && !(decoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
