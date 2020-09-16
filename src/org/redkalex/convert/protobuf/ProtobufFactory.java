@@ -224,6 +224,9 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
             } else if (Collection.class.isAssignableFrom(rawType)
                 || Stream.class.isAssignableFrom(rawType)) {
                 return "repeated " + wireTypeString(pt.getActualTypeArguments()[0]);
+            } else if (pt.getActualTypeArguments().length == 1
+                && (pt.getActualTypeArguments()[0] instanceof Class)) {
+                return rawType.getSimpleName() + "_" + ((Class) pt.getActualTypeArguments()[0]).getSimpleName();
             }
         }
         throw new UnsupportedOperationException("ProtobufConvert not supported type(" + javaType + ")");
