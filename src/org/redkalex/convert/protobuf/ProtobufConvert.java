@@ -102,7 +102,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     protected void defineJsonDescriptor(Type type, StringBuilder sb, boolean dot, String prefix) {
         Encodeable encoder = factory.loadEncoder(type);
         if (encoder instanceof ObjectEncoder) {
-            sb.append(prefix).append("\"message ").append(defineTypeName(type)).append("\" : {\r\n");
+            if (sb.length() > 0) {
+                sb.append(prefix).append("\"message ").append(defineTypeName(type)).append("\" : {\r\n");
+            } else {
+                sb.append("{\r\n");
+            }
             EnMember[] ems = ((ObjectEncoder) encoder).getMembers();
             boolean flag = false;
             for (EnMember member : ems) {
@@ -130,6 +134,18 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     .append(" ").append(member.getAttribute().field()).append("\" : ").append(member.getPosition()).append(i == ems.length - 1 ? "\r\n" : ",\r\n");
             }
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+        } else if (encoder instanceof SimpledCoder
+            || (encoder instanceof ProtobufArrayEncoder && ((ProtobufArrayEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)
+            || (encoder instanceof ProtobufCollectionEncoder && ((ProtobufCollectionEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)) {
+            sb.append(prefix).append("{\r\n");
+            sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type)).append(" 0\" : 0\r\n");
+            sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+        } else if (encoder instanceof MapEncoder) {
+            sb.append(prefix).append("{\r\n");
+            sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type)).append(" 0\" : 0\r\n");
+            sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+        } else {
+            throw new ConvertException("Not support the type (" + type + ")");
         }
     }
 
