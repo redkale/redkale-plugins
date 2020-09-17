@@ -123,7 +123,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                 Class mclz = (Class) member.getEncoder().getType();
                 if (!mclz.isArray() && !mclz.getName().startsWith("java")) {
                     defineJsonDescriptor(mclz, sb, flag, prefix + "    ");
-                } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")) {
+                } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")
+                    && !mclz.getComponentType().getName().equals("boolean") && !mclz.getComponentType().getName().equals("byte")
+                    && !mclz.getComponentType().getName().equals("char") && !mclz.getComponentType().getName().equals("short")
+                    && !mclz.getComponentType().getName().equals("int") && !mclz.getComponentType().getName().equals("long")
+                    && !mclz.getComponentType().getName().equals("float") && !mclz.getComponentType().getName().equals("double")) {
                     defineJsonDescriptor(mclz.getComponentType(), sb, flag, prefix + "    ");
                 }
                 flag = true;
