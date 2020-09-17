@@ -134,6 +134,9 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     .append(" ").append(member.getAttribute().field()).append("\" : ").append(member.getPosition()).append(i == ems.length - 1 ? "\r\n" : ",\r\n");
             }
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+        } else if (encoder instanceof ProtobufArrayEncoder || encoder instanceof ProtobufCollectionEncoder) {
+            Type mtype = encoder instanceof ProtobufArrayEncoder ? ((ProtobufArrayEncoder) encoder).getComponentType() : ((ProtobufCollectionEncoder) encoder).getComponentType();
+            defineJsonDescriptor(mtype, sb, true, prefix);
         } else if (sb.length() == 0) {
             if (encoder instanceof SimpledCoder
                 || (encoder instanceof ProtobufArrayEncoder && ((ProtobufArrayEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)
