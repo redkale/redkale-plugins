@@ -134,16 +134,20 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     .append(" ").append(member.getAttribute().field()).append("\" : ").append(member.getPosition()).append(i == ems.length - 1 ? "\r\n" : ",\r\n");
             }
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
-        } else if (encoder instanceof SimpledCoder
-            || (encoder instanceof ProtobufArrayEncoder && ((ProtobufArrayEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)
-            || (encoder instanceof ProtobufCollectionEncoder && ((ProtobufCollectionEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)) {
-            sb.append(prefix).append("{\r\n");
-            sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type)).append(" 0\" : 0\r\n");
-            sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
-        } else if (encoder instanceof MapEncoder) {
-            sb.append(prefix).append("{\r\n");
-            sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type)).append(" 0\" : 0\r\n");
-            sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+        } else if (sb.length() == 0) {
+            if (encoder instanceof SimpledCoder
+                || (encoder instanceof ProtobufArrayEncoder && ((ProtobufArrayEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)
+                || (encoder instanceof ProtobufCollectionEncoder && ((ProtobufCollectionEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)) {
+                sb.append(prefix).append("{\r\n");
+                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type)).append(" 0\" : 0\r\n");
+                sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+            } else if (encoder instanceof MapEncoder) {
+                sb.append(prefix).append("{\r\n");
+                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type)).append(" 0\" : 0\r\n");
+                sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+            } else {
+                throw new ConvertException("Not support the type (" + type + ")");
+            }
         } else {
             throw new ConvertException("Not support the type (" + type + ")");
         }
