@@ -95,12 +95,13 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     public <T> String getJsonDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
-        defineJsonDescriptor(type, sb, false, "");
+        defineJsonDescriptor(type, sb, "");
         return sb.toString();
     }
 
-    protected void defineJsonDescriptor(Type type, StringBuilder sb, boolean dot, String prefix) {
+    protected void defineJsonDescriptor(Type type, StringBuilder sb, String prefix) {
         Encodeable encoder = factory.loadEncoder(type);
+        boolean dot = sb.length() > 0;
         if (encoder instanceof ObjectEncoder) {
             if (sb.length() > 0) {
                 sb.append(prefix).append("\"message ").append(defineTypeName(type)).append("\" : {\r\n");
@@ -115,20 +116,20 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     if (mtype instanceof ParameterizedType) {
                         final ParameterizedType pt = (ParameterizedType) mtype;
                         if (pt.getActualTypeArguments().length == 1 && (pt.getActualTypeArguments()[0] instanceof Class)) {
-                            defineJsonDescriptor(mtype, sb, flag, prefix + "    ");
+                            defineJsonDescriptor(mtype, sb, prefix + "    ");
                         }
                     }
                     continue;
                 }
                 Class mclz = (Class) member.getEncoder().getType();
                 if (!mclz.isArray() && !mclz.getName().startsWith("java")) {
-                    defineJsonDescriptor(mclz, sb, flag, prefix + "    ");
+                    defineJsonDescriptor(mclz, sb, prefix + "    ");
                 } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")
                     && !mclz.getComponentType().getName().equals("boolean") && !mclz.getComponentType().getName().equals("byte")
                     && !mclz.getComponentType().getName().equals("char") && !mclz.getComponentType().getName().equals("short")
                     && !mclz.getComponentType().getName().equals("int") && !mclz.getComponentType().getName().equals("long")
                     && !mclz.getComponentType().getName().equals("float") && !mclz.getComponentType().getName().equals("double")) {
-                    defineJsonDescriptor(mclz.getComponentType(), sb, flag, prefix + "    ");
+                    defineJsonDescriptor(mclz.getComponentType(), sb, prefix + "    ");
                 }
                 flag = true;
             }
@@ -140,7 +141,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
         } else if (encoder instanceof ProtobufArrayEncoder || encoder instanceof ProtobufCollectionEncoder) {
             Type mtype = encoder instanceof ProtobufArrayEncoder ? ((ProtobufArrayEncoder) encoder).getComponentType() : ((ProtobufCollectionEncoder) encoder).getComponentType();
-            defineJsonDescriptor(mtype, sb, true, prefix);
+            defineJsonDescriptor(mtype, sb, prefix);
         } else if (sb.length() == 0) {
             if (encoder instanceof SimpledCoder
                 || (encoder instanceof ProtobufArrayEncoder && ((ProtobufArrayEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)
