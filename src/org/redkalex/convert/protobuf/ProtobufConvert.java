@@ -161,7 +161,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                 }
             }
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
-        } else if (decoder instanceof ProtobufArrayDecoder || decoder instanceof ProtobufCollectionDecoder) {
+        } else if ((!(type instanceof Class) || !((Class) type).isArray() || !((Class) type).getComponentType().getName().startsWith("java")) && (decoder instanceof ProtobufArrayDecoder || decoder instanceof ProtobufCollectionDecoder)) {
             Type mtype = decoder instanceof ProtobufArrayDecoder ? ((ProtobufArrayDecoder) decoder).getComponentType() : ((ProtobufCollectionDecoder) decoder).getComponentType();
             defineJsonDecodeDescriptor(mtype, sb, prefix, excludeFunc);
         } else if (sb.length() == 0) {
