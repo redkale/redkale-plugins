@@ -19,8 +19,7 @@ class ProtobufStreamWriter extends ProtobufByteBufferWriter {
     private OutputStream out;
 
     protected ProtobufStreamWriter(boolean tiny, boolean enumtostring, OutputStream out) {
-        super(tiny, null);
-        this.enumtostring = enumtostring;
+        super(tiny, enumtostring, null);
         this.out = out;
     }
 

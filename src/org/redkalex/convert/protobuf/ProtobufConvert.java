@@ -79,7 +79,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     //------------------------------ writer -----------------------------------------------------------
     public ProtobufByteBufferWriter pollProtobufWriter(final Supplier<ByteBuffer> supplier) {
-        return configWrite(new ProtobufByteBufferWriter(tiny, supplier));
+        return configWrite(new ProtobufByteBufferWriter(tiny, ((ProtobufFactory) factory).enumtostring, supplier));
     }
 
     public ProtobufWriter pollProtobufWriter(final OutputStream out) {

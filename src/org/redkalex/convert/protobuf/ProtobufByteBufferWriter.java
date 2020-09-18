@@ -21,13 +21,14 @@ public class ProtobufByteBufferWriter extends ProtobufWriter {
 
     private int index;
 
-    public ProtobufByteBufferWriter(Supplier<ByteBuffer> supplier) {
-        this(false, supplier);
+    public ProtobufByteBufferWriter(boolean enumtostring, Supplier<ByteBuffer> supplier) {
+        this(false, enumtostring, supplier);
     }
 
-    protected ProtobufByteBufferWriter(boolean tiny, Supplier<ByteBuffer> supplier) {
+    protected ProtobufByteBufferWriter(boolean tiny, boolean enumtostring, Supplier<ByteBuffer> supplier) {
         super((byte[]) null);
         this.tiny = tiny;
+        this.enumtostring = enumtostring;
         this.supplier = supplier;
     }
 
