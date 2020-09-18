@@ -94,19 +94,101 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         if (out != null) writerPool.accept(out);
     }
 
-    public <T> String getJsonDescriptor(Type type) {
+    public <T> String getJsonDecodeDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
-        defineJsonDescriptor(type, sb, "", null);
+        defineJsonDecodeDescriptor(type, sb, "", null);
         return sb.toString();
     }
 
-    public <T> String getJsonDescriptor(Type type, BiFunction<Type, EnMember, Boolean> func) {
+    public <T> String getJsonDecodeDescriptor(Type type, BiFunction<Type, DeMember, Boolean> func) {
         StringBuilder sb = new StringBuilder();
-        defineJsonDescriptor(type, sb, "", func);
+        defineJsonDecodeDescriptor(type, sb, "", func);
         return sb.toString();
     }
 
-    protected void defineJsonDescriptor(Type type, StringBuilder sb, String prefix, BiFunction<Type, EnMember, Boolean> excludeFunc) {
+    protected void defineJsonDecodeDescriptor(Type type, StringBuilder sb, String prefix, BiFunction<Type, DeMember, Boolean> excludeFunc) {
+        Decodeable decoder = factory.loadDecoder(type);
+        boolean dot = sb.length() > 0;
+        if (decoder instanceof ObjectDecoder) {
+            if (sb.length() > 0) {
+                sb.append(prefix).append("\"message ").append(defineTypeName(type)).append("\" : {\r\n");
+            } else {
+                sb.append("{\r\n");
+            }
+            DeMember[] ems = ((ObjectDecoder) decoder).getMembers();
+            List<DeMember> members = new ArrayList<>();
+            for (DeMember member : ems) {
+                if (excludeFunc != null && excludeFunc.apply(type, member)) continue;
+                members.add(member);
+            }
+            for (DeMember member : members) {
+                Type mtype = member.getDecoder().getType();
+                if (!(mtype instanceof Class)) {
+                    if (mtype instanceof ParameterizedType) {
+                        final ParameterizedType pt = (ParameterizedType) mtype;
+                        if (pt.getActualTypeArguments().length == 1 && (pt.getActualTypeArguments()[0] instanceof Class)) {
+                            defineJsonDecodeDescriptor(mtype, sb, prefix + "    ", excludeFunc);
+                        }
+                    }
+                    continue;
+                }
+                Class mclz = (Class) member.getDecoder().getType();
+                if (!mclz.isArray() && !mclz.isEnum() && !mclz.getName().startsWith("java")) {
+                    defineJsonDecodeDescriptor(mclz, sb, prefix + "    ", excludeFunc);
+                } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")
+                    && !mclz.getComponentType().getName().equals("boolean") && !mclz.getComponentType().getName().equals("byte")
+                    && !mclz.getComponentType().getName().equals("char") && !mclz.getComponentType().getName().equals("short")
+                    && !mclz.getComponentType().getName().equals("int") && !mclz.getComponentType().getName().equals("long")
+                    && !mclz.getComponentType().getName().equals("float") && !mclz.getComponentType().getName().equals("double")) {
+                    defineJsonDecodeDescriptor(mclz.getComponentType(), sb, prefix + "    ", excludeFunc);
+                }
+            }
+            for (int i = 0; i < members.size(); i++) {
+                DeMember member = members.get(i);
+                try {
+                    sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(member.getDecoder().getType(), ((ProtobufFactory) factory).enumtostring))
+                        .append(" ").append(member.getAttribute().field()).append("\" : ").append(member.getPosition()).append(i == members.size() - 1 ? "\r\n" : ",\r\n");
+                } catch (RuntimeException e) {
+                    System.err.println("member = " + member);
+                    throw e;
+                }
+            }
+            sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+        } else if (decoder instanceof ProtobufArrayDecoder || decoder instanceof ProtobufCollectionDecoder) {
+            Type mtype = decoder instanceof ProtobufArrayDecoder ? ((ProtobufArrayEncoder) decoder).getComponentType() : ((ProtobufCollectionDecoder) decoder).getComponentType();
+            defineJsonDecodeDescriptor(mtype, sb, prefix, excludeFunc);
+        } else if (sb.length() == 0) {
+            if (decoder instanceof SimpledCoder
+                || (decoder instanceof ProtobufArrayDecoder && ((ProtobufArrayDecoder) decoder).getComponentDecoder() instanceof SimpledCoder)
+                || (decoder instanceof ProtobufCollectionDecoder && ((ProtobufCollectionDecoder) decoder).getComponentDecoder() instanceof SimpledCoder)) {
+                sb.append(prefix).append("{\r\n");
+                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type, ((ProtobufFactory) factory).enumtostring)).append(" 0\" : 0\r\n");
+                sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+            } else if (decoder instanceof MapDecoder) {
+                sb.append(prefix).append("{\r\n");
+                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type, ((ProtobufFactory) factory).enumtostring)).append(" 0\" : 0\r\n");
+                sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
+            } else {
+                throw new ConvertException("Not support the type (" + type + ")");
+            }
+        } else {
+            throw new ConvertException("Not support the type (" + type + ")");
+        }
+    }
+
+    public <T> String getJsonEncodeDescriptor(Type type) {
+        StringBuilder sb = new StringBuilder();
+        defineJsonEncodeDescriptor(type, sb, "", null);
+        return sb.toString();
+    }
+
+    public <T> String getJsonEncodeDescriptor(Type type, BiFunction<Type, EnMember, Boolean> func) {
+        StringBuilder sb = new StringBuilder();
+        defineJsonEncodeDescriptor(type, sb, "", func);
+        return sb.toString();
+    }
+
+    protected void defineJsonEncodeDescriptor(Type type, StringBuilder sb, String prefix, BiFunction<Type, EnMember, Boolean> excludeFunc) {
         Encodeable encoder = factory.loadEncoder(type);
         boolean dot = sb.length() > 0;
         if (encoder instanceof ObjectEncoder) {
@@ -127,20 +209,20 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     if (mtype instanceof ParameterizedType) {
                         final ParameterizedType pt = (ParameterizedType) mtype;
                         if (pt.getActualTypeArguments().length == 1 && (pt.getActualTypeArguments()[0] instanceof Class)) {
-                            defineJsonDescriptor(mtype, sb, prefix + "    ", excludeFunc);
+                            defineJsonEncodeDescriptor(mtype, sb, prefix + "    ", excludeFunc);
                         }
                     }
                     continue;
                 }
                 Class mclz = (Class) member.getEncoder().getType();
                 if (!mclz.isArray() && !mclz.isEnum() && !mclz.getName().startsWith("java")) {
-                    defineJsonDescriptor(mclz, sb, prefix + "    ", excludeFunc);
+                    defineJsonEncodeDescriptor(mclz, sb, prefix + "    ", excludeFunc);
                 } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")
                     && !mclz.getComponentType().getName().equals("boolean") && !mclz.getComponentType().getName().equals("byte")
                     && !mclz.getComponentType().getName().equals("char") && !mclz.getComponentType().getName().equals("short")
                     && !mclz.getComponentType().getName().equals("int") && !mclz.getComponentType().getName().equals("long")
                     && !mclz.getComponentType().getName().equals("float") && !mclz.getComponentType().getName().equals("double")) {
-                    defineJsonDescriptor(mclz.getComponentType(), sb, prefix + "    ", excludeFunc);
+                    defineJsonEncodeDescriptor(mclz.getComponentType(), sb, prefix + "    ", excludeFunc);
                 }
             }
             for (int i = 0; i < members.size(); i++) {
@@ -156,7 +238,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
         } else if (encoder instanceof ProtobufArrayEncoder || encoder instanceof ProtobufCollectionEncoder) {
             Type mtype = encoder instanceof ProtobufArrayEncoder ? ((ProtobufArrayEncoder) encoder).getComponentType() : ((ProtobufCollectionEncoder) encoder).getComponentType();
-            defineJsonDescriptor(mtype, sb, prefix, excludeFunc);
+            defineJsonEncodeDescriptor(mtype, sb, prefix, excludeFunc);
         } else if (sb.length() == 0) {
             if (encoder instanceof SimpledCoder
                 || (encoder instanceof ProtobufArrayEncoder && ((ProtobufArrayEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)
