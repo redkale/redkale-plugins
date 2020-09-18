@@ -11,6 +11,7 @@ import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.Stream;
 import org.redkale.convert.*;
+import org.redkale.convert.ext.EnumSimpledCoder;
 import org.redkale.util.*;
 
 /**
@@ -19,11 +20,15 @@ import org.redkale.util.*;
  */
 public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWriter> {
 
-    private static final ProtobufFactory instance = new ProtobufFactory(null, Boolean.getBoolean("convert.protobuf.tiny"));
+    private static final ProtobufFactory instance = new ProtobufFactory(null, Boolean.getBoolean("convert.protobuf.tiny"), Boolean.parseBoolean(System.getProperty("convert.protobuf.enumtostring", "true")));
 
     static final Decodeable objectDecoder = instance.loadDecoder(Object.class);
 
     static final Encodeable objectEncoder = instance.loadEncoder(Object.class);
+
+    protected final boolean enumtostring;
+
+    protected boolean reversible = true;
 
     static {
         instance.register(Serializable.class, objectDecoder);
@@ -33,8 +38,10 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         instance.register(AnyValue.class, instance.loadEncoder(AnyValue.DefaultAnyValue.class));
     }
 
-    private ProtobufFactory(ProtobufFactory parent, boolean tiny) {
+    @SuppressWarnings("OverridableMethodCallInConstructor")
+    private ProtobufFactory(ProtobufFactory parent, boolean tiny, boolean enumtostring) {
         super(parent, tiny);
+        this.enumtostring = enumtostring;
         tiny = false; //固定false
         if (parent == null) { //root
             this.register(String[].class, this.createArrayDecoder(String[].class));
@@ -47,12 +54,12 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     public static ProtobufFactory create() {
-        return new ProtobufFactory(null, Boolean.getBoolean("convert.protobuf.tiny"));
+        return new ProtobufFactory(null, Boolean.getBoolean("convert.protobuf.tiny"), Boolean.parseBoolean(System.getProperty("convert.protobuf.enumtostring", "true")));
     }
 
     @Override
     protected SimpledCoder createEnumSimpledCoder(Class enumClass) {
-        return new ProtobufEnumSimpledCoder(enumClass);
+        return this.enumtostring ? new EnumSimpledCoder(enumClass) : new ProtobufEnumSimpledCoder(enumClass);
     }
 
     @Override
@@ -113,12 +120,12 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     @Override
     public ProtobufFactory createChild() {
-        return new ProtobufFactory(this, this.tiny);
+        return new ProtobufFactory(this, this.tiny, this.enumtostring);
     }
 
     @Override
     public ProtobufFactory createChild(boolean tiny) {
-        return new ProtobufFactory(this, tiny);
+        return new ProtobufFactory(this, tiny, this.enumtostring);
     }
 
     @Override
@@ -126,9 +133,14 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         return ConvertType.PROTOBUF;
     }
 
+    public ProtobufFactory reversible(boolean reversible) {
+        this.reversible = reversible;
+        return this;
+    }
+
     @Override
     public boolean isReversible() {
-        return true;
+        return reversible;
     }
 
     @Override
@@ -136,12 +148,12 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         return false;
     }
 
-    protected static Reader getItemReader(boolean string, Reader in, DeMember member, boolean first) {
+    protected static Reader getItemReader(boolean string, Reader in, DeMember member, boolean enumtostring, boolean first) {
         if (string) {
             if (member == null || first) return in;
             ProtobufReader reader = (ProtobufReader) in;
             int tag = reader.readTag();
-            if (tag != ProtobufFactory.getTag(member)) {
+            if (tag != ProtobufFactory.getTag(member, enumtostring)) {
                 reader.backTag(tag);
                 return null;
             }
@@ -150,7 +162,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
             ProtobufReader reader = (ProtobufReader) in;
             if (!first && member != null) {
                 int tag = reader.readTag();
-                if (tag != ProtobufFactory.getTag(member)) {
+                if (tag != ProtobufFactory.getTag(member, enumtostring)) {
                     reader.backTag(tag);
                     return null;
                 }
@@ -160,29 +172,29 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         }
     }
 
-    public static int getTag(String fieldName, Type fieldType, int fieldPos) {
-        int wiretype = ProtobufFactory.wireType(fieldType);
+    public static int getTag(String fieldName, Type fieldType, int fieldPos, boolean enumtostring) {
+        int wiretype = ProtobufFactory.wireType(fieldType, enumtostring);
         return (fieldPos << 3 | wiretype);
     }
 
-    public static int getTag(DeMember member) {
-        int wiretype = ProtobufFactory.wireType(member.getAttribute().type());
+    public static int getTag(DeMember member, boolean enumtostring) {
+        int wiretype = ProtobufFactory.wireType(member.getAttribute().type(), enumtostring);
         return (member.getPosition() << 3 | wiretype);
     }
 
-    public static int wireType(Type javaType) {
+    public static int wireType(Type javaType, boolean enumtostring) {
         if (javaType == double.class || javaType == Double.class) return 1;
         if (javaType == float.class || javaType == Float.class) return 5;
         if (javaType == boolean.class || javaType == Boolean.class) return 0;
         if (javaType instanceof Class) {
             Class javaClazz = (Class) javaType;
-            if (javaClazz.isEnum()) return 0;
+            if (javaClazz.isEnum()) return enumtostring ? 2 : 0;
             if (javaClazz.isPrimitive() || Number.class.isAssignableFrom(javaClazz)) return 0;
         }
         return 2;
     }
 
-    public static String wireTypeString(Type javaType) {
+    public static String wireTypeString(Type javaType, boolean enumtostring) {
         if (javaType == double.class || javaType == Double.class) return "double";
         if (javaType == long.class || javaType == Long.class) return "sint64";
         if (javaType == float.class || javaType == Float.class) return "float";
@@ -210,8 +222,8 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         if (javaType == java.util.Properties.class) return "map<string,string>";
         if (javaType instanceof Class) {
             Class javaClazz = (Class) javaType;
-            if (javaClazz.isArray()) return "repeated " + wireTypeString(javaClazz.getComponentType());
-            if (javaClazz.isEnum()) return javaClazz.getSimpleName();
+            if (javaClazz.isArray()) return "repeated " + wireTypeString(javaClazz.getComponentType(), enumtostring);
+            if (javaClazz.isEnum()) return enumtostring ? "string" : javaClazz.getSimpleName();
             if (CharSequence.class.isAssignableFrom(javaClazz)) return "string";
             return javaClazz == Object.class ? "Any" : javaClazz.getSimpleName();
         } else if (javaType instanceof ParameterizedType) { //Collection、Stream、Map 必须是泛型
@@ -220,10 +232,10 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
             if (Map.class.isAssignableFrom(rawType)) {
                 Type keyType = pt.getActualTypeArguments()[0];
                 Type valueType = pt.getActualTypeArguments()[1];
-                return "map<" + wireTypeString(keyType) + "," + wireTypeString(valueType) + ">";
+                return "map<" + wireTypeString(keyType, enumtostring) + "," + wireTypeString(valueType, enumtostring) + ">";
             } else if (Collection.class.isAssignableFrom(rawType)
                 || Stream.class.isAssignableFrom(rawType)) {
-                return "repeated " + wireTypeString(pt.getActualTypeArguments()[0]);
+                return "repeated " + wireTypeString(pt.getActualTypeArguments()[0], enumtostring);
             } else if (pt.getActualTypeArguments().length == 1
                 && (pt.getActualTypeArguments()[0] instanceof Class)) {
                 return rawType.getSimpleName() + "_" + ((Class) pt.getActualTypeArguments()[0]).getSimpleName();

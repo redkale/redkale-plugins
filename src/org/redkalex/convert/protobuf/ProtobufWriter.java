@@ -26,6 +26,8 @@ public class ProtobufWriter extends Writer {
 
     protected boolean tiny;
 
+    protected boolean enumtostring;
+
     public static ObjectPool<ProtobufWriter> createPool(int max) {
         return new ObjectPool<>(max, (Object... params) -> new ProtobufWriter(), null, (t) -> t.recycle());
     }
@@ -60,6 +62,11 @@ public class ProtobufWriter extends Writer {
 
     public ProtobufWriter tiny(boolean tiny) {
         this.tiny = tiny;
+        return this;
+    }
+
+    public ProtobufWriter enumtostring(boolean enumtostring) {
+        this.enumtostring = enumtostring;
         return this;
     }
 
@@ -241,7 +248,7 @@ public class ProtobufWriter extends Writer {
 
     @Override
     public void writeFieldName(String fieldName, Type fieldType, int fieldPos) {
-        writeUInt32(ProtobufFactory.getTag(fieldName, fieldType, fieldPos));
+        writeUInt32(ProtobufFactory.getTag(fieldName, fieldType, fieldPos, enumtostring));
     }
 
     @Override

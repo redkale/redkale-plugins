@@ -16,8 +16,11 @@ import org.redkale.convert.*;
  */
 public class ProtobufMapDecoder<K, V> extends MapDecoder<K, V> {
 
+    private final boolean enumtostring;
+
     public ProtobufMapDecoder(ConvertFactory factory, Type type) {
         super(factory, type);
+        this.enumtostring = ((ProtobufFactory) factory).enumtostring;
     }
 
     @Override
@@ -25,7 +28,7 @@ public class ProtobufMapDecoder<K, V> extends MapDecoder<K, V> {
         ProtobufReader reader = (ProtobufReader) in;
         if (!first && member != null) {
             int tag = reader.readTag();
-            if (tag != ProtobufFactory.getTag(member)) {
+            if (tag != ProtobufFactory.getTag(member, enumtostring)) {
                 reader.backTag(tag);
                 return null;
             }

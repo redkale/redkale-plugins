@@ -17,14 +17,17 @@ public class ProtobufArrayDecoder<T> extends ArrayDecoder<T> {
 
     private final boolean string;
 
+    private final boolean enumtostring;
+
     public ProtobufArrayDecoder(ConvertFactory factory, Type type) {
         super(factory, type);
+        this.enumtostring = ((ProtobufFactory) factory).enumtostring;
         this.string = String.class == this.getComponentType();
     }
 
     @Override
     protected Reader getItemReader(Reader in, DeMember member, boolean first) {
-        return ProtobufFactory.getItemReader(string, in, member, first);
+        return ProtobufFactory.getItemReader(string, in, member, enumtostring, first);
     }
 
 }

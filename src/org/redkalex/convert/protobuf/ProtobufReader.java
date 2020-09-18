@@ -22,6 +22,8 @@ public class ProtobufReader extends Reader {
 
     protected int cachetag = Integer.MIN_VALUE;
 
+    protected boolean enumtostring;
+
     public static ObjectPool<ProtobufReader> createPool(int max) {
         return new ObjectPool<>(max, (Object... params) -> new ProtobufReader(), null, (t) -> t.recycle());
     }
@@ -35,6 +37,11 @@ public class ProtobufReader extends Reader {
 
     public ProtobufReader(byte[] bytes, int start, int len) {
         setBytes(bytes, start, len);
+    }
+
+    public ProtobufReader enumtostring(boolean enumtostring) {
+        this.enumtostring = enumtostring;
+        return this;
     }
 
     public final void setBytes(byte[] bytes) {
@@ -376,6 +383,6 @@ public class ProtobufReader extends Reader {
 
     @Override
     public ValueType readType() {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

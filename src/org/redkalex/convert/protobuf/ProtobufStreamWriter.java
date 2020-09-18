@@ -9,7 +9,7 @@ import java.io.*;
 import org.redkale.convert.*;
 
 /**
- * 
+ *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -18,8 +18,9 @@ class ProtobufStreamWriter extends ProtobufByteBufferWriter {
 
     private OutputStream out;
 
-    protected ProtobufStreamWriter(boolean tiny, OutputStream out) {
+    protected ProtobufStreamWriter(boolean tiny, boolean enumtostring, OutputStream out) {
         super(tiny, null);
+        this.enumtostring = enumtostring;
         this.out = out;
     }
 

@@ -83,11 +83,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     }
 
     public ProtobufWriter pollProtobufWriter(final OutputStream out) {
-        return configWrite(new ProtobufStreamWriter(tiny, out));
+        return configWrite(new ProtobufStreamWriter(tiny, ((ProtobufFactory) factory).enumtostring, out));
     }
 
     public ProtobufWriter pollProtobufWriter() {
-        return configWrite(writerPool.get().tiny(tiny));
+        return configWrite(writerPool.get().tiny(tiny).enumtostring(((ProtobufFactory) factory).enumtostring));
     }
 
     public void offerProtobufWriter(final ProtobufWriter out) {
@@ -133,7 +133,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     continue;
                 }
                 Class mclz = (Class) member.getEncoder().getType();
-                if (!mclz.isArray() && !mclz.getName().startsWith("java")) {
+                if (!mclz.isArray() && !mclz.isEnum() && !mclz.getName().startsWith("java")) {
                     defineJsonDescriptor(mclz, sb, prefix + "    ", excludeFunc);
                 } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")
                     && !mclz.getComponentType().getName().equals("boolean") && !mclz.getComponentType().getName().equals("byte")
@@ -145,8 +145,13 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
             }
             for (int i = 0; i < members.size(); i++) {
                 EnMember member = members.get(i);
-                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(member.getEncoder().getType()))
-                    .append(" ").append(member.getAttribute().field()).append("\" : ").append(member.getPosition()).append(i == members.size() - 1 ? "\r\n" : ",\r\n");
+                try {
+                    sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(member.getEncoder().getType(), ((ProtobufFactory) factory).enumtostring))
+                        .append(" ").append(member.getAttribute().field()).append("\" : ").append(member.getPosition()).append(i == members.size() - 1 ? "\r\n" : ",\r\n");
+                } catch (RuntimeException e) {
+                    System.err.println("member = " + member);
+                    throw e;
+                }
             }
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
         } else if (encoder instanceof ProtobufArrayEncoder || encoder instanceof ProtobufCollectionEncoder) {
@@ -157,11 +162,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                 || (encoder instanceof ProtobufArrayEncoder && ((ProtobufArrayEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)
                 || (encoder instanceof ProtobufCollectionEncoder && ((ProtobufCollectionEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)) {
                 sb.append(prefix).append("{\r\n");
-                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type)).append(" 0\" : 0\r\n");
+                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type, ((ProtobufFactory) factory).enumtostring)).append(" 0\" : 0\r\n");
                 sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
             } else if (encoder instanceof MapEncoder) {
                 sb.append(prefix).append("{\r\n");
-                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type)).append(" 0\" : 0\r\n");
+                sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type, ((ProtobufFactory) factory).enumtostring)).append(" 0\" : 0\r\n");
                 sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
             } else {
                 throw new ConvertException("Not support the type (" + type + ")");
@@ -186,7 +191,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         if (encoder instanceof ObjectEncoder) {
             sb.append(prefix).append("message ").append(defineTypeName(type)).append(" {\r\n");
             for (EnMember member : ((ObjectEncoder) encoder).getMembers()) {
-                sb.append(prefix).append("    ").append(ProtobufFactory.wireTypeString(member.getEncoder().getType()))
+                sb.append(prefix).append("    ").append(ProtobufFactory.wireTypeString(member.getEncoder().getType(), ((ProtobufFactory) factory).enumtostring))
                     .append(" ").append(member.getAttribute().field()).append(" = ").append(member.getPosition()).append(";\r\n");
             }
             sb.append(prefix).append("}\r\n");

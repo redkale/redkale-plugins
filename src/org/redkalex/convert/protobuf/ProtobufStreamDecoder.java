@@ -11,18 +11,22 @@ import org.redkale.convert.*;
 /**
  *
  * @author zhangjx
+ * @param <T> 泛型
  */
 public class ProtobufStreamDecoder<T> extends StreamDecoder<T> {
 
     private final boolean string;
 
+    private final boolean enumtostring;
+
     public ProtobufStreamDecoder(ConvertFactory factory, Type type) {
         super(factory, type);
+        this.enumtostring = ((ProtobufFactory) factory).enumtostring;
         this.string = String.class == this.getComponentType();
     }
 
     @Override
     protected Reader getItemReader(Reader in, DeMember member, boolean first) {
-        return ProtobufFactory.getItemReader(string, in, member, first);
+        return ProtobufFactory.getItemReader(string, in, member, enumtostring, first);
     }
 }
