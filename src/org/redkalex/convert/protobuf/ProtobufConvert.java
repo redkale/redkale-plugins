@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.*;
 import org.redkale.convert.*;
+import org.redkale.convert.ext.StringArraySimpledCoder;
 import org.redkale.util.*;
 
 /**
@@ -161,10 +162,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
             }
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
         } else if (decoder instanceof ProtobufArrayDecoder || decoder instanceof ProtobufCollectionDecoder) {
-            Type mtype = decoder instanceof ProtobufArrayDecoder ? ((ProtobufArrayEncoder) decoder).getComponentType() : ((ProtobufCollectionDecoder) decoder).getComponentType();
+            Type mtype = decoder instanceof ProtobufArrayDecoder ? ((ProtobufArrayDecoder) decoder).getComponentType() : ((ProtobufCollectionDecoder) decoder).getComponentType();
             defineJsonDecodeDescriptor(mtype, sb, prefix, excludeFunc);
         } else if (sb.length() == 0) {
             if (decoder instanceof SimpledCoder
+                || decoder instanceof StringArraySimpledCoder
                 || (decoder instanceof ProtobufArrayDecoder && ((ProtobufArrayDecoder) decoder).getComponentDecoder() instanceof SimpledCoder)
                 || (decoder instanceof ProtobufCollectionDecoder && ((ProtobufCollectionDecoder) decoder).getComponentDecoder() instanceof SimpledCoder)) {
                 sb.append(prefix).append("{\r\n");
@@ -175,7 +177,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                 sb.append(prefix).append("    \"").append(ProtobufFactory.wireTypeString(type, ((ProtobufFactory) factory).enumtostring)).append(" 0\" : 0\r\n");
                 sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
             } else {
-                throw new ConvertException("Not support the type (" + type + ")");
+                throw new ConvertException("Not support type (" + type + ")");
             }
         } else {
             throw new ConvertException("Not support the type (" + type + ")");
