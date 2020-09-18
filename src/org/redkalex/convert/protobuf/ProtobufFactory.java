@@ -234,12 +234,14 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
                 Type valueType = pt.getActualTypeArguments()[1];
                 return "map<" + wireTypeString(keyType, enumtostring) + "," + wireTypeString(valueType, enumtostring) + ">";
             } else if (Collection.class.isAssignableFrom(rawType)
-                || Stream.class.isAssignableFrom(rawType)) {
+                || Stream.class.isAssignableFrom(rawType) || rawType.isArray()) {
                 return "repeated " + wireTypeString(pt.getActualTypeArguments()[0], enumtostring);
             } else if (pt.getActualTypeArguments().length == 1
                 && (pt.getActualTypeArguments()[0] instanceof Class)) {
                 return rawType.getSimpleName() + "_" + ((Class) pt.getActualTypeArguments()[0]).getSimpleName();
             }
+        } else if (javaType instanceof GenericArrayType) {
+            return "repeated " + wireTypeString(((GenericArrayType) javaType).getGenericComponentType(), enumtostring);
         }
         throw new UnsupportedOperationException("ProtobufConvert not supported type(" + javaType + ")");
     }

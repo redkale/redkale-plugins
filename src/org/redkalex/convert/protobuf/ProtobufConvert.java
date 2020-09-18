@@ -129,6 +129,12 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                         if (pt.getActualTypeArguments().length == 1 && (pt.getActualTypeArguments()[0] instanceof Class)) {
                             defineJsonDecodeDescriptor(mtype, sb, prefix + "    ", excludeFunc);
                         }
+                    } else if (mtype instanceof GenericArrayType) {
+                        final GenericArrayType gt = (GenericArrayType) mtype;
+                        if (!gt.getGenericComponentType().toString().startsWith("java")
+                            && gt.getGenericComponentType().toString().indexOf('.') > 0) {
+                            defineJsonDecodeDescriptor(gt.getGenericComponentType(), sb, prefix + "    ", excludeFunc);
+                        }
                     }
                     continue;
                 }
@@ -210,6 +216,12 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                         final ParameterizedType pt = (ParameterizedType) mtype;
                         if (pt.getActualTypeArguments().length == 1 && (pt.getActualTypeArguments()[0] instanceof Class)) {
                             defineJsonEncodeDescriptor(mtype, sb, prefix + "    ", excludeFunc);
+                        }
+                    } else if (mtype instanceof GenericArrayType) {
+                        final GenericArrayType gt = (GenericArrayType) mtype;
+                        if (!gt.getGenericComponentType().toString().startsWith("java")
+                            && gt.getGenericComponentType().toString().indexOf('.') > 0) {
+                            defineJsonEncodeDescriptor(gt.getGenericComponentType(), sb, prefix + "    ", excludeFunc);
                         }
                     }
                     continue;
