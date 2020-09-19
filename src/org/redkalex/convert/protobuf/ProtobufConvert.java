@@ -451,7 +451,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public ByteBuffer[] convertTo(final Supplier<ByteBuffer> supplier, final Object value) {
-        if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");
+        //if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");
         if (supplier == null) return null;
         ProtobufByteBufferWriter out = pollProtobufWriter(supplier);
         if (value == null) {
@@ -466,7 +466,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public ByteBuffer[] convertTo(final Supplier<ByteBuffer> supplier, final Type type, final Object value) {
-        if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");
+        //if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");
         if (supplier == null || type == null) return null;
         ProtobufByteBufferWriter out = pollProtobufWriter(supplier);
         if (value == null) {
@@ -481,7 +481,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public ByteBuffer[] convertMapTo(final Supplier<ByteBuffer> supplier, final Object... values) {
-        if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
+        //if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
         if (supplier == null) return null;
         ProtobufByteBufferWriter out = pollProtobufWriter(supplier);
         if (values == null) {
