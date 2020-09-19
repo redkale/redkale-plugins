@@ -155,9 +155,8 @@ public class ProtobufReader extends Reader {
     @Override
     public final DeMember readFieldName(final DeMember[] members) {
         int tag = readTag();
-        int pos = tag >>> 3;
         for (DeMember member : members) {
-            if (member.getPosition() == pos) {
+            if (member.getTag() == tag) {
                 return member;
             }
         }
