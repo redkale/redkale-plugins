@@ -240,6 +240,9 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.set("mapvals", mapType, map);
         System.out.println("mapvals:  " + source.get("mapvals", mapType));
 
+        source.remove("byteskey");
+        source.setBytes("byteskey", new byte[]{1, 2, 3});
+        System.out.println("byteskey 值 : " + Arrays.toString(source.getBytes("byteskey")));
         //h
         source.remove("hmap");
         source.hincr("hmap", "key1");
@@ -315,6 +318,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         source.remove("hmaplong");
         source.remove("hmapstr");
         source.remove("hmapstrmap");
+        source.remove("byteskey");
         System.out.println("------------------------------------");
 //        System.out.println("--------------测试大文本---------------");
 //        HashMap<String, String> bigmap = new HashMap<>();
@@ -435,7 +439,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     @Override
     public CompletableFuture<String> getStringAndRefreshAsync(String key, int expireSeconds) {
-        return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getAsync(key));
+        return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getStringAsync(key));
     }
 
     @Override
@@ -1546,6 +1550,67 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     @Override
+    public byte[] getBytes(final String key) {
+        return getBytesAsync(key).join();
+    }
+
+    @Override
+    public byte[] getBytesAndRefresh(final String key, final int expireSeconds) {
+        return getBytesAndRefreshAsync(key, expireSeconds).join();
+    }
+
+    @Override
+    public void setBytes(final String key, final byte[] value) {
+        setBytesAsync(key, value).join();
+    }
+
+    @Override
+    public void setBytes(final int expireSeconds, final String key, final byte[] value) {
+        setBytesAsync(expireSeconds, key, value).join();
+    }
+
+    @Override
+    public <T> void setBytes(final String key, final Convert convert, final Type type, final T value) {
+        setBytesAsync(key, convert, type, value).join();
+    }
+
+    @Override
+    public <T> void setBytes(final int expireSeconds, final String key, final Convert convert, final Type type, final T value) {
+        setBytesAsync(expireSeconds, key, convert, type, value).join();
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getBytesAsync(final String key) {
+        return (CompletableFuture) send("GET", CacheEntryType.BYTES, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getBytesAndRefreshAsync(final String key, final int expireSeconds) {
+        return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getBytesAsync(key));
+    }
+
+    @Override
+    public CompletableFuture<Void> setBytesAsync(final String key, final byte[] value) {
+        return (CompletableFuture) send("SET", CacheEntryType.BYTES, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), value);
+
+    }
+
+    @Override
+    public CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final byte[] value) {
+        return (CompletableFuture) setBytesAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setBytesAsync(final String key, final Convert convert, final Type type, final T value) {
+        return (CompletableFuture) send("SET", CacheEntryType.BYTES, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), convert.convertToBytes(type, value));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final Convert convert, final Type type, final T value) {
+        return (CompletableFuture) setBytesAsync(key, convert.convertToBytes(type, value)).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+    }
+
+    @Override
     public CompletableFuture<List<String>> queryKeysAsync() {
         return (CompletableFuture) send("KEYS", null, (Type) null, "*", new byte[]{(byte) '*'});
     }
@@ -1736,10 +1801,10 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                         Type ct = cacheType == CacheEntryType.LONG ? long.class : (cacheType == CacheEntryType.STRING ? String.class : (resultType == null ? objValueType : resultType));
                                         if (future == null) {
                                             transport.offerConnection(false, conn);
-                                            callback.completed((("SPOP".equals(command) || command.endsWith("GET") || rs == null) ? (ct == String.class && rs != null ? new String(rs, StandardCharsets.UTF_8) : convert.convertFrom(ct, new String(rs, StandardCharsets.UTF_8))) : null), key);
+                                            callback.completed(cacheType == CacheEntryType.BYTES ? rs : (("SPOP".equals(command) || command.endsWith("GET") || rs == null) ? (ct == String.class && rs != null ? new String(rs, StandardCharsets.UTF_8) : convert.convertFrom(ct, new String(rs, StandardCharsets.UTF_8))) : null), key);
                                         } else {
                                             transport.offerConnection(false, conn);
-                                            future.complete(("SPOP".equals(command) || command.endsWith("GET") ? (ct == String.class && rs != null ? new String(rs, StandardCharsets.UTF_8) : convert.convertFrom(ct, rs == null ? null : new String(rs, StandardCharsets.UTF_8))) : rs));
+                                            future.complete(cacheType == CacheEntryType.BYTES ? rs : ("SPOP".equals(command) || command.endsWith("GET") ? (ct == String.class && rs != null ? new String(rs, StandardCharsets.UTF_8) : convert.convertFrom(ct, rs == null ? null : new String(rs, StandardCharsets.UTF_8))) : rs));
                                         }
                                     } else if (sign == ASTERISK_BYTE) { // *
                                         final int len = readInt(buffer);

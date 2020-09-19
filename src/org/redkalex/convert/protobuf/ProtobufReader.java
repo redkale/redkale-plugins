@@ -7,6 +7,7 @@ package org.redkalex.convert.protobuf;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import org.redkale.convert.*;
 import org.redkale.util.*;
 
@@ -69,6 +70,10 @@ public class ProtobufReader extends Reader {
 
     public void close() {
         this.recycle();
+    }
+
+    public byte[] remainBytes() {
+        return Arrays.copyOfRange(this.content, this.position, this.content.length);
     }
 
     /**
