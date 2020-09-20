@@ -28,7 +28,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     protected final boolean enumtostring;
 
-    protected boolean reversible = true;
+    protected boolean reversible = false;
 
     static {
         instance.register(Serializable.class, objectDecoder);
