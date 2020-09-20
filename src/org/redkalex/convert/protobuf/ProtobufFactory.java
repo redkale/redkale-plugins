@@ -20,7 +20,7 @@ import org.redkale.util.*;
  */
 public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWriter> {
 
-    private static final ProtobufFactory instance = new ProtobufFactory(null, Boolean.getBoolean("convert.protobuf.tiny"), Boolean.parseBoolean(System.getProperty("convert.protobuf.enumtostring", "true")));
+    private static final ProtobufFactory instance = new ProtobufFactory(null, getSystemPropertyBoolean("convert.protobuf.tiny", "convert.tiny", true), Boolean.parseBoolean(System.getProperty("convert.protobuf.enumtostring", "true")));
 
     static final Decodeable objectDecoder = instance.loadDecoder(Object.class);
 
@@ -42,7 +42,6 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     private ProtobufFactory(ProtobufFactory parent, boolean tiny, boolean enumtostring) {
         super(parent, tiny);
         this.enumtostring = enumtostring;
-        tiny = false; //固定false
         if (parent == null) { //root
             this.register(String[].class, this.createArrayDecoder(String[].class));
             this.register(String[].class, this.createArrayEncoder(String[].class));
@@ -54,7 +53,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     public static ProtobufFactory create() {
-        return new ProtobufFactory(null, Boolean.getBoolean("convert.protobuf.tiny"), Boolean.parseBoolean(System.getProperty("convert.protobuf.enumtostring", "true")));
+        return new ProtobufFactory(null, getSystemPropertyBoolean("convert.protobuf.tiny", "convert.tiny", true), Boolean.parseBoolean(System.getProperty("convert.protobuf.enumtostring", "true")));
     }
 
     @Override

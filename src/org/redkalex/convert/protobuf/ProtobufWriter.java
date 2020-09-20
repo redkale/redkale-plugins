@@ -18,7 +18,7 @@ import org.redkale.util.*;
  */
 public class ProtobufWriter extends Writer {
 
-    private static final int defaultSize = Integer.getInteger("convert.protobuf.writer.buffer.defsize", 1024);
+    private static final int defaultSize = Integer.getInteger("convert.protobuf.writer.buffer.defsize", Integer.getInteger("convert.writer.buffer.defsize", 1024));
 
     private byte[] content;
 
@@ -255,7 +255,15 @@ public class ProtobufWriter extends Writer {
     public void writeObjectField(final EnMember member, Object obj) {
         Object value = member.getAttribute().get(obj);
         if (value == null) return;
+        if (tiny()) {
+            if (member.isStringType()) {
+                if (((CharSequence) value).length() == 0) return;
+            } else if (member.isBoolType()) {
+                if (!((Boolean) value)) return;
+            }
+        }
         Encodeable encoder = member.getEncoder();
+        if (encoder == null) return;
         if (encoder instanceof MapEncoder) {
             ((MapEncoder) encoder).convertTo(this, member, (Map) value);
         } else if (encoder instanceof ArrayEncoder) {
