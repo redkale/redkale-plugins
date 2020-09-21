@@ -63,7 +63,7 @@ public class SimpleBean {
         //-------------------------------
         byte[] jsonbs = JsonConvert.root().convertToBytes(bean);
         byte[] bs = ProtobufConvert.root().convertTo(bean);
-        Utility.println("pconvert ", bs);
+        Utility.println("predkale ", bs);
         PSimpleBeanOuterClass.PSimpleBean.Builder builder = PSimpleBeanOuterClass.PSimpleBean.newBuilder();
 
         PSimpleBeanOuterClass.PSimpleBean bean2 = createPSimpleBean(bean, builder);
@@ -73,8 +73,8 @@ public class SimpleBean {
         if (!Arrays.equals(bs, bs2)) throw new RuntimeException("两者序列化出来的byte[]不一致");
 
         System.out.println(bean);
-        System.out.println(ProtobufConvert.root().convertFrom(TestBean.class, bs).toString());
-        System.out.println(JsonConvert.root().convertFrom(TestBean.class, jsonbs).toString());
+        System.out.println(ProtobufConvert.root().convertFrom(SimpleBean.class, bs).toString());
+        System.out.println(JsonConvert.root().convertFrom(SimpleBean.class, jsonbs).toString());
 
     }
 

@@ -32,6 +32,12 @@ public class ProtobufObjectDecoder<T> extends ObjectDecoder<ProtobufReader, T> {
     }
 
     @Override
+    protected ProtobufReader objectReader(ProtobufReader in) {
+        if (in.position() > in.initoffset) return new ProtobufReader(in.readByteArray());
+        return in;
+    }
+
+    @Override
     protected Object readMemberValue(ProtobufReader in, DeMember member, boolean first) {
         Decodeable decoder = member.getDecoder();
         if (decoder instanceof ProtobufArrayDecoder) {

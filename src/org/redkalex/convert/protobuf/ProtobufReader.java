@@ -19,6 +19,8 @@ public class ProtobufReader extends Reader {
 
     protected int position = -1;
 
+    protected int initoffset;
+
     private byte[] content;
 
     protected int cachetag = Integer.MIN_VALUE;
@@ -48,6 +50,7 @@ public class ProtobufReader extends Reader {
     public final void setBytes(byte[] bytes) {
         if (bytes == null) {
             this.position = 0;
+            this.initoffset = 0;
         } else {
             setBytes(bytes, 0, bytes.length);
         }
@@ -56,14 +59,17 @@ public class ProtobufReader extends Reader {
     public final void setBytes(byte[] bytes, int start, int len) {
         if (bytes == null) {
             this.position = 0;
+            this.initoffset = 0;
         } else {
             this.content = bytes;
             this.position = start - 1;
+            this.initoffset = this.position;
         }
     }
 
     protected boolean recycle() {
         this.position = -1;
+        this.initoffset = -1;
         this.content = null;
         return true;
     }

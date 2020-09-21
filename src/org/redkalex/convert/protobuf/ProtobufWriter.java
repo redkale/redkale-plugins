@@ -26,10 +26,19 @@ public class ProtobufWriter extends Writer {
 
     protected boolean tiny;
 
+    protected int initoffset;
+
     protected boolean enumtostring;
+
+    protected ProtobufWriter parent;
 
     public static ObjectPool<ProtobufWriter> createPool(int max) {
         return new ObjectPool<>(max, (Object... params) -> new ProtobufWriter(), null, (t) -> t.recycle());
+    }
+
+    protected ProtobufWriter(ProtobufWriter parent) {
+        this();
+        this.parent = parent;
     }
 
     protected ProtobufWriter(byte[] bs) {
@@ -98,6 +107,7 @@ public class ProtobufWriter extends Writer {
     protected boolean recycle() {
         super.recycle();
         this.count = 0;
+        this.initoffset = 0;
         this.specify = null;
         if (this.content.length > defaultSize) {
             this.content = new byte[defaultSize];
@@ -141,6 +151,10 @@ public class ProtobufWriter extends Writer {
 
     @Override
     public void writeObjectE(Object obj) {
+        if (parent != null) {
+            parent.writeUInt32(count());
+            parent.writeTo(toArray());
+        }
     }
 
     @Override
