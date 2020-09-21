@@ -45,7 +45,7 @@ import java.util.RandomAccess;
 final class BooleanArrayList extends AbstractProtobufList<Boolean>
     implements BooleanList, RandomAccess, PrimitiveNonBoxingCollection {
 
-  private static final BooleanArrayList EMPTY_LIST = new BooleanArrayList();
+  private static final BooleanArrayList EMPTY_LIST = new BooleanArrayList(new boolean[0], 0);
   static {
     EMPTY_LIST.makeImmutable();
   }
@@ -54,9 +54,7 @@ final class BooleanArrayList extends AbstractProtobufList<Boolean>
     return EMPTY_LIST;
   }
 
-  /**
-   * The backing store for the list.
-   */
+  /** The backing store for the list. */
   private boolean[] array;
 
   /**
@@ -65,16 +63,14 @@ final class BooleanArrayList extends AbstractProtobufList<Boolean>
    */
   private int size;
 
-  /**
-   * Constructs a new mutable {@code BooleanArrayList} with default capacity.
-   */
+  /** Constructs a new mutable {@code BooleanArrayList} with default capacity. */
   BooleanArrayList() {
     this(new boolean[DEFAULT_CAPACITY], 0);
   }
 
   /**
-   * Constructs a new mutable {@code BooleanArrayList}
-   * containing the same elements as {@code other}.
+   * Constructs a new mutable {@code BooleanArrayList} containing the same elements as {@code
+   * other}.
    */
   private BooleanArrayList(boolean[] other, int size) {
     array = other;
@@ -145,6 +141,26 @@ final class BooleanArrayList extends AbstractProtobufList<Boolean>
   }
 
   @Override
+  public int indexOf(Object element) {
+    if (!(element instanceof Boolean)) {
+      return -1;
+    }
+    boolean unboxedElement = (Boolean) element;
+    int numElems = size();
+    for (int i = 0; i < numElems; i++) {
+      if (array[i] == unboxedElement) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  @Override
+  public boolean contains(Object element) {
+    return indexOf(element) != -1;
+  }
+
+  @Override
   public int size() {
     return size;
   }
@@ -164,21 +180,33 @@ final class BooleanArrayList extends AbstractProtobufList<Boolean>
   }
 
   @Override
+  public boolean add(Boolean element) {
+    addBoolean(element);
+    return true;
+  }
+
+  @Override
   public void add(int index, Boolean element) {
     addBoolean(index, element);
   }
 
-  /**
-   * Like {@link #add(Boolean)} but more efficient in that it doesn't box the element.
-   */
+  /** Like {@link #add(Boolean)} but more efficient in that it doesn't box the element. */
   @Override
   public void addBoolean(boolean element) {
-    addBoolean(size, element);
+    ensureIsMutable();
+    if (size == array.length) {
+      // Resize to 1.5x the size
+      int length = ((size * 3) / 2) + 1;
+      boolean[] newArray = new boolean[length];
+
+      System.arraycopy(array, 0, newArray, 0, size);
+      array = newArray;
+    }
+
+    array[size++] = element;
   }
 
-  /**
-   * Like {@link #add(int, Boolean)} but more efficient in that it doesn't box the element.
-   */
+  /** Like {@link #add(int, Boolean)} but more efficient in that it doesn't box the element. */
   private void addBoolean(int index, boolean element) {
     ensureIsMutable();
     if (index < 0 || index > size) {
@@ -244,7 +272,7 @@ final class BooleanArrayList extends AbstractProtobufList<Boolean>
     ensureIsMutable();
     for (int i = 0; i < size; i++) {
       if (o.equals(array[i])) {
-        System.arraycopy(array, i + 1, array, i, size - i);
+        System.arraycopy(array, i + 1, array, i, size - i - 1);
         size--;
         modCount++;
         return true;
@@ -259,7 +287,7 @@ final class BooleanArrayList extends AbstractProtobufList<Boolean>
     ensureIndexInRange(index);
     boolean value = array[index];
     if (index < size - 1) {
-      System.arraycopy(array, index + 1, array, index, size - index);
+      System.arraycopy(array, index + 1, array, index, size - index - 1);
     }
     size--;
     modCount++;
