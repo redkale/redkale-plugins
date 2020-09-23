@@ -103,21 +103,29 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     public <T> String getJsonDecodeDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
-        defineJsonDecodeDescriptor(type, sb, "", null);
+        defineJsonDecodeDescriptor(null, new ArrayList<>(), type, sb, "", null);
         return sb.toString();
     }
 
     public <T> String getJsonDecodeDescriptor(Type type, BiFunction<Type, DeMember, Boolean> func) {
         StringBuilder sb = new StringBuilder();
-        defineJsonDecodeDescriptor(type, sb, "", func);
+        defineJsonDecodeDescriptor(null, new ArrayList<>(), type, sb, "", func);
         return sb.toString();
     }
 
-    protected void defineJsonDecodeDescriptor(Type type, StringBuilder sb, String prefix, BiFunction<Type, DeMember, Boolean> excludeFunc) {
+    protected <T> String getJsonDecodeDescriptor(Type parent, List<String> list, Type type, BiFunction<Type, DeMember, Boolean> func) {
+        StringBuilder sb = new StringBuilder();
+        defineJsonDecodeDescriptor(parent, list, type, sb, "", func);
+        return sb.toString();
+    }
+
+    protected void defineJsonDecodeDescriptor(Type parent, List<String> list, Type type, StringBuilder sb, String prefix, BiFunction<Type, DeMember, Boolean> excludeFunc) {
         Decodeable decoder = factory.loadDecoder(type);
         boolean dot = sb.length() > 0;
         if (decoder instanceof ObjectDecoder) {
             if (sb.length() > 0) {
+                if (list.contains(parent + "" + defineTypeName(type))) return;
+                list.add(parent + "" + defineTypeName(type));
                 sb.append(prefix).append("\"message ").append(defineTypeName(type)).append("\" : {\r\n");
             } else {
                 sb.append("{\r\n");
@@ -134,26 +142,26 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     if (mtype instanceof ParameterizedType) {
                         final ParameterizedType pt = (ParameterizedType) mtype;
                         if (pt.getActualTypeArguments().length == 1 && (pt.getActualTypeArguments()[0] instanceof Class)) {
-                            defineJsonDecodeDescriptor(mtype, sb, prefix + "    ", excludeFunc);
+                            defineJsonDecodeDescriptor(parent, list, mtype, sb, prefix + "    ", excludeFunc);
                         }
                     } else if (mtype instanceof GenericArrayType) {
                         final GenericArrayType gt = (GenericArrayType) mtype;
                         if (!gt.getGenericComponentType().toString().startsWith("java")
                             && gt.getGenericComponentType().toString().indexOf('.') > 0) {
-                            defineJsonDecodeDescriptor(gt.getGenericComponentType(), sb, prefix + "    ", excludeFunc);
+                            defineJsonDecodeDescriptor(parent, list, gt.getGenericComponentType(), sb, prefix + "    ", excludeFunc);
                         }
                     }
                     continue;
                 }
                 Class mclz = (Class) member.getDecoder().getType();
                 if (!mclz.isArray() && !mclz.isEnum() && !mclz.getName().startsWith("java")) {
-                    defineJsonDecodeDescriptor(mclz, sb, prefix + "    ", excludeFunc);
+                    defineJsonDecodeDescriptor(parent, list, mclz, sb, prefix + "    ", excludeFunc);
                 } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")
                     && !mclz.getComponentType().getName().equals("boolean") && !mclz.getComponentType().getName().equals("byte")
                     && !mclz.getComponentType().getName().equals("char") && !mclz.getComponentType().getName().equals("short")
                     && !mclz.getComponentType().getName().equals("int") && !mclz.getComponentType().getName().equals("long")
                     && !mclz.getComponentType().getName().equals("float") && !mclz.getComponentType().getName().equals("double")) {
-                    defineJsonDecodeDescriptor(mclz.getComponentType(), sb, prefix + "    ", excludeFunc);
+                    defineJsonDecodeDescriptor(parent, list, mclz.getComponentType(), sb, prefix + "    ", excludeFunc);
                 }
             }
             for (int i = 0; i < members.size(); i++) {
@@ -169,7 +177,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
         } else if ((!(type instanceof Class) || !((Class) type).isArray() || !((Class) type).getComponentType().getName().startsWith("java")) && (decoder instanceof ProtobufArrayDecoder || decoder instanceof ProtobufCollectionDecoder)) {
             Type mtype = decoder instanceof ProtobufArrayDecoder ? ((ProtobufArrayDecoder) decoder).getComponentType() : ((ProtobufCollectionDecoder) decoder).getComponentType();
-            defineJsonDecodeDescriptor(mtype, sb, prefix, excludeFunc);
+            defineJsonDecodeDescriptor(parent, list, mtype, sb, prefix, excludeFunc);
         } else if (sb.length() == 0) {
             if (decoder instanceof SimpledCoder
                 || decoder instanceof StringArraySimpledCoder
@@ -192,21 +200,29 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     public <T> String getJsonEncodeDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
-        defineJsonEncodeDescriptor(type, sb, "", null);
+        defineJsonEncodeDescriptor(null, new ArrayList<>(), type, sb, "", null);
         return sb.toString();
     }
 
     public <T> String getJsonEncodeDescriptor(Type type, BiFunction<Type, EnMember, Boolean> func) {
         StringBuilder sb = new StringBuilder();
-        defineJsonEncodeDescriptor(type, sb, "", func);
+        defineJsonEncodeDescriptor(null, new ArrayList<>(), type, sb, "", func);
         return sb.toString();
     }
 
-    protected void defineJsonEncodeDescriptor(Type type, StringBuilder sb, String prefix, BiFunction<Type, EnMember, Boolean> excludeFunc) {
+    protected <T> String getJsonEncodeDescriptor(Type parent, List<String> list, Type type, BiFunction<Type, EnMember, Boolean> func) {
+        StringBuilder sb = new StringBuilder();
+        defineJsonEncodeDescriptor(parent, list, type, sb, "", func);
+        return sb.toString();
+    }
+
+    protected void defineJsonEncodeDescriptor(Type parent, List<String> list, Type type, StringBuilder sb, String prefix, BiFunction<Type, EnMember, Boolean> excludeFunc) {
         Encodeable encoder = factory.loadEncoder(type);
         boolean dot = sb.length() > 0;
         if (encoder instanceof ObjectEncoder) {
             if (sb.length() > 0) {
+                if (list.contains(parent + "" + defineTypeName(type))) return;
+                list.add(parent + "" + defineTypeName(type));
                 sb.append(prefix).append("\"message ").append(defineTypeName(type)).append("\" : {\r\n");
             } else {
                 sb.append("{\r\n");
@@ -223,26 +239,26 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     if (mtype instanceof ParameterizedType) {
                         final ParameterizedType pt = (ParameterizedType) mtype;
                         if (pt.getActualTypeArguments().length == 1 && (pt.getActualTypeArguments()[0] instanceof Class)) {
-                            defineJsonEncodeDescriptor(mtype, sb, prefix + "    ", excludeFunc);
+                            defineJsonEncodeDescriptor(parent, list, mtype, sb, prefix + "    ", excludeFunc);
                         }
                     } else if (mtype instanceof GenericArrayType) {
                         final GenericArrayType gt = (GenericArrayType) mtype;
                         if (!gt.getGenericComponentType().toString().startsWith("java")
                             && gt.getGenericComponentType().toString().indexOf('.') > 0) {
-                            defineJsonEncodeDescriptor(gt.getGenericComponentType(), sb, prefix + "    ", excludeFunc);
+                            defineJsonEncodeDescriptor(parent, list, gt.getGenericComponentType(), sb, prefix + "    ", excludeFunc);
                         }
                     }
                     continue;
                 }
                 Class mclz = (Class) member.getEncoder().getType();
                 if (!mclz.isArray() && !mclz.isEnum() && !mclz.getName().startsWith("java")) {
-                    defineJsonEncodeDescriptor(mclz, sb, prefix + "    ", excludeFunc);
+                    defineJsonEncodeDescriptor(parent, list, mclz, sb, prefix + "    ", excludeFunc);
                 } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")
                     && !mclz.getComponentType().getName().equals("boolean") && !mclz.getComponentType().getName().equals("byte")
                     && !mclz.getComponentType().getName().equals("char") && !mclz.getComponentType().getName().equals("short")
                     && !mclz.getComponentType().getName().equals("int") && !mclz.getComponentType().getName().equals("long")
                     && !mclz.getComponentType().getName().equals("float") && !mclz.getComponentType().getName().equals("double")) {
-                    defineJsonEncodeDescriptor(mclz.getComponentType(), sb, prefix + "    ", excludeFunc);
+                    defineJsonEncodeDescriptor(parent, list, mclz.getComponentType(), sb, prefix + "    ", excludeFunc);
                 }
             }
             for (int i = 0; i < members.size(); i++) {
@@ -258,7 +274,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
         } else if (encoder instanceof ProtobufArrayEncoder || encoder instanceof ProtobufCollectionEncoder) {
             Type mtype = encoder instanceof ProtobufArrayEncoder ? ((ProtobufArrayEncoder) encoder).getComponentType() : ((ProtobufCollectionEncoder) encoder).getComponentType();
-            defineJsonEncodeDescriptor(mtype, sb, prefix, excludeFunc);
+            defineJsonEncodeDescriptor(parent, list, mtype, sb, prefix, excludeFunc);
         } else if (sb.length() == 0) {
             if (encoder instanceof SimpledCoder
                 || (encoder instanceof ProtobufArrayEncoder && ((ProtobufArrayEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)
