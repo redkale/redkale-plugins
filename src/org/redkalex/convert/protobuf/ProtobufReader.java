@@ -79,7 +79,8 @@ public class ProtobufReader extends Reader {
     }
 
     public byte[] remainBytes() {
-        return Arrays.copyOfRange(this.content, this.position, this.content.length);
+        if (this.position >= this.content.length) return new byte[0];
+        return Arrays.copyOfRange(this.content, this.position + 1, this.content.length);
     }
 
     /**
