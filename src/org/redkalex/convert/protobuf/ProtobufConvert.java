@@ -101,20 +101,26 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         if (out != null) writerPool.accept(out);
     }
 
-    //请求参数的类型
-    public <T> String getJsonDecodeDescriptor(Type type) {
+    /**
+     * 请求参数的类型
+     *
+     * @param type 请求参数的类型
+     *
+     * @return String
+     */
+    public String getJsonDecodeDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
         defineJsonDecodeDescriptor(null, new ArrayList<>(), type, sb, "", null);
         return sb.toString();
     }
 
-    public <T> String getJsonDecodeDescriptor(Type type, BiFunction<Type, DeMember, Boolean> func) {
+    public String getJsonDecodeDescriptor(Type type, BiFunction<Type, DeMember, Boolean> func) {
         StringBuilder sb = new StringBuilder();
         defineJsonDecodeDescriptor(null, new ArrayList<>(), type, sb, "", func);
         return sb.toString();
     }
 
-    protected <T> String getJsonDecodeDescriptor(Type parent, List<String> list, Type type, BiFunction<Type, DeMember, Boolean> func) {
+    protected String getJsonDecodeDescriptor(Type parent, List<String> list, Type type, BiFunction<Type, DeMember, Boolean> func) {
         StringBuilder sb = new StringBuilder();
         defineJsonDecodeDescriptor(parent, list, type, sb, "", func);
         return sb.toString();
@@ -203,20 +209,26 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         }
     }
 
-    //输出结果的类型
-    public <T> String getJsonEncodeDescriptor(Type type) {
+    /**
+     * 输出结果的类型
+     *
+     * @param type 输出结果的类型
+     *
+     * @return String
+     */
+    public String getJsonEncodeDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
         defineJsonEncodeDescriptor(null, new ArrayList<>(), type, sb, "", null);
         return sb.toString();
     }
 
-    public <T> String getJsonEncodeDescriptor(Type type, BiFunction<Type, EnMember, Boolean> func) {
+    public String getJsonEncodeDescriptor(Type type, BiFunction<Type, EnMember, Boolean> func) {
         StringBuilder sb = new StringBuilder();
         defineJsonEncodeDescriptor(null, new ArrayList<>(), type, sb, "", func);
         return sb.toString();
     }
 
-    protected <T> String getJsonEncodeDescriptor(Type parent, List<String> list, Type type, BiFunction<Type, EnMember, Boolean> func) {
+    protected String getJsonEncodeDescriptor(Type parent, List<String> list, Type type, BiFunction<Type, EnMember, Boolean> func) {
         StringBuilder sb = new StringBuilder();
         defineJsonEncodeDescriptor(parent, list, type, sb, "", func);
         return sb.toString();
