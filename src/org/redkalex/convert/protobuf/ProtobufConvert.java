@@ -101,6 +101,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         if (out != null) writerPool.accept(out);
     }
 
+    //请求参数的类型
     public <T> String getJsonDecodeDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
         defineJsonDecodeDescriptor(null, new ArrayList<>(), type, sb, "", null);
@@ -147,6 +148,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     } else if (mtype instanceof GenericArrayType) {
                         final GenericArrayType gt = (GenericArrayType) mtype;
                         if (!gt.getGenericComponentType().toString().startsWith("java")
+                            && !gt.getGenericComponentType().toString().startsWith("class java")
                             && gt.getGenericComponentType().toString().indexOf('.') > 0) {
                             defineJsonDecodeDescriptor(parent, list, gt.getGenericComponentType(), sb, prefix + "    ", excludeFunc);
                         }
@@ -154,9 +156,10 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     continue;
                 }
                 Class mclz = (Class) member.getDecoder().getType();
-                if (!mclz.isArray() && !mclz.isEnum() && !mclz.getName().startsWith("java")) {
+                if (!mclz.isArray() && !mclz.isEnum() && !mclz.isPrimitive() && !mclz.getName().startsWith("java")) {
                     defineJsonDecodeDescriptor(parent, list, mclz, sb, prefix + "    ", excludeFunc);
                 } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")
+                    && !mclz.getComponentType().isPrimitive() && !mclz.getComponentType().isArray()
                     && !mclz.getComponentType().getName().equals("boolean") && !mclz.getComponentType().getName().equals("byte")
                     && !mclz.getComponentType().getName().equals("char") && !mclz.getComponentType().getName().equals("short")
                     && !mclz.getComponentType().getName().equals("int") && !mclz.getComponentType().getName().equals("long")
@@ -177,7 +180,9 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
         } else if ((!(type instanceof Class) || !((Class) type).isArray() || !((Class) type).getComponentType().getName().startsWith("java")) && (decoder instanceof ProtobufArrayDecoder || decoder instanceof ProtobufCollectionDecoder)) {
             Type mtype = decoder instanceof ProtobufArrayDecoder ? ((ProtobufArrayDecoder) decoder).getComponentType() : ((ProtobufCollectionDecoder) decoder).getComponentType();
-            defineJsonDecodeDescriptor(parent, list, mtype, sb, prefix, excludeFunc);
+            if (!mtype.toString().startsWith("java") && !mtype.toString().startsWith("class java") && mtype.toString().indexOf('.') > 0) {
+                defineJsonDecodeDescriptor(parent, list, mtype, sb, prefix, excludeFunc);
+            }
         } else if (sb.length() == 0) {
             if (decoder instanceof SimpledCoder
                 || decoder instanceof StringArraySimpledCoder
@@ -198,6 +203,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         }
     }
 
+    //输出结果的类型
     public <T> String getJsonEncodeDescriptor(Type type) {
         StringBuilder sb = new StringBuilder();
         defineJsonEncodeDescriptor(null, new ArrayList<>(), type, sb, "", null);
@@ -244,6 +250,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                     } else if (mtype instanceof GenericArrayType) {
                         final GenericArrayType gt = (GenericArrayType) mtype;
                         if (!gt.getGenericComponentType().toString().startsWith("java")
+                            && !gt.getGenericComponentType().toString().startsWith("class java")
                             && gt.getGenericComponentType().toString().indexOf('.') > 0) {
                             defineJsonEncodeDescriptor(parent, list, gt.getGenericComponentType(), sb, prefix + "    ", excludeFunc);
                         }
@@ -274,7 +281,9 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
             sb.append(prefix).append(dot ? "}," : "}").append("\r\n");
         } else if (encoder instanceof ProtobufArrayEncoder || encoder instanceof ProtobufCollectionEncoder) {
             Type mtype = encoder instanceof ProtobufArrayEncoder ? ((ProtobufArrayEncoder) encoder).getComponentType() : ((ProtobufCollectionEncoder) encoder).getComponentType();
-            defineJsonEncodeDescriptor(parent, list, mtype, sb, prefix, excludeFunc);
+            if (!mtype.toString().startsWith("java") && !mtype.toString().startsWith("class java") && mtype.toString().indexOf('.') > 0) {
+                defineJsonEncodeDescriptor(parent, list, mtype, sb, prefix, excludeFunc);
+            }
         } else if (sb.length() == 0) {
             if (encoder instanceof SimpledCoder
                 || (encoder instanceof ProtobufArrayEncoder && ((ProtobufArrayEncoder) encoder).getComponentEncoder() instanceof SimpledCoder)
