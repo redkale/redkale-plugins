@@ -144,7 +144,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     @Override
     public boolean isFieldSort() {
-        return false;
+        return true;
     }
 
     protected static Reader getItemReader(boolean string, Reader in, DeMember member, boolean enumtostring, boolean first) {
