@@ -89,7 +89,21 @@ public class ProtobufReader extends Reader {
     @Override
     @SuppressWarnings("unchecked")
     public final void skipValue() {
-        readTag();
+        int tag = readTag();
+        switch (tag & 0x7) {
+            case 0:
+                readRawVarint32();
+                break;
+            case 1:
+                readRawLittleEndian64();
+                break;
+            case 2:
+                readByteArray();
+                break;
+            case 5:
+                readRawLittleEndian32();
+                break;
+        }
     }
 
     @Override
