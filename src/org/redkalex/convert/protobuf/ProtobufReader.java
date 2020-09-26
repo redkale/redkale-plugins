@@ -108,7 +108,7 @@ public class ProtobufReader extends Reader {
 
     @Override
     public final String readObjectB(final Class clazz) {
-        return "";
+        return (this.position + 1) < this.content.length ? "" : null;
     }
 
     @Override

@@ -167,7 +167,6 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
                 }
             }
             byte[] bs = reader.readByteArray();
-            if (bs == null || bs.length == 0) return null;
             return new ProtobufReader(bs);
         }
     }
