@@ -22,7 +22,9 @@ public class ProtobufArrayEncoder<T> extends ArrayEncoder<T> {
     @Override
     protected void writeMemberValue(Writer out, EnMember member, Encodeable<Writer, Object> encoder, Object item, boolean first) {
         if (member != null) out.writeFieldName(member);
-        if (item instanceof CharSequence) {
+        if (item == null) {
+            ((ProtobufWriter) out).writeUInt32(0);
+        } else if (item instanceof CharSequence) {
             encoder.convertTo(out, item);
         } else {
             ProtobufWriter tmp = new ProtobufWriter();

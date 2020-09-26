@@ -22,7 +22,9 @@ public class ProtobufCollectionEncoder<T> extends CollectionEncoder<T> {
     @Override
     protected void writeValue(Writer out, EnMember member, Object item) {
         if (member != null) out.writeFieldName(member);
-        if (item instanceof CharSequence) {
+        if (item == null) {
+            ((ProtobufWriter) out).writeUInt32(0);
+        } else if (item instanceof CharSequence) {
             componentEncoder.convertTo(out, item);
         } else {
             ProtobufWriter tmp = new ProtobufWriter();
