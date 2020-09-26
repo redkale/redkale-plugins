@@ -133,7 +133,7 @@ public class TestBean {
         bean.email = "redkale@qq.org";
         bean.kind = Kind.TWO;
         bean.strings = new String[]{"str1", "str2", "str3"};
-        bean.entrys = new PTestEntry[]{new PTestEntry(), new PTestEntry()};
+        bean.entrys = new PTestEntry[]{new PTestEntry(), null, new PTestEntry()};
         bean.map = Utility.ofMap("aa", 0x55, "bb", 0x66);
         bean.end = "over";
 
@@ -150,7 +150,9 @@ public class TestBean {
         if (!Arrays.equals(bs, bs2)) throw new RuntimeException("两者序列化出来的byte[]不一致");
 
         System.out.println(bean);
-        System.out.println(ProtobufConvert.root().convertFrom(TestBean.class, bs).toString());
+        String frombean = ProtobufConvert.root().convertFrom(TestBean.class, bs).toString();
+        System.out.println(frombean);
+        if (!bean.toString().equals(frombean)) throw new RuntimeException("ProtobufConvert反解析后的结果不正确");
         System.out.println(JsonConvert.root().convertFrom(TestBean.class, jsonbs).toString());
 
         int count = 100000;
@@ -192,6 +194,10 @@ public class TestBean {
         }
         for (int i = 0; bean.entrys != null && i < bean.entrys.length; i++) {
             PTestBeanOuterClass.PTestBean.PTestEntry.Builder entry = PTestBeanOuterClass.PTestBean.PTestEntry.newBuilder();
+            if (bean.entrys[i] == null) {
+                builder.addEntrys(entry.build());
+                continue;
+            }
             for (int j = 0; bean.entrys[i].bools != null && j < bean.entrys[i].bools.length; j++) {
                 entry.addBools(bean.entrys[i].bools[j]);
             }
