@@ -321,19 +321,90 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         sb.append("//java ").append(clazz.isArray() ? (clazz.getComponentType().getName() + "[]") : clazz.getName()).append("\r\n\r\n");
         if (type instanceof Class) sb.append("option java_package = \"").append(clazz.getPackage().getName()).append("\";\r\n\r\n");
         sb.append("syntax = \"proto3\";\r\n\r\n");
-        defineProtoDescriptor(type, sb, "");
+        //defineProtoDescriptor(type, sb, "");
+        defineProtoDescriptor(null, new ArrayList<>(), type, sb, "", null);
         return sb.toString();
     }
 
-    protected void defineProtoDescriptor(Type type, StringBuilder sb, String prefix) {
+    protected String defineProtoDescriptor(Type parent, List<String> list, Type type, BiFunction<Type, EnMember, Boolean> func) {
+        StringBuilder sb = new StringBuilder();
+        defineProtoDescriptor(parent, list, type, sb, "", func);
+        return sb.toString();
+    }
+
+    protected void defineProtoDescriptor(Type parent, List<String> list, Type type, StringBuilder sb, String prefix, BiFunction<Type, EnMember, Boolean> excludeFunc) {
         Encodeable encoder = factory.loadEncoder(type);
         if (encoder instanceof ObjectEncoder) {
-            sb.append(prefix).append("message ").append(defineTypeName(type)).append(" {\r\n");
-            for (EnMember member : ((ObjectEncoder) encoder).getMembers()) {
-                sb.append(prefix).append("    ").append(ProtobufFactory.wireTypeString(member.getEncoder().getType(), ((ProtobufFactory) factory).enumtostring))
-                    .append(" ").append(member.getAttribute().field()).append(" = ").append(member.getPosition()).append(";\r\n");
+            if (list.contains(parent + "" + defineTypeName(type))) return;
+            list.add(parent + "" + defineTypeName(type));
+
+            List<EnMember> members = new ArrayList<>();
+            EnMember[] ems = ((ObjectEncoder) encoder).getMembers();
+            for (EnMember member : ems) {
+                if (excludeFunc != null && excludeFunc.apply(type, member)) continue;
+                members.add(member);
             }
-            sb.append(prefix).append("}\r\n");
+            final List<StringBuilder> sblist = new ArrayList<>();
+            for (EnMember member : members) {
+                Type mtype = member.getEncoder().getType();
+                if (!(mtype instanceof Class)) {
+                    if (mtype instanceof ParameterizedType) {
+                        final ParameterizedType pt = (ParameterizedType) mtype;
+                        if (pt.getActualTypeArguments().length == 1 && (pt.getActualTypeArguments()[0] instanceof Class)) {
+                            StringBuilder innersb = new StringBuilder();
+                            defineProtoDescriptor(parent, list, mtype, innersb, prefix, excludeFunc);
+                            sblist.add(innersb);
+                        }
+                    } else if (mtype instanceof GenericArrayType) {
+                        final GenericArrayType gt = (GenericArrayType) mtype;
+                        if (!gt.getGenericComponentType().toString().startsWith("java")
+                            && !gt.getGenericComponentType().toString().startsWith("class java")
+                            && gt.getGenericComponentType().toString().indexOf('.') > 0) {
+                            StringBuilder innersb = new StringBuilder();
+                            defineProtoDescriptor(parent, list, gt.getGenericComponentType(), innersb, prefix, excludeFunc);
+                            sblist.add(innersb);
+                        }
+                    }
+                    continue;
+                }
+                Class mclz = (Class) member.getEncoder().getType();
+                if (!mclz.isArray() && !mclz.isEnum() && !mclz.getName().startsWith("java")) {
+                    StringBuilder innersb = new StringBuilder();
+                    defineProtoDescriptor(parent, list, mclz, innersb, prefix, excludeFunc);
+                    sblist.add(innersb);
+                } else if (mclz.isArray() && !mclz.getComponentType().getName().startsWith("java")
+                    && !mclz.getComponentType().getName().equals("boolean") && !mclz.getComponentType().getName().equals("byte")
+                    && !mclz.getComponentType().getName().equals("char") && !mclz.getComponentType().getName().equals("short")
+                    && !mclz.getComponentType().getName().equals("int") && !mclz.getComponentType().getName().equals("long")
+                    && !mclz.getComponentType().getName().equals("float") && !mclz.getComponentType().getName().equals("double")) {
+                    StringBuilder innersb = new StringBuilder();
+                    defineProtoDescriptor(parent, list, mclz.getComponentType(), innersb, prefix, excludeFunc);
+                    sblist.add(innersb);
+                }
+            }
+            for (StringBuilder sbitem : sblist) {
+                if (sbitem.length() < 1) continue;
+                sb.append(sbitem.toString().trim()).append("\r\n\r\n");
+            }
+            sb.append(prefix).append("message ").append(defineTypeName(type)).append(" {\r\n");
+            for (int i = 0; i < members.size(); i++) {
+                EnMember member = members.get(i);
+                try {
+                    sb.append(prefix).append("    ").append(ProtobufFactory.wireTypeString(member.getEncoder().getType(), ((ProtobufFactory) factory).enumtostring))
+                        .append(" ").append(member.getAttribute().field()).append(" = ").append(member.getPosition()).append(";\r\n");
+                } catch (RuntimeException e) {
+                    System.err.println("member = " + member);
+                    throw e;
+                }
+            }
+            sb.append(prefix).append("}").append("\r\n");
+        } else if (encoder instanceof ProtobufArrayEncoder || encoder instanceof ProtobufCollectionEncoder) {
+            Type mtype = encoder instanceof ProtobufArrayEncoder ? ((ProtobufArrayEncoder) encoder).getComponentType() : ((ProtobufCollectionEncoder) encoder).getComponentType();
+            if (!mtype.toString().startsWith("java") && !mtype.toString().startsWith("class java") && mtype.toString().indexOf('.') > 0) {
+                defineProtoDescriptor(parent, list, mtype, sb, prefix, excludeFunc);
+            }
+        } else {
+            throw new ConvertException("Not support the type (" + type + ")");
         }
     }
 
