@@ -11,7 +11,6 @@ import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.Stream;
 import org.redkale.convert.*;
-import org.redkale.convert.ext.EnumSimpledCoder;
 import org.redkale.util.*;
 
 /**
@@ -58,7 +57,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     @Override
     protected SimpledCoder createEnumSimpledCoder(Class enumClass) {
-        return this.enumtostring ? new EnumSimpledCoder(enumClass) : new ProtobufEnumSimpledCoder(enumClass);
+        return new ProtobufEnumSimpledCoder(enumClass, this.enumtostring);
     }
 
     @Override
@@ -152,7 +151,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
             if (member == null || first) return in;
             ProtobufReader reader = (ProtobufReader) in;
             int tag = reader.readTag();
-            if (tag != ProtobufFactory.getTag(member, enumtostring)) {
+            if (tag != member.getTag()) {
                 reader.backTag(tag);
                 return null;
             }
@@ -161,7 +160,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
             ProtobufReader reader = (ProtobufReader) in;
             if (!first && member != null) {
                 int tag = reader.readTag();
-                if (tag != ProtobufFactory.getTag(member, enumtostring)) {
+                if (tag != member.getTag()) {
                     reader.backTag(tag);
                     return null;
                 }

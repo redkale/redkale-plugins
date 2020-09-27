@@ -26,8 +26,11 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
 
     private final Map<Integer, E> values2 = new HashMap<>();
 
-    public ProtobufEnumSimpledCoder(Class<E> type) {
+    private final boolean enumtostring;
+
+    public ProtobufEnumSimpledCoder(Class<E> type, boolean enumtostring) {
         this.type = type;
+        this.enumtostring = enumtostring;
         try {
             final Method method = type.getMethod("values");
             int index = -1;
@@ -44,6 +47,8 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
     public void convertTo(final W out, final E value) {
         if (value == null) {
             out.writeNull();
+        } else if (enumtostring) {
+            out.writeSmallString(value.toString());
         } else {
             ((ProtobufWriter) out).writeUInt32(values1.getOrDefault(value, -1));
         }
@@ -52,6 +57,11 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
     @Override
     @SuppressWarnings("unchecked")
     public E convertFrom(final R in) {
+        if (enumtostring) {
+            String value = in.readSmallString();
+            if (value == null) return null;
+            return (E) Enum.valueOf((Class<E>) type, value);
+        }
         int value = ((ProtobufReader) in).readRawVarint32();
         if (value == -1) return null;
         return values2.get(value);
@@ -59,7 +69,7 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
 
     @Override
     public Class<E> getType() {
-        return (Class)type;
+        return (Class) type;
     }
 
 }
