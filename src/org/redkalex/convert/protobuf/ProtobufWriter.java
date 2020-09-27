@@ -265,7 +265,6 @@ public class ProtobufWriter extends Writer {
     public void writeFieldName(String fieldName, Type fieldType, int fieldPos) {
         int tag = ProtobufFactory.getTag(fieldName, fieldType, fieldPos, enumtostring);
         writeUInt32(tag);
-        System.out.println("写入tag对应的字段" + fieldName + ": =====" + tag);
     }
 
     @Override
