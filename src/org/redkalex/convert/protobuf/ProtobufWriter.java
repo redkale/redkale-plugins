@@ -39,6 +39,7 @@ public class ProtobufWriter extends Writer {
     protected ProtobufWriter(ProtobufWriter parent) {
         this();
         this.parent = parent;
+        if (parent != null) this.enumtostring = parent.enumtostring;
     }
 
     protected ProtobufWriter(byte[] bs) {
@@ -172,7 +173,7 @@ public class ProtobufWriter extends Writer {
             return length;
         } else {
             final Class type = obj.getClass();
-            ProtobufWriter tmp = new ProtobufWriter();
+            ProtobufWriter tmp = new ProtobufWriter().enumtostring(this.enumtostring);
             if (type == boolean[].class) {
                 for (boolean item : (boolean[]) obj) {
                     tmp.writeBoolean(item);
@@ -262,7 +263,9 @@ public class ProtobufWriter extends Writer {
 
     @Override
     public void writeFieldName(String fieldName, Type fieldType, int fieldPos) {
-        writeUInt32(ProtobufFactory.getTag(fieldName, fieldType, fieldPos, enumtostring));
+        int tag = ProtobufFactory.getTag(fieldName, fieldType, fieldPos, enumtostring);
+        writeUInt32(tag);
+        System.out.println("写入tag对应的字段" + fieldName + ": =====" + tag);
     }
 
     @Override

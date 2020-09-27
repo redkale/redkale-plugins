@@ -15,8 +15,11 @@ import org.redkale.convert.*;
  */
 public class ProtobufCollectionEncoder<T> extends CollectionEncoder<T> {
 
+    private final boolean enumtostring;
+
     public ProtobufCollectionEncoder(ConvertFactory factory, Type type) {
         super(factory, type);
+        this.enumtostring = ((ProtobufFactory) factory).enumtostring;
     }
 
     @Override
@@ -25,9 +28,9 @@ public class ProtobufCollectionEncoder<T> extends CollectionEncoder<T> {
         if (item == null) {
             ((ProtobufWriter) out).writeUInt32(0);
         } else if (item instanceof CharSequence) {
-            componentEncoder.convertTo(out, item);
+            componentEncoder.convertTo(out, item); 
         } else {
-            ProtobufWriter tmp = new ProtobufWriter();
+            ProtobufWriter tmp = new ProtobufWriter().enumtostring(enumtostring);
             componentEncoder.convertTo(tmp, item);
             int length = tmp.count();
             ((ProtobufWriter) out).writeUInt32(length);
