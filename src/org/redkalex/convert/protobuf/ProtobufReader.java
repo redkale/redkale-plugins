@@ -90,6 +90,7 @@ public class ProtobufReader extends Reader {
     @SuppressWarnings("unchecked")
     public final void skipValue() {
         int tag = readTag();
+        if (tag == 0) return;
         switch (tag & 0x7) {
             case 0:
                 readRawVarint32();
