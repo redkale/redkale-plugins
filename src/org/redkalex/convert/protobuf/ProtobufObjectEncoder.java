@@ -6,7 +6,8 @@
 package org.redkalex.convert.protobuf;
 
 import java.lang.reflect.Type;
-import org.redkale.convert.ObjectEncoder;
+import org.redkale.convert.*;
+import org.redkale.util.Attribute;
 
 /**
  *
@@ -16,6 +17,12 @@ public class ProtobufObjectEncoder<T> extends ObjectEncoder<ProtobufWriter, T> {
 
     protected ProtobufObjectEncoder(Type type) {
         super(type);
+    }
+
+    @Override
+    protected void initForEachEnMember(ConvertFactory factory, EnMember member) {
+        Attribute attr = member.getAttribute();
+        setTag(member, ProtobufFactory.getTag(attr.field(), attr.genericType(), member.getPosition(), ((ProtobufFactory) factory).enumtostring));
     }
 
     @Override

@@ -28,7 +28,7 @@ public class ProtobufMapDecoder<K, V> extends MapDecoder<K, V> {
         ProtobufReader reader = (ProtobufReader) in;
         if (!first && member != null) {
             int tag = reader.readTag();
-            if (tag != ProtobufFactory.getTag(member, enumtostring)) {
+            if (tag != member.getTag()) {
                 reader.backTag(tag);
                 return null;
             }
