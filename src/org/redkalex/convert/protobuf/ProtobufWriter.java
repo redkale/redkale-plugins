@@ -364,6 +364,20 @@ public class ProtobufWriter extends Writer {
         if (value != null) writeString(value.getValue());
     }
 
+    public static byte[] uint32(int value) {
+        byte[] bs = new byte[8];
+        int pos = 0;
+        while (true) {
+            if ((value & ~0x7F) == 0) {
+                bs[pos++] = ((byte) value);
+                return pos == bs.length ? bs : Arrays.copyOf(bs, pos);
+            } else {
+                bs[pos++] = ((byte) ((value & 0x7F) | 0x80));
+                value >>>= 7;
+            }
+        }
+    }
+
     protected void writeUInt32(int value) {
         while (true) {
             if ((value & ~0x7F) == 0) {

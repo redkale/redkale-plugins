@@ -524,22 +524,8 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         if (!(encoder instanceof ObjectEncoder) && !(encoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
         encoder.convertTo(out, value);
         out.writeUInt32(tag);
+        out.writeUInt32(appends.length);
         out.writeTo(appends);
-        byte[] result = out.toArray();
-        writerPool.accept(out);
-        return result;
-    }
-
-    public byte[] convertTo(final Type type, final Object value, int tag, final Type type2, final Object value2) {
-        if (type == null) return null;
-        final ProtobufWriter out = pollProtobufWriter();
-        Encodeable encoder = factory.loadEncoder(type);
-        if (!(encoder instanceof ObjectEncoder) && !(encoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
-        encoder.convertTo(out, value);
-        out.writeUInt32(tag);
-        Encodeable encoder2 = factory.loadEncoder(type2);
-        if (!(encoder2 instanceof ObjectEncoder) && !(encoder2 instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type2 + ")");
-        encoder2.convertTo(out, value2);
         byte[] result = out.toArray();
         writerPool.accept(out);
         return result;
