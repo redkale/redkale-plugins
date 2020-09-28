@@ -346,7 +346,12 @@ public class ProtobufWriter extends Writer {
 
     @Override
     public void writeObjectField(final EnMember member, Object obj) {
-        Object value = member.getAttribute().get(obj);
+        Object value;
+        if (objFieldFunc == null) {
+            value = member.getAttribute().get(obj);
+        } else {
+            value = objFieldFunc.apply(member.getAttribute(), obj);
+        }
         if (value == null) return;
         if (tiny()) {
             if (member.isStringType()) {
