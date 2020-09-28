@@ -146,7 +146,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         return true;
     }
 
-    protected static Reader getItemReader(boolean string, Reader in, DeMember member, boolean enumtostring, boolean first) {
+    protected static Reader getItemReader(boolean string, boolean simple, Reader in, DeMember member, boolean enumtostring, boolean first) {
         if (string) {
             if (member == null || first) return in;
             ProtobufReader reader = (ProtobufReader) in;

@@ -35,6 +35,7 @@ public class ProtobufCollectionDecoder<T> extends CollectionDecoder<T> {
 
     @Override
     protected Reader getItemReader(Reader in, DeMember member, boolean first) {
-        return ProtobufFactory.getItemReader(string, in, member, enumtostring, first);
+        if (simple) return in;
+        return ProtobufFactory.getItemReader(string, simple, in, member, enumtostring, first);
     }
 }

@@ -171,7 +171,19 @@ public class ProtobufReader extends Reader {
     @Override
     public final int readMemberContentLength(DeMember member, Decodeable decoder) {
         if (member == null && decoder == null) return -1; //为byte[]
-        if (member != null && !(member.getDecoder() instanceof ProtobufArrayDecoder)) return -1;
+        if (member != null) {
+            if (member.getDecoder() instanceof ProtobufArrayDecoder) {
+                ProtobufArrayDecoder pdecoder = (ProtobufArrayDecoder) member.getDecoder();
+                if (pdecoder.simple) return readRawVarint32();
+            } else if (member.getDecoder() instanceof ProtobufCollectionDecoder) {
+                ProtobufCollectionDecoder pdecoder = (ProtobufCollectionDecoder) member.getDecoder();
+                if (pdecoder.simple) return readRawVarint32();
+            } else if (member.getDecoder() instanceof ProtobufStreamDecoder) {
+                ProtobufStreamDecoder pdecoder = (ProtobufStreamDecoder) member.getDecoder();
+                if (pdecoder.simple) return readRawVarint32();
+            }
+            return -1;
+        }
         return readRawVarint32(); //readUInt32
     }
 
