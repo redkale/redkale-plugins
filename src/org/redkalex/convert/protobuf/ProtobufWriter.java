@@ -230,6 +230,64 @@ public class ProtobufWriter extends Writer {
                 for (Double item : (Double[]) obj) {
                     tmp.writeDouble(item == null ? 0D : item);
                 }
+            } else if (encoder instanceof CollectionEncoder) {
+                CollectionEncoder listEncoder = (CollectionEncoder) encoder;
+                Type componentType = listEncoder.getComponentType();
+                if (componentType instanceof Class) {
+                    Class componentClass = (Class) componentType;
+                    if (componentClass == Boolean.class) {
+                        for (Boolean item : (Collection<Boolean>) obj) {
+                            tmp.writeBoolean(item);
+                        }
+                    } else if (componentClass == Short.class) {
+                        for (Short item : (Collection<Short>) obj) {
+                            tmp.writeShort(item);
+                        }
+                    } else if (componentClass == Integer.class) {
+                        for (Integer item : (Collection<Integer>) obj) {
+                            tmp.writeInt(item);
+                        }
+                    } else if (componentClass == Float.class) {
+                        for (Float item : (Collection<Float>) obj) {
+                            tmp.writeFloat(item);
+                        }
+                    } else if (componentClass == Long.class) {
+                        for (Long item : (Collection<Long>) obj) {
+                            tmp.writeLong(item);
+                        }
+                    } else if (componentClass == Double.class) {
+                        for (Double item : (Collection<Double>) obj) {
+                            tmp.writeDouble(item);
+                        }
+                    } else {
+                        return -1;
+                    }
+                } else {
+                    return -1;
+                }
+            } else if (encoder instanceof StreamEncoder) {
+                StreamEncoder streamEncoder = (StreamEncoder) encoder;
+                Type componentType = streamEncoder.getComponentType();
+                if (componentType instanceof Class) {
+                    Class componentClass = (Class) componentType;
+                    if (componentClass == Boolean.class) {
+                        ((Stream<Boolean>) obj).forEach(item -> tmp.writeBoolean(item));
+                    } else if (componentClass == Short.class) {
+                        ((Stream<Short>) obj).forEach(item -> tmp.writeShort(item));
+                    } else if (componentClass == Integer.class) {
+                        ((Stream<Integer>) obj).forEach(item -> tmp.writeInt(item));
+                    } else if (componentClass == Float.class) {
+                        ((Stream<Float>) obj).forEach(item -> tmp.writeFloat(item));
+                    } else if (componentClass == Long.class) {
+                        ((Stream<Long>) obj).forEach(item -> tmp.writeLong(item));
+                    } else if (componentClass == Double.class) {
+                        ((Stream<Double>) obj).forEach(item -> tmp.writeDouble(item));
+                    } else {
+                        return -1;
+                    }
+                } else {
+                    return -1;
+                }
             } else {
                 return -1;
             }
