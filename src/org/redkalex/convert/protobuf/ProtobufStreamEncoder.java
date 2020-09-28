@@ -44,7 +44,7 @@ public class ProtobufStreamEncoder<T> extends StreamEncoder<T> {
         if (item instanceof CharSequence) {
             componentEncoder.convertTo(out, item);
         } else {
-            ProtobufWriter tmp = new ProtobufWriter().enumtostring(enumtostring);
+            ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(out);
             componentEncoder.convertTo(tmp, item);
             int length = tmp.count();
             ((ProtobufWriter) out).writeUInt32(length);

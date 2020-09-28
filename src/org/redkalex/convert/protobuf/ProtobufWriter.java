@@ -47,6 +47,15 @@ public class ProtobufWriter extends Writer {
         this.content = bs;
     }
 
+    protected ProtobufWriter configFieldFunc(Writer parent) {
+        if (parent == null) return this;
+        ProtobufWriter out = (ProtobufWriter) this.parent;
+        this.objFieldFunc = out.objFieldFunc;
+        this.objExtFunc = out.objExtFunc;
+        this.enumtostring = out.enumtostring;
+        return this;
+    }
+
     public ProtobufWriter() {
         this(defaultSize);
     }
@@ -174,7 +183,7 @@ public class ProtobufWriter extends Writer {
             return length;
         } else {
             final Class type = obj.getClass();
-            ProtobufWriter tmp = new ProtobufWriter().enumtostring(this.enumtostring);
+            ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(this);
             if (type == boolean[].class) {
                 for (boolean item : (boolean[]) obj) {
                     tmp.writeBoolean(item);
@@ -368,7 +377,7 @@ public class ProtobufWriter extends Writer {
             ProtobufArrayEncoder arrayEncoder = (ProtobufArrayEncoder) encoder;
             if (arrayEncoder.simple) {
                 this.writeFieldName(member);
-                ProtobufWriter tmp = new ProtobufWriter().enumtostring(enumtostring);
+                ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(this);
                 arrayEncoder.convertTo(tmp, member, (Object[]) value);
                 //int length = tmp.count();
                 //this.writeUInt32(length);
@@ -380,7 +389,7 @@ public class ProtobufWriter extends Writer {
             ProtobufCollectionEncoder collectionEncoder = (ProtobufCollectionEncoder) encoder;
             if (collectionEncoder.simple) {
                 this.writeFieldName(member);
-                ProtobufWriter tmp = new ProtobufWriter().enumtostring(enumtostring);
+                ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(this);
                 collectionEncoder.convertTo(tmp, member, (Collection) value);
                 int length = tmp.count();
                 this.writeUInt32(length);
@@ -392,7 +401,7 @@ public class ProtobufWriter extends Writer {
             ProtobufStreamEncoder streamEncoder = (ProtobufStreamEncoder) encoder;
             if (streamEncoder.simple) {
                 this.writeFieldName(member);
-                ProtobufWriter tmp = new ProtobufWriter().enumtostring(enumtostring);
+                ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(this);
                 streamEncoder.convertTo(tmp, member, (Stream) value);
                 int length = tmp.count();
                 this.writeUInt32(length);

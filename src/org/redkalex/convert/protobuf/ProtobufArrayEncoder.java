@@ -46,7 +46,7 @@ public class ProtobufArrayEncoder<T> extends ArrayEncoder<T> {
         } else if (item instanceof CharSequence) {
             encoder.convertTo(out, item);
         } else {
-            ProtobufWriter tmp = new ProtobufWriter().enumtostring(enumtostring);
+            ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(out);
             encoder.convertTo(tmp, item);
             int length = tmp.count();
             ((ProtobufWriter) out).writeUInt32(length);
