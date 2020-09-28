@@ -56,6 +56,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         return new ProtobufConvert(getFactory(), tiny) {
             @Override
             protected <S extends ProtobufWriter> S configWrite(S writer) {
+                super.configWrite(writer);
                 return fieldFunc(writer, fieldFunc, objExtFunc);
             }
         };
