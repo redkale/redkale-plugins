@@ -8,6 +8,7 @@ package org.redkalex.convert.protobuf;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.concurrent.atomic.*;
 import org.redkale.convert.*;
 import org.redkale.util.*;
 
@@ -141,11 +142,11 @@ public class ProtobufReader extends Reader {
         Type type = componentDecoder.getType();
         if (!(type instanceof Class)) return Reader.SIGN_NOLENBUTBYTES;
         Class clazz = (Class) type;
-        if (clazz.isPrimitive() || clazz == Boolean.class
-            || clazz == Byte.class || clazz == Short.class
-            || clazz == Character.class || clazz == Integer.class
-            || clazz == Float.class || clazz == Long.class
-            || clazz == Double.class) {
+        if (clazz.isPrimitive() || clazz == Boolean.class || clazz == Byte.class
+            || clazz == Short.class || clazz == Character.class
+            || clazz == Integer.class || clazz == Float.class
+            || clazz == Long.class || clazz == Double.class
+            || clazz == AtomicInteger.class || clazz == AtomicLong.class) {
             return Reader.SIGN_NOLENBUTBYTES;
         }
         return Reader.SIGN_NOLENGTH;
