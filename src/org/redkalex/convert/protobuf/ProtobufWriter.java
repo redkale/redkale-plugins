@@ -231,6 +231,14 @@ public class ProtobufWriter extends Writer {
                 for (Double item : (Double[]) obj) {
                     tmp.writeDouble(item == null ? 0D : item);
                 }
+            } else if (type == AtomicInteger[].class) {
+                for (AtomicInteger item : (AtomicInteger[]) obj) {
+                    tmp.writeInt(item == null ? 0 : item.get());
+                }
+            } else if (type == AtomicLong[].class) {
+                for (AtomicLong item : (AtomicLong[]) obj) {
+                    tmp.writeLong(item == null ? 0L : item.get());
+                }
             } else if (encoder instanceof ProtobufCollectionDecoder) {
                 ProtobufCollectionDecoder listEncoder = (ProtobufCollectionDecoder) encoder;
                 Type componentType = listEncoder.getComponentType();
@@ -351,8 +359,18 @@ public class ProtobufWriter extends Writer {
         if (encoder == null) return;
         if (encoder instanceof MapEncoder) {
             ((MapEncoder) encoder).convertTo(this, member, (Map) value);
-        } else if (encoder instanceof ArrayEncoder) {
-            ((ArrayEncoder) encoder).convertTo(this, member, (Object[]) value);
+        } else if (encoder instanceof ProtobufArrayEncoder) {
+            ProtobufArrayEncoder arrayEncoder = (ProtobufArrayEncoder) encoder;
+            if (arrayEncoder.simple) {
+                this.writeFieldName(member);
+                ProtobufWriter tmp = new ProtobufWriter().enumtostring(enumtostring);
+                arrayEncoder.convertTo(tmp, member, (Object[]) value);
+                //int length = tmp.count();
+                //this.writeUInt32(length);
+                this.writeTo(tmp.toArray());
+            } else {
+                arrayEncoder.convertTo(this, member, (Object[]) value);
+            }
         } else if (encoder instanceof ProtobufCollectionEncoder) {
             ProtobufCollectionEncoder collectionEncoder = (ProtobufCollectionEncoder) encoder;
             if (collectionEncoder.simple) {

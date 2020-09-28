@@ -6,6 +6,7 @@
 package org.redkalex.convert.protobuf;
 
 import java.lang.reflect.Type;
+import java.util.concurrent.atomic.*;
 import org.redkale.convert.*;
 
 /**
@@ -15,15 +16,30 @@ import org.redkale.convert.*;
  */
 public class ProtobufArrayEncoder<T> extends ArrayEncoder<T> {
 
+    protected final boolean simple;
+
     private final boolean enumtostring;
 
     public ProtobufArrayEncoder(ConvertFactory factory, Type type) {
         super(factory, type);
         this.enumtostring = ((ProtobufFactory) factory).enumtostring;
+        Type comtype = this.getComponentType();
+        this.simple = Boolean.class == comtype || Short.class == comtype
+            || Character.class == comtype || Integer.class == comtype || Float.class == comtype
+            || Long.class == comtype || Double.class == comtype
+            || AtomicInteger.class == comtype || AtomicLong.class == comtype;
     }
 
     @Override
     protected void writeMemberValue(Writer out, EnMember member, Encodeable<Writer, Object> encoder, Object item, boolean first) {
+        if (simple) {
+            if (item == null) {
+                ((ProtobufWriter) out).writeUInt32(0);
+            } else {
+                componentEncoder.convertTo(out, item);
+            }
+            return;
+        }
         if (member != null) out.writeFieldName(member);
         if (item == null) {
             ((ProtobufWriter) out).writeUInt32(0);
