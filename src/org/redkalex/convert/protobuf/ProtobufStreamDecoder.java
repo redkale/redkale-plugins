@@ -6,6 +6,7 @@
 package org.redkalex.convert.protobuf;
 
 import java.lang.reflect.Type;
+import java.util.concurrent.atomic.*;
 import org.redkale.convert.*;
 
 /**
@@ -15,6 +16,8 @@ import org.redkale.convert.*;
  */
 public class ProtobufStreamDecoder<T> extends StreamDecoder<T> {
 
+    protected final boolean simple;
+
     private final boolean string;
 
     private final boolean enumtostring;
@@ -22,7 +25,12 @@ public class ProtobufStreamDecoder<T> extends StreamDecoder<T> {
     public ProtobufStreamDecoder(ConvertFactory factory, Type type) {
         super(factory, type);
         this.enumtostring = ((ProtobufFactory) factory).enumtostring;
-        this.string = String.class == this.getComponentType();
+        Type comtype = this.getComponentType();
+        this.string = String.class == comtype;
+        this.simple = Boolean.class == comtype || Short.class == comtype
+            || Character.class == comtype || Integer.class == comtype || Float.class == comtype
+            || Long.class == comtype || Double.class == comtype
+            || AtomicInteger.class == comtype || AtomicLong.class == comtype;
     }
 
     @Override

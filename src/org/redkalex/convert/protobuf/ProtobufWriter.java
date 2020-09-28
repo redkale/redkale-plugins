@@ -8,6 +8,7 @@ package org.redkalex.convert.protobuf;
 import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.atomic.*;
 import java.util.stream.Stream;
 import org.redkale.convert.*;
 import org.redkale.util.*;
@@ -159,7 +160,7 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
-    public int writeArrayB(int size, Encodeable<Writer, Object> encoder, Object obj) {
+    public int writeArrayB(int size, Encodeable encoder, Encodeable<Writer, Object> componentEncoder, Object obj) {
         if (obj == null) {
             writeNull();
             return 0;
@@ -230,60 +231,70 @@ public class ProtobufWriter extends Writer {
                 for (Double item : (Double[]) obj) {
                     tmp.writeDouble(item == null ? 0D : item);
                 }
-            } else if (encoder instanceof CollectionEncoder) {
-                CollectionEncoder listEncoder = (CollectionEncoder) encoder;
+            } else if (encoder instanceof ProtobufCollectionDecoder) {
+                ProtobufCollectionDecoder listEncoder = (ProtobufCollectionDecoder) encoder;
                 Type componentType = listEncoder.getComponentType();
-                if (componentType instanceof Class) {
-                    Class componentClass = (Class) componentType;
-                    if (componentClass == Boolean.class) {
+                if (listEncoder.simple) {
+                    if (componentType == Boolean.class) {
                         for (Boolean item : (Collection<Boolean>) obj) {
                             tmp.writeBoolean(item);
                         }
-                    } else if (componentClass == Short.class) {
+                    } else if (componentType == Short.class) {
                         for (Short item : (Collection<Short>) obj) {
                             tmp.writeShort(item);
                         }
-                    } else if (componentClass == Integer.class) {
+                    } else if (componentType == Integer.class) {
                         for (Integer item : (Collection<Integer>) obj) {
                             tmp.writeInt(item);
                         }
-                    } else if (componentClass == Float.class) {
+                    } else if (componentType == Float.class) {
                         for (Float item : (Collection<Float>) obj) {
                             tmp.writeFloat(item);
                         }
-                    } else if (componentClass == Long.class) {
+                    } else if (componentType == Long.class) {
                         for (Long item : (Collection<Long>) obj) {
                             tmp.writeLong(item);
                         }
-                    } else if (componentClass == Double.class) {
+                    } else if (componentType == Double.class) {
                         for (Double item : (Collection<Double>) obj) {
                             tmp.writeDouble(item);
                         }
-                    } else {
-                        return -1;
+                    } else if (componentType == Long.class) {
+                        for (Long item : (Collection<Long>) obj) {
+                            tmp.writeLong(item);
+                        }
+                    } else if (componentType == AtomicInteger.class) {
+                        for (AtomicInteger item : (Collection<AtomicInteger>) obj) {
+                            tmp.writeInt(item == null ? 0 : item.get());
+                        }
+                    } else if (componentType == AtomicLong.class) {
+                        for (AtomicLong item : (Collection<AtomicLong>) obj) {
+                            tmp.writeLong(item == null ? 0L : item.get());
+                        }
                     }
                 } else {
                     return -1;
                 }
-            } else if (encoder instanceof StreamEncoder) {
-                StreamEncoder streamEncoder = (StreamEncoder) encoder;
+            } else if (encoder instanceof ProtobufStreamDecoder) {
+                ProtobufStreamDecoder streamEncoder = (ProtobufStreamDecoder) encoder;
                 Type componentType = streamEncoder.getComponentType();
-                if (componentType instanceof Class) {
-                    Class componentClass = (Class) componentType;
-                    if (componentClass == Boolean.class) {
+                if (streamEncoder.simple) {
+                    if (componentType == Boolean.class) {
                         ((Stream<Boolean>) obj).forEach(item -> tmp.writeBoolean(item));
-                    } else if (componentClass == Short.class) {
+                    } else if (componentType == Short.class) {
                         ((Stream<Short>) obj).forEach(item -> tmp.writeShort(item));
-                    } else if (componentClass == Integer.class) {
+                    } else if (componentType == Integer.class) {
                         ((Stream<Integer>) obj).forEach(item -> tmp.writeInt(item));
-                    } else if (componentClass == Float.class) {
+                    } else if (componentType == Float.class) {
                         ((Stream<Float>) obj).forEach(item -> tmp.writeFloat(item));
-                    } else if (componentClass == Long.class) {
+                    } else if (componentType == Long.class) {
                         ((Stream<Long>) obj).forEach(item -> tmp.writeLong(item));
-                    } else if (componentClass == Double.class) {
+                    } else if (componentType == Double.class) {
                         ((Stream<Double>) obj).forEach(item -> tmp.writeDouble(item));
-                    } else {
-                        return -1;
+                    } else if (componentType == AtomicInteger.class) {
+                        ((Stream<AtomicInteger>) obj).forEach(item -> tmp.writeInt(item == null ? 0 : item.get()));
+                    } else if (componentType == AtomicLong.class) {
+                        ((Stream<AtomicLong>) obj).forEach(item -> tmp.writeLong(item == null ? 0L : item.get()));
                     }
                 } else {
                     return -1;
@@ -342,10 +353,30 @@ public class ProtobufWriter extends Writer {
             ((MapEncoder) encoder).convertTo(this, member, (Map) value);
         } else if (encoder instanceof ArrayEncoder) {
             ((ArrayEncoder) encoder).convertTo(this, member, (Object[]) value);
-        } else if (encoder instanceof CollectionEncoder) {
-            ((CollectionEncoder) encoder).convertTo(this, member, (Collection) value);
-        } else if (encoder instanceof StreamEncoder) {
-            ((StreamEncoder) encoder).convertTo(this, member, (Stream) value);
+        } else if (encoder instanceof ProtobufCollectionEncoder) {
+            ProtobufCollectionEncoder collectionEncoder = (ProtobufCollectionEncoder) encoder;
+            if (collectionEncoder.simple) {
+                this.writeFieldName(member);
+                ProtobufWriter tmp = new ProtobufWriter().enumtostring(enumtostring);
+                collectionEncoder.convertTo(tmp, member, (Collection) value);
+                int length = tmp.count();
+                this.writeUInt32(length);
+                this.writeTo(tmp.toArray());
+            } else {
+                collectionEncoder.convertTo(this, member, (Collection) value);
+            }
+        } else if (encoder instanceof ProtobufStreamEncoder) {
+            ProtobufStreamEncoder streamEncoder = (ProtobufStreamEncoder) encoder;
+            if (streamEncoder.simple) {
+                this.writeFieldName(member);
+                ProtobufWriter tmp = new ProtobufWriter().enumtostring(enumtostring);
+                streamEncoder.convertTo(tmp, member, (Stream) value);
+                int length = tmp.count();
+                this.writeUInt32(length);
+                this.writeTo(tmp.toArray());
+            } else {
+                streamEncoder.convertTo(this, member, (Stream) value);
+            }
         } else {
             this.writeFieldName(member);
             encoder.convertTo(this, value);
@@ -364,7 +395,7 @@ public class ProtobufWriter extends Writer {
             writeNull();
             return;
         }
-        if (writeArrayB(values.length, null, values) < 0) {
+        if (writeArrayB(values.length, null, null, values) < 0) {
             boolean flag = false;
             for (byte v : values) {
                 if (flag) writeArrayMark();
