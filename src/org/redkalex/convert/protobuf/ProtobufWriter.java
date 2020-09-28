@@ -47,9 +47,9 @@ public class ProtobufWriter extends Writer {
         this.content = bs;
     }
 
-    protected ProtobufWriter configFieldFunc(Writer parent) {
-        if (parent == null) return this;
-        ProtobufWriter out = (ProtobufWriter) this.parent;
+    protected ProtobufWriter configFieldFunc(Writer writer) {
+        if (writer == null) return this;
+        ProtobufWriter out = (ProtobufWriter) writer;
         this.objFieldFunc = out.objFieldFunc;
         this.objExtFunc = out.objExtFunc;
         this.enumtostring = out.enumtostring;
