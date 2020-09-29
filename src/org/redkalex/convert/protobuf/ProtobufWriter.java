@@ -174,7 +174,7 @@ public class ProtobufWriter extends Writer {
             writeNull();
             return 0;
         } else if (size < 1) {
-            writeUInt32(0);
+            //writeUInt32(0);
             return 0;
         } else if (obj instanceof byte[]) {
             int length = ((byte[]) obj).length;
@@ -369,31 +369,45 @@ public class ProtobufWriter extends Writer {
                 if (!((Boolean) value)) return;
             }
         }
+        Type mtype = member.getAttribute().type();
+        if (mtype == boolean[].class && ((boolean[]) value).length < 1) return;
+        if (mtype == byte[].class && ((byte[]) value).length < 1) return;
+        if (mtype == short[].class && ((short[]) value).length < 1) return;
+        if (mtype == char[].class && ((char[]) value).length < 1) return;
+        if (mtype == int[].class && ((int[]) value).length < 1) return;
+        if (mtype == float[].class && ((float[]) value).length < 1) return;
+        if (mtype == long[].class && ((long[]) value).length < 1) return;
+        if (mtype == double[].class && ((double[]) value).length < 1) return;
+
         Encodeable encoder = member.getEncoder();
         if (encoder == null) return;
         if (encoder instanceof MapEncoder) {
-            ((MapEncoder) encoder).convertTo(this, member, (Map) value);
+            if (!((Map) value).isEmpty()) ((MapEncoder) encoder).convertTo(this, member, (Map) value);
         } else if (encoder instanceof ProtobufArrayEncoder) {
             ProtobufArrayEncoder arrayEncoder = (ProtobufArrayEncoder) encoder;
             if (arrayEncoder.simple) {
-                this.writeFieldName(member);
-                ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(this);
-                arrayEncoder.convertTo(tmp, member, (Object[]) value);
-                //int length = tmp.count();
-                //this.writeUInt32(length);
-                this.writeTo(tmp.toArray());
+                if (((Object[]) value).length < 1) {
+                    this.writeFieldName(member);
+                    ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(this);
+                    arrayEncoder.convertTo(tmp, member, (Object[]) value);
+                    //int length = tmp.count();
+                    //this.writeUInt32(length);
+                    this.writeTo(tmp.toArray());
+                }
             } else {
                 arrayEncoder.convertTo(this, member, (Object[]) value);
             }
         } else if (encoder instanceof ProtobufCollectionEncoder) {
             ProtobufCollectionEncoder collectionEncoder = (ProtobufCollectionEncoder) encoder;
             if (collectionEncoder.simple) {
-                this.writeFieldName(member);
-                ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(this);
-                collectionEncoder.convertTo(tmp, member, (Collection) value);
-                int length = tmp.count();
-                this.writeUInt32(length);
-                this.writeTo(tmp.toArray());
+                if (!((Collection) value).isEmpty()) {
+                    this.writeFieldName(member);
+                    ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(this);
+                    collectionEncoder.convertTo(tmp, member, (Collection) value);
+                    int length = tmp.count();
+                    this.writeUInt32(length);
+                    this.writeTo(tmp.toArray());
+                }
             } else {
                 collectionEncoder.convertTo(this, member, (Collection) value);
             }

@@ -18,11 +18,9 @@ public class ProtobufCollectionEncoder<T> extends CollectionEncoder<T> {
 
     protected final boolean simple;
 
-    private final boolean enumtostring;
 
     public ProtobufCollectionEncoder(ConvertFactory factory, Type type) {
         super(factory, type);
-        this.enumtostring = ((ProtobufFactory) factory).enumtostring;
         Type comtype = this.getComponentType();
         this.simple = Boolean.class == comtype || Short.class == comtype
             || Character.class == comtype || Integer.class == comtype || Float.class == comtype
