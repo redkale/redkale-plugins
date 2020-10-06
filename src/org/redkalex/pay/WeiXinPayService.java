@@ -128,7 +128,7 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("spbill_create_ip", request.getClientAddr());
             map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getTimeoutms() * 60 * 1000));
             map.put("notify_url", ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl));
-            map.put("trade_type", request.getPayway() == PAYWAY_WEB ? "JSAPI" : "APP");
+            map.put("trade_type", request.getPayway() == PAYWAY_WEB ? "JSAPI" : (request.getPayway() == PAYWAY_H5 ? "MWEB" : "APP"));
             //trade_type=JSAPI，openid参数必传，用户在商户appid下的唯一标识
             if (request.getPayway() == PAYWAY_WEB && !map.containsKey("openid")) return result.retcode(RETPAY_OPENID_ERROR).toFuture();
             map.put("sign", createSign(element, map));
@@ -565,7 +565,7 @@ public class WeiXinPayService extends AbstractPayService {
         public String certbase64 = "";  //证书内容，存在的话则不取certpath文件中的内容
 
         //
-        protected SSLContext paySSLContext;
+        protected SSLContext paySSLContext; //退款才会使用到
 
         public static Map<String, WeixinPayElement> create(Logger logger, Properties properties, File home) {
             String def_appid = properties.getProperty("pay.weixin.appid", "").trim();
@@ -590,7 +590,7 @@ public class WeiXinPayService extends AbstractPayService {
                 String certpath = properties.getProperty(prefix + ".certpath", def_certpath).trim();
                 String certbase64 = properties.getProperty(prefix + ".certbase64", def_certbase64).trim();
 
-                if (appid.isEmpty() || merchno.isEmpty() || notifyurl.isEmpty() || signkey.isEmpty() || (certpath.isEmpty() && certbase64.isEmpty())) {
+                if (appid.isEmpty() || merchno.isEmpty() || notifyurl.isEmpty() || signkey.isEmpty()) {
                     logger.log(Level.WARNING, properties + "; has illegal weixinpay conf by prefix" + prefix);
                     return;
                 }
@@ -613,6 +613,8 @@ public class WeiXinPayService extends AbstractPayService {
 
         @Override
         public boolean initElement(Logger logger, File home) {
+            if ((this.certbase64 == null || this.certbase64.isEmpty())
+                && (this.certpath == null || this.certpath.isEmpty())) return true;
             try {
                 InputStream in;
                 if (this.certbase64 != null && !this.certbase64.isEmpty()) {

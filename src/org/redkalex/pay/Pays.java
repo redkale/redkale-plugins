@@ -34,7 +34,7 @@ public abstract class Pays {
     public static final short MIN_DIY_PAYTYPE = 50;
 
     //--------------------- 支付渠道 -----------------------------
-    //支付渠道:  10: 信用/虚拟支付; 20:人工支付; 30:APP支付; 40:网页支付; 50:机器支付;
+    //支付渠道:  10: 信用/虚拟支付; 20:人工支付; 30:APP支付; 40:网页支付; 50:机器支付; 60:H5支付;
     //信用/虚拟支付
     public static final short PAYWAY_CREDIT = 10;
 
@@ -49,6 +49,9 @@ public abstract class Pays {
 
     //机器支付
     public static final short PAYWAY_NATIVE = 50;
+
+    //H5支付
+    public static final short PAYWAY_H5 = 60;
 
     //--------------------- 支付状态 -----------------------------
     //10:待支付;20:支付中;30:已支付;40:支付失败;50:待退款;60退款中;70:已退款;80:退款失败;90:已关闭;95:已取消;
