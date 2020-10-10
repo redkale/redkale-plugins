@@ -101,6 +101,10 @@ public class AliPayService extends AbstractPayService {
         return prepayAsync(request).join();
     }
 
+    public static void main(String[] args) throws Throwable {
+
+    }
+
     @Override
     public CompletableFuture<PayPreResponse> prepayAsync(final PayPreRequest request) {
         request.checkVaild();
@@ -110,39 +114,72 @@ public class AliPayService extends AbstractPayService {
             final AliPayElement element = elements.get(request.getAppid());
             if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             result.setAppid(element.appid);
+            long now = System.currentTimeMillis();
             // 签约合作者身份ID
-            String param = "partner=" + "\"" + element.merchno + "\"";
-            // 签约卖家支付宝账号(也可用身份ID)
-            param += "&seller_id=" + "\"" + element.sellerid + "\"";
-            // 商户网站唯一订单号
-            param += "&out_trade_no=" + "\"" + request.getPayno() + "\"";
-            // 商品名称
-            param += "&subject=" + "\"" + request.getPaytitle() + "\"";
-            // 商品详情
-            param += "&body=" + "\"" + request.getPaybody() + "\"";
-            // 商品金额
-            param += "&total_fee=" + "\"" + (request.getPaymoney() / 100.0) + "\"";
-            // 服务器异步通知页面路径
-            param += "&notify_url=" + "\"" + ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl) + "\"";
-            // 服务接口名称， 固定值
-            param += "&service=\"mobile.securitypay.pay\"";
-            // 支付类型， 固定值
-            param += "&payment_type=\"1\"";
-            // 参数编码， 固定值
-            param += "&_input_charset=\"utf-8\"";
+            String param = "";
+            if (element.merchno == null || element.merchno.isEmpty()) {
+                TreeMap<String, String> paramap = new TreeMap<>();
+                paramap.put("app_id", element.appid);
+                paramap.put("method", "alipay.trade.wap.pay");
+                paramap.put("format", "JSON");
+                //paramap.put("return_url", "");
+                paramap.put("charset", "utf-8");
+                paramap.put("sign_type", "RSA");
+                paramap.put("timestamp", Utility.formatTime(now));
+                if (request.notifyurl != null && !request.notifyurl.isEmpty()) {
+                    paramap.put("notify_url", request.notifyurl);
+                }
+                final TreeMap<String, String> biz_content = new TreeMap<>();
+                if (request.getAttach() != null) biz_content.putAll(request.getAttach());
+                biz_content.put("subject", "" + request.getPaytitle());
+                biz_content.put("out_trade_no", request.getPayno());
+                paramap.put("time_expire", Utility.formatTime(now + request.getTimeoutms()));
+                biz_content.put("total_amount", "" + (request.getPaymoney() / 100.0));
+                biz_content.put("quit_url", element.notifyurl); //返回url
+                biz_content.put("product_code", "QUICK_WAP_WAY");
+                biz_content.put("goods_id", "gid-" + request.getPayno());
+                biz_content.put("goods_name", request.getPaytitle());
+                biz_content.put("quantity", "1");
+                biz_content.put("price", "" + (request.getPaymoney() / 100.0));
 
-            // 设置未付款交易的超时时间
-            // 默认30分钟，一旦超时，该笔交易就会自动被关闭。
-            // 取值范围：1m～15d。 m-分钟，h-小时，d-天，1c-当天（无论交易何时创建，都在0点关闭）。
-            // 该参数数值不接受小数点，如1.5h，可转换为90m。
-            param += "&it_b_pay=\"" + request.getTimeoutms() + "m\"";
+                paramap.put("biz_content", convert.convertTo(biz_content));
+                Signature signature = Signature.getInstance("SHA1WithRSA");
+                signature.initSign(element.priKey);
+                signature.update(param.getBytes("UTF-8"));
+                paramap.put("sign", URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8"));
+            } else {
+                param = "partner=" + "\"" + element.merchno + "\"";
+                // 签约卖家支付宝账号(也可用身份ID)
+                param += "&seller_id=" + "\"" + element.sellerid + "\"";
+                // 商户网站唯一订单号
+                param += "&out_trade_no=" + "\"" + request.getPayno() + "\"";
+                // 商品名称
+                param += "&subject=" + "\"" + request.getPaytitle() + "\"";
+                // 商品详情
+                param += "&body=" + "\"" + request.getPaybody() + "\"";
+                // 商品金额
+                param += "&total_fee=" + "\"" + (request.getPaymoney() / 100.0) + "\"";
+                // 服务器异步通知页面路径
+                param += "&notify_url=" + "\"" + ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl) + "\"";
+                // 服务接口名称， 固定值
+                param += "&service=\"mobile.securitypay.pay\"";
+                // 支付类型， 固定值
+                param += "&payment_type=\"1\"";
+                // 参数编码， 固定值
+                param += "&_input_charset=\"utf-8\"";
 
-            Signature signature = Signature.getInstance("SHA1WithRSA");
-            signature.initSign(element.priKey);
-            signature.update(param.getBytes("UTF-8"));
-            param += "&sign=\"" + URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8") + "\"";
-            param += "&sign_type=\"RSA\"";
+                // 设置未付款交易的超时时间
+                // 默认30分钟，一旦超时，该笔交易就会自动被关闭。
+                // 取值范围：1m～15d。 m-分钟，h-小时，d-天，1c-当天（无论交易何时创建，都在0点关闭）。
+                // 该参数数值不接受小数点，如1.5h，可转换为90m。
+                param += "&it_b_pay=\"" + request.getTimeoutms() + "m\"";
 
+                Signature signature = Signature.getInstance("SHA1WithRSA");
+                signature.initSign(element.priKey);
+                signature.update(param.getBytes("UTF-8"));
+                param += "&sign=\"" + URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8") + "\"";
+                param += "&sign_type=\"RSA\"";
+            }
             final Map<String, String> rmap = new TreeMap<>();
             rmap.put("content", param);
             result.setResult(rmap);
@@ -541,7 +578,7 @@ public class AliPayService extends AbstractPayService {
                 String signcertkey = properties.getProperty(prefix + ".signcertkey", def_signcertkey).trim();
                 String verifycertkey = properties.getProperty(prefix + ".verifycertkey", def_verifycertkey).trim();
 
-                if (appid.isEmpty() || merchno.isEmpty() || notifyurl.isEmpty() || signcertkey.isEmpty()) {
+                if (appid.isEmpty() || notifyurl.isEmpty() || signcertkey.isEmpty()) {
                     logger.log(Level.WARNING, properties + "; has illegal alipay conf by prefix" + prefix);
                     return;
                 }
