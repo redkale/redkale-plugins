@@ -145,7 +145,7 @@ public class AliPayService extends AbstractPayService {
                 paramap.put("biz_content", convert.convertTo(biz_content));
                 Signature signature = Signature.getInstance("SHA1WithRSA");
                 signature.initSign(element.priKey);
-                signature.update(param.getBytes("UTF-8"));
+                signature.update(joinMap(paramap).getBytes("UTF-8"));
                 paramap.put("sign", URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8"));
             } else {
                 param = "partner=" + "\"" + element.merchno + "\"";
