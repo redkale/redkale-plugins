@@ -100,7 +100,7 @@ public abstract class AbstractPayService implements Service {
 
     protected String postHttpContent(String url, String body) {
         try {
-            return remoteHttpContent(null, "POST", url, 10, null, body).toString("UTF-8");
+            return remoteHttpContent(null, "POST", url, 10_000, null, body).toString("UTF-8");
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
@@ -112,7 +112,7 @@ public abstract class AbstractPayService implements Service {
 
     protected String postHttpContent(SSLContext ssl, String url, Charset charset, String body) {
         try {
-            return remoteHttpContent(ssl, "POST", url, 10, null, body).toString(charset.name());
+            return remoteHttpContent(ssl, "POST", url, 10_000, null, body).toString(charset.name());
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
