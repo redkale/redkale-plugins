@@ -101,10 +101,6 @@ public class AliPayService extends AbstractPayService {
         return prepayAsync(request).join();
     }
 
-    public static void main(String[] args) throws Throwable {
-
-    }
-
     @Override
     public CompletableFuture<PayPreResponse> prepayAsync(final PayPreRequest request) {
         request.checkVaild();
@@ -124,7 +120,7 @@ public class AliPayService extends AbstractPayService {
                 paramap.put("format", "JSON");
                 //paramap.put("return_url", "");
                 paramap.put("charset", "utf-8");
-                paramap.put("sign_type", "RSA");
+                paramap.put("sign_type", "RSA2");
                 paramap.put("timestamp", Utility.formatTime(now));
                 if (request.notifyurl != null && !request.notifyurl.isEmpty()) {
                     paramap.put("notify_url", request.notifyurl);
@@ -143,10 +139,18 @@ public class AliPayService extends AbstractPayService {
                 biz_content.put("price", "" + (request.getPaymoney() / 100.0));
 
                 paramap.put("biz_content", convert.convertTo(biz_content));
-                Signature signature = Signature.getInstance("SHA1WithRSA");
+                Signature signature = Signature.getInstance("SHA256WithRSA");
                 signature.initSign(element.priKey);
                 signature.update(joinMap(paramap).getBytes("UTF-8"));
                 paramap.put("sign", URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8"));
+                System.out.println(joinMap(paramap));
+                return postHttpContentAsync("https://openapi.alipay.com/gateway.do", joinMap(paramap)).thenApply(responseText -> {
+                    result.setResponsetext(responseText);
+                    System.out.println("返回结果：" + responseText);
+                    Map<String, String> resultmap = convert.convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, responseText);
+
+                    return result;
+                });
             } else {
                 param = "partner=" + "\"" + element.merchno + "\"";
                 // 签约卖家支付宝账号(也可用身份ID)
@@ -174,11 +178,11 @@ public class AliPayService extends AbstractPayService {
                 // 该参数数值不接受小数点，如1.5h，可转换为90m。
                 param += "&it_b_pay=\"" + request.getTimeoutms() + "m\"";
 
-                Signature signature = Signature.getInstance("SHA1WithRSA");
+                Signature signature = Signature.getInstance("SHA256WithRSA");
                 signature.initSign(element.priKey);
                 signature.update(param.getBytes("UTF-8"));
                 param += "&sign=\"" + URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8") + "\"";
-                param += "&sign_type=\"RSA\"";
+                param += "&sign_type=\"RSA2\"";
             }
             final Map<String, String> rmap = new TreeMap<>();
             rmap.put("content", param);
@@ -456,7 +460,7 @@ public class AliPayService extends AbstractPayService {
             String text = response.responseText;
             text = text.substring(text.indexOf(':') + 1, text.indexOf(",\"sign\""));
 
-            Signature signature = Signature.getInstance("SHA1WithRSA");
+            Signature signature = Signature.getInstance("SHA256WithRSA");
             signature.initVerify(((AliPayElement) element).pubKey);
             signature.update(text.getBytes(((AliPayElement) element).charset));
             return signature.verify(Base64.getDecoder().decode(response.sign.getBytes()));
@@ -469,7 +473,7 @@ public class AliPayService extends AbstractPayService {
     @Override
     protected String createSign(final PayElement element, Map<String, ?> map) {
         try {
-            Signature signature = Signature.getInstance("SHA1WithRSA");
+            Signature signature = Signature.getInstance("SHA256WithRSA");
             signature.initSign(((AliPayElement) element).priKey);
             signature.update(joinMap(map).getBytes(((AliPayElement) element).charset));
             return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), "UTF-8");
@@ -489,7 +493,7 @@ public class AliPayService extends AbstractPayService {
         map.put("sign", sign);
         if (sign_type != null) map.put("sign_type", sign_type);
         try {
-            Signature signature = Signature.getInstance("SHA1WithRSA");
+            Signature signature = Signature.getInstance("SHA256WithRSA");
             signature.initVerify(((AliPayElement) element).pubKey);
             signature.update(text.getBytes("UTF-8"));
             return signature.verify(Base64.getDecoder().decode(sign.getBytes()));
