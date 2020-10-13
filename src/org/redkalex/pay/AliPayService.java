@@ -237,7 +237,7 @@ public class AliPayService extends AbstractPayService {
             map.put("method", "alipay.trade.create");
             map.put("format", "JSON");
             map.put("charset", element.charset);
-            map.put("sign_type", "RSA");
+            map.put("sign_type", "RSA2");
             map.put("timestamp", String.format(format, System.currentTimeMillis()));
             map.put("version", "1.0");
             if (element.notifyurl != null && !element.notifyurl.isEmpty()) map.put("notify_url", element.notifyurl);
@@ -288,7 +288,7 @@ public class AliPayService extends AbstractPayService {
             if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
-            map.put("sign_type", "RSA");
+            map.put("sign_type", "RSA2");
             map.put("charset", element.charset);
             map.put("format", "json");
             map.put("version", "1.0");
@@ -351,7 +351,7 @@ public class AliPayService extends AbstractPayService {
             if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
-            map.put("sign_type", "RSA");
+            map.put("sign_type", "RSA2");
             map.put("charset", element.charset);
             map.put("format", "json");
             map.put("version", "1.0");
@@ -400,7 +400,7 @@ public class AliPayService extends AbstractPayService {
             if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
-            map.put("sign_type", "RSA");
+            map.put("sign_type", "RSA2");
             map.put("charset", element.charset);
             map.put("format", "json");
             map.put("version", "1.0");
@@ -605,7 +605,7 @@ public class AliPayService extends AbstractPayService {
         @Override
         public boolean initElement(Logger logger, File home) {
             try {
-                final KeyFactory factory = KeyFactory.getInstance("RSA");
+                final KeyFactory factory = KeyFactory.getInstance("RSA2");
                 if (this.verifycertkey != null && !this.verifycertkey.isEmpty()) {
                     this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.verifycertkey)));
                 } else {
