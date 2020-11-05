@@ -993,87 +993,43 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public CompletableFuture<Map<String, Long>> getLongMapAsync(String... keys) {
-        byte[][] bs = new byte[keys.length][];
-        for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
-        }
-        return (CompletableFuture) send("MGET", CacheEntryType.LONG, null, false, keys[0], bs).thenApply(r -> {
-            List list = (List) r;
-            Map map = new LinkedHashMap<>();
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
-            }
-            return map;
-        });
+        return completableFuture(redisson.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).getAsync(keys));
     }
 
     @Override
     public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
-        byte[][] bs = new byte[keys.length][];
-        for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
-        }
-        return (CompletableFuture) send("MGET", CacheEntryType.LONG, null, false, keys[0], bs).thenApply(r -> {
-            List list = (List) r;
+        return completableFuture(redisson.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).getAsync(keys).thenApply(map -> {
             Long[] rs = new Long[keys.length];
-            for (int i = 0; i < keys.length; i++) {
-                Number obj = (Number) list.get(i);
-                rs[i] = obj == null ? null : obj.longValue();
+            for (int i = 0; i < rs.length; i++) {
+                rs[i] = (Long) map.get(keys[i]);
             }
             return rs;
-        });
+        }));
     }
 
     @Override
     public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
-        byte[][] bs = new byte[keys.length][];
-        for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
-        }
-        return (CompletableFuture) send("MGET", CacheEntryType.STRING, null, false, keys[0], bs).thenApply(r -> {
-            List list = (List) r;
+        return completableFuture(redisson.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).getAsync(keys).thenApply(map -> {
             String[] rs = new String[keys.length];
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                rs[i] = obj == null ? null : obj.toString();
+            for (int i = 0; i < rs.length; i++) {
+                rs[i] = (String) map.get(keys[i]);
             }
             return rs;
-        });
+        }));
     }
 
     @Override
     public CompletableFuture<Map<String, String>> getStringMapAsync(String... keys) {
-        byte[][] bs = new byte[keys.length][];
-        for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
-        }
-        return (CompletableFuture) send("MGET", CacheEntryType.STRING, null, false, keys[0], bs).thenApply(r -> {
-            List list = (List) r;
-            Map map = new LinkedHashMap<>();
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
-            }
-            return map;
-        });
+        return completableFuture(redisson.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).getAsync(keys));
     }
 
     @Override
     public <T> CompletableFuture<Map<String, T>> getMapAsync(final Type componentType, String... keys) {
-        byte[][] bs = new byte[keys.length][];
-        for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
-        }
-        return (CompletableFuture) send("MGET", CacheEntryType.OBJECT, componentType, false, keys[0], bs).thenApply(r -> {
-            List list = (List) r;
-            Map map = new LinkedHashMap<>();
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
-            }
-            return map;
-        });
+        return completableFuture(redisson.getBuckets(org.redisson.client.codec.ByteArrayCodec.INSTANCE).getAsync(keys).thenApply(map -> {
+            Map rs = new HashMap();
+            map.forEach((k, v) -> rs.put(k, convert.convertFrom(componentType, (byte[]) v)));
+            return rs;
+        }));
     }
 
     @Override
