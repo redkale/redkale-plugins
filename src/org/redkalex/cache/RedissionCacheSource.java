@@ -16,7 +16,7 @@ import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redisson.Redisson;
 import org.redisson.api.*;
-import org.redisson.config.Config;
+import org.redisson.config.*;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.*;
 import org.redkale.convert.json.JsonConvert;
@@ -54,8 +54,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     protected Type objValueType = String.class;
 
-    protected Map<String, byte[]> passwords;
-
     protected List<String> nodeAddrs;
 
     protected int db;
@@ -68,18 +66,50 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         if (conf == null) conf = new AnyValue.DefaultAnyValue();
 
         final List<String> addresses = new ArrayList<>();
-        Map<String, byte[]> passwords0 = new HashMap<>();
         Config config = new Config();
-        for (AnyValue node : conf.getAnyValues("node")) {
-            String addr = node.getValue("value");
+        AnyValue[] nodes = conf.getAnyValues("node");
+        String type = conf.getOrDefault("type", "");
+        BaseConfig baseConfig = null;
+        for (AnyValue node : nodes) {
+            String addr = node.getValue("addr");
             addresses.add(addr);
-            config.useSingleServer().setAddress(addr);
-            String password = node.getValue("password", "").trim();
-            if (!password.isEmpty()) passwords0.put(addr, password.getBytes(StandardCharsets.UTF_8));
             String db0 = node.getValue("db", "").trim();
             if (!db0.isEmpty()) this.db = Integer.valueOf(db0);
+            if (nodes.length == 1) {
+                baseConfig = config.useSingleServer();
+                config.useSingleServer().setAddress(addr);
+                config.useSingleServer().setDatabase(this.db);
+            } else if ("masterslave".equalsIgnoreCase(type)) { //主从
+                baseConfig = config.useMasterSlaveServers();
+                if (node.get("master") != null) {
+                    config.useMasterSlaveServers().setMasterAddress(addr);
+                } else {
+                    config.useMasterSlaveServers().addSlaveAddress(addr);
+                }
+                config.useMasterSlaveServers().setDatabase(this.db);
+            } else if ("cluster".equalsIgnoreCase(type)) { //集群
+                baseConfig = config.useClusterServers();
+                config.useClusterServers().addNodeAddress(addr);
+            } else if ("replicated".equalsIgnoreCase(type)) { //
+                baseConfig = config.useReplicatedServers();
+                config.useReplicatedServers().addNodeAddress(addr);
+                config.useReplicatedServers().setDatabase(this.db);
+            } else if ("sentinel".equalsIgnoreCase(type)) { //
+                baseConfig = config.useSentinelServers();
+                config.useSentinelServers().addSentinelAddress(addr);
+                config.useSentinelServers().setDatabase(this.db);
+            }
         }
-        if (!passwords0.isEmpty()) this.passwords = passwords0;
+        if (baseConfig != null) {
+            String username = conf.getValue("username", "").trim();
+            String password = conf.getValue("password", "").trim();
+            String retryAttempts = conf.getValue("retryAttempts", "").trim();
+            String retryInterval = conf.getValue("retryInterval", "").trim();
+            if (!username.isEmpty()) baseConfig.setUsername(username);
+            if (!password.isEmpty()) baseConfig.setPassword(password);
+            if (!retryAttempts.isEmpty()) baseConfig.setRetryAttempts(Integer.parseInt(retryAttempts));
+            if (!retryInterval.isEmpty()) baseConfig.setRetryInterval(Integer.parseInt(retryInterval));
+        }
         this.redisson = Redisson.create(config);
         this.nodeAddrs = addresses;
         if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
@@ -92,7 +122,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         AnyValue[] nodes = config.getAnyValues("node");
         if (nodes == null || nodes.length == 0) return false;
         for (AnyValue node : nodes) {
-            String val = node.getValue("value");
+            String val = node.getValue("addr");
             if (val != null && val.startsWith("redis://")) return true;
         }
         return false;
@@ -128,7 +158,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     public static void main(String[] args) throws Exception {
         DefaultAnyValue conf = new DefaultAnyValue().addValue("maxconns", "1");
-        conf.addValue("node", new DefaultAnyValue().addValue("value", "redis://127.0.0.1:6363"));
+        conf.addValue("node", new DefaultAnyValue().addValue("addr", "redis://127.0.0.1:6363"));
 
         RedissionCacheSource source = new RedissionCacheSource();
         source.defaultConvert = JsonFactory.root().getConvert();
