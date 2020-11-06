@@ -8,8 +8,6 @@ package org.redkalex.cache;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.net.*;
-import java.nio.channels.CompletionHandler;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
@@ -742,30 +740,30 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public List<String> hkeys(final String key) {
-        return (List) new ArrayList<>(redisson.getMap(key, org.redisson.client.codec.StringCodec.INSTANCE).keySet());
+        return (List) new ArrayList<>(redisson.getMap(key, MapStringCodec.instance).keySet());
     }
 
     @Override
     public long hincr(final String key, String field) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return map.addAndGet(key, 1);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
+        return map.addAndGet(key, 1L);
     }
 
     @Override
     public long hincr(final String key, String field, long num) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
         return map.addAndGet(key, num);
     }
 
     @Override
     public long hdecr(final String key, String field) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return map.addAndGet(key, -1);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
+        return map.addAndGet(key, -1L);
     }
 
     @Override
     public long hdecr(final String key, String field, long num) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
         return map.addAndGet(key, num);
     }
 
@@ -776,31 +774,35 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public <T> void hset(final String key, final String field, final Convert convert0, final T value) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        if (value == null) return;
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         map.fastPut(key, (convert0 == null ? convert : convert0).convertToBytes(objValueType, value));
     }
 
     @Override
     public <T> void hset(final String key, final String field, final Type type, final T value) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        if (value == null) return;
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         map.fastPut(key, this.convert.convertToBytes(type, value));
     }
 
     @Override
     public <T> void hset(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        if (value == null) return;
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         map.fastPut(key, (convert0 == null ? convert : convert0).convertToBytes(type, value));
     }
 
     @Override
     public void hsetString(final String key, final String field, final String value) {
-        RMap<String, String> map = redisson.getMap(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        if (value == null) return;
+        RMap<String, String> map = redisson.getMap(key, MapStringCodec.instance);
         map.fastPut(key, value);
     }
 
     @Override
     public void hsetLong(final String key, final String field, final long value) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
         map.fastPut(key, value);
     }
 
@@ -810,13 +812,13 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         for (int i = 0; i < values.length; i += 2) {
             vals.put(String.valueOf(values[i]), this.convert.convertToBytes(values[i + 1]));
         }
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         map.putAll(vals);
     }
 
     @Override
     public List<Serializable> hmget(final String key, final Type type, final String... fields) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         Map<String, byte[]> rs = map.getAll(Set.of(fields));
         List<Serializable> list = new ArrayList<>(fields.length);
         for (String field : fields) {
@@ -832,106 +834,132 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit, String pattern) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        Iterator<String> it = map.keySet().iterator();
-        return null; //待实现
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
+        Iterator<String> it = map.keySet(pattern, offset + limit).iterator();
+        final Map<String, T> rs = new HashMap<>();
+        int index = -1;
+        while (it.hasNext()) {
+            if (++index < offset) continue;
+            if (index >= offset + limit) break;
+            String field = it.next();
+            byte[] bs = map.get(key);
+            if (bs != null) rs.put(field, convert.convertFrom(type, bs));
+        }
+        return rs;
     }
 
     @Override
     public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit) {
-        return (Map) hmapAsync(key, type, offset, limit).join();
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
+        Iterator<String> it = map.keySet(offset + limit).iterator();
+        final Map<String, T> rs = new HashMap<>();
+        int index = -1;
+        while (it.hasNext()) {
+            if (++index < offset) continue;
+            if (index >= offset + limit) break;
+            String field = it.next();
+            byte[] bs = map.get(key);
+            if (bs != null) rs.put(field, convert.convertFrom(type, bs));
+        }
+        return rs;
     }
 
     @Override
     public <T> T hget(final String key, final String field, final Type type) {
-        return (T) hgetAsync(key, field, type).join();
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
+        byte[] bs = map.get(field);
+        return bs == null ? null : convert.convertFrom(type, bs);
     }
 
     @Override
     public String hgetString(final String key, final String field) {
-        return hgetStringAsync(key, field).join();
+        RMap<String, String> map = redisson.getMap(key, MapStringCodec.instance);
+        return map.get(field);
     }
 
     @Override
     public long hgetLong(final String key, final String field, long defValue) {
-        return hgetLongAsync(key, field, defValue).join();
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
+        Long rs = map.get(field);
+        return rs == null ? defValue : rs;
     }
 
     @Override
     public CompletableFuture<Integer> hremoveAsync(final String key, String... fields) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.fastRemoveAsync(fields).thenApply(r -> r.intValue()));
     }
 
     @Override
     public CompletableFuture<Integer> hsizeAsync(final String key) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.sizeAsync());
     }
 
     @Override
     public CompletableFuture<List<String>> hkeysAsync(final String key) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.readAllKeySetAsync().thenApply(set -> set == null ? null : new ArrayList(set)));
     }
 
     @Override
     public CompletableFuture<Long> hincrAsync(final String key, String field) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return completableFuture(map.addAndGetAsync(field, 1));
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
+        return completableFuture(map.addAndGetAsync(field, 1L));
     }
 
     @Override
     public CompletableFuture<Long> hincrAsync(final String key, String field, long num) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
         return completableFuture(map.addAndGetAsync(field, num));
     }
 
     @Override
     public CompletableFuture<Long> hdecrAsync(final String key, String field) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return completableFuture(map.addAndGetAsync(field, -1));
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
+        return completableFuture(map.addAndGetAsync(field, -1L));
     }
 
     @Override
     public CompletableFuture<Long> hdecrAsync(final String key, String field, long num) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
         return completableFuture(map.addAndGetAsync(field, -num));
     }
 
     @Override
     public CompletableFuture<Boolean> hexistsAsync(final String key, String field) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
         return completableFuture(map.containsKeyAsync(field));
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert0, final T value) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.fastPutAsync(field, (convert0 == null ? convert : convert0).convertToBytes(objValueType, value)).thenApply(r -> null));
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Type type, final T value) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.fastPutAsync(field, convert.convertToBytes(type, value)).thenApply(r -> null));
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.fastPutAsync(field, (convert0 == null ? convert : convert0).convertToBytes(type, value)).thenApply(r -> null));
     }
 
     @Override
     public CompletableFuture<Void> hsetStringAsync(final String key, final String field, final String value) {
-        RMap<String, String> map = redisson.getMap(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        if (value == null) return CompletableFuture.completedFuture(null);
+        RMap<String, String> map = redisson.getMap(key, MapStringCodec.instance);
         return completableFuture(map.fastPutAsync(field, value).thenApply(r -> null));
     }
 
     @Override
     public CompletableFuture<Void> hsetLongAsync(final String key, final String field, final long value) {
-        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
         return completableFuture(map.fastPutAsync(field, value).thenApply(r -> null));
     }
 
@@ -941,13 +969,13 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         for (int i = 0; i < values.length; i += 2) {
             vals.put(String.valueOf(values[i]), this.convert.convertToBytes(values[i + 1]));
         }
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.putAllAsync(vals));
     }
 
     @Override
     public CompletableFuture<List<Serializable>> hmgetAsync(final String key, final Type type, final String... fields) {
-        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.getAllAsync(Set.of(fields)).thenApply(rs -> {
             List<Serializable> list = new ArrayList<>(fields.length);
             for (String field : fields) {
@@ -964,37 +992,58 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, int offset, int limit) {
-        return null;
+        return CompletableFuture.supplyAsync(() -> {
+            RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
+
+            Iterator<String> it = map.keySet(offset + limit).iterator();
+            final Map<String, T> rs = new HashMap<>();
+            int index = -1;
+            while (it.hasNext()) {
+                if (++index < offset) continue;
+                if (index >= offset + limit) break;
+                String field = it.next();
+                byte[] bs = map.get(key);
+                if (bs != null) rs.put(field, convert.convertFrom(type, bs));
+            }
+            return rs;
+        });
     }
 
     @Override
     public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, int offset, int limit, String pattern) {
-        byte[][] bs = new byte[pattern == null || pattern.isEmpty() ? 4 : 6][limit];
-        int index = -1;
-        bs[++index] = key.getBytes(StandardCharsets.UTF_8);
-        bs[++index] = String.valueOf(offset).getBytes(StandardCharsets.UTF_8);
-        if (pattern != null && !pattern.isEmpty()) {
-            bs[++index] = "MATCH".getBytes(StandardCharsets.UTF_8);
-            bs[++index] = pattern.getBytes(StandardCharsets.UTF_8);
-        }
-        bs[++index] = "COUNT".getBytes(StandardCharsets.UTF_8);
-        bs[++index] = String.valueOf(limit).getBytes(StandardCharsets.UTF_8);
-        return (CompletableFuture) send("HSCAN", CacheEntryType.MAP, type, key, bs);
+        return CompletableFuture.supplyAsync(() -> {
+            RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
+
+            Iterator<String> it = map.keySet(pattern, offset + limit).iterator();
+            final Map<String, T> rs = new HashMap<>();
+            int index = -1;
+            while (it.hasNext()) {
+                if (++index < offset) continue;
+                if (index >= offset + limit) break;
+                String field = it.next();
+                byte[] bs = map.get(key);
+                if (bs != null) rs.put(field, convert.convertFrom(type, bs));
+            }
+            return rs;
+        });
     }
 
     @Override
     public <T> CompletableFuture<T> hgetAsync(final String key, final String field, final Type type) {
-        return (CompletableFuture) send("HGET", CacheEntryType.OBJECT, type, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8));
+        RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
+        return completableFuture(map.getAsync(field).thenApply(r -> r == null ? null : convert.convertFrom(type, r)));
     }
 
     @Override
     public CompletableFuture<String> hgetStringAsync(final String key, final String field) {
-        return (CompletableFuture) send("HGET", CacheEntryType.STRING, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8));
+        RMap<String, String> map = redisson.getMap(key, MapStringCodec.instance);
+        return completableFuture(map.getAsync(field));
     }
 
     @Override
     public CompletableFuture<Long> hgetLongAsync(final String key, final String field, long defValue) {
-        return (CompletableFuture) send("HGET", CacheEntryType.LONG, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8)).thenApplyAsync(v -> v == null ? defValue : v);
+        RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
+        return completableFuture(map.getAsync(field).thenApply(r -> r == null ? defValue : r.longValue()));
     }
 
     //--------------------- collection ------------------------------  
@@ -1114,27 +1163,45 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<T>> map = new HashMap<>();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        if (!set) { //list        
+        if (!set) { //list    
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
-                    if (c != null) {
-                        synchronized (map) {
-                            map.put(key, (Collection) c);
+                futures[i] = completableFuture(redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
+                    if (list == null || list.isEmpty()) return list;
+                    List<T> rs = new ArrayList<>();
+                    for (Object item : list) {
+                        byte[] bs = (byte[]) item;
+                        if (bs == null) {
+                            rs.add(null);
+                        } else {
+                            rs.add(convert.convertFrom(componentType, bs));
                         }
                     }
-                });
+                    synchronized (map) {
+                        map.put(key, rs);
+                    }
+                    return rs;
+                }));
             }
         } else {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(StandardCharsets.UTF_8)).thenAccept(c -> {
-                    if (c != null) {
-                        synchronized (map) {
-                            map.put(key, (Collection) c);
+                futures[i] = completableFuture(redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
+                    if (list == null || list.isEmpty()) return list;
+                    List<T> rs = new ArrayList<>();
+                    for (Object item : list) {
+                        byte[] bs = (byte[]) item;
+                        if (bs == null) {
+                            rs.add(null);
+                        } else {
+                            rs.add(convert.convertFrom(componentType, bs));
                         }
                     }
-                });
+                    synchronized (map) {
+                        map.put(key, rs);
+                    }
+                    return rs;
+                }));
             }
         }
         CompletableFuture.allOf(futures).whenComplete((w, e) -> {
@@ -1160,12 +1227,17 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public Map<String, Long> getLongMap(final String... keys) {
-        return getLongMapAsync(keys).join();
+        return redisson.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).get(keys);
     }
 
     @Override
     public Long[] getLongArray(final String... keys) {
-        return getLongArrayAsync(keys).join();
+        Map<String, Long> map = redisson.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).get(keys);
+        Long[] rs = new Long[keys.length];
+        for (int i = 0; i < rs.length; i++) {
+            rs[i] = map.get(keys[i]);
+        }
+        return rs;
     }
 
     @Override
@@ -1198,14 +1270,13 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
-        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
-            if (t == null) return CompletableFuture.completedFuture(null);
-            if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'});
+        return completableFuture(redisson.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
+            if (String.valueOf(type).contains("list")) {
+                return (CompletionStage) redisson.getList(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync();
             } else {
-                return send("SMEMBERS", CacheEntryType.STRING, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8));
+                return (CompletionStage) redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply(s -> s == null ? null : new ArrayList(s));
             }
-        });
+        }));
     }
 
     @Override
@@ -1213,27 +1284,29 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<String>> map = new HashMap<>();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        if (!set) { //list        
+        if (!set) { //list    
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("LRANGE", CacheEntryType.STRING, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
-                    if (c != null) {
+                futures[i] = completableFuture(redisson.getList(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply(r -> {
+                    if (r != null) {
                         synchronized (map) {
-                            map.put(key, (Collection) c);
+                            map.put(key, (Collection) r);
                         }
                     }
-                });
+                    return null;
+                }));
             }
         } else {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("SMEMBERS", CacheEntryType.STRING, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8)).thenAccept(c -> {
-                    if (c != null) {
+                futures[i] = completableFuture(redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply(r -> {
+                    if (r != null) {
                         synchronized (map) {
-                            map.put(key, (Collection) c);
+                            map.put(key, new ArrayList(r));
                         }
                     }
-                });
+                    return null;
+                }));
             }
         }
         CompletableFuture.allOf(futures).whenComplete((w, e) -> {
@@ -1258,14 +1331,13 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
-        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
-            if (t == null) return CompletableFuture.completedFuture(null);
-            if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'});
+        return completableFuture(redisson.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
+            if (String.valueOf(type).contains("list")) {
+                return (CompletionStage) redisson.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync();
             } else {
-                return send("SMEMBERS", CacheEntryType.LONG, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8));
+                return (CompletionStage) redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(s -> s == null ? null : new ArrayList(s));
             }
-        });
+        }));
     }
 
     @Override
@@ -1273,27 +1345,29 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<Long>> map = new HashMap<>();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        if (!set) { //list        
+        if (!set) { //list    
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("LRANGE", CacheEntryType.LONG, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'}).thenAccept(c -> {
-                    if (c != null) {
+                futures[i] = completableFuture(redisson.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(r -> {
+                    if (r != null) {
                         synchronized (map) {
-                            map.put(key, (Collection) c);
+                            map.put(key, (Collection) r);
                         }
                     }
-                });
+                    return null;
+                }));
             }
         } else {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
-                futures[i] = send("SMEMBERS", CacheEntryType.LONG, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8)).thenAccept(c -> {
-                    if (c != null) {
+                futures[i] = completableFuture(redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(r -> {
+                    if (r != null) {
                         synchronized (map) {
-                            map.put(key, (Collection) c);
+                            map.put(key, new ArrayList(r));
                         }
                     }
-                });
+                    return null;
+                }));
             }
         }
         CompletableFuture.allOf(futures).whenComplete((w, e) -> {
@@ -1817,15 +1891,48 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         return CompletableFuture.completedFuture(new ArrayList<>()); //不返回数据
     }
 
-    private CompletableFuture<Serializable> send(final String command, final CacheEntryType cacheType, final Type resultType, final String key, final byte[]... args) {
-        return send(command, cacheType, resultType, false, key, args);
+    protected static class MapByteArrayCodec extends org.redisson.client.codec.ByteArrayCodec {
+
+        public static final MapByteArrayCodec instance = new MapByteArrayCodec();
+
+        @Override
+        public org.redisson.client.protocol.Decoder<Object> getMapKeyDecoder() {
+            return org.redisson.client.codec.StringCodec.INSTANCE.getValueDecoder();
+        }
+
+        @Override
+        public org.redisson.client.protocol.Encoder getMapKeyEncoder() {
+            return org.redisson.client.codec.StringCodec.INSTANCE.getValueEncoder();
+        }
     }
 
-    private CompletableFuture<Serializable> send(final String command, final CacheEntryType cacheType, final Type resultType, final boolean set, final String key, final byte[]... args) {
-        return send(null, command, cacheType, resultType, set, key, args);
+    protected static class MapStringCodec extends org.redisson.client.codec.StringCodec {
+
+        public static final MapStringCodec instance = new MapStringCodec();
+
+        @Override
+        public org.redisson.client.protocol.Decoder<Object> getMapKeyDecoder() {
+            return org.redisson.client.codec.StringCodec.INSTANCE.getValueDecoder();
+        }
+
+        @Override
+        public org.redisson.client.protocol.Encoder getMapKeyEncoder() {
+            return org.redisson.client.codec.StringCodec.INSTANCE.getValueEncoder();
+        }
     }
 
-    private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final CacheEntryType cacheType, final Type resultType, final boolean set, final String key, final byte[]... args) {
-        return null;
+    protected static class MapLongCodec extends org.redisson.client.codec.LongCodec {
+
+        public static final MapLongCodec instance = new MapLongCodec();
+
+        @Override
+        public org.redisson.client.protocol.Decoder<Object> getMapKeyDecoder() {
+            return org.redisson.client.codec.StringCodec.INSTANCE.getValueDecoder();
+        }
+
+        @Override
+        public org.redisson.client.protocol.Encoder getMapKeyEncoder() {
+            return org.redisson.client.codec.StringCodec.INSTANCE.getValueEncoder();
+        }
     }
 }
