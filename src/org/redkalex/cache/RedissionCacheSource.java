@@ -347,6 +347,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 //            System.out.println("内容长度: " + fs.get("val").length());
 //        }
             source.remove("bigmap");
+
         } finally {
             source.close();
         }
