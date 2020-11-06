@@ -641,7 +641,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     @Override
     public CompletableFuture<Void> setStringAsync(int expireSeconds, String key, String value) {
         final RBucket<String> bucket = redisson.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(convert.convertTo(value)).thenCompose(v -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS)).thenApply(r -> null));
+        return completableFuture(bucket.setAsync(value).thenCompose(v -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS)).thenApply(r -> null));
     }
 
     @Override
@@ -1541,7 +1541,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public <T> CompletableFuture<Integer> removeListItemAsync(String key, final Type componentType, T value) {
-        return completableFuture(redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertTo(componentType, value)).thenApply(r -> r ? 1 : 0));
+        return completableFuture(redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertToBytes(componentType, value)).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
@@ -1719,12 +1719,12 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     @Override
     @Deprecated
     public CompletableFuture<Integer> removeSetItemAsync(String key, V value) {
-        return completableFuture(redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertTo(objValueType, value)).thenApply(r -> r ? 1 : 0));
+        return removeSetItemAsync(key, objValueType, value);
     }
 
     @Override
     public <T> CompletableFuture<Integer> removeSetItemAsync(String key, final Type componentType, T value) {
-        return completableFuture(redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertTo(componentType, value)).thenApply(r -> r ? 1 : 0));
+        return completableFuture(redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertToBytes(componentType, value)).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
