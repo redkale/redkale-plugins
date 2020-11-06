@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
+import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import org.redisson.Redisson;
 import org.redisson.api.*;
@@ -26,6 +27,7 @@ import org.redkale.util.*;
 import org.redkale.util.AnyValue.DefaultAnyValue;
 
 /**
+ * //https://www.cnblogs.com/xiami2046/p/13934146.html
  *
  * @author zhangjx
  */
@@ -33,16 +35,6 @@ import org.redkale.util.AnyValue.DefaultAnyValue;
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
 public class RedissionCacheSource<V extends Object> extends AbstractService implements CacheSource<V>, Service, AutoCloseable, Resourcable {
-
-    protected static final byte DOLLAR_BYTE = '$';
-
-    protected static final byte ASTERISK_BYTE = '*';
-
-    protected static final byte PLUS_BYTE = '+';
-
-    protected static final byte MINUS_BYTE = '-';
-
-    protected static final byte COLON_BYTE = ':';
 
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -164,182 +156,182 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
         InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 7788);
+        try {
+            System.out.println("------------------------------------");
+            source.removeAsync("stritem1");
+            source.removeAsync("stritem2");
+            source.setStringAsync("stritem1", "value1");
+            source.setStringAsync("stritem2", "value2");
+            System.out.println("[有值] MGET : " + source.getStringMap("stritem1", "stritem2"));
+            System.out.println("[有值] MGET : " + Arrays.toString(source.getStringArray("stritem1", "stritem2")));
 
-        System.out.println("------------------------------------");
-        source.removeAsync("stritem1");
-        source.removeAsync("stritem2");
-        source.setStringAsync("stritem1", "value1");
-        source.setStringAsync("stritem2", "value2");
-        System.out.println("[有值] MGET : " + source.getStringMap("stritem1", "stritem2"));
-        System.out.println("[有值] MGET : " + Arrays.toString(source.getStringArray("stritem1", "stritem2")));
+            source.remove("intitem1");
+            source.remove("intitem2");
+            source.setLong("intitem1", 333);
+            source.setLong("intitem2", 444);
+            System.out.println("[有值] MGET : " + source.getStringMap("intitem1", "intitem22", "intitem2"));
+            System.out.println("[有值] MGET : " + Arrays.toString(source.getStringArray("intitem1", "intitem22", "intitem2")));
+            source.remove("objitem1");
+            source.remove("objitem2");
+            source.set("objitem1", Flipper.class, new Flipper(10));
+            source.set("objitem2", Flipper.class, new Flipper(20));
+            System.out.println("[有值] MGET : " + source.getMap(Flipper.class, "objitem1", "objitem2"));
 
-        source.remove("intitem1");
-        source.remove("intitem2");
-        source.setLong("intitem1", 333);
-        source.setLong("intitem2", 444);
-        System.out.println("[有值] MGET : " + source.getStringMap("intitem1", "intitem22", "intitem2"));
-        System.out.println("[有值] MGET : " + Arrays.toString(source.getStringArray("intitem1", "intitem22", "intitem2")));
-        source.remove("objitem1");
-        source.remove("objitem2");
-        source.set("objitem1", Flipper.class, new Flipper(10));
-        source.set("objitem2", Flipper.class, new Flipper(20));
-        System.out.println("[有值] MGET : " + source.getMap(Flipper.class, "objitem1", "objitem2"));
+            source.remove("key1");
+            source.remove("key2");
+            source.remove("300");
+            source.set(1000, "key1", String.class, "value1");
+            source.set("key1", String.class, "value1");
+            source.setString("keystr1", "strvalue1");
+            source.setLong("keylong1", 333L);
+            source.set("300", String.class, "4000");
+            source.getAndRefresh("key1", 3500, String.class);
+            System.out.println("[有值] 300 GET : " + source.get("300", String.class));
+            System.out.println("[有值] key1 GET : " + source.get("key1", String.class));
+            System.out.println("[无值] key2 GET : " + source.get("key2", String.class));
+            System.out.println("[有值] keystr1 GET : " + source.getString("keystr1"));
+            System.out.println("[有值] keylong1 GET : " + source.getLong("keylong1", 0L));
+            System.out.println("[有值] key1 EXISTS : " + source.exists("key1"));
+            System.out.println("[无值] key2 EXISTS : " + source.exists("key2"));
 
-        source.remove("key1");
-        source.remove("key2");
-        source.remove("300");
-        source.set(1000, "key1", String.class, "value1");
-        source.set("key1", String.class, "value1");
-        source.setString("keystr1", "strvalue1");
-        source.setLong("keylong1", 333L);
-        source.set("300", String.class, "4000");
-        source.getAndRefresh("key1", 3500, String.class);
-        System.out.println("[有值] 300 GET : " + source.get("300", String.class));
-        System.out.println("[有值] key1 GET : " + source.get("key1", String.class));
-        System.out.println("[无值] key2 GET : " + source.get("key2", String.class));
-        System.out.println("[有值] keystr1 GET : " + source.getString("keystr1"));
-        System.out.println("[有值] keylong1 GET : " + source.getLong("keylong1", 0L));
-        System.out.println("[有值] key1 EXISTS : " + source.exists("key1"));
-        System.out.println("[无值] key2 EXISTS : " + source.exists("key2"));
+            source.remove("keys3");
+            source.appendListItem("keys3", String.class, "vals1");
+            source.appendListItem("keys3", String.class, "vals2");
+            System.out.println("-------- keys3 追加了两个值 --------");
+            System.out.println("[两值] keys3 VALUES : " + source.getCollection("keys3", String.class));
+            System.out.println("[有值] keys3 EXISTS : " + source.exists("keys3"));
+            source.removeListItem("keys3", String.class, "vals1");
+            System.out.println("[一值] keys3 VALUES : " + source.getCollection("keys3", String.class));
+            source.getCollectionAndRefresh("keys3", 3000, String.class);
 
-        source.remove("keys3");
-        source.appendListItem("keys3", String.class, "vals1");
-        source.appendListItem("keys3", String.class, "vals2");
-        System.out.println("-------- keys3 追加了两个值 --------");
-        System.out.println("[两值] keys3 VALUES : " + source.getCollection("keys3", String.class));
-        System.out.println("[有值] keys3 EXISTS : " + source.exists("keys3"));
-        source.removeListItem("keys3", String.class, "vals1");
-        System.out.println("[一值] keys3 VALUES : " + source.getCollection("keys3", String.class));
-        source.getCollectionAndRefresh("keys3", 3000, String.class);
+            source.remove("stringmap");
+            source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
+            source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));
+            System.out.println("[两值] stringmap VALUES : " + source.getCollectionAsync("stringmap", JsonConvert.TYPE_MAP_STRING_STRING).join());
 
-        source.remove("stringmap");
-        source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
-        source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));
-        System.out.println("[两值] stringmap VALUES : " + source.getCollectionAsync("stringmap", JsonConvert.TYPE_MAP_STRING_STRING).join());
+            source.remove("sets3");
+            source.remove("sets4");
+            source.appendSetItem("sets3", String.class, "setvals1");
+            source.appendSetItem("sets3", String.class, "setvals2");
+            source.appendSetItem("sets3", String.class, "setvals1");
+            source.appendSetItem("sets4", String.class, "setvals2");
+            source.appendSetItem("sets4", String.class, "setvals1");
+            System.out.println("[两值] sets3 VALUES : " + source.getCollection("sets3", String.class));
+            System.out.println("[有值] sets3 EXISTS : " + source.exists("sets3"));
+            System.out.println("[有值] sets3-setvals2 EXISTSITEM : " + source.existsSetItem("sets3", String.class, "setvals2"));
+            System.out.println("[有值] sets3-setvals3 EXISTSITEM : " + source.existsSetItem("sets3", String.class, "setvals3"));
+            source.removeSetItem("sets3", String.class, "setvals1");
+            System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3", String.class));
+            System.out.println("sets3 大小 : " + source.getCollectionSize("sets3"));
+            System.out.println("all keys: " + source.queryKeys());
+            System.out.println("key startkeys: " + source.queryKeysStartsWith("key"));
+            System.out.println("newnum 值 : " + source.incr("newnum"));
+            System.out.println("newnum 值 : " + source.decr("newnum"));
+            System.out.println("sets3&sets4:  " + source.getStringCollectionMap(true, "sets3", "sets4"));
+            System.out.println("------------------------------------");
+            source.set("myaddr", InetSocketAddress.class, addr);
+            System.out.println("myaddrstr:  " + source.getString("myaddr"));
+            System.out.println("myaddr:  " + source.get("myaddr", InetSocketAddress.class));
+            source.remove("myaddrs");
+            source.remove("myaddrs2");
+            source.appendSetItem("myaddrs", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
+            source.appendSetItem("myaddrs", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7799));
+            System.out.println("myaddrs:  " + source.getCollection("myaddrs", InetSocketAddress.class));
+            source.removeSetItem("myaddrs", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
+            System.out.println("myaddrs:  " + source.getCollection("myaddrs", InetSocketAddress.class));
+            source.appendSetItem("myaddrs2", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
+            source.appendSetItem("myaddrs2", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7799));
+            System.out.println("myaddrs&myaddrs2:  " + source.getCollectionMap(true, InetSocketAddress.class, "myaddrs", "myaddrs2"));
+            System.out.println("------------------------------------");
+            source.remove("myaddrs");
+            Type mapType = new TypeToken<Map<String, Integer>>() {
+            }.getType();
+            Map<String, Integer> map = new HashMap<>();
+            map.put("a", 1);
+            map.put("b", 2);
+            source.set("mapvals", mapType, map);
+            System.out.println("mapvals:  " + source.get("mapvals", mapType));
 
-        source.remove("sets3");
-        source.remove("sets4");
-        source.appendSetItem("sets3", String.class, "setvals1");
-        source.appendSetItem("sets3", String.class, "setvals2");
-        source.appendSetItem("sets3", String.class, "setvals1");
-        source.appendSetItem("sets4", String.class, "setvals2");
-        source.appendSetItem("sets4", String.class, "setvals1");
-        System.out.println("[两值] sets3 VALUES : " + source.getCollection("sets3", String.class));
-        System.out.println("[有值] sets3 EXISTS : " + source.exists("sets3"));
-        System.out.println("[有值] sets3-setvals2 EXISTSITEM : " + source.existsSetItem("sets3", String.class, "setvals2"));
-        System.out.println("[有值] sets3-setvals3 EXISTSITEM : " + source.existsSetItem("sets3", String.class, "setvals3"));
-        source.removeSetItem("sets3", String.class, "setvals1");
-        System.out.println("[一值] sets3 VALUES : " + source.getCollection("sets3", String.class));
-        System.out.println("sets3 大小 : " + source.getCollectionSize("sets3"));
-        System.out.println("all keys: " + source.queryKeys());
-        System.out.println("key startkeys: " + source.queryKeysStartsWith("key"));
-        System.out.println("newnum 值 : " + source.incr("newnum"));
-        System.out.println("newnum 值 : " + source.decr("newnum"));
-        System.out.println("sets3&sets4:  " + source.getStringCollectionMap(true, "sets3", "sets4"));
-        System.out.println("------------------------------------");
-        source.set("myaddr", InetSocketAddress.class, addr);
-        System.out.println("myaddrstr:  " + source.getString("myaddr"));
-        System.out.println("myaddr:  " + source.get("myaddr", InetSocketAddress.class));
-        source.remove("myaddrs");
-        source.remove("myaddrs2");
-        source.appendSetItem("myaddrs", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
-        source.appendSetItem("myaddrs", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7799));
-        System.out.println("myaddrs:  " + source.getCollection("myaddrs", InetSocketAddress.class));
-        source.removeSetItem("myaddrs", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
-        System.out.println("myaddrs:  " + source.getCollection("myaddrs", InetSocketAddress.class));
-        source.appendSetItem("myaddrs2", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7788));
-        source.appendSetItem("myaddrs2", InetSocketAddress.class, new InetSocketAddress("127.0.0.1", 7799));
-        System.out.println("myaddrs&myaddrs2:  " + source.getCollectionMap(true, InetSocketAddress.class, "myaddrs", "myaddrs2"));
-        System.out.println("------------------------------------");
-        source.remove("myaddrs");
-        Type mapType = new TypeToken<Map<String, Integer>>() {
-        }.getType();
-        Map<String, Integer> map = new HashMap<>();
-        map.put("a", 1);
-        map.put("b", 2);
-        source.set("mapvals", mapType, map);
-        System.out.println("mapvals:  " + source.get("mapvals", mapType));
+            source.remove("byteskey");
+            source.setBytes("byteskey", new byte[]{1, 2, 3});
+            System.out.println("byteskey 值 : " + Arrays.toString(source.getBytes("byteskey")));
+            //h
+            source.remove("hmap");
+            source.hincr("hmap", "key1");
+            System.out.println("hmap.key1 值 : " + source.hgetLong("hmap", "key1", -1));
+            source.hmset("hmap", "key2", "haha", "key3", 333);
+            source.hmset("hmap", "sm", (HashMap) Utility.ofMap("a", "aa", "b", "bb"));
+            System.out.println("hmap.sm 值 : " + source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING));
+            System.out.println("hmap.[key1,key2,key3] 值 : " + source.hmget("hmap", String.class, "key1", "key2", "key3"));
+            System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
+            source.hremove("hmap", "key1", "key3");
+            System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
+            System.out.println("hmap.key2 值 : " + source.hgetString("hmap", "key2"));
+            System.out.println("hmap列表大小 : " + source.hsize("hmap"));
 
-        source.remove("byteskey");
-        source.setBytes("byteskey", new byte[]{1, 2, 3});
-        System.out.println("byteskey 值 : " + Arrays.toString(source.getBytes("byteskey")));
-        //h
-        source.remove("hmap");
-        source.hincr("hmap", "key1");
-        System.out.println("hmap.key1 值 : " + source.hgetLong("hmap", "key1", -1));
-        source.hmset("hmap", "key2", "haha", "key3", 333);
-        source.hmset("hmap", "sm", (HashMap) Utility.ofMap("a", "aa", "b", "bb"));
-        System.out.println("hmap.sm 值 : " + source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING));
-        System.out.println("hmap.[key1,key2,key3] 值 : " + source.hmget("hmap", String.class, "key1", "key2", "key3"));
-        System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
-        source.hremove("hmap", "key1", "key3");
-        System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
-        System.out.println("hmap.key2 值 : " + source.hgetString("hmap", "key2"));
-        System.out.println("hmap列表大小 : " + source.hsize("hmap"));
+            source.remove("hmaplong");
+            source.hincr("hmaplong", "key1", 10);
+            source.hsetLong("hmaplong", "key2", 30);
+            System.out.println("hmaplong.所有值 : " + source.hmap("hmaplong", long.class, 0, 10));
 
-        source.remove("hmaplong");
-        source.hincr("hmaplong", "key1", 10);
-        source.hsetLong("hmaplong", "key2", 30);
-        System.out.println("hmaplong.所有值 : " + source.hmap("hmaplong", long.class, 0, 10));
+            source.remove("hmapstr");
+            source.hsetString("hmapstr", "key1", "str10");
+            source.hsetString("hmapstr", "key2", null);
+            System.out.println("hmapstr.所有值 : " + source.hmap("hmapstr", String.class, 0, 10));
 
-        source.remove("hmapstr");
-        source.hsetString("hmapstr", "key1", "str10");
-        source.hsetString("hmapstr", "key2", null);
-        System.out.println("hmapstr.所有值 : " + source.hmap("hmapstr", String.class, 0, 10));
+            source.remove("hmapstrmap");
+            source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
+            source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
+            System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*"));
 
-        source.remove("hmapstrmap");
-        source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
-        source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
-        System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*"));
+            source.remove("popset");
+            source.appendStringSetItem("popset", "111");
+            source.appendStringSetItem("popset", "222");
+            source.appendStringSetItem("popset", "333");
+            source.appendStringSetItem("popset", "444");
+            source.appendStringSetItem("popset", "555");
+            System.out.println("SPOP一个元素：" + source.spopStringSetItem("popset"));
+            System.out.println("SPOP两个元素：" + source.spopStringSetItem("popset", 2));
+            System.out.println("SPOP五个元素：" + source.spopStringSetItem("popset", 5));
+            source.appendLongSetItem("popset", 111);
+            source.appendLongSetItem("popset", 222);
+            source.appendLongSetItem("popset", 333);
+            source.appendLongSetItem("popset", 444);
+            source.appendLongSetItem("popset", 555);
+            System.out.println("SPOP一个元素：" + source.spopLongSetItem("popset"));
+            System.out.println("SPOP两个元素：" + source.spopLongSetItem("popset", 2));
+            System.out.println("SPOP五个元素：" + source.spopLongSetItem("popset", 5));
+            System.out.println("SPOP一个元素：" + source.spopLongSetItem("popset"));
 
-        source.remove("popset");
-        source.appendStringSetItem("popset", "111");
-        source.appendStringSetItem("popset", "222");
-        source.appendStringSetItem("popset", "333");
-        source.appendStringSetItem("popset", "444");
-        source.appendStringSetItem("popset", "555");
-        System.out.println("SPOP一个元素：" + source.spopStringSetItem("popset"));
-        System.out.println("SPOP两个元素：" + source.spopStringSetItem("popset", 2));
-        System.out.println("SPOP五个元素：" + source.spopStringSetItem("popset", 5));
-        source.appendLongSetItem("popset", 111);
-        source.appendLongSetItem("popset", 222);
-        source.appendLongSetItem("popset", 333);
-        source.appendLongSetItem("popset", 444);
-        source.appendLongSetItem("popset", 555);
-        System.out.println("SPOP一个元素：" + source.spopLongSetItem("popset"));
-        System.out.println("SPOP两个元素：" + source.spopLongSetItem("popset", 2));
-        System.out.println("SPOP五个元素：" + source.spopLongSetItem("popset", 5));
-        System.out.println("SPOP一个元素：" + source.spopLongSetItem("popset"));
-
-        //清除
-        int rs = source.remove("stritem1");
-        System.out.println("删除stritem1个数: " + rs);
-        source.remove("popset");
-        source.remove("stritem2");
-        source.remove("intitem1");
-        source.remove("intitem2");
-        source.remove("keylong1");
-        source.remove("keystr1");
-        source.remove("mapvals");
-        source.remove("myaddr");
-        source.remove("myaddrs2");
-        source.remove("newnum");
-        source.remove("objitem1");
-        source.remove("objitem2");
-        source.remove("key1");
-        source.remove("key2");
-        source.remove("keys3");
-        source.remove("sets3");
-        source.remove("sets4");
-        source.remove("myaddrs");
-        source.remove("300");
-        source.remove("stringmap");
-        source.remove("hmap");
-        source.remove("hmaplong");
-        source.remove("hmapstr");
-        source.remove("hmapstrmap");
-        source.remove("byteskey");
-        System.out.println("------------------------------------");
+            //清除
+            int rs = source.remove("stritem1");
+            System.out.println("删除stritem1个数: " + rs);
+            source.remove("popset");
+            source.remove("stritem2");
+            source.remove("intitem1");
+            source.remove("intitem2");
+            source.remove("keylong1");
+            source.remove("keystr1");
+            source.remove("mapvals");
+            source.remove("myaddr");
+            source.remove("myaddrs2");
+            source.remove("newnum");
+            source.remove("objitem1");
+            source.remove("objitem2");
+            source.remove("key1");
+            source.remove("key2");
+            source.remove("keys3");
+            source.remove("sets3");
+            source.remove("sets4");
+            source.remove("myaddrs");
+            source.remove("300");
+            source.remove("stringmap");
+            source.remove("hmap");
+            source.remove("hmaplong");
+            source.remove("hmapstr");
+            source.remove("hmapstrmap");
+            source.remove("byteskey");
+            System.out.println("------------------------------------");
 //        System.out.println("--------------测试大文本---------------");
 //        HashMap<String, String> bigmap = new HashMap<>();
 //        StringBuilder sb = new StringBuilder();
@@ -356,8 +348,10 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 //            HashMap<String, String> fs = (HashMap) source.get("bigmap", JsonConvert.TYPE_MAP_STRING_STRING);
 //            System.out.println("内容长度: " + fs.get("val").length());
 //        }
-        source.remove("bigmap");
-        source.close();
+            source.remove("bigmap");
+        } finally {
+            source.close();
+        }
     }
 
     @Override
@@ -754,82 +748,109 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public int hremove(final String key, String... fields) {
-        return hremoveAsync(key, fields).join();
+        RMap<String, ?> map = redisson.getMap(key);
+        return (int) map.fastRemove(fields);
     }
 
     @Override
     public int hsize(final String key) {
-        return hsizeAsync(key).join();
+        return redisson.getMap(key).size();
     }
 
     @Override
     public List<String> hkeys(final String key) {
-        return hkeysAsync(key).join();
+        return (List) new ArrayList<>(redisson.getMap(key, org.redisson.client.codec.StringCodec.INSTANCE).keySet());
     }
 
     @Override
     public long hincr(final String key, String field) {
-        return hincrAsync(key, field).join();
+        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return map.addAndGet(key, 1);
     }
 
     @Override
     public long hincr(final String key, String field, long num) {
-        return hincrAsync(key, field, num).join();
+        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return map.addAndGet(key, num);
     }
 
     @Override
     public long hdecr(final String key, String field) {
-        return hdecrAsync(key, field).join();
+        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return map.addAndGet(key, -1);
     }
 
     @Override
     public long hdecr(final String key, String field, long num) {
-        return hdecrAsync(key, field, num).join();
+        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return map.addAndGet(key, num);
     }
 
     @Override
     public boolean hexists(final String key, String field) {
-        return hexistsAsync(key, field).join();
+        return redisson.getMap(key).containsKey(field);
     }
 
     @Override
-    public <T> void hset(final String key, final String field, final Convert convert, final T value) {
-        hsetAsync(key, field, convert, value).join();
+    public <T> void hset(final String key, final String field, final Convert convert0, final T value) {
+        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        map.fastPut(key, (convert0 == null ? convert : convert0).convertToBytes(objValueType, value));
     }
 
     @Override
     public <T> void hset(final String key, final String field, final Type type, final T value) {
-        hsetAsync(key, field, type, value).join();
+        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        map.fastPut(key, this.convert.convertToBytes(type, value));
     }
 
     @Override
-    public <T> void hset(final String key, final String field, final Convert convert, final Type type, final T value) {
-        hsetAsync(key, field, convert, type, value).join();
+    public <T> void hset(final String key, final String field, final Convert convert0, final Type type, final T value) {
+        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        map.fastPut(key, (convert0 == null ? convert : convert0).convertToBytes(type, value));
     }
 
     @Override
     public void hsetString(final String key, final String field, final String value) {
-        hsetStringAsync(key, field, value).join();
+        RMap<String, String> map = redisson.getMap(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        map.fastPut(key, value);
     }
 
     @Override
     public void hsetLong(final String key, final String field, final long value) {
-        hsetLongAsync(key, field, value).join();
+        RMap<String, Long> map = redisson.getMap(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        map.fastPut(key, value);
     }
 
     @Override
     public void hmset(final String key, final Serializable... values) {
-        hmsetAsync(key, values).join();
+        Map<String, byte[]> vals = new HashMap<>();
+        for (int i = 0; i < values.length; i += 2) {
+            vals.put(String.valueOf(values[i]), this.convert.convertToBytes(values[i + 1]));
+        }
+        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        map.putAll(vals);
     }
 
     @Override
     public List<Serializable> hmget(final String key, final Type type, final String... fields) {
-        return hmgetAsync(key, type, fields).join();
+        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        Map<String, byte[]> rs = map.getAll(Set.of(fields));
+        List<Serializable> list = new ArrayList<>(fields.length);
+        for (String field : fields) {
+            byte[] bs = rs.get(field);
+            if (bs == null) {
+                list.add(null);
+            } else {
+                list.add(convert.convertFrom(type, bs));
+            }
+        }
+        return list;
     }
 
     @Override
     public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit, String pattern) {
-        return (Map) hmapAsync(key, type, offset, limit, pattern).join();
+        RMap<String, byte[]> map = redisson.getMap(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return null; //待实现
     }
 
     @Override
@@ -981,44 +1002,72 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     //--------------------- collection ------------------------------  
     @Override
     public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
-        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
-            if (t == null) return CompletableFuture.completedFuture(null);
-            if (new String((byte[]) t).contains("list")) { //list
-                return send("LLEN", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
+        return completableFuture(redisson.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
+            if (String.valueOf(type).contains("list")) {
+                return redisson.getList(key).sizeAsync();
             } else {
-                return send("SCARD", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8));
+                return redisson.getSet(key).sizeAsync();
             }
-        });
+        }));
     }
 
     @Override
     public int getCollectionSize(String key) {
-        return getCollectionSizeAsync(key).join();
+        String type = redisson.getScript().eval(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE);
+        if (String.valueOf(type).contains("list")) {
+            return redisson.getList(key).size();
+        } else {
+            return redisson.getSet(key).size();
+        }
     }
 
     @Override
     @Deprecated
     public CompletableFuture<Collection<V>> getCollectionAsync(String key) {
-        return (CompletableFuture) send("TYPE", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
-            if (t == null) return CompletableFuture.completedFuture(null);
-            if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.OBJECT, (Type) null, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'});
-            } else {
-                return send("SMEMBERS", CacheEntryType.OBJECT, (Type) null, true, key, key.getBytes(StandardCharsets.UTF_8));
-            }
-        });
+        return getCollectionAsync(key, objValueType);
     }
 
     @Override
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
-        return (CompletableFuture) send("TYPE", null, componentType, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
-            if (t == null) return CompletableFuture.completedFuture(null);
-            if (new String((byte[]) t).contains("list")) { //list
-                return send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'});
+        return completableFuture(redisson.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
+            if (String.valueOf(type).contains("list")) {
+                return (CompletionStage) redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
+                    if (list == null || list.isEmpty()) return list;
+                    List<T> rs = new ArrayList<>();
+                    for (Object item : list) {
+                        byte[] bs = (byte[]) item;
+                        if (bs == null) {
+                            rs.add(null);
+                        } else {
+                            rs.add(convert.convertFrom(componentType, bs));
+                        }
+                    }
+                    return rs;
+                });
             } else {
-                return send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(StandardCharsets.UTF_8));
+                return (CompletionStage) redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
+                    if (set == null || set.isEmpty()) return set;
+                    Set<T> rs = new HashSet<>();
+                    for (Object item : set) {
+                        byte[] bs = (byte[]) item;
+                        if (bs == null) {
+                            rs.add(null);
+                        } else {
+                            rs.add(convert.convertFrom(componentType, bs));
+                        }
+                    }
+                    return rs;
+                });
             }
-        });
+        }));
+//        return (CompletableFuture) send("TYPE", null, componentType, key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
+//            if (t == null) return CompletableFuture.completedFuture(null);
+//            if (new String((byte[]) t).contains("list")) { //list
+//                return send("LRANGE", CacheEntryType.OBJECT, componentType, false, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'});
+//            } else {
+//                return send("SMEMBERS", CacheEntryType.OBJECT, componentType, true, key, key.getBytes(StandardCharsets.UTF_8));
+//            }
+//        });
     }
 
     @Override
@@ -1321,56 +1370,66 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public <T> boolean existsSetItem(String key, final Type componentType, T value) {
-        return existsSetItemAsync(key, componentType, value).join();
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.contains(convert.convertToBytes(componentType, value));
     }
 
     @Override
     @Deprecated
     public CompletableFuture<Boolean> existsSetItemAsync(String key, V value) {
-        return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.containsAsync(convert.convertToBytes(objValueType, value)));
     }
 
     @Override
     public <T> CompletableFuture<Boolean> existsSetItemAsync(String key, final Type componentType, T value) {
-        return (CompletableFuture) send("SISMEMBER", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.containsAsync(convert.convertToBytes(componentType, value)));
     }
 
     @Override
     public boolean existsStringSetItem(String key, String value) {
-        return existsStringSetItemAsync(key, value).join();
+        final RSet<String> bucket = redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return bucket.contains(value);
     }
 
     @Override
     public CompletableFuture<Boolean> existsStringSetItemAsync(String key, String value) {
-        return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        final RSet<String> bucket = redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return completableFuture(bucket.containsAsync(value));
     }
 
     @Override
     public boolean existsLongSetItem(String key, long value) {
-        return existsLongSetItemAsync(key, value).join();
+        final RSet<Long> bucket = redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return bucket.contains(value);
     }
 
     @Override
     public CompletableFuture<Boolean> existsLongSetItemAsync(String key, long value) {
-        return (CompletableFuture) send("SISMEMBER", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        final RSet<Long> bucket = redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return completableFuture(bucket.containsAsync(value));
     }
 
     //--------------------- appendListItem ------------------------------  
     @Override
     @Deprecated
     public CompletableFuture<Void> appendListItemAsync(String key, V value) {
-        return (CompletableFuture) send("RPUSH", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        final RList<byte[]> bucket = redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.addAsync(convert.convertToBytes(objValueType, value)).thenApply(r -> null));
     }
 
     @Override
     public <T> CompletableFuture<Void> appendListItemAsync(String key, final Type componentType, T value) {
-        return (CompletableFuture) send("RPUSH", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        final RList<byte[]> bucket = redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.addAsync(convert.convertToBytes(componentType, value)).thenApply(r -> null));
     }
 
     @Override
     @Deprecated
     public void appendListItem(String key, V value) {
-        appendListItemAsync(key, value).join();
+        final RList<byte[]> bucket = redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        bucket.add(convert.convertToBytes(objValueType, value));
     }
 
     @Override
@@ -1407,210 +1466,251 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     @Override
     @Deprecated
     public CompletableFuture<Integer> removeListItemAsync(String key, V value) {
-        return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        return completableFuture(redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertTo(objValueType, value)).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
     public <T> CompletableFuture<Integer> removeListItemAsync(String key, final Type componentType, T value) {
-        return (CompletableFuture) send("LREM", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        return completableFuture(redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertTo(componentType, value)).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
     @Deprecated
     public int removeListItem(String key, V value) {
-        return removeListItemAsync(key, value).join();
+        final RList<byte[]> bucket = redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.add(convert.convertToBytes(objValueType, value)) ? 1 : 0;
     }
 
     @Override
     public <T> int removeListItem(String key, final Type componentType, T value) {
-        return removeListItemAsync(key, componentType, value).join();
+        final RList<byte[]> bucket = redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.add(convert.convertToBytes(componentType, value)) ? 1 : 0;
     }
 
     @Override
     public CompletableFuture<Integer> removeStringListItemAsync(String key, String value) {
-        return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        return completableFuture(redisson.getList(key, org.redisson.client.codec.StringCodec.INSTANCE).removeAsync(value).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
     public int removeStringListItem(String key, String value) {
-        return removeStringListItemAsync(key, value).join();
+        return redisson.getList(key, org.redisson.client.codec.StringCodec.INSTANCE).remove(value) ? 1 : 0;
     }
 
     @Override
     public CompletableFuture<Integer> removeLongListItemAsync(String key, long value) {
-        return (CompletableFuture) send("LREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        return completableFuture(redisson.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).removeAsync((Object) value).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
     public int removeLongListItem(String key, long value) {
-        return removeLongListItemAsync(key, value).join();
+        return redisson.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).remove((Object) value) ? 1 : 0;
     }
 
     //--------------------- appendSetItem ------------------------------  
     @Override
     @Deprecated
     public CompletableFuture<Void> appendSetItemAsync(String key, V value) {
-        return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.addAsync(convert.convertToBytes(objValueType, value)).thenApply(r -> null));
     }
 
     @Override
     public <T> CompletableFuture<Void> appendSetItemAsync(String key, Type componentType, T value) {
-        return (CompletableFuture) send("SADD", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.addAsync(convert.convertToBytes(componentType, value)).thenApply(r -> null));
     }
 
     @Override
     public <T> CompletableFuture<T> spopSetItemAsync(String key, Type componentType) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.OBJECT, componentType, key, key.getBytes(StandardCharsets.UTF_8));
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.removeRandomAsync().thenApply(bs -> bs == null ? null : convert.convertFrom(componentType, bs)));
     }
 
     @Override
     public <T> CompletableFuture<List<T>> spopSetItemAsync(String key, int count, Type componentType) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.OBJECT, componentType, key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(count).getBytes(StandardCharsets.UTF_8));
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.removeRandomAsync(count).thenApply((Set<byte[]> bslist) -> {
+            if (bslist == null || bslist.isEmpty()) return new ArrayList<>();
+            List<T> rs = new ArrayList<>();
+            for (byte[] bs : bslist) {
+                rs.add(convert.convertFrom(componentType, bs));
+            }
+            return rs;
+        }));
     }
 
     @Override
     public CompletableFuture<String> spopStringSetItemAsync(String key) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.STRING, String.class, key, key.getBytes(StandardCharsets.UTF_8));
+        final RSet<String> bucket = redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return completableFuture(bucket.removeRandomAsync());
     }
 
     @Override
     public CompletableFuture<List<String>> spopStringSetItemAsync(String key, int count) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.STRING, String.class, key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(count).getBytes(StandardCharsets.UTF_8));
+        final RSet<String> bucket = redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return completableFuture(bucket.removeRandomAsync(count).thenApply(r -> r == null ? null : new ArrayList<>(r)));
     }
 
     @Override
     public CompletableFuture<Long> spopLongSetItemAsync(String key) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.LONG, long.class, key, key.getBytes(StandardCharsets.UTF_8));
+        final RSet<Long> bucket = redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return completableFuture(bucket.removeRandomAsync());
     }
 
     @Override
     public CompletableFuture<List<Long>> spopLongSetItemAsync(String key, int count) {
-        return (CompletableFuture) send("SPOP", CacheEntryType.LONG, long.class, key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(count).getBytes(StandardCharsets.UTF_8));
+        final RSet<Long> bucket = redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return completableFuture(bucket.removeRandomAsync(count).thenApply(r -> r == null ? null : new ArrayList<>(r)));
     }
 
     @Override
     @Deprecated
     public void appendSetItem(String key, V value) {
-        appendSetItemAsync(key, value).join();
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        bucket.add(convert.convertToBytes(objValueType, value));
     }
 
     @Override
     public <T> void appendSetItem(String key, final Type componentType, T value) {
-        appendSetItemAsync(key, componentType, value).join();
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        bucket.add(convert.convertToBytes(componentType, value));
     }
 
     @Override
     public <T> T spopSetItem(String key, final Type componentType) {
-        return (T) spopSetItemAsync(key, componentType).join();
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        byte[] bs = bucket.removeRandom();
+        return bs == null ? null : convert.convertFrom(componentType, bs);
     }
 
     @Override
     public <T> List<T> spopSetItem(String key, int count, final Type componentType) {
-        return (List) spopSetItemAsync(key, count, componentType).join();
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        Set< byte[]> bslist = bucket.removeRandom(count);
+        List<T> rs = new ArrayList<>();
+        if (bslist == null) return rs;
+        for (byte[] bs : bslist) {
+            rs.add(convert.convertFrom(componentType, bs));
+        }
+        return rs;
     }
 
     @Override
     public String spopStringSetItem(String key) {
-        return spopStringSetItemAsync(key).join();
+        final RSet<String> bucket = redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return bucket.removeRandom();
     }
 
     @Override
     public List<String> spopStringSetItem(String key, int count) {
-        return spopStringSetItemAsync(key, count).join();
+        final RSet<String> bucket = redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        Set<String> rs = bucket.removeRandom(count);
+        return rs == null ? null : new ArrayList<>(rs);
     }
 
     @Override
     public Long spopLongSetItem(String key) {
-        return spopLongSetItemAsync(key).join();
+        final RSet<Long> bucket = redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return bucket.removeRandom();
     }
 
     @Override
     public List<Long> spopLongSetItem(String key, int count) {
-        return spopLongSetItemAsync(key, count).join();
+        final RSet<Long> bucket = redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        Set<Long> rs = bucket.removeRandom(count);
+        return rs == null ? null : new ArrayList<>(rs);
     }
 
     @Override
     public CompletableFuture<Void> appendStringSetItemAsync(String key, String value) {
-        return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        final RSet<String> bucket = redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return completableFuture(bucket.addAsync(value).thenApply(r -> null));
     }
 
     @Override
     public void appendStringSetItem(String key, String value) {
-        appendStringSetItemAsync(key, value).join();
+        final RSet<String> bucket = redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        bucket.add(value);
     }
 
     @Override
     public CompletableFuture<Void> appendLongSetItemAsync(String key, long value) {
-        return (CompletableFuture) send("SADD", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        final RSet<Long> bucket = redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        return completableFuture(bucket.addAsync(value).thenApply(r -> null));
     }
 
     @Override
     public void appendLongSetItem(String key, long value) {
-        appendLongSetItemAsync(key, value).join();
+        final RSet<Long> bucket = redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
+        bucket.add(value);
     }
 
     //--------------------- removeSetItem ------------------------------  
     @Override
     @Deprecated
     public CompletableFuture<Integer> removeSetItemAsync(String key, V value) {
-        return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, (Type) null, value));
+        return completableFuture(redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertTo(objValueType, value)).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
     public <T> CompletableFuture<Integer> removeSetItemAsync(String key, final Type componentType, T value) {
-        return (CompletableFuture) send("SREM", null, componentType, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.OBJECT, (Convert) null, componentType, value));
+        return completableFuture(redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertTo(componentType, value)).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
     @Deprecated
     public int removeSetItem(String key, V value) {
-        return removeSetItemAsync(key, value).join();
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.remove(convert.convertToBytes(objValueType, value)) ? 1 : 0;
     }
 
     @Override
     public <T> int removeSetItem(String key, final Type componentType, T value) {
-        return removeSetItemAsync(key, componentType, value).join();
+        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.remove(convert.convertToBytes(componentType, value)) ? 1 : 0;
     }
 
     @Override
     public CompletableFuture<Integer> removeStringSetItemAsync(String key, String value) {
-        return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.STRING, (Convert) null, (Type) null, value));
+        return completableFuture(redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).removeAsync(value).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
     public int removeStringSetItem(String key, String value) {
-        return removeStringSetItemAsync(key, value).join();
+        return redisson.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).remove(value) ? 1 : 0;
     }
 
     @Override
     public CompletableFuture<Integer> removeLongSetItemAsync(String key, long value) {
-        return (CompletableFuture) send("SREM", null, (Type) null, key, key.getBytes(StandardCharsets.UTF_8), formatValue(CacheEntryType.LONG, (Convert) null, (Type) null, value));
+        return completableFuture(redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).removeAsync(value).thenApply(r -> r ? 1 : 0));
     }
 
     @Override
     public int removeLongSetItem(String key, long value) {
-        return removeLongSetItemAsync(key, value).join();
+        return redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).remove(value) ? 1 : 0;
     }
 
     //--------------------- queryKeys ------------------------------  
     @Override
     public List<String> queryKeys() {
-        return queryKeysAsync().join();
+        return redisson.getKeys().getKeysStream().collect(Collectors.toList());
     }
 
     @Override
     public List<String> queryKeysStartsWith(String startsWith) {
-        return queryKeysStartsWithAsync(startsWith).join();
+        return redisson.getKeys().getKeysStreamByPattern("^" + startsWith + ".*").collect(Collectors.toList());
     }
 
     @Override
     public List<String> queryKeysEndsWith(String endsWith) {
-        return queryKeysEndsWithAsync(endsWith).join();
+        return redisson.getKeys().getKeysStreamByPattern(".*" + endsWith + "$").collect(Collectors.toList());
     }
 
     @Override
     public byte[] getBytes(final String key) {
-        return getBytesAsync(key).join();
+        final RBucket<byte[]> bucket = redisson.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.get();
     }
 
     @Override
