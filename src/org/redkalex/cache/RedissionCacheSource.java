@@ -140,7 +140,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
             if (t != null) {
                 future.completeExceptionally(t);
             } else {
-                future.complete(t);
+                future.complete(r);
             }
         });
         return future;
