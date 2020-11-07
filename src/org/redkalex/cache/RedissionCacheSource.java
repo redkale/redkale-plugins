@@ -747,25 +747,25 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     @Override
     public long hincr(final String key, String field) {
         RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
-        return map.addAndGet(key, 1L);
+        return map.addAndGet(field, 1L);
     }
 
     @Override
     public long hincr(final String key, String field, long num) {
         RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
-        return map.addAndGet(key, num);
+        return map.addAndGet(field, num);
     }
 
     @Override
     public long hdecr(final String key, String field) {
         RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
-        return map.addAndGet(key, -1L);
+        return map.addAndGet(field, -1L);
     }
 
     @Override
     public long hdecr(final String key, String field, long num) {
         RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
-        return map.addAndGet(key, num);
+        return map.addAndGet(field, num);
     }
 
     @Override
