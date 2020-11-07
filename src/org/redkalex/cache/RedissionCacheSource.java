@@ -160,6 +160,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
             source.removeAsync("stritem2");
             source.setStringAsync("stritem1", "value1");
             source.setStringAsync("stritem2", "value2");
+            System.out.println("stritem开头的key有两个: " + source.queryKeysStartsWith("stritem"));
             System.out.println("[有值] MGET : " + source.getStringMap("stritem1", "stritem2"));
             System.out.println("[有值] MGET : " + Arrays.toString(source.getStringArray("stritem1", "stritem2")));
 
@@ -1768,12 +1769,12 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public List<String> queryKeysStartsWith(String startsWith) {
-        return redisson.getKeys().getKeysStreamByPattern("^" + startsWith + ".*").collect(Collectors.toList());
+        return redisson.getKeys().getKeysStreamByPattern(startsWith + "*").collect(Collectors.toList());
     }
 
     @Override
     public List<String> queryKeysEndsWith(String endsWith) {
-        return redisson.getKeys().getKeysStreamByPattern(".*" + endsWith + "$").collect(Collectors.toList());
+        return redisson.getKeys().getKeysStreamByPattern("*" + endsWith).collect(Collectors.toList());
     }
 
     @Override
