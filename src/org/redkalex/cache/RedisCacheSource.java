@@ -150,6 +150,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
             source.removeAsync("stritem2");
             source.setStringAsync("stritem1", "value1");
             source.setStringAsync("stritem2", "value2");
+            System.out.println("stritem开头的key有两个: " + source.queryKeysStartsWith("stritem"));
             System.out.println("[有值] MGET : " + source.getStringMap("stritem1", "stritem2"));
             System.out.println("[有值] MGET : " + Arrays.toString(source.getStringArray("stritem1", "stritem2")));
 
@@ -251,26 +252,26 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
             source.hmset("hmap", "sm", (HashMap) Utility.ofMap("a", "aa", "b", "bb"));
             System.out.println("hmap.sm 值 : " + source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING));
             System.out.println("hmap.[key1,key2,key3] 值 : " + source.hmget("hmap", String.class, "key1", "key2", "key3"));
-            System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
+            System.out.println("hmap.keys 四值 : " + source.hkeys("hmap"));
             source.hremove("hmap", "key1", "key3");
-            System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
+            System.out.println("hmap.keys 两值 : " + source.hkeys("hmap"));
             System.out.println("hmap.key2 值 : " + source.hgetString("hmap", "key2"));
-            System.out.println("hmap列表大小 : " + source.hsize("hmap"));
+            System.out.println("hmap列表(2)大小 : " + source.hsize("hmap"));
 
             source.remove("hmaplong");
             source.hincr("hmaplong", "key1", 10);
             source.hsetLong("hmaplong", "key2", 30);
-            System.out.println("hmaplong.所有值 : " + source.hmap("hmaplong", long.class, 0, 10));
+            System.out.println("hmaplong.所有两值 : " + source.hmap("hmaplong", long.class, 0, 10));
 
             source.remove("hmapstr");
             source.hsetString("hmapstr", "key1", "str10");
             source.hsetString("hmapstr", "key2", null);
-            System.out.println("hmapstr.所有值 : " + source.hmap("hmapstr", String.class, 0, 10));
+            System.out.println("hmapstr.所有一值 : " + source.hmap("hmapstr", String.class, 0, 10));
 
             source.remove("hmapstrmap");
             source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
             source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
-            System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*"));
+            System.out.println("hmapstrmap.无值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*"));
 
             source.remove("popset");
             source.appendStringSetItem("popset", "111");

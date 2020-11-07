@@ -262,26 +262,26 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
             source.hmset("hmap", "sm", (HashMap) Utility.ofMap("a", "aa", "b", "bb"));
             System.out.println("hmap.sm 值 : " + source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING));
             System.out.println("hmap.[key1,key2,key3] 值 : " + source.hmget("hmap", String.class, "key1", "key2", "key3"));
-            System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
+            System.out.println("hmap.keys 四值 : " + source.hkeys("hmap"));
             source.hremove("hmap", "key1", "key3");
-            System.out.println("hmap.keys 值 : " + source.hkeys("hmap"));
+            System.out.println("hmap.keys 两值 : " + source.hkeys("hmap"));
             System.out.println("hmap.key2 值 : " + source.hgetString("hmap", "key2"));
-            System.out.println("hmap列表大小 : " + source.hsize("hmap"));
+            System.out.println("hmap列表(2)大小 : " + source.hsize("hmap"));
 
             source.remove("hmaplong");
             source.hincr("hmaplong", "key1", 10);
             source.hsetLong("hmaplong", "key2", 30);
-            System.out.println("hmaplong.所有值 : " + source.hmap("hmaplong", long.class, 0, 10));
+            System.out.println("hmaplong.所有两值 : " + source.hmap("hmaplong", long.class, 0, 10));
 
             source.remove("hmapstr");
             source.hsetString("hmapstr", "key1", "str10");
             source.hsetString("hmapstr", "key2", null);
-            System.out.println("hmapstr.所有值 : " + source.hmap("hmapstr", String.class, 0, 10));
+            System.out.println("hmapstr.所有一值 : " + source.hmap("hmapstr", String.class, 0, 10));
 
             source.remove("hmapstrmap");
             source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
             source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
-            System.out.println("hmapstrmap.所有值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*"));
+            System.out.println("hmapstrmap.无值 : " + source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*"));
 
             source.remove("popset");
             source.appendStringSetItem("popset", "111");
@@ -731,13 +731,13 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public int hremove(final String key, String... fields) {
-        RMap<String, ?> map = redisson.getMap(key);
+        RMap<String, ?> map = redisson.getMap(key, MapByteArrayCodec.instance);
         return (int) map.fastRemove(fields);
     }
 
     @Override
     public int hsize(final String key) {
-        return redisson.getMap(key).size();
+        return redisson.getMap(key, MapByteArrayCodec.instance).size();
     }
 
     @Override
@@ -771,7 +771,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     @Override
     public boolean hexists(final String key, String field) {
-        return redisson.getMap(key).containsKey(field);
+        return redisson.getMap(key, MapByteArrayCodec.instance).containsKey(field);
     }
 
     @Override
@@ -844,7 +844,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
             if (++index < offset) continue;
             if (index >= offset + limit) break;
             String field = it.next();
-            byte[] bs = map.get(key);
+            byte[] bs = map.get(field);
             if (bs != null) rs.put(field, convert.convertFrom(type, bs));
         }
         return rs;
@@ -860,7 +860,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
             if (++index < offset) continue;
             if (index >= offset + limit) break;
             String field = it.next();
-            byte[] bs = map.get(key);
+            byte[] bs = map.get(field);
             if (bs != null) rs.put(field, convert.convertFrom(type, bs));
         }
         return rs;
@@ -1004,7 +1004,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
                 if (++index < offset) continue;
                 if (index >= offset + limit) break;
                 String field = it.next();
-                byte[] bs = map.get(key);
+                byte[] bs = map.get(field);
                 if (bs != null) rs.put(field, convert.convertFrom(type, bs));
             }
             return rs;
@@ -1023,7 +1023,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
                 if (++index < offset) continue;
                 if (index >= offset + limit) break;
                 String field = it.next();
-                byte[] bs = map.get(key);
+                byte[] bs = map.get(field);
                 if (bs != null) rs.put(field, convert.convertFrom(type, bs));
             }
             return rs;
@@ -1554,7 +1554,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     @Override
     public <T> int removeListItem(String key, final Type componentType, T value) {
         final RList<byte[]> bucket = redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        return bucket.add(convert.convertToBytes(componentType, value)) ? 1 : 0;
+        return bucket.remove(convert.convertToBytes(componentType, value)) ? 1 : 0;
     }
 
     @Override
