@@ -89,8 +89,17 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         final List<InetSocketAddress> addresses = new ArrayList<>();
         Map<SocketAddress, byte[]> passwords0 = new HashMap<>();
         for (AnyValue node : conf.getAnyValues("node")) {
-            InetSocketAddress addr = new InetSocketAddress(node.getValue("addr"), node.getIntValue("port"));
-            addresses.add(addr);
+            String addrstr = node.getValue("addr");
+            InetSocketAddress addr = null;
+            if (addrstr.startsWith("redis://")) {
+                addrstr = addrstr.substring("redis://".length());
+                int pos = addrstr.indexOf(':');
+                addr = new InetSocketAddress(addrstr.substring(0, pos), Integer.parseInt(addrstr.substring(pos + 1)));
+                addresses.add(addr);
+            } else {
+                addr = new InetSocketAddress(addrstr, node.getIntValue("port"));
+                addresses.add(addr);
+            }
             String password = node.getValue("password", "").trim();
             if (!password.isEmpty()) passwords0.put(addr, password.getBytes(StandardCharsets.UTF_8));
             String db0 = node.getValue("db", "").trim();
@@ -112,6 +121,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         if (nodes == null || nodes.length == 0) return false;
         for (AnyValue node : nodes) {
             if (node.getValue("addr") != null && node.getValue("port") != null) return true;
+            if (node.getValue("addr") != null && node.getValue("addr").startsWith("redis://")) return true;
         }
         return false;
     }
