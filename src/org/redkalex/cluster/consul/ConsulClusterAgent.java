@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.*;
 import org.redkale.boot.*;
 import org.redkale.convert.json.JsonConvert;
@@ -99,27 +98,25 @@ public class ConsulClusterAgent extends ClusterAgent {
                 return t;
             });
 
-            this.scheduler.scheduleAtFixedRate(() -> {
+            this.scheduler.scheduleWithFixedDelay(() -> {
                 checkApplicationHealth();
                 checkHttpAddressHealth();
-            }, 0, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
-
-            this.scheduler.scheduleAtFixedRate(() -> {
                 loadMqtpAddressHealth();
-            }, 0, ttls * 1000, TimeUnit.MILLISECONDS);
-
-            AtomicInteger offset = new AtomicInteger();
-            for (final ClusterEntry entry : localEntrys.values()) {
-                entry.checkScheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
-                    checkLocalHealth(entry);
-                }, offset.incrementAndGet() * 100, ttls * 1000 * 4 / 5, TimeUnit.MILLISECONDS);
-            }
-            for (final ClusterEntry entry : remoteEntrys.values()) {
-                if (!"SNCP".equalsIgnoreCase(entry.protocol)) continue;
-                entry.checkScheduledFuture = this.scheduler.scheduleAtFixedRate(() -> {
-                    updateSncpTransport(entry);
-                }, offset.incrementAndGet() * 88, ttls * 1000, TimeUnit.MILLISECONDS);  //88错开delay
-            }
+                try {
+                    localEntrys.values().stream().forEach(entry -> {
+                        checkLocalHealth(entry);
+                    });
+                } catch (Exception ex) {
+                    logger.log(Level.SEVERE, "checkLocalHealth check error", ex);
+                }
+                try {
+                    remoteEntrys.values().stream().filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol)).forEach(entry -> {
+                        updateSncpTransport(entry);
+                    });
+                } catch (Exception ex) {
+                    logger.log(Level.SEVERE, "updateSncpTransport check error", ex);
+                }
+            }, 100, Math.max(2000, ttls * 1000 * 4 / 5), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -133,7 +130,7 @@ public class ConsulClusterAgent extends ClusterAgent {
             });
             mqtpkeys.forEach(servicename -> {
                 try {
-                    this.mqtpAddressMap.put(servicename, queryAddress(servicename).get(10, TimeUnit.SECONDS));
+                    this.mqtpAddressMap.put(servicename, queryAddress(servicename).get(3, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "loadMqtpAddressHealth check " + servicename + " error", e);
                 }
@@ -147,7 +144,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         try {
             this.httpAddressMap.keySet().stream().forEach(servicename -> {
                 try {
-                    this.httpAddressMap.put(servicename, queryAddress(servicename).get(10, TimeUnit.SECONDS));
+                    this.httpAddressMap.put(servicename, queryAddress(servicename).get(3, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "checkHttpAddressHealth check " + servicename + " error", e);
                 }
