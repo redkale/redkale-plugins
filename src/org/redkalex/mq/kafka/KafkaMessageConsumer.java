@@ -32,19 +32,23 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     protected boolean reconnecting;
 
+    protected boolean autoCommit;
+
     protected final Object resumeLock = new Object();
 
     public KafkaMessageConsumer(MessageAgent agent, String[] topics, String group,
         MessageProcessor processor, String servers, Properties consumerConfig) {
         super(agent, topics, group, processor);
+        boolean defAutoCommit = !agent.isHashPool();
         final Properties props = new Properties();
         props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerid);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, MessageRecordDeserializer.class);
         props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, "1000");
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, String.valueOf(!agent.isHashPool()));
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, String.valueOf(defAutoCommit));
         props.putAll(consumerConfig);
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
+        this.autoCommit = "true".equalsIgnoreCase(props.getOrDefault(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, String.valueOf(defAutoCommit)).toString());
         this.config = props;
     }
 
@@ -73,9 +77,11 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
         try {
             if (records0 != null && records0.count() > 0) {
-                consumer.commitAsync((map, exp) -> {
-                    if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
-                });
+                if (!this.autoCommit) {
+                    consumer.commitAsync((map, exp) -> {
+                        if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
+                    });
+                }
                 MessageRecord msg = null;
                 try {
                     processor.begin(records0.count());
@@ -108,9 +114,11 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                 if (this.reconnecting) this.reconnecting = false;
                 int count = records.count();
                 if (count == 0) continue;
-                this.consumer.commitAsync((map, exp) -> {
-                    if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
-                });
+                if (!this.autoCommit) {
+                    this.consumer.commitAsync((map, exp) -> {
+                        if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
+                    });
+                }
                 MessageRecord msg = null;
                 try {
                     processor.begin(count);
