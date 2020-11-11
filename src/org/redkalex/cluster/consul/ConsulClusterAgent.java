@@ -98,25 +98,27 @@ public class ConsulClusterAgent extends ClusterAgent {
                 return t;
             });
 
-            this.scheduler.scheduleWithFixedDelay(() -> {
+            //delay为了错开请求
+            this.scheduler.scheduleAtFixedRate(() -> {
                 checkApplicationHealth();
                 checkHttpAddressHealth();
+            }, 18, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+
+            this.scheduler.scheduleAtFixedRate(() -> {
                 loadMqtpAddressHealth();
-                try {
-                    localEntrys.values().stream().forEach(entry -> {
-                        checkLocalHealth(entry);
-                    });
-                } catch (Exception ex) {
-                    logger.log(Level.SEVERE, "checkLocalHealth check error", ex);
-                }
-                try {
-                    remoteEntrys.values().stream().filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol)).forEach(entry -> {
-                        updateSncpTransport(entry);
-                    });
-                } catch (Exception ex) {
-                    logger.log(Level.SEVERE, "updateSncpTransport check error", ex);
-                }
-            }, 100, Math.max(2000, ttls * 1000 * 4 / 5), TimeUnit.MILLISECONDS);
+            }, 88 * 2, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+
+            this.scheduler.scheduleAtFixedRate(() -> {
+                localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
+                    checkLocalHealth(entry);
+                });
+            }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+
+            this.scheduler.scheduleAtFixedRate(() -> {
+                remoteEntrys.values().stream().filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol)).forEach(entry -> {
+                    updateSncpTransport(entry);
+                });
+            }, 188 * 4, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -130,7 +132,7 @@ public class ConsulClusterAgent extends ClusterAgent {
             });
             mqtpkeys.forEach(servicename -> {
                 try {
-                    this.mqtpAddressMap.put(servicename, queryAddress(servicename).get(3, TimeUnit.SECONDS));
+                    this.mqtpAddressMap.put(servicename, queryAddress(servicename).get(10, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "loadMqtpAddressHealth check " + servicename + " error", e);
                 }
@@ -144,7 +146,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         try {
             this.httpAddressMap.keySet().stream().forEach(servicename -> {
                 try {
-                    this.httpAddressMap.put(servicename, queryAddress(servicename).get(3, TimeUnit.SECONDS));
+                    this.httpAddressMap.put(servicename, queryAddress(servicename).get(10, TimeUnit.SECONDS));
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "checkHttpAddressHealth check " + servicename + " error", e);
                 }
@@ -300,7 +302,7 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     @Override
     protected void register(NodeServer ns, String protocol, Service service) {
-        deregister(ns, protocol, service);
+        deregister(ns, protocol, service, false);
         //
         String serviceid = generateServiceId(ns, protocol, service);
         String servicename = generateServiceName(ns, protocol, service);
@@ -319,6 +321,10 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     @Override
     protected void deregister(NodeServer ns, String protocol, Service service) {
+        deregister(ns, protocol, service, true);
+    }
+
+    protected void deregister(NodeServer ns, String protocol, Service service, boolean realcanceled) {
         String serviceid = generateServiceId(ns, protocol, service);
         ClusterEntry currEntry = null;
         for (final ClusterEntry entry : localEntrys.values()) {
@@ -337,7 +343,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
-            if (currEntry != null && currEntry.checkScheduledFuture != null) currEntry.checkScheduledFuture.cancel(true);
+            if (realcanceled) currEntry.canceled = true;
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error", ex);
