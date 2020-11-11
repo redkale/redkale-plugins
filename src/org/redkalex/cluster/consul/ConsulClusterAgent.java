@@ -313,7 +313,12 @@ public class ConsulClusterAgent extends ClusterAgent {
             + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/register", httpHeaders, json).toString(StandardCharsets.UTF_8);
-            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " register error: " + rs);
+            if (rs.isEmpty()) {
+                //需要立马执行下check，否则立即queryAddress可能会得到critical
+                Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + generateCheckId(ns, protocol, service), httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
+            } else {
+                logger.log(Level.SEVERE, serviceid + " register error: " + rs);
+            }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " register error", ex);
         }
