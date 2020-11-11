@@ -39,16 +39,17 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
     public KafkaMessageConsumer(MessageAgent agent, String[] topics, String group,
         MessageProcessor processor, String servers, Properties consumerConfig) {
         super(agent, topics, group, processor);
-        boolean defAutoCommit = !agent.isHashPool();
         final Properties props = new Properties();
         props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerid);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, MessageRecordDeserializer.class);
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");// 当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
         props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, "1000");
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, String.valueOf(defAutoCommit));
+        props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
         props.putAll(consumerConfig);
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
-        this.autoCommit = "true".equalsIgnoreCase(props.getOrDefault(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, String.valueOf(defAutoCommit)).toString());
+        this.autoCommit = "true".equalsIgnoreCase(props.getOrDefault(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true").toString());
         this.config = props;
     }
 
