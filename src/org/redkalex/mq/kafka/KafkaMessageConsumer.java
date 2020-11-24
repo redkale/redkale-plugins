@@ -36,6 +36,10 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     protected final Object resumeLock = new Object();
 
+    protected final boolean finest;
+
+    protected final boolean finer;
+
     public KafkaMessageConsumer(MessageAgent agent, String[] topics, String group,
         MessageProcessor processor, String servers, Properties consumerConfig) {
         super(agent, topics, group, processor);
@@ -51,6 +55,8 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         this.autoCommit = "true".equalsIgnoreCase(props.getOrDefault(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true").toString());
         this.config = props;
+        this.finest = logger.isLoggable(Level.FINEST);
+        this.finer = logger.isLoggable(Level.FINER);
     }
 
     public void retryConnect() {
@@ -120,6 +126,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                         if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
                     });
                 }
+                long s = System.currentTimeMillis();
                 MessageRecord msg = null;
                 try {
                     processor.begin(count);
@@ -130,6 +137,12 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     processor.commit();
                 } catch (Throwable e) {
                     logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
+                }
+                long e = System.currentTimeMillis() - s;
+                if (e > 100 || finer) {
+                    logger.log(Level.FINER, "Kafka.consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
+                } else if (finest) {
+                    logger.log(Level.FINEST, "Kafka.consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
                 }
             }
             if (this.consumer != null) this.consumer.close();
