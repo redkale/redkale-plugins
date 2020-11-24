@@ -74,13 +74,13 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         if (this.producer == null) throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") not started when send " + message);
         final CompletableFuture future = new CompletableFuture();
         Integer partition = null;
-//        if (this.partitions > 0) {    //不指定 partition， 设计上以对等为主
-//            if (message.getGroupid() != null && !message.getGroupid().isEmpty()) {
-//                partition = message.getGroupid().hashCode() % this.partitions;
-//            } else if (message.getUserid() != 0) {
-//                partition = message.getUserid() % this.partitions;
-//            }
-//        }
+        if (this.partitions > 0) {    //不指定 partition则设计上需要以对等为主
+            if (message.getGroupid() != null && !message.getGroupid().isEmpty()) {
+                partition = message.getGroupid().hashCode() % this.partitions;
+            } else if (message.getUserid() != 0) {
+                partition = message.getUserid() % this.partitions;
+            }
+        }
         producer.send(new ProducerRecord<>(message.getTopic(), partition, null, message), (metadata, exp) -> {
             if (exp != null) {
                 future.completeExceptionally(exp);
