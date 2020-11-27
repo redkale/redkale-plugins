@@ -351,7 +351,7 @@ public class ConsulClusterAgent extends ClusterAgent {
             if (realcanceled) currEntry.canceled = true;
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, serviceid + " deregister error", ex);
+            logger.log(Level.SEVERE, serviceid + " deregister error，protocol=" + protocol + ", service=" + service + ", currEntry=" + currEntry, ex);
         }
     }
 
