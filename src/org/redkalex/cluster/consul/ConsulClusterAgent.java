@@ -348,7 +348,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
         try {
             String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString(StandardCharsets.UTF_8);
-            if (realcanceled) currEntry.canceled = true;
+            if (realcanceled && currEntry != null) currEntry.canceled = true;
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error，protocol=" + protocol + ", service=" + service + ", currEntry=" + currEntry, ex);
