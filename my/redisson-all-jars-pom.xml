@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.redkale.mq.pulsar</groupId>
     <artifactId>redisson-clients</artifactId>
-    <version>3.13.6</version>
+    <version>3.14.0</version>
     <packaging>jar</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -15,7 +15,7 @@
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson</artifactId>
-            <version>3.13.6</version>
+            <version>3.14.0</version>
         </dependency>
     </dependencies>
     
