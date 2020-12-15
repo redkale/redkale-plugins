@@ -141,7 +141,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                 long e = System.currentTimeMillis() - s;
                 if (e > 100 && finer) {
                     logger.log(Level.FINER, "Kafka.consumer (mq.count = " + count + ", mq.costs = " + e + " ms)， msg=" + msg);
-                } else if (finest) {
+                } else if (finest && e > 5) {
                     logger.log(Level.FINEST, "Kafka.consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
                 }
             }
