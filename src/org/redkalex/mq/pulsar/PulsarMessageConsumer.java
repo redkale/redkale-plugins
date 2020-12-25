@@ -89,9 +89,10 @@ public class PulsarMessageConsumer extends MessageConsumer implements Runnable {
                 this.consumer.acknowledgeAsync(pulsarmsgs).whenComplete((r, exp) -> {
                     if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + localmsg, exp);
                 });
+                long s = System.currentTimeMillis();
                 MessageRecord msg = null;
                 try {
-                    processor.begin(pulsarmsgs.size());
+                    processor.begin(pulsarmsgs.size(), s);
                     for (Message<MessageRecord> mmr : pulsarmsgs) {
                         msg = mmr.getValue();
                         processor.process(msg, null);

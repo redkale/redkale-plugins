@@ -89,9 +89,10 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                         if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
                     });
                 }
+                long s = System.currentTimeMillis();
                 MessageRecord msg = null;
                 try {
-                    processor.begin(records0.count());
+                    processor.begin(records0.count(), s);
                     for (ConsumerRecord<String, MessageRecord> r : records0) {
                         msg = r.value();
                         processor.process(msg, null);
@@ -129,7 +130,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                 long s = System.currentTimeMillis();
                 MessageRecord msg = null;
                 try {
-                    processor.begin(count);
+                    processor.begin(count, s);
                     for (ConsumerRecord<String, MessageRecord> r : records) {
                         msg = r.value();
                         processor.process(msg, null);
