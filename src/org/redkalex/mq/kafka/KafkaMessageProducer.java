@@ -38,6 +38,10 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
 
     protected final Object resumeLock = new Object();
 
+    protected final boolean finest;
+
+    protected final boolean finer;
+
     public KafkaMessageProducer(String name, MessageAgent messageAgent, String servers, int partitions, Properties producerConfig) {
         super(name, messageAgent.getLogger());
         this.partitions = partitions;
@@ -55,6 +59,8 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         props.putAll(producerConfig);
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         this.config = props;
+        this.finest = logger.isLoggable(Level.FINEST);
+        this.finer = logger.isLoggable(Level.FINER);
     }
 
     public void retryConnect() {
@@ -81,11 +87,19 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
                 partition = message.getUserid() % this.partitions;
             }
         }
+        final Integer partition0 = partition;
         producer.send(new ProducerRecord<>(message.getTopic(), partition, null, message), (metadata, exp) -> {
             if (exp != null) {
                 future.completeExceptionally(exp);
             } else {
                 future.complete(null);
+            }
+
+            long e = System.currentTimeMillis() - message.getCreatetime();
+            if (e > 100 && finer) {
+                logger.log(Level.FINER, "Kafka.producer (mq.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+            } else if (finest && e > 5) {
+                logger.log(Level.FINEST, "Kafka.producer (mq.cost = " + e + " ms)，partition=" + partition0);
             }
         });
         return future;
