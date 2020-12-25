@@ -42,6 +42,8 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
 
     protected final boolean finer;
 
+    protected final boolean fine;
+
     public KafkaMessageProducer(String name, MessageAgent messageAgent, String servers, int partitions, Properties producerConfig) {
         super(name, messageAgent.getLogger());
         this.partitions = partitions;
@@ -61,6 +63,7 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         this.config = props;
         this.finest = logger.isLoggable(Level.FINEST);
         this.finer = logger.isLoggable(Level.FINER);
+        this.fine = logger.isLoggable(Level.FINE);
     }
 
     public void retryConnect() {
@@ -96,7 +99,9 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
             }
 
             long e = System.currentTimeMillis() - message.getCreatetime();
-            if (e > 100 && finer) {
+            if (e > 1000 && fine) {
+                logger.log(Level.FINE, "Kafka.producer (mqs.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+            } else if (e > 100 && finer) {
                 logger.log(Level.FINER, "Kafka.producer (mq.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (finest && e > 5) {
                 logger.log(Level.FINEST, "Kafka.producer (mq.cost = " + e + " ms)，partition=" + partition0);

@@ -40,6 +40,8 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     protected final boolean finer;
 
+    protected final boolean fine;
+
     public KafkaMessageConsumer(MessageAgent agent, String[] topics, String group,
         MessageProcessor processor, String servers, Properties consumerConfig) {
         super(agent, topics, group, processor);
@@ -57,6 +59,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         this.config = props;
         this.finest = logger.isLoggable(Level.FINEST);
         this.finer = logger.isLoggable(Level.FINER);
+        this.fine = logger.isLoggable(Level.FINE);
     }
 
     public void retryConnect() {
@@ -140,7 +143,9 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
                 }
                 long e = System.currentTimeMillis() - s;
-                if (e > 100 && finer) {
+                if (e > 1000 && fine) {
+                    logger.log(Level.FINE, "Kafka.consumer (mqs.count = " + count + ", mq.costs = " + e + " ms)， msg=" + msg);
+                } else if (e > 100 && finer) {
                     logger.log(Level.FINER, "Kafka.consumer (mq.count = " + count + ", mq.costs = " + e + " ms)， msg=" + msg);
                 } else if (finest && e > 5) {
                     logger.log(Level.FINEST, "Kafka.consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
