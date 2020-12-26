@@ -127,7 +127,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                 if (count == 0) continue;
                 if (!this.autoCommit) {
                     this.consumer.commitAsync((map, exp) -> {
-                        if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
+                        if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer commitAsync error: " + map, exp);
                     });
                 }
                 long s = System.currentTimeMillis();
