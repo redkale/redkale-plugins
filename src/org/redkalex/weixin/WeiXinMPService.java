@@ -64,6 +64,9 @@ public class WeiXinMPService implements Service {
     @Resource(name = "property.weixin.mp.token")
     protected String mptoken = "";
 
+    @Resource(name = "property.weixin.mp.miniprogram")
+    protected boolean miniprogram;
+
     @Override
     public void init(AnyValue conf) {
         if (this.conf != null && !this.conf.isEmpty()) { //存在微信公众号配置
@@ -83,7 +86,7 @@ public class WeiXinMPService implements Service {
                     this.mptoken = defElement.mptoken;
                 }
                 this.appidElements.values().forEach(element -> clientidElements.put(element.clientid, element));
-                
+
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init weixinmp conf error", e);
             }
@@ -114,25 +117,27 @@ public class WeiXinMPService implements Service {
     }
 
     public Map<String, String> getMPUserTokenByCode(String code) throws IOException {
-        return getMPUserTokenByCode(appid, appsecret, code);
+        return getMPUserTokenByCode(miniprogram, appid, appsecret, code);
     }
 
     public Map<String, String> getMPUserTokenByCode(String clientid, String code) throws IOException {
         MpElement element = this.clientidElements.get(clientid);
-        return getMPUserTokenByCode(element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code);
+        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code);
     }
 
     public Map<String, String> getMPUserTokenByCodeAndAppid(String appid, String code) throws IOException {
         MpElement element = this.appidElements.get(appid);
-        return getMPUserTokenByCode(element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code);
+        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code);
     }
 
-    private Map<String, String> getMPUserTokenByCode(String appid0, String appsecret0, String code) throws IOException {
+    private Map<String, String> getMPUserTokenByCode(boolean miniprogram, String appid0, String appsecret0, String code) throws IOException {
         if (code != null) code = code.replace("\"", "").replace("'", "");
         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid0 + "&secret=" + appsecret0 + "&code=" + code + "&grant_type=authorization_code";
+        if (miniprogram) url = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid0 + "&secret=" + appsecret0 + "&js_code=" + code + "&grant_type=authorization_code";
         String json = getHttpContent(url);
         if (finest) logger.finest(url + "--->" + json);
         Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
+        if (miniprogram) return jsonmap;
         return getMPUserTokenByOpenid(jsonmap.get("access_token"), jsonmap.get("openid"));
     }
 
@@ -186,17 +191,20 @@ public class WeiXinMPService implements Service {
 
         public String clientid = "";
 
+        public String mptoken = "";
+
         public String appid = "";
 
         public String appsecret = "";
 
-        public String mptoken = "";
+        public boolean miniprogram = false;
 
         public static Map<String, MpElement> create(Logger logger, Properties properties, File home) {
             String def_clientid = properties.getProperty("weixin.mp.clientid", "").trim();
             String def_appid = properties.getProperty("weixin.mp.appid", "").trim();
             String def_appsecret = properties.getProperty("weixin.mp.appsecret", "").trim();
             String def_mptoken = properties.getProperty("weixin.mp.mptoken", "").trim();
+            boolean def_miniprogram = "true".equalsIgnoreCase(properties.getProperty("weixin.mp.miniprogram", "false").trim());
 
             final Map<String, MpElement> map = new HashMap<>();
             properties.keySet().stream().filter(x -> x.toString().startsWith("weixin.mp.") && x.toString().endsWith(".appid")).forEach(appid_key -> {
@@ -206,7 +214,7 @@ public class WeiXinMPService implements Service {
                 String appid = properties.getProperty(prefix + ".appid", def_appid).trim();
                 String appsecret = properties.getProperty(prefix + ".appsecret", def_appsecret).trim();
                 String mptoken = properties.getProperty(prefix + ".mptoken", def_mptoken).trim();
-
+                boolean miniprogram = "true".equalsIgnoreCase(properties.getProperty(prefix + ".miniprogram", String.valueOf(def_miniprogram)).trim());
                 if (appid.isEmpty() || appsecret.isEmpty()) {
                     logger.log(Level.WARNING, properties + "; has illegal weixinmp conf by prefix" + prefix);
                     return;
@@ -216,9 +224,9 @@ public class WeiXinMPService implements Service {
                 element.appid = appid;
                 element.appsecret = appsecret;
                 element.mptoken = mptoken;
+                element.miniprogram = miniprogram;
                 map.put(appid, element);
                 if (def_appid.equals(appid)) map.put("", element);
-
             });
             return map;
         }
