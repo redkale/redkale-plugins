@@ -180,8 +180,18 @@ public class WeiXinMPService implements Service {
                         if (finest) logger.finest("olddecrypt=" + oldresult + ", newdescrpty=" + result);
                     }
                     Map<String, String> map = convert.convertFrom(TYPE_MAP_STRING_STRING, result);
-                    if (!map.containsKey("unionid") && map.containsKey("unionId")) map.put("unionid", map.get("unionId"));
-                    if (!map.containsKey("openid") && map.containsKey("openId")) map.put("openid", map.get("openId"));
+                    if (!map.containsKey("unionid") && map.containsKey("unionId")) {
+                        map.put("unionid", map.get("unionId"));
+                    }
+                    if (!map.containsKey("openid") && map.containsKey("openId")) {
+                        map.put("openid", map.get("openId"));
+                    }
+                    if (!map.containsKey("nickname") && map.containsKey("avatarUrl")) {
+                        map.put("nickname", map.get("avatarUrl"));
+                    }
+                    if (!map.containsKey("sex") && map.containsKey("gender")) {
+                        map.put("sex", map.get("gender"));
+                    }
                     jsonmap.putAll(map);
                 } catch (Exception ex) {
                     logger.log(Level.SEVERE, "url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + " error", ex);
