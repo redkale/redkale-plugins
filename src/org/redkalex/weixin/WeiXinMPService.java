@@ -16,6 +16,8 @@ import java.security.*;
 import java.util.*;
 import java.util.logging.*;
 import javax.annotation.*;
+import javax.crypto.*;
+import javax.crypto.spec.*;
 import org.redkale.service.Local;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.getHttpContent;
@@ -117,27 +119,76 @@ public class WeiXinMPService implements Service {
     }
 
     public Map<String, String> getMPUserTokenByCode(String code) throws IOException {
-        return getMPUserTokenByCode(miniprogram, appid, appsecret, code);
+        return getMPUserTokenByCode(miniprogram, appid, appsecret, code, null, null);
     }
 
     public Map<String, String> getMPUserTokenByCode(String clientid, String code) throws IOException {
         MpElement element = this.clientidElements.get(clientid);
-        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code);
+        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code, null, null);
+    }
+
+    public Map<String, String> getMPUserTokenByCodeEncryptedData(String clientid, String code, String encryptedData, String iv) throws IOException {
+        MpElement element = this.clientidElements.get(clientid);
+        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code, encryptedData, iv);
     }
 
     public Map<String, String> getMPUserTokenByCodeAndAppid(String appid, String code) throws IOException {
         MpElement element = this.appidElements.get(appid);
-        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code);
+        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code, null, null);
     }
 
-    private Map<String, String> getMPUserTokenByCode(boolean miniprogram, String appid0, String appsecret0, String code) throws IOException {
+    private Map<String, String> getMPUserTokenByCode(boolean miniprogram, String appid0, String appsecret0, String code, String encryptedData, String iv) throws IOException {
         if (code != null) code = code.replace("\"", "").replace("'", "");
         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid0 + "&secret=" + appsecret0 + "&code=" + code + "&grant_type=authorization_code";
         if (miniprogram) url = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid0 + "&secret=" + appsecret0 + "&js_code=" + code + "&grant_type=authorization_code";
         String json = getHttpContent(url);
-        if (finest) logger.finest(url + "--->" + json);
+        if (finest) logger.finest("url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + "--->" + json);
         Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
-        if (miniprogram) return jsonmap;
+        if (miniprogram) {
+            if (encryptedData != null && !encryptedData.isEmpty() && iv != null && !iv.isEmpty()) {
+                try {
+                    String sessionkey = jsonmap.get("session_key");
+                    // 被加密的数据
+                    byte[] dataByte = Base64.getDecoder().decode(encryptedData);
+                    // 加密秘钥
+                    byte[] keyByte = Base64.getDecoder().decode(sessionkey);
+                    // 偏移量
+                    byte[] ivByte = Base64.getDecoder().decode(iv);
+                    int base = 16;
+                    if (keyByte.length % base != 0) {
+                        int groups = keyByte.length / base + (keyByte.length % base != 0 ? 1 : 0);
+                        byte[] temp = new byte[groups * base];
+                        Arrays.fill(temp, (byte) 0);
+                        System.arraycopy(keyByte, 0, temp, 0, keyByte.length);
+                        keyByte = temp;
+                    }
+                    SecretKeySpec spec = new SecretKeySpec(keyByte, "AES");
+                    AlgorithmParameters parameters = AlgorithmParameters.getInstance("AES");
+                    parameters.init(new IvParameterSpec(ivByte));
+                    // 解密
+                    Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
+                    cipher.init(Cipher.DECRYPT_MODE, spec, parameters);// 初始化
+                    byte[] resultByte = cipher.doFinal(dataByte);
+                    String result = new String(resultByte, "UTF-8");
+                    if (finest) logger.finest("url=" + url + ", session_key=" + sessionkey + ", encryptedData=" + encryptedData + ", iv=" + iv + "， decryptedData=" + result);
+                    int pos = result.indexOf("\"watermark\"");
+                    if (pos > 0) {
+                        final String oldresult = result;
+                        int pos1 = result.indexOf('{', pos);
+                        int pos2 = result.indexOf('}', pos);
+                        result = result.substring(0, pos1) + "null" + result.substring(pos2 + 1);
+                        if (finest) logger.finest("olddecrypt=" + oldresult + ", newdescrpty=" + result);
+                    }
+                    Map<String, String> map = convert.convertFrom(TYPE_MAP_STRING_STRING, result);
+                    if (!map.containsKey("unionid") && map.containsKey("unionId")) map.put("unionid", map.get("unionId"));
+                    if (!map.containsKey("openid") && map.containsKey("openId")) map.put("openid", map.get("openId"));
+                    jsonmap.putAll(map);
+                } catch (Exception ex) {
+                    logger.log(Level.SEVERE, "url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + " error", ex);
+                }
+            }
+            return jsonmap;
+        }
         return getMPUserTokenByOpenid(jsonmap.get("access_token"), jsonmap.get("openid"));
     }
 
