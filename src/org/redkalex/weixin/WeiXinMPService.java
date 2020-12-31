@@ -186,8 +186,11 @@ public class WeiXinMPService implements Service {
                     if (!map.containsKey("openid") && map.containsKey("openId")) {
                         map.put("openid", map.get("openId"));
                     }
-                    if (!map.containsKey("nickname") && map.containsKey("avatarUrl")) {
-                        map.put("nickname", map.get("avatarUrl"));
+                    if (!map.containsKey("nickname") && map.containsKey("nickName")) {
+                        map.put("nickname", map.get("nickName"));
+                    }
+                    if (!map.containsKey("headimgurl") && map.containsKey("avatarUrl")) {
+                        map.put("headimgurl", map.get("avatarUrl"));
                     }
                     if (!map.containsKey("sex") && map.containsKey("gender")) {
                         map.put("sex", map.get("gender"));
