@@ -148,6 +148,7 @@ public class WeiXinMPService implements Service {
             if (encryptedData != null && !encryptedData.isEmpty() && iv != null && !iv.isEmpty()) {
                 try {
                     String sessionkey = jsonmap.get("session_key");
+                    if (sessionkey == null) return jsonmap;  //{"errcode":40163,"errmsg":"code been used, hints: [ req_id: GEbaO6yFe-g8Msfa ]"}
                     // 被加密的数据
                     byte[] dataByte = Base64.getDecoder().decode(encryptedData);
                     // 加密秘钥
