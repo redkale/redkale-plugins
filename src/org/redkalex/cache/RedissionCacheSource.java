@@ -68,13 +68,20 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
             if (!db0.isEmpty()) this.db = Integer.valueOf(db0);
             if (nodes.length == 1) {
                 baseConfig = config.useSingleServer();
-                if (maxconns > 0) config.useSingleServer().setConnectionPoolSize(maxconns);
+                if (maxconns > 0) {
+                    config.useSingleServer().setConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    config.useSingleServer().setConnectionPoolSize(maxconns);
+                }
                 config.useSingleServer().setAddress(addr);
                 config.useSingleServer().setDatabase(this.db);
             } else if ("masterslave".equalsIgnoreCase(type)) { //主从
                 baseConfig = config.useMasterSlaveServers();
-                if (maxconns > 0) config.useMasterSlaveServers().setMasterConnectionPoolSize(maxconns);
-                if (maxconns > 0) config.useMasterSlaveServers().setSlaveConnectionPoolSize(maxconns);
+                if (maxconns > 0) {
+                    config.useMasterSlaveServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    config.useMasterSlaveServers().setMasterConnectionPoolSize(maxconns);
+                    config.useMasterSlaveServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    config.useMasterSlaveServers().setSlaveConnectionPoolSize(maxconns);
+                }
                 if (node.get("master") != null) {
                     config.useMasterSlaveServers().setMasterAddress(addr);
                 } else {
@@ -83,19 +90,31 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
                 config.useMasterSlaveServers().setDatabase(this.db);
             } else if ("cluster".equalsIgnoreCase(type)) { //集群
                 baseConfig = config.useClusterServers();
-                if (maxconns > 0) config.useClusterServers().setMasterConnectionPoolSize(maxconns);
-                if (maxconns > 0) config.useClusterServers().setSlaveConnectionPoolSize(maxconns);
+                if (maxconns > 0) {
+                    config.useClusterServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    config.useClusterServers().setMasterConnectionPoolSize(maxconns);
+                    config.useClusterServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    config.useClusterServers().setSlaveConnectionPoolSize(maxconns);
+                }
                 config.useClusterServers().addNodeAddress(addr);
             } else if ("replicated".equalsIgnoreCase(type)) { //
                 baseConfig = config.useReplicatedServers();
-                if (maxconns > 0) config.useMasterSlaveServers().setMasterConnectionPoolSize(maxconns);
-                if (maxconns > 0) config.useReplicatedServers().setSlaveConnectionPoolSize(maxconns);
+                if (maxconns > 0) {
+                    config.useReplicatedServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    config.useReplicatedServers().setMasterConnectionPoolSize(maxconns);
+                    config.useReplicatedServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    config.useReplicatedServers().setSlaveConnectionPoolSize(maxconns);
+                }
                 config.useReplicatedServers().addNodeAddress(addr);
                 config.useReplicatedServers().setDatabase(this.db);
             } else if ("sentinel".equalsIgnoreCase(type)) { //
                 baseConfig = config.useSentinelServers();
-                if (maxconns > 0) config.useSentinelServers().setMasterConnectionPoolSize(maxconns);
-                if (maxconns > 0) config.useSentinelServers().setSlaveConnectionPoolSize(maxconns);
+                if (maxconns > 0) {
+                    config.useSentinelServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    config.useSentinelServers().setMasterConnectionPoolSize(maxconns);
+                    config.useSentinelServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    config.useSentinelServers().setSlaveConnectionPoolSize(maxconns);
+                }
                 config.useSentinelServers().addSentinelAddress(addr);
                 config.useSentinelServers().setDatabase(this.db);
             }
