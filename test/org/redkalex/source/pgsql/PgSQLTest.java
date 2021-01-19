@@ -35,7 +35,7 @@ public class PgSQLTest {
 
     public static void main(String[] args) throws Throwable {
         final int capacity = 16 * 1024;
-        final ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(new AtomicLong(), new AtomicLong(), 16,
+        final ObjectPool<ByteBuffer> bufferPool = ObjectPool.createSafePool(new AtomicLong(), new AtomicLong(), 16,
             (Object... params) -> ByteBuffer.allocateDirect(capacity), null, (e) -> {
                 if (e == null || e.isReadOnly() || e.capacity() != capacity) return false;
                 e.clear();

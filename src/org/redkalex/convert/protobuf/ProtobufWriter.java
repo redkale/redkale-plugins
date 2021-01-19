@@ -34,7 +34,7 @@ public class ProtobufWriter extends Writer {
     protected ProtobufWriter parent;
 
     public static ObjectPool<ProtobufWriter> createPool(int max) {
-        return new ObjectPool<>(max, (Object... params) -> new ProtobufWriter(), null, (t) -> t.recycle());
+        return ObjectPool.createSafePool(max, (Object... params) -> new ProtobufWriter(), null, (t) -> t.recycle());
     }
 
     protected ProtobufWriter(ProtobufWriter parent) {

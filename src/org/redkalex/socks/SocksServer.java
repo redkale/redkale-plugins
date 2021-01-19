@@ -44,7 +44,7 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
         AtomicLong createBufferCounter = new AtomicLong();
         AtomicLong cycleBufferCounter = new AtomicLong();
         int rcapacity = Math.max(this.bufferCapacity, 8 * 1024);
-        ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(createBufferCounter, cycleBufferCounter, this.bufferPoolSize,
+        ObjectPool<ByteBuffer> bufferPool = ObjectPool.createSafePool(createBufferCounter, cycleBufferCounter, this.bufferPoolSize,
             (Object... params) -> ByteBuffer.allocateDirect(rcapacity), null, (e) -> {
                 if (e == null || e.isReadOnly() || e.capacity() != rcapacity) return false;
                 e.clear();
@@ -77,7 +77,7 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
         AtomicLong createBufferCounter = new AtomicLong();
         AtomicLong cycleBufferCounter = new AtomicLong();
         final int rcapacity = this.bufferCapacity;
-        ObjectPool<ByteBuffer> bufferPool = new ObjectPool<>(createBufferCounter, cycleBufferCounter, bufferPoolSize,
+        ObjectPool<ByteBuffer> bufferPool = ObjectPool.createSafePool(createBufferCounter, cycleBufferCounter, bufferPoolSize,
             (Object... params) -> ByteBuffer.allocateDirect(rcapacity), null, (e) -> {
                 if (e == null || e.isReadOnly() || e.capacity() != rcapacity) return false;
                 e.clear();
