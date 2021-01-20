@@ -23,9 +23,9 @@ public class SocksRequest extends Request<SocksContext> {
 
     private boolean http;
 
-    protected SocksRequest(SocksContext context, ObjectPool<ByteBuffer> bufferPool) {
-        super(context, bufferPool);
-        this.httpRequest = new HttpxRequest(context, null);
+    protected SocksRequest(SocksContext context) {
+        super(context);
+        this.httpRequest = new HttpxRequest(context);
     }
 
     @Override
@@ -86,9 +86,9 @@ public class SocksRequest extends Request<SocksContext> {
 
 class HttpxRequest extends HttpRequest {
 
-    public HttpxRequest(HttpContext context, ObjectPool<ByteBuffer> bufferPool) {
-        super(context, bufferPool);
-    }
+    public HttpxRequest(HttpContext context) {
+        super(context);
+    } 
 
     protected InetSocketAddress getURLSocketAddress() {
         return parseSocketAddress(super.getRequestURI());

@@ -88,11 +88,8 @@ public final class SocksServer extends Server<Serializable, SocksContext, SocksR
 
     @Override
     protected ObjectPool<Response> createResponsePool(AtomicLong createCounter, AtomicLong cycleCounter, int responsePoolSize) {
-        return SocksResponse.createPool(createCounter, cycleCounter, responsePoolSize, null);
-    }
-
-    @Override
-    protected Creator<Response> createResponseCreator(ObjectPool<ByteBuffer> bufferPool, ObjectPool<Response> responsePool) {
-        return (Object... params) -> new SocksResponse(this.context, new SocksRequest(this.context, bufferPool), responsePool);
+        ObjectPool<Response> pool = SocksResponse.createPool(createCounter, cycleCounter, responsePoolSize, null);
+        pool.setCreator((Object... params) -> new SocksResponse(this.context, new SocksRequest(this.context), pool));
+        return pool;
     }
 }
