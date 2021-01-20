@@ -616,6 +616,17 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     }
 
     @Override
+    public byte[] convertMapToBytes(final Object... values) {
+        ProtobufWriter out = pollProtobufWriter();
+        if (values == null) {
+            out.writeNull();
+        } else {
+            ((AnyEncoder) factory.getAnyEncoder()).convertMapTo(out, values);
+        }
+        return out.toArray();
+    }
+
+    @Override
     public ByteBuffer[] convertMapTo(final Supplier<ByteBuffer> supplier, final Object... values) {
         //if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
         if (supplier == null) return null;
