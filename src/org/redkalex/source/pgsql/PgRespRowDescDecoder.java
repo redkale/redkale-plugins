@@ -5,9 +5,8 @@
  */
 package org.redkalex.source.pgsql;
 
-import org.redkale.util.ByteBufferReader;
-import static org.redkalex.source.pgsql.PgsqlLDataSource.readUTF8String;
-import static org.redkalex.source.pgsql.PgsqlLDataSource.readUTF8String;
+import java.nio.ByteBuffer;
+import org.redkale.util.*;
 
 /**
  *
@@ -21,15 +20,13 @@ public class PgRespRowDescDecoder implements PgRespDecoder<PgRowDesc> {
     }
 
     @Override
-    public PgRowDesc read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
+    public PgRowDesc read(final ByteBuffer buffer, final int length, final ByteArray bytes) {
         PgColumnDesc[] columns = new PgColumnDesc[buffer.getShort()];
         for (int i = 0; i < columns.length; i++) {
-            String name = readUTF8String(buffer, bytes);
-            //buffer.position(buffer.position() + 6);
-            buffer.skip(6);
+            String name = PgClientCodec.readUTF8String(buffer, bytes);
+            buffer.position(buffer.position() + 6);
             PgOid type = PgOid.valueOfId(buffer.getInt());
-            //buffer.position(buffer.position() + 8);
-            buffer.skip(8);
+            buffer.position(buffer.position() + 8);
             columns[i] = new PgColumnDesc(name, type);
         }
         return new PgRowDesc(columns);

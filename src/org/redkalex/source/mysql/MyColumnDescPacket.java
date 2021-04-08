@@ -47,7 +47,7 @@ public class MyColumnDescPacket extends MyPacket {
 
     public byte[] defaultValues;
 
-    public MyColumnDescPacket(ByteBufferReader reader, byte[] array) {
+    public MyColumnDescPacket(ByteBufferReader reader) {
         this.packetLength = Mysqls.readUB3(reader);
         this.packetIndex = reader.get();
         this.def = Mysqls.readBytesWithLength(reader);

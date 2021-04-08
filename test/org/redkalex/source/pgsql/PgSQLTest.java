@@ -7,19 +7,16 @@ package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import java.nio.channels.CompletionHandler;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
 import javax.persistence.*;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.net.AsyncConnection;
+import org.redkale.net.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkalex.source.pgsql.PgsqlLDataSource.*;
-import static org.redkalex.source.pgsql.PgPoolSource.CONN_ATTR_BYTES_NAME;
+import static org.redkale.boot.Application.RESNAME_APP_GROUP;
 
 /**
  *
@@ -34,252 +31,122 @@ public class PgSQLTest {
     }
 
     public static void main(String[] args) throws Throwable {
-        final int capacity = 16 * 1024;
-        final ObjectPool<ByteBuffer> bufferPool = ObjectPool.createSafePool(new AtomicLong(), new AtomicLong(), 16,
-            (Object... params) -> ByteBuffer.allocateDirect(capacity), null, (e) -> {
-                if (e == null || e.isReadOnly() || e.capacity() != capacity) return false;
-                e.clear();
-                return true;
-            });
+        final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
+        asyncGroup.start();
+        ResourceFactory.root().register(RESNAME_APP_GROUP, asyncGroup);
 
         Properties prop = new Properties();
         prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.put("javax.persistence.jdbc.preparecache", "true");
         prop.setProperty(DataSources.JDBC_USER, "postgres");
         prop.setProperty(DataSources.JDBC_PWD, "1234");
-        prop.setProperty(DataSources.JDBC_CONNECTIONS_LIMIT, "32");
-        final PgsqlLDataSource source = new PgsqlLDataSource("", null, prop, prop);
 
-        final int count = 2000;
+        Properties prop2 = new Properties();
+        prop2.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop2.put("javax.persistence.jdbc.preparecache", "true");
+        prop2.setProperty(DataSources.JDBC_USER, "postgres");
+        prop2.setProperty(DataSources.JDBC_PWD, "1234");
+
+        final PgsqlLDataSource source = new PgsqlLDataSource("", null, prop, prop2);
+        ResourceFactory.root().inject(source);
+        source.init(null);
+        {
+            System.out.println("当前机器CPU核数: " + Runtime.getRuntime().availableProcessors());
+            final CompletableFuture[] futures = new CompletableFuture[Runtime.getRuntime().availableProcessors()];
+            final CompletableFuture[] futures2 = new CompletableFuture[Runtime.getRuntime().availableProcessors()];
+            Thread.sleep(1000);
+            for (int i = 0; i < futures.length; i++) {
+                PgClientConnection conn = (PgClientConnection) source.readPoolSource().client.getConnArray()[i];
+                futures[i] = conn.writeChannel(new PgReqQuery(null, "SELECT 2"));
+                PgClientConnection conn2 = (PgClientConnection) source.writePoolSource().client.getConnArray()[i];
+                futures2[i] = conn2.writeChannel(new PgReqQuery(null, "SELECT 2"));
+            }
+
+            CompletableFuture.allOf(futures).join();
+            CompletableFuture.allOf(futures2).join();
+            System.out.println("已连接数: " + source.readPoolSource().client.getConnArray().length);
+        }
+//        System.out.println(source.queryList(Fortune.class)); 
+        CompletableFuture[] ffs = new CompletableFuture[2];
+        ffs[0] = source.findAsync(Fortune.class, 1);
+        ffs[1] = source.findAsync(Fortune.class, 2);
+        CompletableFuture.allOf(ffs).join();
+        System.out.println(ffs[0].join());
+        System.out.println(ffs[1].join());
+//        ffs = new CompletableFuture[2];
+//        ffs[0] = source.findAsync(Fortune.class, 1);
+//        ffs[1] = source.findAsync(Fortune.class, 2);
+//        CompletableFuture.allOf(ffs).join();
+//        System.out.println(ffs[0].join());
+//        System.out.println(ffs[1].join());
+        Thread.sleep(1000);
+        System.out.println("============== 开始 ==============");
+        source.readPoolSource().client.getWriteReqCounter().set(0);
+        source.readPoolSource().client.getPollRespCounter().set(0);
+        source.writePoolSource().client.getWriteReqCounter().set(0);
+        source.writePoolSource().client.getPollRespCounter().set(0);
+        final int count = 2;  //4.18秒
         final CountDownLatch cdl = new CountDownLatch(count);
+        final CountDownLatch startcdl = new CountDownLatch(count);
         long s1 = System.currentTimeMillis();
         for (int j = 0; j < count; j++) {
-            if (false) {
-                new Thread() {
-                    public void run() {
-                        try {
-                            final World[] rs = new World[5];
-                            for (int i = 0; i < rs.length; i++) {
-                                final int index = i;
-                                rs[index] = source.find(World.class, randomId());
-                            }
-                            source.update(rs);
+            new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        startcdl.countDown();
+                        startcdl.await();
+
+                        final World[] rs = new World[5];
+                        final CompletableFuture[] futures = new CompletableFuture[rs.length];
+                        for (int i = 0; i < rs.length; i++) {
+                            final int index = i;
+                            futures[index] = source.findAsync(World.class, randomId()).thenAccept(r -> rs[index] = r.randomNumber(randomId()));
+                        }
+                        CompletableFuture.allOf(futures).thenCompose(v -> {
+                            //return CompletableFuture.completedFuture(null);
+                            return source.updateAsync(sort(rs));
+                        }).whenComplete((r, t) -> {
                             cdl.countDown();
-                        } catch (Throwable t) {
-                            t.printStackTrace();
-                        }
+                            if (t != null) t.printStackTrace();
+                        });
+                    } catch (Throwable t) {
+                        t.printStackTrace();
                     }
-                }.start();
-            } else {
-                new Thread() {
-                    public void run() {
-                        try {
-                            final World[] rs = new World[5];
-                            final CompletableFuture<Integer>[] futures = new CompletableFuture[rs.length];
-                            for (int i = 0; i < rs.length; i++) {
-                                final int index = i;
-                                futures[index] = source.findAsync(World.class, randomId()).thenCompose(w -> {
-                                    rs[index] = w;
-                                    return source.updateAsync(w);
-                                });
-                            }
-                            CompletableFuture.allOf(futures).whenComplete((r, e) -> {
-                                if (e != null) e.printStackTrace();
-                                cdl.countDown();
-                            });
-                        } catch (Throwable t) {
-                            t.printStackTrace();
-                        }
-                    }
-                }.start();
-            }
+                }
+            }.start();
         }
         cdl.await();
         long e1 = System.currentTimeMillis() - s1;
         System.out.println("一共耗时: " + e1);
-        System.out.println("只读池创建数: " + source.readPoolSource().getCreatCount());
-        System.out.println("只读池回收数: " + source.readPoolSource().getCycleCount());
-        System.out.println("只读池保存数: " + source.readPoolSource().getSaveCount());
-        System.out.println("只读池关闭数: " + source.readPoolSource().getCloseCount());
-        System.out.println("可写池创建数: " + source.writePoolSource().getCreatCount());
-        System.out.println("可写池回收数: " + source.writePoolSource().getCycleCount());
-        System.out.println("可写池保存数: " + source.writePoolSource().getSaveCount());
-        System.out.println("可写池关闭数: " + source.writePoolSource().getCloseCount());
+        System.out.println("只读池req数: " + source.readPoolSource().client.getWriteReqCounter());
+        System.out.println("只读池resp数: " + source.readPoolSource().client.getPollRespCounter());
+        System.out.println("---------------------------------");
 
-        if (true) return;
-        PoolSource<AsyncConnection> poolSource = source.writePoolSource();
-        System.out.println("user:" + poolSource.getUsername() + ", pass: " + poolSource.getPassword() + ", db: " + poolSource.getDatabase());
-        long s, e;
-        s = System.currentTimeMillis();
-        AsyncConnection conn = poolSource.pollAsync().join();
-        System.out.println("真实连接: " + conn);
-        poolSource.offerConnection(conn);
-        e = System.currentTimeMillis() - s;
-        System.out.println("第一次连接(" + conn + ")耗时: " + e + "ms");
-        System.out.println("--------------------------------------------开始singleQuery查询连接--------------------------------------------");
-        s = System.currentTimeMillis();
-        singleQuery(bufferPool, poolSource);
-        e = System.currentTimeMillis() - s;
-        System.out.println("SELECT * FROM fortune  查询耗时: " + e + "ms");
-
-        System.out.println("--------------------------------------------PgSQLDataSource更新操作--------------------------------------------");
-        Fortune bean = new Fortune();
-        bean.setId(1);
-        bean.setMessage("aaa");
-        s = System.currentTimeMillis();
-        int rows = source.updateColumn(bean, "message");
-        e = System.currentTimeMillis() - s;
-        System.out.println("更新结果:(" + rows + ") 耗时: " + e + "ms");
-
-        bean = new Fortune();
-        bean.setId(100);
-        bean.setMessage("ccc");
-        s = System.currentTimeMillis();
-        source.delete(bean);
-        e = System.currentTimeMillis() - s;
-        System.out.println("删除结果:(" + rows + ") 耗时: " + e + "ms");
-
-        bean = new Fortune();
-        bean.setId(100);
-        bean.setMessage("ccc");
-        s = System.currentTimeMillis();
-        source.insert(bean);
-        e = System.currentTimeMillis() - s;
-        System.out.println("插入结果:(" + rows + ") 耗时: " + e + "ms");
-
-        if (false) {
-            System.out.println("--------------------------------------------PgSQLDataSource插入操作--------------------------------------------");
-            //create table record(  id serial,  name character varying(128), constraint pk_record_id primary key( id) ); 
-            Record r1 = new Record("ccc");
-            Record r2 = new Record("eee");
-            s = System.currentTimeMillis();
-            source.insert(r1, r2);
-            e = System.currentTimeMillis() - s;
-            System.out.println("插入Record结果:(" + rows + ") 耗时: " + e + "ms " + r1 + "," + r2);
-        }
-
-        System.out.println("--------------------------------------------PgSQLDataSource查询操作--------------------------------------------");
-        s = System.currentTimeMillis();
-        List rs = source.queryList(Fortune.class);
-        System.out.println(rs);
-        e = System.currentTimeMillis() - s;
-        System.out.println("查询结果:(" + rs.size() + ") 耗时: " + e + "ms ");
-
-        System.out.println("--------------------------------------------PgSQLDataSource查改操作--------------------------------------------");
-        final World[] ws = new World[500];
-        s = System.currentTimeMillis();
-        for (int i = 0; i < ws.length; i++) {
-            ws[i] = source.find(World.class, i + 1);
-            ws[i].setId(i + 1);
-            ws[i].setRandomNumber(i + 1);
-        }
-        System.out.println("查询结果:(" + rs.size() + ") 耗时: " + e + "ms ");
-        source.update(ws);
-        e = System.currentTimeMillis() - s;
-        System.out.println("更改结果:(" + rs.size() + ") 耗时: " + e + "ms ");
-
-        conn = poolSource.pollAsync().join();
-        System.out.println("真实连接: " + conn);
-
+        s1 = System.currentTimeMillis();
+        source.close();
+        e1 = System.currentTimeMillis() - s1;
+        System.out.println("关闭耗时: " + e1 + " ms");
     }
 
-    private static void singleQuery(final ObjectPool<ByteBuffer> bufferPool, final PoolSource<AsyncConnection> poolSource) {
-        final AsyncConnection conn = poolSource.pollAsync().join();
-        System.out.println("真实连接: " + conn);
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTES_NAME);
-        final String sql = "SELECT a.* FROM fortune a";
-        ByteBuffer wbuffer = bufferPool.get();
-        {
-            wbuffer.put((byte) 'Q');
-            int start = wbuffer.position();
-            wbuffer.putInt(0);
-            writeUTF8String(wbuffer, sql);
-            wbuffer.putInt(start, wbuffer.position() - start);
+    protected static World[] sort(World[] worlds) {
+        Arrays.sort(worlds);
+        return worlds;
+    }
+
+    protected static ByteBuffer writeUTF8String(ByteBuffer array, String string) {
+        array.put(string.getBytes(StandardCharsets.UTF_8));
+        array.put((byte) 0);
+        return array;
+    }
+
+    protected static String readUTF8String(ByteBuffer buffer, ByteArray array) {
+        int i = 0;
+        array.clear();
+        for (byte c = buffer.get(); c != 0; c = buffer.get()) {
+            array.put(c);
         }
-        wbuffer.flip();
-        final CompletableFuture<AsyncConnection> future = new CompletableFuture();
-        conn.write(wbuffer, null, new CompletionHandler<Integer, Void>() {
-            @Override
-            public void completed(Integer result, Void attachment1) {
-                if (result < 0) {
-                    failed(new SQLException("Write Buffer Error"), attachment1);
-                    return;
-                }
-                if (wbuffer.hasRemaining()) {
-                    conn.write(wbuffer, attachment1, this);
-                    return;
-                }
-                wbuffer.clear();
-                conn.setReadBuffer(wbuffer);
-                conn.read(new CompletionHandler<Integer, ByteBuffer>() {
-                    @Override
-                    public void completed(Integer result, ByteBuffer buffer) {
-                        if (result < 0) {
-                            failed(new SQLException("Read Buffer Error"), buffer);
-                            return;
-                        }
-                        buffer.flip();
-                        ByteBufferReader bufReader = ByteBufferReader.create(buffer);
-                        char cmd = (char) buffer.get();
-                        int length = buffer.getInt();
-                        System.out.println(sql + "---------cmd:" + cmd + "-----length:" + length);
-                        if (cmd == 'T') {
-                            System.out.println(new PgRespRowDescDecoder().read(bufReader, length, bytes));
-                            cmd = (char) buffer.get();
-                            length = buffer.getInt();
-                            System.out.println("---------cmd:" + cmd + "-----length:" + length);
-                        }
-                        while (cmd != 'E') {
-                            if (cmd == 'C') {
-                                System.out.println(readUTF8String(buffer, new byte[255]));
-                            } else if (cmd == 'Z') {
-                                System.out.println("连接待命中");
-                                buffer.position(buffer.position() + length - 4);
-                                poolSource.offerConnection(conn);
-                            } else {
-                                buffer.position(buffer.position() + length - 4);
-                            }
-                            if (!buffer.hasRemaining()) break;
-                            cmd = (char) buffer.get();
-                            length = buffer.getInt();
-                            System.out.println("---------cmd:" + cmd + "-----length:" + length);
-                        }
-                        if (cmd == 'E') { //异常了
-                            byte[] field = new byte[255];
-                            String level = null, code = null, message = null;
-                            for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-                                String value = readUTF8String(buffer, field);
-                                if (type == (byte) 'S') {
-                                    level = value;
-                                } else if (type == 'C') {
-                                    code = value;
-                                } else if (type == 'M') {
-                                    message = value;
-                                }
-                            }
-                            conn.offerBuffer(buffer);
-                            System.out.println("---------Exception------level:" + level + "-----code:" + code + "-----message:" + message);
-                            future.completeExceptionally(new SQLException(message, code, 0));
-                            conn.dispose();
-                            return;
-                        }
-                        future.complete(conn);
-                    }
-
-                    @Override
-                    public void failed(Throwable exc, ByteBuffer attachment2) {
-                        conn.offerBuffer(attachment2);
-                        future.completeExceptionally(exc);
-                        conn.dispose();
-                    }
-                });
-            }
-
-            @Override
-            public void failed(Throwable exc, Void attachment1) {
-                exc.printStackTrace();
-            }
-        });
-        future.join();
+        return array.toString(StandardCharsets.UTF_8);
     }
 
     //@DistributeTable(strategy = Record.TableStrategy.class)
@@ -392,6 +259,11 @@ public class PgSQLTest {
         private int id;
 
         private int randomNumber;
+
+        public World randomNumber(int randomNumber) {
+            this.randomNumber = randomNumber;
+            return this;
+        }
 
         public int getId() {
             return id;

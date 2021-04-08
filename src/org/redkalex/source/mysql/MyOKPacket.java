@@ -45,7 +45,7 @@ public class MyOKPacket extends MyPacket {
 
     public int statusFlags;
 
-    public MyOKPacket(int len, ByteBufferReader reader, byte[] array) {
+    public MyOKPacket(int len, ByteBufferReader reader, ByteArray array) {
         this.packetLength = len < 1 ? Mysqls.readUB3(reader) : len;
         this.packetIndex = reader.get();
         this.typeid = reader.get() & 0xff;

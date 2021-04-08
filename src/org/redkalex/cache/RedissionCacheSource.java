@@ -850,7 +850,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     @Override
     public List<Serializable> hmget(final String key, final Type type, final String... fields) {
         RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
-        Map<String, byte[]> rs = map.getAll(Set.of(fields));
+        Map<String, byte[]> rs = map.getAll(Utility.ofSet(fields));
         List<Serializable> list = new ArrayList<>(fields.length);
         for (String field : fields) {
             byte[] bs = rs.get(field);
@@ -1007,7 +1007,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     @Override
     public CompletableFuture<List<Serializable>> hmgetAsync(final String key, final Type type, final String... fields) {
         RMap<String, byte[]> map = redisson.getMap(key, MapByteArrayCodec.instance);
-        return completableFuture(map.getAllAsync(Set.of(fields)).thenApply(rs -> {
+        return completableFuture(map.getAllAsync(Utility.ofSet(fields)).thenApply(rs -> {
             List<Serializable> list = new ArrayList<>(fields.length);
             for (String field : fields) {
                 byte[] bs = rs.get(field);

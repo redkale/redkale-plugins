@@ -6,7 +6,7 @@
 package org.redkalex.source.mysql;
 
 import java.nio.ByteBuffer;
-import org.redkale.util.ByteBufferWriter;
+import org.redkale.util.*;
 
 /**
  *
@@ -38,7 +38,16 @@ public class MyQueryPacket extends MyPacket {
         buffer.put(message);
         return buffer;
     }
-    
+
+    public ByteArray writeTo(ByteArray buffer) {
+        int size = calcPacketSize();
+        Mysqls.writeUB3(buffer, size);
+        buffer.put(packetIndex);
+        buffer.put(COM_QUERY);
+        buffer.put(message);
+        return buffer;
+    }
+
     protected int calcPacketSize() {
         int size = 1;
         if (message != null) {

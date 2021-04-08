@@ -200,19 +200,19 @@ public class WeiXinQYService implements Service {
         byte[] corpidBytes = qycorpid.getBytes(CHARSET);
 
         // randomStr + networkBytesOrder + text + qycorpid
-        bytes.write(randomStrBytes);
-        bytes.writeInt(textBytes.length);
-        bytes.write(textBytes);
-        bytes.write(corpidBytes);
+        bytes.put(randomStrBytes);
+        bytes.putInt(textBytes.length);
+        bytes.put(textBytes);
+        bytes.put(corpidBytes);
 
         // ... + pad: 使用自定义的填充方式对明文进行补位填充
-        byte[] padBytes = encodePKCS7(bytes.size());
-        bytes.write(padBytes);
+        byte[] padBytes = encodePKCS7(bytes.length());
+        bytes.put(padBytes);
 
         // 获得最终的字节流, 未加密
         try {
             // 加密
-            byte[] encrypted = createQYCipher(Cipher.ENCRYPT_MODE).doFinal(bytes.directBytes(), 0, bytes.size());
+            byte[] encrypted = createQYCipher(Cipher.ENCRYPT_MODE).doFinal(bytes.content(), 0, bytes.length());
             // 使用BASE64对加密后的字符串进行编码
             return Base64.getEncoder().encodeToString(encrypted);
         } catch (Exception e) {

@@ -19,17 +19,67 @@ import java.util.*;
 @SuppressWarnings("deprecation")
 public class PgResultSet implements java.sql.ResultSet {
 
-    private PgRowDesc rowDesc;
+    protected PgRowDesc rowDesc;
 
-    private Map<String, Integer> colmap;
+    protected Map<String, Integer> colmap;
 
-    private final List<PgRowData> rowDatas = new ArrayList<>();
+    protected List<PgRowData> rowDatas;
 
-    private int rowIndex = -1;
+    protected int rowIndex = -1;
 
-    private PgRowData currRow;
+    protected PgRowData currRow;
+
+    protected boolean authOK;
+
+    protected byte[] authSalt;
+
+    protected int updateEffectCount;
+
+    Object realResult;
 
     public PgResultSet() {
+    }
+
+    public PgResultSet copy() {
+        PgResultSet reset = new PgResultSet();
+        reset.rowDesc = rowDesc;
+        reset.colmap = colmap;
+        reset.rowDatas = rowDatas;
+        reset.realResult = realResult;
+        return reset;
+    }
+
+    @Override
+    public String toString() {
+        return "{\"rowDesc\":" + rowDesc + ", \"rowDatas_size\":" + (rowDatas == null ? -1 : rowDatas.size()) + ", \"updateEffectCount\":" + updateEffectCount + "}";
+    }
+
+    public void increUpdateEffectCount(int c) {
+        updateEffectCount += c;
+    }
+
+    public int getUpdateEffectCount() {
+        return updateEffectCount;
+    }
+
+    public void setUpdateEffectCount(int updateEffectCount) {
+        this.updateEffectCount = updateEffectCount;
+    }
+
+    public boolean isAuthOK() {
+        return authOK;
+    }
+
+    public void setAuthOK(boolean authOK) {
+        this.authOK = authOK;
+    }
+
+    public byte[] getAuthSalt() {
+        return authSalt;
+    }
+
+    public void setAuthSalt(byte[] authSalt) {
+        this.authSalt = authSalt;
     }
 
     public void setRowDesc(PgRowDesc rowDesc) {
@@ -42,12 +92,14 @@ public class PgResultSet implements java.sql.ResultSet {
     }
 
     public PgResultSet addRowData(PgRowData rowData) {
+        if (this.rowDatas == null) this.rowDatas = new ArrayList<>();
         this.rowDatas.add(rowData);
         return this;
     }
 
     @Override
     public boolean next() throws SQLException {
+        if (this.rowDatas == null) return false;
         if (++this.rowIndex < this.rowDatas.size()) {
             this.currRow = this.rowDatas.get(this.rowIndex);
             return true;

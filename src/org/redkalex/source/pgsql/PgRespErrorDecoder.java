@@ -5,10 +5,9 @@
  */
 package org.redkalex.source.pgsql;
 
+import java.nio.ByteBuffer;
 import java.sql.SQLException;
-import org.redkale.util.ByteBufferReader;
-import static org.redkalex.source.pgsql.PgsqlLDataSource.readUTF8String;
-import static org.redkalex.source.pgsql.PgsqlLDataSource.readUTF8String;
+import org.redkale.util.*;
 
 /**
  *
@@ -22,10 +21,10 @@ public class PgRespErrorDecoder implements PgRespDecoder<SQLException> {
     }
 
     @Override
-    public SQLException read(final ByteBufferReader buffer, final int length, final byte[] bytes) {
+    public SQLException read(final ByteBuffer buffer, final int length, final ByteArray bytes) {
         String level = null, code = null, message = null;
         for (byte type = buffer.get(); type != 0; type = buffer.get()) {
-            String value = readUTF8String(buffer, bytes);
+            String value = PgClientCodec.readUTF8String(buffer, bytes);
             if (type == (byte) 'S') {
                 level = value;
             } else if (type == 'C') {

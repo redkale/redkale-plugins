@@ -11,7 +11,7 @@ import java.sql.SQLException;
 import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
-import org.redkale.net.AsyncConnection;
+import org.redkale.net.*;
 import org.redkale.source.PoolTcpSource;
 import org.redkale.util.*;
 
@@ -21,23 +21,19 @@ import org.redkale.util.*;
  */
 public class MyPoolSource extends PoolTcpSource {
 
-    protected static final String CONN_ATTR_BYTES_NAME = "BYTES_NAME";
-
     protected static final String CONN_ATTR_CURR_DBNAME = "CURR_DBNAME";
 
     protected static final byte[] CURRDBNAME_BYTES = "SELECT DATABASE()".getBytes();
-    
+
     protected static final byte[] PING_BYTES = "SELECT 1".getBytes();
 
-    public MyPoolSource(String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop,
-        Logger logger, ObjectPool<ByteBuffer> bufferPool, ThreadPoolExecutor executor) {
-        super(rwtype, queue, semaphore, prop, logger, bufferPool, executor);
+    public MyPoolSource(AsyncGroup asyncGroup, String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop, Logger logger) {
+        super(asyncGroup, rwtype, queue, semaphore, prop, logger);
         if (this.encoding == null || this.encoding.isEmpty()) this.encoding = "UTF8MB4";
     }
 
     @Override
-    protected ByteBuffer reqConnectBuffer(AsyncConnection conn) {
-        if (conn.getAttribute(CONN_ATTR_BYTES_NAME) == null) conn.setAttribute(CONN_ATTR_BYTES_NAME, new byte[1024]);
+    protected ByteArray reqConnectBuffer(AsyncConnection conn) {
         return null;
     }
 
@@ -45,14 +41,13 @@ public class MyPoolSource extends PoolTcpSource {
 
     @Override
     protected void respConnectBuffer(final ByteBuffer buffer, CompletableFuture<AsyncConnection> future, AsyncConnection conn) {
-        final byte[] bytes = conn.getAttribute(CONN_ATTR_BYTES_NAME);
-
+        final ByteArray array = conn.getSubobject();
         //MySQLIO.doHandshake
         MyHandshakePacket handshakePacket = null;
         try {
-            handshakePacket = new MyHandshakePacket(buffer, bytes);
+            handshakePacket = new MyHandshakePacket(buffer, array);
         } catch (Exception ex) {
-            bufferPool.accept(buffer);
+            conn.offerBuffer(buffer);
             conn.dispose();
             future.completeExceptionally(ex);
             return;
@@ -69,10 +64,6 @@ public class MyPoolSource extends PoolTcpSource {
                     failed(new RuntimeException("Write Buffer Error"), attachment1);
                     return;
                 }
-                if (buffer.hasRemaining()) {
-                    conn.write(buffer, attachment1, this);
-                    return;
-                }
                 buffer.clear();
                 conn.setReadBuffer(buffer);
                 conn.read(new CompletionHandler<Integer, ByteBuffer>() {
@@ -83,7 +74,7 @@ public class MyPoolSource extends PoolTcpSource {
                             return;
                         }
                         attachment2.flip();
-                        MyOKPacket okPacket = new MyOKPacket(-1, ByteBufferReader.create(buffer), bytes);
+                        MyOKPacket okPacket = new MyOKPacket(-1, ByteBufferReader.create(buffer), array);
                         if (!okPacket.isOK()) {
                             conn.offerBuffer(buffer);
                             future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState));
@@ -100,10 +91,6 @@ public class MyPoolSource extends PoolTcpSource {
                                     failed(new RuntimeException("Write Buffer Error"), attachment3);
                                     return;
                                 }
-                                if (buffer.hasRemaining()) {
-                                    conn.write(buffer, attachment3, this);
-                                    return;
-                                }
                                 buffer.clear();
                                 conn.setReadBuffer(buffer);
                                 conn.read(new CompletionHandler<Integer, ByteBuffer>() {
@@ -114,7 +101,7 @@ public class MyPoolSource extends PoolTcpSource {
                                             return;
                                         }
                                         attachment4.flip();
-                                        MyOKPacket okPacket = new MyOKPacket(-1, ByteBufferReader.create(attachment4), bytes);
+                                        MyOKPacket okPacket = new MyOKPacket(-1, ByteBufferReader.create(attachment4), array);
                                         if (!okPacket.isOK()) {
                                             conn.offerBuffer(buffer);
                                             future.completeExceptionally(new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState));
@@ -122,7 +109,7 @@ public class MyPoolSource extends PoolTcpSource {
                                             return;
                                         }
                                         //完成了
-                                        bufferPool.accept(buffer);
+                                        conn.offerBuffer(buffer);
                                         future.complete(conn);
                                     }
 
@@ -157,7 +144,7 @@ public class MyPoolSource extends PoolTcpSource {
 
             @Override
             public void failed(Throwable exc, Void attachment1) {
-                bufferPool.accept(buffer);
+                conn.offerBuffer(buffer);
                 conn.dispose();
                 future.completeExceptionally(exc);
             }
@@ -171,7 +158,7 @@ public class MyPoolSource extends PoolTcpSource {
 
     @Override
     protected CompletableFuture<AsyncConnection> sendPingCommand(AsyncConnection conn) {
-        final ByteBuffer buffer = bufferPool.get();
+        final ByteBuffer buffer = ByteBuffer.allocate(8192);  //临时
         Mysqls.writeUB3(buffer, 1 + PING_BYTES.length);
         buffer.put((byte) 0x0);
         buffer.put(MyPacket.COM_QUERY);
@@ -183,10 +170,6 @@ public class MyPoolSource extends PoolTcpSource {
             public void completed(Integer result, ByteBuffer attachment) {
                 if (result < 0) {
                     failed(new RuntimeException("Write Buffer Error"), attachment);
-                    return;
-                }
-                if (buffer.hasRemaining()) {
-                    conn.write(buffer, attachment, this);
                     return;
                 }
                 buffer.clear();
@@ -216,13 +199,13 @@ public class MyPoolSource extends PoolTcpSource {
 //                            MyOKPacket okPacket = new MyOKPacket(packetLength, buffers, array);
 //                            System.out.println("PING的结果 ： " + okPacket);
 //                        }
-                        bufferPool.accept(buffer);
+                        conn.offerBuffer(buffer);
                         future.complete(conn);
                     }
 
                     @Override
                     public void failed(Throwable exc, ByteBuffer attachment) {
-                        bufferPool.accept(buffer);
+                        conn.offerBuffer(buffer);
                         conn.dispose();
                         future.completeExceptionally(exc);
                     }
@@ -232,7 +215,7 @@ public class MyPoolSource extends PoolTcpSource {
 
             @Override
             public void failed(Throwable exc, ByteBuffer attachment) {
-                bufferPool.accept(buffer);
+                conn.offerBuffer(buffer);
                 conn.dispose();
                 future.completeExceptionally(exc);
             }
@@ -242,7 +225,7 @@ public class MyPoolSource extends PoolTcpSource {
 
     @Override
     protected CompletableFuture<AsyncConnection> sendCloseCommand(AsyncConnection conn) {
-        final ByteBuffer buffer = bufferPool.get();
+        final ByteBuffer buffer = ByteBuffer.allocate(8192);  //临时
         Mysqls.writeUB3(buffer, 1);
         buffer.put((byte) 0x0);
         buffer.put(MyPacket.COM_QUIT);
@@ -255,18 +238,14 @@ public class MyPoolSource extends PoolTcpSource {
                     failed(new RuntimeException("Write Buffer Error"), attachment);
                     return;
                 }
-                if (buffer.hasRemaining()) {
-                    conn.write(buffer, attachment, this);
-                    return;
-                }
                 buffer.clear();
-                bufferPool.accept(buffer);
+                conn.offerBuffer(buffer);
                 future.complete(conn);
             }
 
             @Override
             public void failed(Throwable exc, ByteBuffer attachment) {
-                bufferPool.accept(buffer);
+                conn.offerBuffer(buffer);
                 conn.dispose();
                 future.completeExceptionally(exc);
             }

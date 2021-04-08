@@ -26,7 +26,7 @@ class Mysqls {
     static final int COMP_HEADER_LENGTH = 3;
 
     static final int MIN_COMPRESS_LEN = 50;
- 
+
     static final int HEADER_LENGTH = 4;
 
     static final int AUTH_411_OVERHEAD = 33;
@@ -147,10 +147,14 @@ class Mysqls {
         }
     }
 
-//--------------------------- write ------------------------------
+//--------------------------- put ------------------------------
     protected static void writeUB2(ByteBuffer buffer, int i) {
         buffer.put((byte) (i & 0xff));
         buffer.put((byte) (i >>> 8));
+    }
+
+    protected static void writeUB2(ByteArray buffer, int i) {
+        buffer.put((byte) (i & 0xff), (byte) (i >>> 8));
     }
 
     protected static void writeUB2(ByteBufferWriter buffer, int i) {
@@ -162,6 +166,10 @@ class Mysqls {
         buffer.put((byte) (i & 0xff));
         buffer.put((byte) (i >>> 8));
         buffer.put((byte) (i >>> 16));
+    }
+
+    protected static void writeUB3(ByteArray buffer, int i) {
+        buffer.put((byte) (i & 0xff), (byte) (i >>> 8), (byte) (i >>> 16));
     }
 
     protected static void writeUB3(ByteBufferWriter buffer, int i) {
@@ -179,6 +187,11 @@ class Mysqls {
     }
 
     //可以存入一个int类型，表示已经考虑到24-32的含有符号位的8位了。
+    protected static void writeInt(ByteArray buffer, int i) {
+        buffer.put((byte) (i & 0xff), (byte) (i >>> 8), (byte) (i >>> 16), (byte) (i >>> 24));
+    }
+
+    //可以存入一个int类型，表示已经考虑到24-32的含有符号位的8位了。
     protected static void writeInt(ByteBufferWriter buffer, int i) {
         buffer.put((byte) (i & 0xff));
         buffer.put((byte) (i >>> 8));
@@ -187,6 +200,10 @@ class Mysqls {
     }
 
     protected static void writeFloat(ByteBuffer buffer, float f) {
+        writeInt(buffer, Float.floatToIntBits(f));
+    }
+
+    protected static void writeFloat(ByteArray buffer, float f) {
         writeInt(buffer, Float.floatToIntBits(f));
     }
 
@@ -200,6 +217,11 @@ class Mysqls {
         buffer.put((byte) (l >>> 8));
         buffer.put((byte) (l >>> 16));
         buffer.put((byte) (l >>> 24));
+    }
+
+    //如果是存入四个字节，其实是不能使用int的，因为24-32位是有符号位的，所以这里需要使用Long，这样可以保证前32表示的都是值
+    protected static void writeUB4(ByteArray buffer, long l) {
+        buffer.put((byte) (l & 0xff), (byte) (l >>> 8), (byte) (l >>> 16), (byte) (l >>> 24));
     }
 
     //如果是存入四个字节，其实是不能使用int的，因为24-32位是有符号位的，所以这里需要使用Long，这样可以保证前32表示的都是值
@@ -221,6 +243,13 @@ class Mysqls {
         buffer.put((byte) (l >>> 56));
     }
 
+    protected static void writeLong(ByteArray buffer, long l) {
+        buffer.put((byte) (l & 0xff), (byte) (l >>> 8),
+            (byte) (l >>> 16), (byte) (l >>> 24),
+            (byte) (l >>> 32), (byte) (l >>> 40),
+            (byte) (l >>> 48), (byte) (l >>> 56));
+    }
+
     protected static void writeLong(ByteBufferWriter buffer, long l) {
         buffer.put((byte) (l & 0xff));
         buffer.put((byte) (l >>> 8));
@@ -236,11 +265,30 @@ class Mysqls {
         writeLong(buffer, Double.doubleToLongBits(d));
     }
 
+    protected static void writeDouble(ByteArray buffer, double d) {
+        writeLong(buffer, Double.doubleToLongBits(d));
+    }
+
     protected static void writeDouble(ByteBufferWriter buffer, double d) {
         writeLong(buffer, Double.doubleToLongBits(d));
     }
 
     protected static void writeLength(ByteBuffer buffer, long l) {
+        if (l < 251) {
+            buffer.put((byte) l);
+        } else if (l < 0x10000L) {
+            buffer.put((byte) 252);
+            writeUB2(buffer, (int) l);
+        } else if (l < 0x1000000L) {
+            buffer.put((byte) 253);
+            writeUB3(buffer, (int) l);
+        } else {
+            buffer.put((byte) 254);
+            writeLong(buffer, l);
+        }
+    }
+
+    protected static void writeLength(ByteArray buffer, long l) {
         if (l < 251) {
             buffer.put((byte) l);
         } else if (l < 0x10000L) {
@@ -275,12 +323,34 @@ class Mysqls {
         buffer.put((byte) 0);
     }
 
+    protected static void writeWithNull(ByteArray buffer, byte[] src) {
+        buffer.put(src);
+        buffer.put((byte) 0);
+    }
+
     protected static void writeWithNull(ByteBufferWriter buffer, byte[] src) {
         buffer.put(src);
         buffer.put((byte) 0);
     }
 
     protected static void writeWithLength(ByteBuffer buffer, byte[] src) {
+        int length = src.length;
+        if (length < 251) {
+            buffer.put((byte) length);
+        } else if (length < 0x10000L) {
+            buffer.put((byte) 252);
+            writeUB2(buffer, length);
+        } else if (length < 0x1000000L) {
+            buffer.put((byte) 253);
+            writeUB3(buffer, length);
+        } else {
+            buffer.put((byte) 254);
+            writeLong(buffer, length);
+        }
+        buffer.put(src);
+    }
+
+    protected static void writeWithLength(ByteArray buffer, byte[] src) {
         int length = src.length;
         if (length < 251) {
             buffer.put((byte) length);
@@ -315,6 +385,14 @@ class Mysqls {
     }
 
     protected static void writeWithLength(ByteBuffer buffer, byte[] src, byte nullValue) {
+        if (src == null) {
+            buffer.put(nullValue);
+        } else {
+            writeWithLength(buffer, src);
+        }
+    }
+
+    protected static void writeWithLength(ByteArray buffer, byte[] src, byte nullValue) {
         if (src == null) {
             buffer.put(nullValue);
         } else {
@@ -458,76 +536,40 @@ class Mysqls {
         return bs == store ? Arrays.copyOf(store, len) : bs;
     }
 
-    protected static byte[] readBytes(ByteBuffer buffer, byte[] store) {
-        int i = 0;
-        ByteArray array = null;
+    protected static byte[] readBytes(ByteBuffer buffer, ByteArray array) {
+        array.clear();
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            if (array != null) {
-                array.write(c);
-            } else {
-                store[i++] = c;
-                if (i == store.length) {
-                    array = new ByteArray(1024);
-                    array.write(store);
-                }
-            }
+            array.put(c);
             if (!buffer.hasRemaining()) break;
         }
-        return array == null ? Arrays.copyOf(store, i) : array.getBytes();
+        return array.getBytes();
     }
 
-    protected static byte[] readBytes(ByteBufferReader buffer, byte[] store) {
-        int i = 0;
-        ByteArray array = null;
+    protected static byte[] readBytes(ByteBufferReader buffer, ByteArray array) {
+        array.clear();
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            if (array != null) {
-                array.write(c);
-            } else {
-                store[i++] = c;
-                if (i == store.length) {
-                    array = new ByteArray(1024);
-                    array.write(store);
-                }
-            }
+            array.put(c);
             if (!buffer.hasRemaining()) break;
         }
-        return array == null ? Arrays.copyOf(store, i) : array.getBytes();
+        return array.getBytes();
     }
 
-    protected static String readUTF8String(ByteBufferReader buffer, byte[] store) {
-        int i = 0;
-        ByteArray array = null;
+    protected static String readUTF8String(ByteBufferReader buffer, ByteArray array) {
+        array.clear();
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            if (array != null) {
-                array.write(c);
-            } else {
-                store[i++] = c;
-                if (i == store.length) {
-                    array = new ByteArray(1024);
-                    array.write(store);
-                }
-            }
+            array.put(c);
             if (!buffer.hasRemaining()) break;
         }
-        return array == null ? new String(store, 0, i, StandardCharsets.UTF_8) : array.toString(StandardCharsets.UTF_8);
+        return array.toString(StandardCharsets.UTF_8);
     }
 
-    protected static String readASCIIString(ByteBuffer buffer, byte[] store) {
-        int i = 0;
-        ByteArray array = null;
+    protected static String readASCIIString(ByteBuffer buffer, ByteArray array) {
+        array.clear();
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
-            if (array != null) {
-                array.write(c);
-            } else {
-                store[i++] = c;
-                if (i == store.length) {
-                    array = new ByteArray(1024);
-                    array.write(store);
-                }
-            }
+            array.put(c);
             if (!buffer.hasRemaining()) break;
         }
-        return array == null ? new String(store, 0, i, StandardCharsets.US_ASCII) : array.toString(StandardCharsets.US_ASCII);
+        return array.toString(StandardCharsets.US_ASCII);
     }
 
     protected static String readASCIIString(ByteBuffer buffer, int length) {
@@ -541,12 +583,12 @@ class Mysqls {
         ByteArray array = null;
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
             if (array != null) {
-                array.write(c);
+                array.put(c);
             } else {
                 store[i++] = c;
                 if (i == store.length) {
                     array = new ByteArray(1024);
-                    array.write(store);
+                    array.put(store);
                 }
             }
             if (!buffer.hasRemaining()) break;

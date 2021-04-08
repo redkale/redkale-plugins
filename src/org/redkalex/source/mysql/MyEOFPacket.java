@@ -20,7 +20,7 @@ public class MyEOFPacket extends MyPacket {
 
     public int statusFlags;
 
-    public MyEOFPacket(int len, int index, ByteBufferReader reader, byte[] array) {
+    public MyEOFPacket(int len, int index, ByteBufferReader reader) {
         this.packetLength = len < 1 ? Mysqls.readUB3(reader) : len;
         this.packetIndex = index < -999 ? reader.get() : (byte)index;
         this.typeid = reader.get() & 0xff;

@@ -7,6 +7,7 @@ package org.redkalex.source.mysql;
 
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
+import org.redkale.util.ByteArray;
 
 /**
  *
@@ -34,7 +35,7 @@ public class MyHandshakePacket extends MyPacket {
 
     public byte[] seed2;
 
-    public MyHandshakePacket(ByteBuffer buffer, byte[] array) throws SQLException {
+    public MyHandshakePacket(ByteBuffer buffer, ByteArray array) throws SQLException {
         packetLength = Mysqls.readUB3(buffer);
         packetIndex = buffer.get();
         protocolVersion = buffer.get() & 0xff;

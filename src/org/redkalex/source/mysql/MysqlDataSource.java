@@ -15,10 +15,12 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
 import java.util.logging.*;
-import org.redkale.net.AsyncConnection;
+import org.redkale.net.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.JDBC_CONNECTIONS_LIMIT;
 import org.redkale.util.*;
+import static org.redkale.boot.Application.RESNAME_APP_GROUP;
 
 /**
  * MySQL数据库的DataSource实现
@@ -42,17 +44,54 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     private static final byte[] SQL_ROLLBACK = "ROLLBACK".getBytes(StandardCharsets.UTF_8);
 
     public static void main(String[] args) throws Throwable {
+        final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
+        asyncGroup.start();
+        ResourceFactory.root().register(RESNAME_APP_GROUP, asyncGroup);
         Properties prop = new Properties();
         prop.setProperty(DataSources.JDBC_URL, "jdbc:mysql://localhost:3306/platf_core?characterEncoding=utf8");
         prop.setProperty(DataSources.JDBC_USER, "root");
         prop.setProperty(DataSources.JDBC_PWD, "");
         MysqlDataSource source = new MysqlDataSource("", null, prop, prop);
+        ResourceFactory.root().inject(source);
+        source.init(null);
         source.getReadPoolSource().poll();
         source.directExecute("SET NAMES UTF8MB4");
+        source.directQuery("select * from userrobot limit 2", (ResultSet reset) -> {
+            try {
+                if (reset.next()) {
+                    System.out.println("存在值: " + reset.getInt("userid"));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        });
     }
 
     public MysqlDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
         super(unitName, persistxml, readprop, writeprop);
+    }
+
+    @Override
+    public void init(AnyValue conf) {
+        super.init(conf);
+        if (readprop.getProperty(JDBC_CONNECTIONS_LIMIT) == null) {
+            try {
+                readPool.pollAsync().thenCompose((conn) -> executeQuery(null, conn, "SHOW VARIABLES LIKE 'max_connections'").thenAccept((ResultSet reset) -> {
+                    try {
+                        if (reset.next()) {
+                            String maxstr = reset.getString(2);
+                            logger.log(Level.INFO, "DataSource[name=" + (name == null || name.isEmpty() ? "''" : name) + "] max_connections = " + maxstr);
+                            int maxconn = Math.max(10, Integer.parseInt(maxstr) * 8 / 10);
+                            updateMaxconns(maxconn);
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                })).get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+            }
+        }
     }
 
     @Local
@@ -76,8 +115,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop) {
-        return new MyPoolSource(rwtype, queue, semaphore, prop, logger, bufferPool, executor);
+    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, AsyncGroup asyncGroup, String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop) {
+        return new MyPoolSource(asyncGroup, rwtype, queue, semaphore, prop, logger);
     }
 
     @Override
@@ -87,25 +126,25 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         String presql = info.getInsertPrepareSQL(values[0]);
         byte[] prebs = (presql.substring(0, presql.indexOf("VALUES")) + "VALUES").getBytes(StandardCharsets.UTF_8); //不会存在非ASCII字符
         ByteArray ba = new ByteArray();
-        ba.write(prebs);
+        ba.put(prebs);
         for (int i = 0; i < values.length; i++) {
-            if (i > 0) ba.write((byte) ',');
-            ba.write((byte) '(');
+            if (i > 0) ba.put((byte) ',');
+            ba.put((byte) '(');
             for (int j = 0; j < attrs.length; j++) {
-                if (j > 0) ba.write((byte) ',');
+                if (j > 0) ba.put((byte) ',');
                 byte[] param = formatPrepareParam(info, attrs[j], attrs[j].get(values[i]));
                 if (param == null) {
-                    ba.write(BYTES_NULL);
+                    ba.put(BYTES_NULL);
                 } else {
-                    ba.write((byte) 0x27);
+                    ba.put((byte) 0x27);
                     for (byte b : param) {
-                        if (b == 0x5c || b == 0x27) ba.write((byte) 0x5c);
-                        ba.write(b);
+                        if (b == 0x5c || b == 0x27) ba.put((byte) 0x5c);
+                        ba.put(b);
                     }
-                    ba.write((byte) 0x27);
+                    ba.put((byte) 0x27);
                 }
             }
-            ba.write((byte) ')');
+            ba.put((byte) ')');
         }
         sqlBytesArray[0] = ba.getBytes();
         if (info.isLoggable(logger, Level.FINEST)) {
@@ -195,20 +234,20 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             int index = -1;
             for (char ch : sqlChs) {
                 if (ch != '?') {
-                    ba.write((byte) ch);
+                    ba.put((byte) ch);
                     continue;
                 }
                 index++;
                 byte[] param = index < attrs.length ? formatPrepareParam(info, attrs[index], attrs[index].get(values[i])) : formatPrepareParam(info, primary, primary.get(values[i])); //最后一个是主键
                 if (param == null) {
-                    ba.write(BYTES_NULL);
+                    ba.put(BYTES_NULL);
                 } else {
-                    ba.write((byte) 0x27);
+                    ba.put((byte) 0x27);
                     for (byte b : param) {
-                        if (b == 0x5c || b == 0x27) ba.write((byte) 0x5c);
-                        ba.write(b);
+                        if (b == 0x5c || b == 0x27) ba.put((byte) 0x5c);
+                        ba.put(b);
                     }
-                    ba.write((byte) 0x27);
+                    ba.put((byte) 0x27);
                 }
             }
             sqlBytesArray[i] = ba.getBytes();
@@ -235,21 +274,21 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         ByteArray ba = new ByteArray();
         String[] subsqls = realsql.split("\\" + prepareParamSign(1).replace("1", "") + "\\d+");
         for (int i = 0; i < params.length; i++) {
-            ba.write(subsqls[i].getBytes(StandardCharsets.UTF_8));
+            ba.put(subsqls[i].getBytes(StandardCharsets.UTF_8));
             byte[] param = formatPrepareParam(info, null, params[i]);
             if (param == null) {
-                ba.write(BYTES_NULL);
+                ba.put(BYTES_NULL);
             } else {
-                ba.write((byte) 0x27);
+                ba.put((byte) 0x27);
                 for (byte b : param) {
-                    if (b == 0x5c || b == 0x27) ba.write((byte) 0x5c);
-                    ba.write(b);
+                    if (b == 0x5c || b == 0x27) ba.put((byte) 0x5c);
+                    ba.put(b);
                 }
-                ba.write((byte) 0x27);
+                ba.put((byte) 0x27);
             }
         }
         for (int i = params.length; i < subsqls.length; i++) {
-            ba.write(subsqls[i].getBytes(StandardCharsets.UTF_8));
+            ba.put(subsqls[i].getBytes(StandardCharsets.UTF_8));
         }
         return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.UPDATE, ba.getBytes()));
     }
@@ -430,7 +469,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<Integer> exceptionallyUpdateTableNotExist(CompletableFuture<Integer> future,
-        EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final byte[] array, final T oneEntity, final byte[] sqlBytes) {
+        EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final ByteArray array, final T oneEntity, final byte[] sqlBytes) {
         final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
         future.whenComplete((o, ex1) -> {
             if (ex1 == null) {
@@ -535,7 +574,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     protected <T> CompletableFuture<int[]> executeBatchUpdate(final EntityInfo<T> info, final AsyncConnection conn, final UpdateMode mode, final T oneEntity, final byte[]... sqlBytesArray) {
-        final byte[] array = conn.getAttribute(MyPoolSource.CONN_ATTR_BYTES_NAME);
+        final ByteArray array = conn.getSubobject();
         if (sqlBytesArray.length == 1) {
             return executeAtomicOneUpdate(info, conn, array, SQL_SET_AUTOCOMMIT_1).thenCompose(o
                 -> mode == UpdateMode.INSERT ? exceptionallyUpdateTableNotExist(executeAtomicOneUpdate(info, conn, array, sqlBytesArray[0]), info, conn, mode, array, oneEntity, sqlBytesArray[0])
@@ -578,35 +617,18 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         });
     }
 
-    protected <T> CompletableFuture<Integer> executeAtomicOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final byte[] array, final byte[] sqlBytes) {
-        final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
+    protected <T> CompletableFuture<Integer> executeAtomicOneUpdate(final EntityInfo<T> info, final AsyncConnection conn, final ByteArray array, final byte[] sqlBytes) {
+        final ByteArray writer = conn.getSubobject();
+        writer.clear();
         {
             new MyQueryPacket(sqlBytes).writeTo(writer);
         }
-        final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<Integer> future = new CompletableFuture();
-        conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
+        conn.write(writer, new CompletionHandler<Integer, Void>() {
             @Override
-            public void completed(Integer result, ByteBuffer[] attachment1) {
+            public void completed(Integer result, Void attachment1) {
                 if (result < 0) {
                     failed(new SQLException("Write Buffer Error"), attachment1);
-                    return;
-                }
-                int index = -1;
-                for (int i = 0; i < attachment1.length; i++) {
-                    if (attachment1[i].hasRemaining()) {
-                        index = i;
-                        break;
-                    }
-                    bufferPool.accept(attachment1[i]);
-                }
-                if (index == 0) {
-                    conn.write(attachment1, attachment1, this);
-                    return;
-                } else if (index > 0) {
-                    ByteBuffer[] newattachs = new ByteBuffer[attachment1.length - index];
-                    System.arraycopy(attachment1, index, newattachs, 0, newattachs.length);
-                    conn.write(newattachs, newattachs, this);
                     return;
                 }
 
@@ -634,7 +656,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                             //不能关conn
                         } else {
                             for (ByteBuffer buf : readBuffs) {
-                                bufferPool.accept(buf);
+                                conn.offerBuffer(buf);
                             }
                             future.complete((int) okPacket.updateCount);
                         }
@@ -650,10 +672,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             }
 
             @Override
-            public void failed(Throwable exc, ByteBuffer[] attachment1) {
-                for (ByteBuffer attach : attachment1) {
-                    bufferPool.accept(attach);
-                }
+            public void failed(Throwable exc, Void attachment1) {
                 future.completeExceptionally(exc);
             }
         });
@@ -662,37 +681,20 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
 
     //info可以为null,供directQuery
     protected <T> CompletableFuture<ResultSet> executeQuery(final EntityInfo<T> info, final AsyncConnection conn, final String sql) {
-        final byte[] array = conn.getAttribute(MyPoolSource.CONN_ATTR_BYTES_NAME);
-        final ByteBufferWriter writer = ByteBufferWriter.create(bufferPool);
+        final ByteArray writer = conn.getSubobject();
+        writer.clear();
         {
             new MyQueryPacket(sql.getBytes(StandardCharsets.UTF_8)).writeTo(writer);
         }
-        final ByteBuffer[] buffers = writer.toBuffers();
         final CompletableFuture<ResultSet> future = new CompletableFuture();
-        conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
+        conn.write(writer, new CompletionHandler<Integer, Void>() {
             @Override
-            public void completed(Integer result, ByteBuffer[] attachment1) {
+            public void completed(Integer result, Void attachment1) {
                 if (result < 0) {
                     failed(new SQLException("Write Buffer Error"), attachment1);
                     return;
                 }
-                int index = -1;
-                for (int i = 0; i < attachment1.length; i++) {
-                    if (attachment1[i].hasRemaining()) {
-                        index = i;
-                        break;
-                    }
-                    bufferPool.accept(attachment1[i]);
-                }
-                if (index == 0) {
-                    conn.write(attachment1, attachment1, this);
-                    return;
-                } else if (index > 0) {
-                    ByteBuffer[] newattachs = new ByteBuffer[attachment1.length - index];
-                    System.arraycopy(attachment1, index, newattachs, 0, newattachs.length);
-                    conn.write(newattachs, newattachs, this);
-                    return;
-                }
+
                 final List<ByteBuffer> readBuffs = new ArrayList<>();
                 conn.read(new CompletionHandler<Integer, ByteBuffer>() {
                     @Override
@@ -717,15 +719,15 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                         int packetLength = Mysqls.readUB3(bufferReader);
                         MyResultSet resultSet = null;
                         if (packetLength < 4) {
-                            MyColumnCountPacket countPacket = new MyColumnCountPacket(packetLength, bufferReader, array);
+                            MyColumnCountPacket countPacket = new MyColumnCountPacket(packetLength, bufferReader);
                             //System.out.println("查询sql=" + sql + ", 字段数： " + countPacket.columnCount);
                             //System.out.println("--------- column desc start  -------------");
                             MyColumnDescPacket[] colDescs = new MyColumnDescPacket[countPacket.columnCount];
                             for (int i = 0; i < colDescs.length; i++) {
-                                colDescs[i] = new MyColumnDescPacket(bufferReader, array);
+                                colDescs[i] = new MyColumnDescPacket(bufferReader);
                             }
                             //读取EOF包
-                            MyEOFPacket eofPacket = new MyEOFPacket(-1, -1000, bufferReader, array);
+                            MyEOFPacket eofPacket = new MyEOFPacket(-1, -1000, bufferReader);
                             //System.out.println("字段描述EOF包： " + eofPacket);
 
                             List<MyRowDataPacket> rows = new ArrayList<>();
@@ -733,7 +735,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                             int packetIndex = bufferReader.get();
                             int typeid = bufferReader.preget() & 0xff;
                             while (typeid != Mysqls.TYPE_ID_EOF) { //EOF包
-                                final MyRowDataPacket rowData = new MyRowDataPacket(colDescs, colPacketLength, packetIndex, bufferReader, countPacket.columnCount, array);
+                                final MyRowDataPacket rowData = new MyRowDataPacket(colDescs, colPacketLength, packetIndex, bufferReader, countPacket.columnCount);
                                 while (!rowData.readColumnValue(bufferReader) || bufferReader.remaining() < 3 + 6) {
                                     final CompletableFuture<ByteBuffer> patchFuture = new CompletableFuture<>();
                                     conn.read(new CompletionHandler<Integer, ByteBuffer>() {
@@ -759,7 +761,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                                 typeid = bufferReader.preget() & 0xff;
                                 rows.add(rowData);
                             }
-                            eofPacket = new MyEOFPacket(colPacketLength, packetIndex, bufferReader, array);
+                            eofPacket = new MyEOFPacket(colPacketLength, packetIndex, bufferReader);
                             //System.out.println("查询结果包解析完毕： " + eofPacket);
 
                             resultSet = new MyResultSet(info, colDescs, rows);
@@ -767,7 +769,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
                             endok = true;
                             futureover = true;
                         } else {
-                            MyOKPacket okPacket = new MyOKPacket(packetLength, bufferReader, array);
+                            MyOKPacket okPacket = new MyOKPacket(packetLength, bufferReader, writer);
                             //System.out.println("查询sql=" + sql + ", 异常： " + okPacket);
                             ex = new SQLException(okPacket.toMessageString("MySQLOKPacket statusCode not success"), okPacket.sqlState, okPacket.vendorCode);
                         }
@@ -791,10 +793,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             }
 
             @Override
-            public void failed(Throwable exc, ByteBuffer[] attachment1) {
-                for (ByteBuffer attach : attachment1) {
-                    bufferPool.accept(attach);
-                }
+            public void failed(Throwable exc, Void attachment1) {
                 future.completeExceptionally(exc);
             }
         });

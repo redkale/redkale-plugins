@@ -29,6 +29,9 @@ public class MultiPayService extends AbstractPayService {
     private WeiXinPayService weiXinPayService;
 
     @Resource
+    private OppoPayService oppoPayService;
+
+    @Resource
     private AliPayService aliPayService;
 
     @Resource
@@ -57,6 +60,7 @@ public class MultiPayService extends AbstractPayService {
         if (paytype == PAYTYPE_UNION) return unionPayService.supportPayType(paytype);
         if (paytype == PAYTYPE_WEIXIN) return weiXinPayService.supportPayType(paytype);
         if (paytype == PAYTYPE_ALIPAY) return aliPayService.supportPayType(paytype);
+        if (paytype == PAYTYPE_OPPO) return oppoPayService.supportPayType(paytype);
         AbstractPayService service = diyPayServiceMap.get(paytype);
         if (service == null) return false;
         return service.supportPayType(paytype);
@@ -71,6 +75,8 @@ public class MultiPayService extends AbstractPayService {
             weiXinPayService.reloadConfig(paytype);
         } else if (paytype == PAYTYPE_ALIPAY) {
             aliPayService.reloadConfig(paytype);
+        } else if (paytype == PAYTYPE_OPPO) {
+            oppoPayService.reloadConfig(paytype);
         } else {
             AbstractPayService service = diyPayServiceMap.get(paytype);
             if (service != null) service.reloadConfig(paytype);
@@ -82,6 +88,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.prepay(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.prepay(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.prepay(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.prepay(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.prepay(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -92,6 +99,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.prepayAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.prepayAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.prepayAsync(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.prepayAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.prepayAsync(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -102,6 +110,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.notify(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.notify(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.notify(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.notify(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.notify(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -112,6 +121,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.notifyAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.notifyAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.notifyAsync(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.notifyAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.notifyAsync(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -122,6 +132,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.create(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.create(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.create(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.create(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.create(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -132,6 +143,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.createAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.createAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.createAsync(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.createAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.createAsync(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -142,6 +154,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.query(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.query(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.query(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.query(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.query(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -152,6 +165,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.queryAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.queryAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.queryAsync(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.queryAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.queryAsync(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -162,6 +176,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.close(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.close(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.close(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.close(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.close(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -172,6 +187,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.closeAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.closeAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.closeAsync(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.closeAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.closeAsync(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -182,6 +198,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.refund(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.refund(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.refund(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.refund(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.refund(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -192,6 +209,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.refundAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.refundAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.refundAsync(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.refundAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.refundAsync(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -202,6 +220,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.queryRefund(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.queryRefund(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.queryRefund(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.queryRefund(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.queryRefund(request);
         throw new RuntimeException(request + ".paytype is illegal");
@@ -212,6 +231,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.queryRefundAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.queryRefundAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.queryRefundAsync(request);
+        if (request.paytype == PAYTYPE_OPPO) return oppoPayService.queryRefundAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.queryRefundAsync(request);
         throw new RuntimeException(request + ".paytype is illegal");

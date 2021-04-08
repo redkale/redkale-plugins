@@ -25,7 +25,7 @@ public class MyRowDataPacket extends MyPacket {
 
     private int currValueLength = -2;
 
-    public MyRowDataPacket(MyColumnDescPacket[] columns, int len, int index, ByteBufferReader reader, int columnCount, byte[] array) {
+    public MyRowDataPacket(MyColumnDescPacket[] columns, int len, int index, ByteBufferReader reader, int columnCount) {
         this.columns = columns;
         this.columnCount = columnCount;
         this.packetLength = len;

@@ -6,7 +6,7 @@
 package org.redkalex.cache;
 
 import java.io.*;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
@@ -16,7 +16,6 @@ import java.util.concurrent.*;
 import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redkale.convert.Convert;
-import org.redkale.convert.bson.BsonByteBufferWriter;
 import org.redkale.convert.json.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.*;
@@ -24,6 +23,7 @@ import org.redkale.service.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import org.redkale.util.AnyValue.DefaultAnyValue;
+import static org.redkale.boot.Application.RESNAME_APP_GROUP;
 
 /**
  * 详情见: https://redkale.org
@@ -49,6 +49,9 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
+    @Resource(name = RESNAME_APP_GROUP)
+    protected AsyncGroup asyncGroup;
+
     @Resource
     protected JsonConvert defaultConvert;
 
@@ -69,21 +72,6 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     public void init(AnyValue conf) {
         if (this.convert == null) this.convert = this.defaultConvert;
         if (conf == null) conf = new AnyValue.DefaultAnyValue();
-
-        AnyValue prop = conf.getAnyValue("properties");
-        if (prop != null) {
-            String storeValueStr = prop.getValue("value-type");
-            if (storeValueStr != null) {
-                try {
-                    this.initValueType(Thread.currentThread().getContextClassLoader().loadClass(storeValueStr));
-                } catch (Throwable e) {
-                    logger.log(Level.SEVERE, this.getClass().getSimpleName() + " load key & value store class (" + storeValueStr + ") error", e);
-                }
-            }
-        }
-        final int bufferCapacity = conf.getIntValue("bufferCapacity", 8 * 1024);
-        final int bufferPoolSize = conf.getIntValue("bufferPoolSize", Runtime.getRuntime().availableProcessors() * 8);
-        final int threads = conf.getIntValue("threads", Runtime.getRuntime().availableProcessors() * 8);
         final int readTimeoutSeconds = conf.getIntValue("readTimeoutSeconds", TransportFactory.DEFAULT_READTIMEOUTSECONDS);
         final int writeTimeoutSeconds = conf.getIntValue("writeTimeoutSeconds", TransportFactory.DEFAULT_WRITETIMEOUTSECONDS);
         final List<InetSocketAddress> addresses = new ArrayList<>();
@@ -107,9 +95,9 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         }
         if (!passwords0.isEmpty()) this.passwords = passwords0;
         this.nodeAddrs = addresses;
-        TransportFactory transportFactory = TransportFactory.create(threads, bufferPoolSize, bufferCapacity, readTimeoutSeconds, writeTimeoutSeconds);
+        TransportFactory transportFactory = TransportFactory.create(asyncGroup, readTimeoutSeconds, writeTimeoutSeconds);
         this.transport = transportFactory.createTransportTCP("Redis-Transport", null, addresses);
-        this.transport.setSemaphore(new Semaphore(conf.getIntValue("maxconns", threads)));
+        this.transport.setSemaphore(new Semaphore(conf.getIntValue("maxconns", 1000)));
         if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
 
     }
@@ -150,7 +138,13 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         DefaultAnyValue conf = new DefaultAnyValue().addValue("maxconns", "1");
         conf.addValue("node", new DefaultAnyValue().addValue("addr", "127.0.0.1").addValue("port", "6363"));
 
+        final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
+        asyncGroup.start();
+        ResourceFactory.root().register(RESNAME_APP_GROUP, asyncGroup);
+
         RedisCacheSource source = new RedisCacheSource();
+        ResourceFactory.root().inject(source);
+        source.init(null);
         source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
         InetSocketAddress addr = new InetSocketAddress("127.0.0.1", 7788);
@@ -1692,25 +1686,23 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     }
 
     private CompletableFuture<Serializable> send(final CompletionHandler callback, final String command, final CacheEntryType cacheType, final Type resultType, final boolean set, final String key, final byte[]... args) {
-        final BsonByteBufferWriter writer = new BsonByteBufferWriter(transport.getBufferSupplier());
-        writer.writeTo(ASTERISK_BYTE);
-        writer.writeTo(String.valueOf(args.length + 1).getBytes(StandardCharsets.UTF_8));
-        writer.writeTo((byte) '\r', (byte) '\n');
-        writer.writeTo(DOLLAR_BYTE);
-        writer.writeTo(String.valueOf(command.length()).getBytes(StandardCharsets.UTF_8));
-        writer.writeTo((byte) '\r', (byte) '\n');
-        writer.writeTo(command.getBytes(StandardCharsets.UTF_8));
-        writer.writeTo((byte) '\r', (byte) '\n');
+        final ByteArray writer = new ByteArray();
+        writer.put(ASTERISK_BYTE);
+        writer.put(String.valueOf(args.length + 1).getBytes(StandardCharsets.UTF_8));
+        writer.put((byte) '\r', (byte) '\n');
+        writer.put(DOLLAR_BYTE);
+        writer.put(String.valueOf(command.length()).getBytes(StandardCharsets.UTF_8));
+        writer.put((byte) '\r', (byte) '\n');
+        writer.put(command.getBytes(StandardCharsets.UTF_8));
+        writer.put((byte) '\r', (byte) '\n');
 
         for (final byte[] arg : args) {
-            writer.writeTo(DOLLAR_BYTE);
-            writer.writeTo(String.valueOf(arg.length).getBytes(StandardCharsets.UTF_8));
-            writer.writeTo((byte) '\r', (byte) '\n');
-            writer.writeTo(arg);
-            writer.writeTo((byte) '\r', (byte) '\n');
+            writer.put(DOLLAR_BYTE);
+            writer.put(String.valueOf(arg.length).getBytes(StandardCharsets.UTF_8));
+            writer.put((byte) '\r', (byte) '\n');
+            writer.put(arg);
+            writer.put((byte) '\r', (byte) '\n');
         }
-
-        final ByteBuffer[] buffers = writer.toBuffers();
 
         final CompletableFuture<Serializable> future = callback == null ? new CompletableFuture<>() : null;
         CompletableFuture<AsyncConnection> connFuture = this.transport.pollConnection(null);
@@ -1736,7 +1728,6 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
         }
         connFuture.whenComplete((conn, ex) -> {
             if (ex != null) {
-                transport.offerBuffer(buffers);
                 if (future == null) {
                     callback.failed(ex, null);
                 } else {
@@ -1744,28 +1735,10 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                 }
                 return;
             }
-            conn.write(buffers, buffers, new CompletionHandler<Integer, ByteBuffer[]>() {
+            conn.write(writer, new CompletionHandler<Integer, Void>() {
                 @Override
-                public void completed(Integer result, ByteBuffer[] attachments) {
-                    int index = -1;
+                public void completed(Integer result, Void attachment0) {
                     try {
-                        for (int i = 0; i < attachments.length; i++) {
-                            if (attachments[i].hasRemaining()) {
-                                index = i;
-                                break;
-                            } else {
-                                transport.offerBuffer(attachments[i]);
-                            }
-                        }
-                        if (index == 0) {
-                            conn.write(attachments, attachments, this);
-                            return;
-                        } else if (index > 0) {
-                            ByteBuffer[] newattachs = new ByteBuffer[attachments.length - index];
-                            System.arraycopy(attachments, index, newattachs, 0, newattachs.length);
-                            conn.write(newattachs, newattachs, this);
-                            return;
-                        }
                         //----------------------- 读取返回结果 -------------------------------------
                         conn.read(new ReplyCompletionHandler(conn) {
                             @Override
@@ -1904,7 +1877,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                                 conn.offerBuffer(attachment);
                                 transport.offerConnection(true, conn);
                                 if (future == null) {
-                                    callback.failed(exc, attachments);
+                                    callback.failed(exc, attachment0);
                                 } else {
                                     future.completeExceptionally(exc);
                                 }
@@ -1912,15 +1885,15 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
 
                         });
                     } catch (Exception e) {
-                        failed(e, attachments);
+                        failed(e, attachment0);
                     }
                 }
 
                 @Override
-                public void failed(Throwable exc, ByteBuffer[] attachments) {
+                public void failed(Throwable exc, Void attachment0) {
                     transport.offerConnection(true, conn);
                     if (future == null) {
-                        callback.failed(exc, attachments);
+                        callback.failed(exc, attachment0);
                     } else {
                         future.completeExceptionally(exc);
                     }
@@ -1933,45 +1906,26 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     private CompletableFuture<AsyncConnection> selectdb(final AsyncConnection conn, final int db, final String command) {
         final CompletableFuture<AsyncConnection> rsfuture = new CompletableFuture();
         try {
-            final BsonByteBufferWriter dbwriter = new BsonByteBufferWriter(transport.getBufferSupplier());
-            dbwriter.writeTo(ASTERISK_BYTE);
-            dbwriter.writeTo((byte) '2');
-            dbwriter.writeTo((byte) '\r', (byte) '\n');
-            dbwriter.writeTo(DOLLAR_BYTE);
-            dbwriter.writeTo((byte) '6');
-            dbwriter.writeTo((byte) '\r', (byte) '\n');
-            dbwriter.writeTo("SELECT".getBytes(StandardCharsets.UTF_8));
-            dbwriter.writeTo((byte) '\r', (byte) '\n');
+            final ByteArray dbwriter = new ByteArray();
+            dbwriter.put(ASTERISK_BYTE);
+            dbwriter.put((byte) '2');
+            dbwriter.put((byte) '\r', (byte) '\n');
+            dbwriter.put(DOLLAR_BYTE);
+            dbwriter.put((byte) '6');
+            dbwriter.put((byte) '\r', (byte) '\n');
+            dbwriter.put("SELECT".getBytes(StandardCharsets.UTF_8));
+            dbwriter.put((byte) '\r', (byte) '\n');
 
-            dbwriter.writeTo(DOLLAR_BYTE);
-            dbwriter.writeTo(String.valueOf(String.valueOf(db).length()).getBytes(StandardCharsets.UTF_8));
-            dbwriter.writeTo((byte) '\r', (byte) '\n');
-            dbwriter.writeTo(String.valueOf(db).getBytes(StandardCharsets.UTF_8));
-            dbwriter.writeTo((byte) '\r', (byte) '\n');
+            dbwriter.put(DOLLAR_BYTE);
+            dbwriter.put(String.valueOf(String.valueOf(db).length()).getBytes(StandardCharsets.UTF_8));
+            dbwriter.put((byte) '\r', (byte) '\n');
+            dbwriter.put(String.valueOf(db).getBytes(StandardCharsets.UTF_8));
+            dbwriter.put((byte) '\r', (byte) '\n');
 
-            final ByteBuffer[] authbuffers = dbwriter.toBuffers();
-            conn.write(authbuffers, authbuffers, new CompletionHandler<Integer, ByteBuffer[]>() {
+            conn.write(dbwriter, new CompletionHandler<Integer, Void>() {
                 @Override
-                public void completed(Integer result, ByteBuffer[] attachments) {
-                    int index = -1;
+                public void completed(Integer result, Void attachments) {
                     try {
-                        for (int i = 0; i < attachments.length; i++) {
-                            if (attachments[i].hasRemaining()) {
-                                index = i;
-                                break;
-                            } else {
-                                transport.offerBuffer(attachments[i]);
-                            }
-                        }
-                        if (index == 0) {
-                            conn.write(attachments, attachments, this);
-                            return;
-                        } else if (index > 0) {
-                            ByteBuffer[] newattachs = new ByteBuffer[attachments.length - index];
-                            System.arraycopy(attachments, index, newattachs, 0, newattachs.length);
-                            conn.write(newattachs, newattachs, this);
-                            return;
-                        }
                         //----------------------- 读取返回结果 -------------------------------------
                         conn.read(new ReplyCompletionHandler(conn) {
                             @Override
@@ -2016,7 +1970,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                 }
 
                 @Override
-                public void failed(Throwable exc, ByteBuffer[] attachments) {
+                public void failed(Throwable exc, Void attachments) {
                     transport.offerConnection(true, conn);
                     rsfuture.completeExceptionally(exc);
                 }
@@ -2030,45 +1984,26 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
     private CompletableFuture<AsyncConnection> auth(final AsyncConnection conn, final byte[] password, final String command) {
         final CompletableFuture<AsyncConnection> rsfuture = new CompletableFuture();
         try {
-            final BsonByteBufferWriter authwriter = new BsonByteBufferWriter(transport.getBufferSupplier());
-            authwriter.writeTo(ASTERISK_BYTE);
-            authwriter.writeTo((byte) '2');
-            authwriter.writeTo((byte) '\r', (byte) '\n');
-            authwriter.writeTo(DOLLAR_BYTE);
-            authwriter.writeTo((byte) '4');
-            authwriter.writeTo((byte) '\r', (byte) '\n');
-            authwriter.writeTo("AUTH".getBytes(StandardCharsets.UTF_8));
-            authwriter.writeTo((byte) '\r', (byte) '\n');
+            final ByteArray authwriter = new ByteArray();
+            authwriter.put(ASTERISK_BYTE);
+            authwriter.put((byte) '2');
+            authwriter.put((byte) '\r', (byte) '\n');
+            authwriter.put(DOLLAR_BYTE);
+            authwriter.put((byte) '4');
+            authwriter.put((byte) '\r', (byte) '\n');
+            authwriter.put("AUTH".getBytes(StandardCharsets.UTF_8));
+            authwriter.put((byte) '\r', (byte) '\n');
 
-            authwriter.writeTo(DOLLAR_BYTE);
-            authwriter.writeTo(String.valueOf(password.length).getBytes(StandardCharsets.UTF_8));
-            authwriter.writeTo((byte) '\r', (byte) '\n');
-            authwriter.writeTo(password);
-            authwriter.writeTo((byte) '\r', (byte) '\n');
+            authwriter.put(DOLLAR_BYTE);
+            authwriter.put(String.valueOf(password.length).getBytes(StandardCharsets.UTF_8));
+            authwriter.put((byte) '\r', (byte) '\n');
+            authwriter.put(password);
+            authwriter.put((byte) '\r', (byte) '\n');
 
-            final ByteBuffer[] authbuffers = authwriter.toBuffers();
-            conn.write(authbuffers, authbuffers, new CompletionHandler<Integer, ByteBuffer[]>() {
+            conn.write(authwriter, new CompletionHandler<Integer, Void>() {
                 @Override
-                public void completed(Integer result, ByteBuffer[] attachments) {
-                    int index = -1;
+                public void completed(Integer result, Void attachments) {
                     try {
-                        for (int i = 0; i < attachments.length; i++) {
-                            if (attachments[i].hasRemaining()) {
-                                index = i;
-                                break;
-                            } else {
-                                transport.offerBuffer(attachments[i]);
-                            }
-                        }
-                        if (index == 0) {
-                            conn.write(attachments, attachments, this);
-                            return;
-                        } else if (index > 0) {
-                            ByteBuffer[] newattachs = new ByteBuffer[attachments.length - index];
-                            System.arraycopy(attachments, index, newattachs, 0, newattachs.length);
-                            conn.write(newattachs, newattachs, this);
-                            return;
-                        }
                         //----------------------- 读取返回结果 -------------------------------------
                         conn.read(new ReplyCompletionHandler(conn) {
                             @Override
@@ -2113,7 +2048,7 @@ public final class RedisCacheSource<V extends Object> extends AbstractService im
                 }
 
                 @Override
-                public void failed(Throwable exc, ByteBuffer[] attachments) {
+                public void failed(Throwable exc, Void attachments) {
                     transport.offerConnection(true, conn);
                     rsfuture.completeExceptionally(exc);
                 }
@@ -2155,7 +2090,7 @@ abstract class ReplyCompletionHandler implements CompletionHandler<Integer, Byte
         if (out.get(0) == '$') start = 1;
         boolean negative = out.get(start) == '-';
         long value = negative ? 0 : (out.get(start) - '0');
-        for (int i = 1 + start; i < out.size(); i++) {
+        for (int i = 1 + start; i < out.length(); i++) {
             value = value * 10 + (out.get(i) - '0');
         }
         out.clear();
@@ -2170,14 +2105,14 @@ abstract class ReplyCompletionHandler implements CompletionHandler<Integer, Byte
             buffer.get();//读掉 \n
             return;//传null则表示使用StandardCharsets.UTF_8
         }
-        if (has) out.write(lasted);
+        if (has) out.put(lasted);
         while (buffer.hasRemaining()) {
             byte b = buffer.get();
             if (b == '\n' && lasted == '\r') {
                 out.removeLastByte();
                 return;
             }
-            out.write(lasted = b);
+            out.put(lasted = b);
         }
         //说明数据还没读取完
         buffer.clear();

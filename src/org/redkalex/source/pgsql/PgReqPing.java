@@ -5,17 +5,16 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.nio.ByteBuffer;
-import org.redkale.util.*;
-
 /**
  *
  * @author zhangjx
- * @param <T> 泛型
  */
-public interface PgRespDecoder<T> {
+public class PgReqPing extends PgReqQuery {
 
-    public byte messageid();
+    public static final PgReqPing INSTANCE = new PgReqPing();
 
-    public T read(final ByteBuffer buffer, final int length, final ByteArray bytes);
+    public <T extends Object> PgReqPing() {
+        super(null, "SELECT 1");
+    }
+
 }

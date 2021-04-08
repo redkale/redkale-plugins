@@ -13,9 +13,8 @@ import java.time.*;
 import static java.time.format.DateTimeFormatter.*;
 import java.time.format.DateTimeParseException;
 import java.util.UUID;
-import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.Utility;
-import static org.redkalex.source.pgsql.PgsqlLDataSource.*;
+import static org.redkalex.source.pgsql.PgClientRequest.*;
 
 /**
  *
@@ -91,6 +90,6 @@ public class PgColumnDesc {
 
     @Override
     public String toString() {
-        return JsonConvert.root().convertTo(this);
+        return name;
     }
 }

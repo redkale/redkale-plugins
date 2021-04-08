@@ -26,11 +26,15 @@ import org.redkale.util.*;
  */
 public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWriter> {
 
-    private static final ObjectPool<ProtobufReader> readerPool = ProtobufReader.createPool(Integer.getInteger("convert.protobuf.pool.size", 16));
+    private final ThreadLocal<ProtobufWriter> writerPool = ThreadLocal.withInitial(ProtobufWriter::new);
 
-    private static final ObjectPool<ProtobufWriter> writerPool = ProtobufWriter.createPool(Integer.getInteger("convert.protobuf.pool.size", 16));
+    private final Consumer<ProtobufWriter> offerConsumer = w -> offerProtobufWriter(w);
 
     private final boolean tiny;
+
+    private Encodeable lastConvertEncodeable;
+
+    private Decodeable lastConvertDecodeable;
 
     protected ProtobufConvert(ConvertFactory<ProtobufReader, ProtobufWriter> factory, boolean tiny) {
         super(factory);
@@ -62,23 +66,6 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         };
     }
 
-    //------------------------------ reader -----------------------------------------------------------
-    public ProtobufReader pollProtobufReader(final ByteBuffer... buffers) {
-        return new ProtobufByteBufferReader((ConvertMask) null, buffers);
-    }
-
-    public ProtobufReader pollProtobufReader(final InputStream in) {
-        return new ProtobufStreamReader(in);
-    }
-
-    public ProtobufReader pollProtobufReader() {
-        return readerPool.get();
-    }
-
-    public void offerProtobufReader(final ProtobufReader in) {
-        if (in != null) readerPool.accept(in);
-    }
-
     //------------------------------ writer -----------------------------------------------------------
     @Override
     protected <S extends ProtobufWriter> S configWrite(S writer) {
@@ -95,11 +82,20 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     }
 
     public ProtobufWriter pollProtobufWriter() {
-        return configWrite(writerPool.get().tiny(tiny).enumtostring(((ProtobufFactory) factory).enumtostring));
+        ProtobufWriter writer = writerPool.get();
+        if (writer == null) {
+            writer = new ProtobufWriter();
+        } else {
+            writerPool.set(null);
+        }
+        return configWrite(writer.tiny(tiny).enumtostring(((ProtobufFactory) factory).enumtostring));
     }
 
     public void offerProtobufWriter(final ProtobufWriter out) {
-        if (out != null) writerPool.accept(out);
+        if (out != null) {
+            out.recycle();
+            writerPool.set(out);
+        }
     }
 
     /**
@@ -437,13 +433,14 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     @SuppressWarnings("unchecked")
     public <T> T convertFrom(final Type type, final byte[] bytes, final int offset, final int len) {
         if (type == null) return null;
-        final ProtobufReader in = readerPool.get();
-        in.setBytes(bytes, offset, len);
-        @SuppressWarnings("unchecked")
-        Decodeable decoder = factory.loadDecoder(type);
+        final ProtobufReader reader = new ProtobufReader(bytes, offset, len);
+        Decodeable decoder = this.lastConvertDecodeable;
+        if (decoder == null || decoder.getType() != type) {
+            decoder = factory.loadDecoder(type);
+            this.lastConvertDecodeable = decoder;
+        }
         if (!(decoder instanceof ObjectDecoder) && !(decoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
-        T rs = (T) decoder.convertFrom(in);
-        readerPool.accept(in);
+        T rs = (T) decoder.convertFrom(reader);
         return rs;
     }
 
@@ -451,8 +448,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     public <T> T convertFrom(final Type type, final InputStream in) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertFrom InputStream");
         if (type == null || in == null) return null;
-        @SuppressWarnings("unchecked")
-        Decodeable decoder = factory.loadDecoder(type);
+        Decodeable decoder = this.lastConvertDecodeable;
+        if (decoder == null || decoder.getType() != type) {
+            decoder = factory.loadDecoder(type);
+            this.lastConvertDecodeable = decoder;
+        }
         if (!(decoder instanceof ObjectDecoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
         return (T) decoder.convertFrom(new ProtobufStreamReader(in));
     }
@@ -462,8 +462,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     public <T> T convertFrom(final Type type, final ByteBuffer... buffers) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertFrom ByteBuffer");
         if (type == null || buffers.length < 1) return null;
-        @SuppressWarnings("unchecked")
-        Decodeable decoder = factory.loadDecoder(type);
+        Decodeable decoder = this.lastConvertDecodeable;
+        if (decoder == null || decoder.getType() != type) {
+            decoder = factory.loadDecoder(type);
+            this.lastConvertDecodeable = decoder;
+        }
         if (!(decoder instanceof ObjectDecoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
         return (T) decoder.convertFrom(new ProtobufByteBufferReader((ConvertMask) null, buffers));
     }
@@ -473,8 +476,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     public <T> T convertFrom(final Type type, final ConvertMask mask, final ByteBuffer... buffers) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertFrom ByteBuffer");
         if (type == null || buffers.length < 1) return null;
-        @SuppressWarnings("unchecked")
-        Decodeable decoder = factory.loadDecoder(type);
+        Decodeable decoder = this.lastConvertDecodeable;
+        if (decoder == null || decoder.getType() != type) {
+            decoder = factory.loadDecoder(type);
+            this.lastConvertDecodeable = decoder;
+        }
         if (!(decoder instanceof ObjectDecoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
         return (T) decoder.convertFrom(new ProtobufByteBufferReader(mask, buffers));
     }
@@ -482,8 +488,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     @SuppressWarnings("unchecked")
     public <T> T convertFrom(final Type type, final ProtobufReader reader) {
         if (type == null) return null;
-        @SuppressWarnings("unchecked")
-        Decodeable decoder = factory.loadDecoder(type);
+        Decodeable decoder = this.lastConvertDecodeable;
+        if (decoder == null || decoder.getType() != type) {
+            decoder = factory.loadDecoder(type);
+            this.lastConvertDecodeable = decoder;
+        }
         if (!(decoder instanceof ObjectDecoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
         T rs = (T) decoder.convertFrom(reader);
         return rs;
@@ -493,10 +502,10 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     @Override
     public byte[] convertTo(final Object value) {
         if (value == null) {
-            final ProtobufWriter out = pollProtobufWriter();
-            out.writeNull();
-            byte[] result = out.toArray();
-            writerPool.accept(out);
+            final ProtobufWriter writer = pollProtobufWriter();
+            writer.writeNull();
+            byte[] result = writer.toArray();
+            offerProtobufWriter(writer);
             return result;
         }
         return convertTo(value.getClass(), value);
@@ -505,12 +514,17 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     @Override
     public byte[] convertTo(final Type type, final Object value) {
         if (type == null) return null;
-        final ProtobufWriter out = pollProtobufWriter();
-        Encodeable encoder = factory.loadEncoder(type);
+        final ProtobufWriter writer = pollProtobufWriter();
+        Encodeable encoder = this.lastConvertEncodeable;
+        if (encoder == null || encoder.getType() != type) {
+            encoder = factory.loadEncoder(type);
+            this.lastConvertEncodeable = encoder;
+        }
+        if (encoder.specifyable()) writer.specify(type);
         if (!(encoder instanceof ObjectEncoder) && !(encoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
-        encoder.convertTo(out, value);
-        byte[] result = out.toArray();
-        writerPool.accept(out);
+        encoder.convertTo(writer, value);
+        byte[] result = writer.toArray();
+        offerProtobufWriter(writer);
         return result;
     }
 
@@ -520,15 +534,20 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     public byte[] convertTo(final Type type, final Object value, int tag, byte... appends) {
         if (type == null) return null;
-        final ProtobufWriter out = pollProtobufWriter();
-        Encodeable encoder = factory.loadEncoder(type);
+        final ProtobufWriter writer = pollProtobufWriter();
+        Encodeable encoder = this.lastConvertEncodeable;
+        if (encoder == null || encoder.getType() != type) {
+            encoder = factory.loadEncoder(type);
+            this.lastConvertEncodeable = encoder;
+        }
+        if (encoder.specifyable()) writer.specify(type);
         if (!(encoder instanceof ObjectEncoder) && !(encoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
-        encoder.convertTo(out, value);
-        out.writeUInt32(tag);
-        out.writeUInt32(appends.length);
-        out.writeTo(appends);
-        byte[] result = out.toArray();
-        writerPool.accept(out);
+        encoder.convertTo(writer, value);
+        writer.writeUInt32(tag);
+        writer.writeUInt32(appends.length);
+        writer.writeTo(appends);
+        byte[] result = writer.toArray();
+        offerProtobufWriter(writer);
         return result;
     }
 
@@ -543,45 +562,84 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     }
 
     @Override
-    public byte[] convertMapTo(final Object... values) {
-        if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
-        if (values == null) return null;
-        final ProtobufWriter out = pollProtobufWriter();
-        ((AnyEncoder) factory.getAnyEncoder()).convertMapTo(out, values);
-        byte[] result = out.toArray();
-        writerPool.accept(out);
-        return result;
+    public void convertToBytes(final Object value, final ConvertBytesHandler handler) {
+        convertToBytes(value == null ? null : value.getClass(), value, handler);
+    }
+
+    @Override
+    public void convertToBytes(final Type type, final Object value, final ConvertBytesHandler handler) {
+        final ProtobufWriter writer = pollProtobufWriter();
+        if (type == null) {
+            writer.writeNull();
+        } else {
+            Encodeable encoder = this.lastConvertEncodeable;
+            if (encoder == null || encoder.getType() != type) {
+                encoder = factory.loadEncoder(type);
+                this.lastConvertEncodeable = encoder;
+            }
+            if (encoder.specifyable()) writer.specify(type);
+            if (!(encoder instanceof ObjectEncoder) && !(encoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
+            encoder.convertTo(writer, value);
+        }
+        writer.completed(handler, offerConsumer);
+    }
+
+    @Override
+    public void convertToBytes(final ByteArray array, final Object value) {
+        convertToBytes(array, value == null ? null : value.getClass(), value);
+    }
+
+    @Override
+    public void convertToBytes(final ByteArray array, final Type type, final Object value) {
+        final ProtobufWriter writer = configWrite(new ProtobufWriter(array).tiny(tiny).enumtostring(((ProtobufFactory) factory).enumtostring));
+        if (type == null) {
+            writer.writeNull();
+        } else {
+            Encodeable encoder = this.lastConvertEncodeable;
+            if (encoder == null || encoder.getType() != type) {
+                encoder = factory.loadEncoder(type);
+                this.lastConvertEncodeable = encoder;
+            }
+            if (encoder.specifyable()) writer.specify(type);
+            if (!(encoder instanceof ObjectEncoder) && !(encoder instanceof SimpledCoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
+            encoder.convertTo(writer, value);
+        }
+        writer.directTo(array);
     }
 
     public void convertTo(final OutputStream out, final Object value) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo OutputStream");
+        ProtobufWriter writer = pollProtobufWriter(out);
         if (value == null) {
-            pollProtobufWriter(out).writeNull();
+            writer.writeNull();
         } else {
-            Encodeable encoder = factory.loadEncoder(value.getClass());
+            Type type = value.getClass();
+            Encodeable encoder = this.lastConvertEncodeable;
+            if (encoder == null || encoder.getType() != type) {
+                encoder = factory.loadEncoder(type);
+                this.lastConvertEncodeable = encoder;
+            }
+            if (encoder.specifyable()) writer.specify(type);
             if (!(encoder instanceof ObjectEncoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + value.getClass() + ")");
-            encoder.convertTo(pollProtobufWriter(out), value);
+            encoder.convertTo(writer, value);
         }
     }
 
     public void convertTo(final OutputStream out, final Type type, final Object value) {
         if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo OutputStream");
         if (type == null) return;
+        ProtobufWriter writer = pollProtobufWriter(out);
         if (value == null) {
-            pollProtobufWriter(out).writeNull();
+            writer.writeNull();
         } else {
-            Encodeable encoder = factory.loadEncoder(type);
+            Encodeable encoder = this.lastConvertEncodeable;
+            if (encoder == null || encoder.getType() != type) {
+                encoder = factory.loadEncoder(type);
+                this.lastConvertEncodeable = encoder;
+            }
+            if (encoder.specifyable()) writer.specify(type);
             if (!(encoder instanceof ObjectEncoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
-            encoder.convertTo(pollProtobufWriter(out), value);
-        }
-    }
-
-    public void convertMapTo(final OutputStream out, final Object... values) {
-        if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
-        if (values == null) {
-            pollProtobufWriter(out).writeNull();
-        } else {
-            ((AnyEncoder) factory.getAnyEncoder()).convertMapTo(pollProtobufWriter(out), values);
+            encoder.convertTo(writer, value);
         }
     }
 
@@ -589,61 +647,54 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     public ByteBuffer[] convertTo(final Supplier<ByteBuffer> supplier, final Object value) {
         //if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");
         if (supplier == null) return null;
-        ProtobufByteBufferWriter out = pollProtobufWriter(supplier);
+        ProtobufByteBufferWriter writer = pollProtobufWriter(supplier);
         if (value == null) {
-            out.writeNull();
+            writer.writeNull();
         } else {
-            Encodeable encoder = factory.loadEncoder(value.getClass());
+            Type type = value.getClass();
+            Encodeable encoder = this.lastConvertEncodeable;
+            if (encoder == null || encoder.getType() != type) {
+                encoder = factory.loadEncoder(type);
+                this.lastConvertEncodeable = encoder;
+            }
+            if (encoder.specifyable()) writer.specify(type);
             if (!(encoder instanceof ObjectEncoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + value.getClass() + ")");
-            encoder.convertTo(out, value);
+            encoder.convertTo(writer, value);
         }
-        return out.toBuffers();
+        return writer.toBuffers();
     }
 
     @Override
     public ByteBuffer[] convertTo(final Supplier<ByteBuffer> supplier, final Type type, final Object value) {
         //if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");
         if (supplier == null || type == null) return null;
-        ProtobufByteBufferWriter out = pollProtobufWriter(supplier);
+        ProtobufByteBufferWriter writer = pollProtobufWriter(supplier);
         if (value == null) {
-            out.writeNull();
+            writer.writeNull();
         } else {
-            Encodeable encoder = factory.loadEncoder(type);
+            Encodeable encoder = this.lastConvertEncodeable;
+            if (encoder == null || encoder.getType() != type) {
+                encoder = factory.loadEncoder(type);
+                this.lastConvertEncodeable = encoder;
+            }
+            if (encoder.specifyable()) writer.specify(type);
             if (!(encoder instanceof ObjectEncoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
-            encoder.convertTo(out, value);
+            encoder.convertTo(writer, value);
         }
-        return out.toBuffers();
-    }
-
-    @Override
-    public byte[] convertMapToBytes(final Object... values) {
-        ProtobufWriter out = pollProtobufWriter();
-        if (values == null) {
-            out.writeNull();
-        } else {
-            ((AnyEncoder) factory.getAnyEncoder()).convertMapTo(out, values);
-        }
-        return out.toArray();
-    }
-
-    @Override
-    public ByteBuffer[] convertMapTo(final Supplier<ByteBuffer> supplier, final Object... values) {
-        //if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
-        if (supplier == null) return null;
-        ProtobufByteBufferWriter out = pollProtobufWriter(supplier);
-        if (values == null) {
-            out.writeNull();
-        } else {
-            ((AnyEncoder) factory.getAnyEncoder()).convertMapTo(out, values);
-        }
-        return out.toBuffers();
+        return writer.toBuffers();
     }
 
     public void convertTo(final ProtobufWriter writer, final Object value) {
         if (value == null) {
             writer.writeNull();
         } else {
-            Encodeable encoder = factory.loadEncoder(value.getClass());
+            Type type = value.getClass();
+            Encodeable encoder = this.lastConvertEncodeable;
+            if (encoder == null || encoder.getType() != type) {
+                encoder = factory.loadEncoder(type);
+                this.lastConvertEncodeable = encoder;
+            }
+            if (encoder.specifyable()) writer.specify(type);
             if (!(encoder instanceof ObjectEncoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + value.getClass() + ")");
             writer.initoffset = writer.count;
             encoder.convertTo(writer, value);
@@ -653,17 +704,13 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     public void convertTo(final ProtobufWriter writer, final Type type, final Object value) {
         if (type == null) return;
         writer.initoffset = writer.count;
-        factory.loadEncoder(type).convertTo(writer, value);
-    }
-
-    public void convertMapTo(final ProtobufWriter writer, final Object... values) {
-        if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
-        if (values == null) {
-            writer.writeNull();
-        } else {
-            writer.initoffset = writer.count;
-            ((AnyEncoder) factory.getAnyEncoder()).convertMapTo(writer, values);
+        Encodeable encoder = this.lastConvertEncodeable;
+        if (encoder == null || encoder.getType() != type) {
+            encoder = factory.loadEncoder(type);
+            this.lastConvertEncodeable = encoder;
         }
+        if (encoder.specifyable()) writer.specify(type);
+        encoder.convertTo(writer, value);
     }
 
     public ProtobufWriter convertToWriter(final Object value) {
@@ -673,17 +720,17 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     public ProtobufWriter convertToWriter(final Type type, final Object value) {
         if (type == null) return null;
-        final ProtobufWriter out = pollProtobufWriter();
-        Encodeable encoder = factory.loadEncoder(type);
+        final ProtobufWriter writer = pollProtobufWriter();
+
+        Encodeable encoder = this.lastConvertEncodeable;
+        if (encoder == null || encoder.getType() != type) {
+            encoder = factory.loadEncoder(type);
+            this.lastConvertEncodeable = encoder;
+        }
+        if (encoder.specifyable()) writer.specify(type);
         if (!(encoder instanceof ObjectEncoder)) throw new RuntimeException(this.getClass().getSimpleName() + " not supported type(" + type + ")");
-        encoder.convertTo(out, value);
-        return out;
+        encoder.convertTo(writer, value);
+        return writer;
     }
 
-    public ProtobufWriter convertMapToWriter(final Object... values) {
-        if (true) throw new RuntimeException(this.getClass().getSimpleName() + " not supported convertMapTo");
-        final ProtobufWriter out = pollProtobufWriter();
-        ((AnyEncoder) factory.getAnyEncoder()).convertMapTo(out, values);
-        return out;
-    }
 }

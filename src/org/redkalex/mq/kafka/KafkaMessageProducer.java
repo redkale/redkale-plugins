@@ -85,9 +85,9 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         Integer partition = null;
         if (this.partitions > 0) {    //不指定 partition则设计上需要以对等为主
             if (message.getGroupid() != null && !message.getGroupid().isEmpty()) {
-                partition = message.getGroupid().hashCode() % this.partitions;
+                partition = Math.abs(message.getGroupid().hashCode()) % this.partitions;
             } else if (message.getUserid() != 0) {
-                partition = message.getUserid() % this.partitions;
+                partition = Math.abs(message.getUserid()) % this.partitions;
             }
         }
         final Integer partition0 = partition;

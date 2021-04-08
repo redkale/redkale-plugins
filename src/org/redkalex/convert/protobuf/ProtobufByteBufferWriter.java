@@ -134,4 +134,19 @@ public class ProtobufByteBufferWriter extends ProtobufWriter {
         this.buffers = null;
         return false;
     }
+
+    @Override
+    public byte[] content() {
+        throw new UnsupportedOperationException("Not supported yet."); //无需实现
+    }
+
+    @Override
+    public int offset() {
+        throw new UnsupportedOperationException("Not supported yet.");//无需实现
+    }
+
+    @Override
+    public int length() {
+        throw new UnsupportedOperationException("Not supported yet."); //无需实现
+    }
 }

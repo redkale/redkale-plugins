@@ -9,6 +9,7 @@ import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.*;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.redkale.convert.*;
 import org.redkale.util.*;
@@ -17,7 +18,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
-public class ProtobufWriter extends Writer {
+public class ProtobufWriter extends Writer implements ByteTuple {
 
     private static final int defaultSize = Integer.getInteger("convert.protobuf.writer.buffer.defsize", Integer.getInteger("convert.writer.buffer.defsize", 1024));
 
@@ -64,8 +65,50 @@ public class ProtobufWriter extends Writer {
         this.content = new byte[size > 128 ? size : 128];
     }
 
+    public ProtobufWriter(ByteArray array) {
+        this.content = array.content();
+        this.count = array.length();
+    }
+
+    @Override
+    public byte[] content() {
+        return content;
+    }
+
+    @Override
+    public int offset() {
+        return initoffset;
+    }
+
+    @Override
+    public int length() {
+        return count;
+    }
+
+    /**
+     * 将本对象的内容引用复制给array
+     *
+     * @param array ByteArray
+     */
+    public void directTo(ByteArray array) {
+        array.directFrom(content, count);
+    }
+
     public ByteBuffer[] toBuffers() {
         return new ByteBuffer[]{ByteBuffer.wrap(content, 0, count)};
+    }
+
+    /**
+     * 直接获取全部数据, 实际数据需要根据count长度来截取
+     *
+     * @return byte[]
+     */
+    public byte[] directBytes() {
+        return content;
+    }
+
+    public void completed(ConvertBytesHandler handler, Consumer<ProtobufWriter> callback) {
+        handler.completed(content, 0, count, callback, this);
     }
 
     public byte[] toArray() {
@@ -112,6 +155,12 @@ public class ProtobufWriter extends Writer {
         expand(len);
         System.arraycopy(chs, start, content, count, len);
         count += len;
+    }
+
+    public ProtobufWriter clear() {
+        this.count = 0;
+        this.initoffset = 0;
+        return this;
     }
 
     @Override
@@ -348,7 +397,7 @@ public class ProtobufWriter extends Writer {
     }
 
     @Override
-    public void writeFieldName(String fieldName, Type fieldType, int fieldPos) {
+    public void writeFieldName(EnMember member, String fieldName, Type fieldType, int fieldPos) {
         int tag = ProtobufFactory.getTag(fieldName, fieldType, fieldPos, enumtostring);
         writeUInt32(tag);
     }
@@ -489,7 +538,7 @@ public class ProtobufWriter extends Writer {
 
     @Override
     public void writeString(String value) {
-        byte[] bs = Utility.encodeUTF8(value);
+        byte[] bs = Utility.isLatin1(value) ? Utility.byteArray(value) : Utility.encodeUTF8(value);
         writeUInt32(bs.length);
         writeTo(bs);
     }
