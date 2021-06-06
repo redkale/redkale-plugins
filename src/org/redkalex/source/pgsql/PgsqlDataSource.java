@@ -26,9 +26,9 @@ import org.redkale.util.*;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
+public class PgsqlDataSource extends DataSqlSource {
 
-    public PgsqlLDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
+    public PgsqlDataSource(String unitName, URL persistxml, Properties readprop, Properties writeprop) {
         super(unitName, persistxml, readprop, writeprop);
     }
 
@@ -58,7 +58,7 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, AsyncGroup asyncGroup, String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop) {
+    protected PoolSource createPoolSource(DataSource source, AsyncGroup asyncGroup, String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop) {
         return new PgPoolSource(asyncGroup, rwtype, queue, semaphore, prop, logger);
     }
 
@@ -105,7 +105,7 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateDB(EntityInfo<T> info, final T... values) {
+    protected <T> CompletableFuture<Integer> updateDB(EntityInfo<T> info, ChannelContext context, final T... values) {
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
         final Object[][] objs = new Object[values.length][];
@@ -121,7 +121,7 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
         if (pool.client.prepareCacheable) {
             String sql = info.getUpdateDollarPrepareSQL(values[0]);
             PgReqExtendedCommand req = new PgReqExtendedCommand(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, pool.client.extendedStatementIndex(sql), info, sql, 0, Utility.append(attrs, primary), objs);
-            return pool.sendAsync(req).thenApply(g -> g.getUpdateEffectCount());
+            return pool.sendAsync(context, req).thenApply(g -> g.getUpdateEffectCount());
         } else {
             return executeUpdate(info, info.getUpdateDollarPrepareSQL(values[0]), null, 0, false, Utility.append(attrs, primary), objs);
         }
@@ -224,12 +224,12 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, final SelectColumn selects, Serializable pk) {
+    protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, ChannelContext context, final SelectColumn selects, Serializable pk) {
         if (info.getTableStrategy() == null && selects == null && readPoolSource().client.prepareCacheable) {
             PgPoolSource pool = readPoolSource();
             String sql = info.getFindDollarPrepareSQL(null);
             PgReqExtendedCommand req = new PgReqExtendedCommand(PgClientRequest.REQ_TYPE_EXTEND_QUERY, pool.client.extendedStatementIndex(sql), info, sql, 0, null, new Object[]{pk});
-            return pool.sendAsync(req).thenApply((PgResultSet set) -> {
+            return pool.sendAsync(context, req).thenApply((PgResultSet set) -> {
                 PgResultSet pgset = set.realResult == null ? set : set.copy();
                 T rs = (T) pgset.realResult;
                 if (rs == null) {
@@ -248,11 +248,11 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
         String column = info.getPrimarySQLColumn();
         final String sql = "SELECT " + info.getQueryColumns(null, selects) + " FROM " + info.getTable(pk) + " WHERE " + column + "=" + info.formatSQLValue(column, pk, sqlFormatter);
         if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
-        return findDB(info, sql, true, selects);
+        return findDB(info, context, sql, true, selects);
     }
 
     @Override
-    protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, String sql, boolean onlypk, SelectColumn selects) {
+    protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, ChannelContext context, String sql, boolean onlypk, SelectColumn selects) {
         return executeQuery(info, sql).thenApply((ResultSet set) -> {
             PgResultSet pgset = (PgResultSet) set;
             T rs = (T) pgset.realResult;
@@ -317,7 +317,7 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
             CompletableFuture<PgResultSet> listfuture;
             if (queryallcacheflag) {
                 PgReqExtendedCommand req = new PgReqExtendedCommand(PgClientRequest.REQ_TYPE_EXTEND_QUERY, pool.client.extendedStatementIndex(listsql), info, listsql, 0, null);
-                listfuture = pool.sendAsync(req);
+                listfuture = pool.sendAsync(null, req);
             } else {
                 listfuture = executeQuery(info, listsql);
             }
@@ -376,12 +376,12 @@ public class PgsqlLDataSource extends DataSqlSource<AsyncConnection> {
 
     protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String sql, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
         PgClientRequest req = insert ? new PgReqInsert(info, sql, fetchSize, attrs, parameters) : new PgReqUpdate(info, sql, fetchSize, attrs, parameters);
-        return writePoolSource().sendAsync(req).thenApply(g -> g.getUpdateEffectCount());
+        return writePoolSource().sendAsync(null, req).thenApply(g -> g.getUpdateEffectCount());
     }
 
     //info可以为null,供directQuery
     protected <T> CompletableFuture<PgResultSet> executeQuery(final EntityInfo<T> info, final String sql) {
-        return readPoolSource().sendAsync(new PgReqQuery(info, sql));
+        return readPoolSource().sendAsync(null, new PgReqQuery(info, sql));
     }
 
     @Local

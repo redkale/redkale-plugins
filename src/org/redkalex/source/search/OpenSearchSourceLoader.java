@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkalex.source.mysql;
+package org.redkalex.source.search;
 
 import org.redkale.source.*;
 import org.redkale.util.AnyValue;
@@ -12,16 +12,15 @@ import org.redkale.util.AnyValue;
  *
  * @author zhangjx
  */
-public class MysqlSourceLoader implements DataSourceLoader {
+public class OpenSearchSourceLoader implements DataSourceLoader {
 
     @Override
     public boolean match(AnyValue config) {
-        return "mysql".equalsIgnoreCase(config.getValue("dbtype"));
+        return "search".equalsIgnoreCase(config.getValue("dbtype"));
     }
 
     @Override
     public Class<? extends DataSource> sourceClass() {
-        return MysqlDataSource.class;
+        return OpenSearchSource.class;
     }
-
 }

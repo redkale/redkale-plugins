@@ -33,8 +33,8 @@ public class PgPoolSource extends PoolTcpSource {
         this.client.close();
     }
 
-    public CompletableFuture<PgResultSet> sendAsync(PgClientRequest req) {
-        return client.sendAsync(req);
+    public CompletableFuture<PgResultSet> sendAsync(ChannelContext context, PgClientRequest req) {
+        return client.sendAsync(context, req);
     }
 
     @Override

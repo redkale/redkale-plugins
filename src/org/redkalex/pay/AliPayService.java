@@ -212,7 +212,7 @@ public class AliPayService extends AbstractPayService {
         if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
         result.setPayno(map.getOrDefault("out_trade_no", ""));
         result.setThirdpayno(map.getOrDefault("trade_no", ""));
-        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
+        if (!checkSign(element, map, null)) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
         String state = map.getOrDefault("trade_status", "");
         if ("WAIT_BUYER_PAY".equals(state)) return result.retcode(RETPAY_PAY_WAITING).toFuture();
         if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).toFuture();
@@ -251,7 +251,7 @@ public class AliPayService extends AbstractPayService {
             biz_content.put("body", request.getPaybody());
             map.put("biz_content", convert.convertTo(biz_content));
 
-            map.put("sign", createSign(element, map));
+            map.put("sign", createSign(element, map, null));
 
             return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
                 //{"alipay_trade_create_response":{"code":"40002","msg":"Invalid Arguments","sub_code":"isv.invalid-signature","sub_msg":"无效签名"},"sign":"xxxxxxxxxxxx"}
@@ -300,7 +300,7 @@ public class AliPayService extends AbstractPayService {
             biz_content.put("out_trade_no", request.getPayno());
             map.put("biz_content", convert.convertTo(biz_content));
 
-            map.put("sign", createSign(element, map));
+            map.put("sign", createSign(element, map, null));
 
             return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
 
@@ -363,7 +363,7 @@ public class AliPayService extends AbstractPayService {
             biz_content.put("out_trade_no", request.getPayno());
             map.put("biz_content", convert.convertTo(biz_content));
 
-            map.put("sign", createSign(element, map));
+            map.put("sign", createSign(element, map, null));
 
             return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
 
@@ -412,7 +412,7 @@ public class AliPayService extends AbstractPayService {
             biz_content.put("refund_amount", "" + (request.getRefundmoney() / 100.0));
             map.put("biz_content", convert.convertTo(biz_content));
 
-            map.put("sign", createSign(element, map));
+            map.put("sign", createSign(element, map, null));
 
             return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
 
@@ -471,7 +471,7 @@ public class AliPayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, ?> map) {
+    protected String createSign(final PayElement element, Map<String, ?> map, String text) {
         try {
             Signature signature = Signature.getInstance("SHA256WithRSA");
             signature.initSign(((AliPayElement) element).priKey);
@@ -483,7 +483,7 @@ public class AliPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map0) { //支付宝玩另类
+    protected boolean checkSign(final PayElement element, Map<String, ?> map0, String text0) { //支付宝玩另类
         if (((AliPayElement) element).pubKey == null) return true;
         Map<String, String> map = (Map<String, String>) map0;
         String sign = (String) map.remove("sign");

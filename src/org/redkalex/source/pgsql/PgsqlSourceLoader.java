@@ -6,21 +6,22 @@
 package org.redkalex.source.pgsql;
 
 import org.redkale.source.*;
+import org.redkale.util.AnyValue;
 
 /**
  *
  * @author zhangjx
  */
-public class PgsqlSourceLoader implements SourceLoader {
+public class PgsqlSourceLoader implements DataSourceLoader {
 
     @Override
-    public String dbtype() {
-        return "postgresql";
+    public boolean match(AnyValue config) {
+        return "postgresql".equalsIgnoreCase(config.getValue("dbtype"));
     }
 
     @Override
-    public Class<? extends DataSource> dataSourceClass() {
-        return PgsqlLDataSource.class;
+    public Class<? extends DataSource> sourceClass() {
+        return PgsqlDataSource.class;
     }
 
 }

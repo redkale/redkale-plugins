@@ -17,6 +17,8 @@ public class PayRefundRequest extends PayRequest {
 
     protected long paymoney; //  支付金额。 单位:分 
 
+    protected String paycurrency; //  币种,一般币值*100
+
     protected String thirdpayno = ""; //第三方的支付流水号
 
     protected long refundmoney; //  退款金额。 单位:分  不能大于支付金额
@@ -69,6 +71,14 @@ public class PayRefundRequest extends PayRequest {
 
     public void setPaymoney(long paymoney) {
         this.paymoney = paymoney;
+    }
+
+    public String getPaycurrency() {
+        return paycurrency;
+    }
+
+    public void setPaycurrency(String paycurrency) {
+        this.paycurrency = paycurrency;
     }
 
     public String getRefundno() {

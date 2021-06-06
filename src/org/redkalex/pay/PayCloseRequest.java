@@ -19,6 +19,8 @@ public class PayCloseRequest extends PayRequest {
 
     protected long paymoney; //  支付金额。 单位:分 
 
+    protected String paycurrency; //  币种,一般币值*100
+
     protected Map<String, String> attach; //扩展信息
 
     @Override
@@ -56,6 +58,14 @@ public class PayCloseRequest extends PayRequest {
 
     public void setPaymoney(long paymoney) {
         this.paymoney = paymoney;
+    }
+
+    public String getPaycurrency() {
+        return paycurrency;
+    }
+
+    public void setPaycurrency(String paycurrency) {
+        this.paycurrency = paycurrency;
     }
 
     public Map<String, String> getAttach() {

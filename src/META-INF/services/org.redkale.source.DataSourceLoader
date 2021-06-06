@@ -1,0 +1,4 @@
+org.redkalex.source.mysql.MysqlSourceLoader
+org.redkalex.source.pgsql.PgsqlSourceLoader
+org.redkalex.source.mongo.MongodbSourceLoader
+org.redkalex.source.search.OpenSearchSourceLoader

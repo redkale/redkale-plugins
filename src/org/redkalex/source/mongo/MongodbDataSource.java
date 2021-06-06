@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkalex.source.mongodb;
+package org.redkalex.source.mongo;
 
 import java.io.Serializable;
 import java.util.*;
@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import org.redkale.service.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
+import org.redkale.net.ChannelContext;
 
 /**
  * Mongodb版的DataSource实现 <br>
@@ -1018,6 +1019,16 @@ public class MongodbDataSource extends AbstractService implements DataSource, Au
 
     @Override
     public String resourceName() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<Integer> updateAsync(ChannelContext context, T... entitys) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public <T> CompletableFuture<T> findAsync(Class<T> clazz, ChannelContext context, Serializable pk) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     

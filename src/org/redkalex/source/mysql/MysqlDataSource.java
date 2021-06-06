@@ -31,7 +31,7 @@ import static org.redkale.boot.Application.RESNAME_APP_GROUP;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
+public class MysqlDataSource extends DataSqlSource {
 
     private static final byte[] BYTES_NULL = "NULL".getBytes(StandardCharsets.UTF_8);
 
@@ -77,7 +77,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         super.init(conf);
         if (readprop.getProperty(JDBC_CONNECTIONS_LIMIT) == null) {
             try {
-                readPool.pollAsync().thenCompose((conn) -> executeQuery(null, conn, "SHOW VARIABLES LIKE 'max_connections'").thenAccept((ResultSet reset) -> {
+                CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+                connFuture.thenCompose(conn -> executeQuery(null, conn, "SHOW VARIABLES LIKE 'max_connections'").thenAccept((ResultSet reset) -> {
                     try {
                         if (reset.next()) {
                             String maxstr = reset.getString(2);
@@ -95,12 +96,12 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Local
-    protected PoolSource<AsyncConnection> readPoolSource() {
+    protected PoolSource readPoolSource() {
         return readPool;
     }
 
     @Local
-    protected PoolSource<AsyncConnection> writePoolSource() {
+    protected PoolSource writePoolSource() {
         return writePool;
     }
 
@@ -115,7 +116,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected PoolSource<AsyncConnection> createPoolSource(DataSource source, AsyncGroup asyncGroup, String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop) {
+    protected PoolSource createPoolSource(DataSource source, AsyncGroup asyncGroup, String rwtype, ArrayBlockingQueue queue, Semaphore semaphore, Properties prop) {
         return new MyPoolSource(asyncGroup, rwtype, queue, semaphore, prop, logger);
     }
 
@@ -151,7 +152,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             String realsql = ba.toString(StandardCharsets.UTF_8);
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " insert sql=" + realsql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.INSERT, values[0], sqlBytesArray).thenApply((int[] rs) -> {
+        CompletableFuture<AsyncConnection> connFuture = writePool.pollAsync();
+        return connFuture.thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.INSERT, values[0], sqlBytesArray).thenApply((int[] rs) -> {
             int count = 0;
             for (int i : rs) count += i;
             return count;
@@ -164,7 +166,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " delete sql=" + realsql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.DELETE, realsql.getBytes(StandardCharsets.UTF_8)));
+        CompletableFuture<AsyncConnection> connFuture = writePool.pollAsync();
+        return connFuture.thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.DELETE, realsql.getBytes(StandardCharsets.UTF_8)));
     }
 
     @Override
@@ -172,7 +175,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> {
+        CompletableFuture<AsyncConnection> connFuture = writePool.pollAsync();
+        return connFuture.thenCompose((conn) -> {
             CompletableFuture<Integer> future = executeOneUpdate(info, conn, UpdateMode.CLEAR, sql.getBytes(StandardCharsets.UTF_8));
             final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
             future.whenComplete((o, ex1) -> {
@@ -200,7 +204,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sql);
         }
-        return writePool.pollAsync().thenCompose((conn) -> {
+        CompletableFuture<AsyncConnection> connFuture = writePool.pollAsync();
+        return connFuture.thenCompose((conn) -> {
             CompletableFuture<Integer> future = executeOneUpdate(info, conn, UpdateMode.DROP, sql.getBytes(StandardCharsets.UTF_8));
             final CompletableFuture<Integer> newFuture = new CompletableFuture<>();
             future.whenComplete((o, ex1) -> {
@@ -224,7 +229,7 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateDB(EntityInfo<T> info, final T... values) {
+    protected <T> CompletableFuture<Integer> updateDB(EntityInfo<T> info, ChannelContext channel, final T... values) {
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
         final byte[][] sqlBytesArray = new byte[values.length][];
@@ -257,7 +262,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             }
             ba.clear();
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.UPDATE, null, sqlBytesArray).thenApply((int[] rs) -> {
+        CompletableFuture<AsyncConnection> connFuture = writePool.pollAsync();
+        return connFuture.thenCompose((conn) -> executeBatchUpdate(info, conn, UpdateMode.UPDATE, null, sqlBytesArray).thenApply((int[] rs) -> {
             int count = 0;
             for (int i : rs) count += i;
             return count;
@@ -270,7 +276,10 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, realsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + realsql);
         }
-        if (!prepared) return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.UPDATE, realsql.getBytes(StandardCharsets.UTF_8)));
+        if (!prepared) {
+            CompletableFuture<AsyncConnection> connFuture = writePool.pollAsync();
+            return connFuture.thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.UPDATE, realsql.getBytes(StandardCharsets.UTF_8)));
+        }
         ByteArray ba = new ByteArray();
         String[] subsqls = realsql.split("\\" + prepareParamSign(1).replace("1", "") + "\\d+");
         for (int i = 0; i < params.length; i++) {
@@ -290,12 +299,14 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
         for (int i = params.length; i < subsqls.length; i++) {
             ba.put(subsqls[i].getBytes(StandardCharsets.UTF_8));
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.UPDATE, ba.getBytes()));
+        CompletableFuture<AsyncConnection> connFuture = writePool.pollAsync();
+        return connFuture.thenCompose((conn) -> executeOneUpdate(info, conn, UpdateMode.UPDATE, ba.getBytes()));
     }
 
     @Override
     protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDB(EntityInfo<T> info, String sql, FilterFuncColumn... columns) {
-        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
+        CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+        return connFuture.thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             final Map map = new HashMap<>();
             try {
                 if (set.next()) {
@@ -318,7 +329,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Number> getNumberResultDB(EntityInfo<T> info, String sql, Number defVal, String column) {
-        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info)
+        CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+        return connFuture.thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info)
             .thenApply((ResultSet set) -> {
                 Number rs = defVal;
                 try {
@@ -335,7 +347,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDB(EntityInfo<T> info, String sql, String keyColumn) {
-        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
+        CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+        return connFuture.thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             Map<K, N> rs = new LinkedHashMap<>();
             try {
                 while (set.next()) {
@@ -350,7 +363,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDB(EntityInfo<T> info, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns) {
-        return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
+        CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+        return connFuture.thenCompose((conn) -> executeQuery(info, conn, sql).thenApply((ResultSet set) -> {
             Map rs = new LinkedHashMap<>();
             try {
                 while (set.next()) {
@@ -373,8 +387,9 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     }
 
     @Override
-    protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, String sql, boolean onlypk, SelectColumn selects) {
-        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
+    protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, ChannelContext channel, String sql, boolean onlypk, SelectColumn selects) {
+        CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+        return connFuture.thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             T rs = null;
             try {
                 rs = set.next() ? getEntityValue(info, selects, set) : null;
@@ -387,7 +402,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Serializable> findColumnDB(EntityInfo<T> info, String sql, boolean onlypk, String column, Serializable defValue) {
-        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
+        CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+        return connFuture.thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             Serializable val = defValue;
             try {
                 if (set.next()) {
@@ -403,7 +419,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
 
     @Override
     protected <T> CompletableFuture<Boolean> existsDB(EntityInfo<T> info, String sql, boolean onlypk) {
-        return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
+        CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+        return connFuture.thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, sql), info).thenApply((ResultSet set) -> {
             try {
                 boolean rs = set.next() ? (set.getInt(1) > 0) : false;
                 return rs;
@@ -423,7 +440,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             + ((where == null || where.length() == 0) ? "" : (" WHERE " + where)) + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
         if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
         if (!needtotal) {
-            return readPool.pollAsync().thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, listsql), info)
+            CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+            return connFuture.thenCompose((conn) -> exceptionallyQueryTableNotExist(executeQuery(info, conn, listsql), info)
                 .thenApply((ResultSet set) -> {
                     try {
                         final List<T> list = new ArrayList();
@@ -440,7 +458,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
         return getNumberResultDB(info, countsql, 0, countsql).thenCompose(total -> {
             if (total.longValue() <= 0) return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
-            return readPool.pollAsync().thenCompose((conn) -> executeQuery(info, conn, listsql).thenApply((ResultSet set) -> {
+            CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+            return connFuture.thenCompose((conn) -> executeQuery(info, conn, listsql).thenApply((ResultSet set) -> {
                 try {
                     final List<T> list = new ArrayList();
                     while (set.next()) {
@@ -803,7 +822,8 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
     @Local
     @Override
     public int directExecute(String sql) {
-        return writePool.pollAsync().thenCompose((conn) -> executeOneUpdate(null, conn, UpdateMode.OTHER, sql.getBytes(StandardCharsets.UTF_8))).join();
+        CompletableFuture<AsyncConnection> connFuture = writePool.pollAsync();
+        return connFuture.thenCompose((conn) -> executeOneUpdate(null, conn, UpdateMode.OTHER, sql.getBytes(StandardCharsets.UTF_8))).join();
     }
 
     @Local
@@ -814,13 +834,15 @@ public class MysqlDataSource extends DataSqlSource<AsyncConnection> {
             sqlBytesArray[i] = sqls[i].getBytes(StandardCharsets.UTF_8);
 
         }
-        return writePool.pollAsync().thenCompose((conn) -> executeBatchUpdate(null, conn, UpdateMode.OTHER, null, sqlBytesArray)).join();
+        CompletableFuture<AsyncConnection> connFuture = writePool.pollAsync();
+        return connFuture.thenCompose((conn) -> executeBatchUpdate(null, conn, UpdateMode.OTHER, null, sqlBytesArray)).join();
     }
 
     @Local
     @Override
     public <V> V directQuery(String sql, Function<ResultSet, V> handler) {
-        return readPool.pollAsync().thenCompose((conn) -> executeQuery(null, conn, sql).thenApply((ResultSet set) -> {
+        CompletableFuture<AsyncConnection> connFuture = readPool.pollAsync();
+        return connFuture.thenCompose((conn) -> executeQuery(null, conn, sql).thenApply((ResultSet set) -> {
             return handler.apply(set);
         })).join();
     }

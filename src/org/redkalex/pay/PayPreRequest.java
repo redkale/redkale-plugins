@@ -19,6 +19,8 @@ public class PayPreRequest extends PayRequest {
 
     protected long paymoney; //  支付金额。 单位:分 
 
+    protected String paycurrency; //  币种,一般币值*100
+
     protected String paytitle = ""; //订单标题
 
     protected String paybody = ""; //订单内容描述
@@ -72,6 +74,14 @@ public class PayPreRequest extends PayRequest {
 
     public void setPaymoney(long paymoney) {
         this.paymoney = paymoney;
+    }
+
+    public String getPaycurrency() {
+        return paycurrency;
+    }
+
+    public void setPaycurrency(String paycurrency) {
+        this.paycurrency = paycurrency;
     }
 
     public String getPaytitle() {

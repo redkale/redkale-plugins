@@ -41,8 +41,12 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
 
     private final AtomicInteger prepareThreadIndex = new AtomicInteger();
 
+    private final String pgconnectionAttrName;
+
+    @SuppressWarnings("OverridableMethodCallInConstructor")
     public PgClient(String rwtype, AsyncGroup group, SocketAddress address, int maxConns, final Properties prop, final PgReqAuthentication authreq) {
-        super(group, true, address, Runtime.getRuntime().availableProcessors(), 1, p -> new PgClientCodec(), PgReqPing.INSTANCE, PgReqClose.INSTANCE, null); //maxConns
+        super(group, true, address, maxConns, 20, p -> new PgClientCodec(), PgReqPing.INSTANCE, PgReqClose.INSTANCE, null); //maxConns
+        this.pgconnectionAttrName = "pg-client-" + rwtype + "-connection";
         this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authreq).thenCompose((PgResultSet rs) -> {
             if (rs.isAuthOK()) return CompletableFuture.completedFuture(conn);
             return writeChannel(conn, new PgReqAuthentication.PgReqAuthPassword(authreq.username, authreq.password, rs.getAuthSalt())).thenApply(pg -> conn);
@@ -59,31 +63,45 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
             long s = System.currentTimeMillis();
             CompletableFuture[] futures = new CompletableFuture[connArray.length];
             for (int i = 0; i < connArray.length; i++) {
-                futures[i] = connect();
+                futures[i] = connect(null);
             }
             CompletableFuture.allOf(futures).whenComplete((r, t) -> {
                 for (int i = 0; i < connArray.length; i++) {
                     threadConnections.add(connArray[i]);
                 }
                 prepareThreadFinished.set(true);
-                logger.info("PgClient " + rwtype + " connect: " + (System.currentTimeMillis() - s) + " ms");
+                logger.info("PgClient " + rwtype + " " + connArray.length + " conns, connect: " + (System.currentTimeMillis() - s) + " ms");
             });
         }
     }
 
     @Override
-    protected CompletableFuture<ClientConnection> connect() {
-        if (!prepareThreadFinished.get()) return super.connect();
-        ClientConnection conn = localConnection.get();
-        if (conn != null && conn.isOpen()) return CompletableFuture.completedFuture(conn);
-        conn = threadConnections.poll();
-        if (conn != null && conn.isOpen()) {
+    protected CompletableFuture<ClientConnection> connect(ChannelContext context) {
+        if (!prepareThreadFinished.get()) return super.connect(context);
+        ClientConnection conn;
+        if (context == null) {
+            conn = localConnection.get();
+            if (conn != null && conn.isOpen()) return CompletableFuture.completedFuture(conn);
+            conn = threadConnections.poll();
+            if (conn != null && conn.isOpen()) {
+                localConnection.set(conn);
+                return CompletableFuture.completedFuture(conn);
+            }
+            conn = connArray[prepareThreadIndex.getAndIncrement() % connArray.length];
             localConnection.set(conn);
             return CompletableFuture.completedFuture(conn);
+        } else {
+            conn = context.getAttribute(pgconnectionAttrName);
+            if (conn != null && conn.isOpen()) return CompletableFuture.completedFuture(conn);
+            conn = threadConnections.poll();
+            if (conn != null && conn.isOpen()) {
+                context.setAttribute(pgconnectionAttrName, conn);
+                return CompletableFuture.completedFuture(conn);
+            }
+            conn = connArray[prepareThreadIndex.getAndIncrement() % connArray.length];
+            context.setAttribute(pgconnectionAttrName, conn);
+            return CompletableFuture.completedFuture(conn);
         }
-        conn = connArray[prepareThreadIndex.getAndIncrement() % connArray.length];
-        localConnection.set(conn);
-        return CompletableFuture.completedFuture(conn);
     }
 
     protected long extendedStatementIndex(String sql) {

@@ -89,11 +89,11 @@ public abstract class AbstractPayService implements Service {
     public abstract CompletableFuture<PayRefundResponse> queryRefundAsync(PayRequest request);
 
     //------------------------------------------------------------------
-    @Comment("计算签名")
-    protected abstract String createSign(final PayElement element, Map<String, ?> map);
+    @Comment("计算签名; map和text只会存在一个有值")
+    protected abstract String createSign(final PayElement element, Map<String, ?> map, String text);
 
-    @Comment("验证签名")
-    protected abstract boolean checkSign(final PayElement element, Map<String, ?> map);
+    @Comment("验证签名; map和text只会存在一个有值")
+    protected abstract boolean checkSign(final PayElement element, Map<String, ?> map, String text);
 
     @Comment("获取配置项")
     public abstract PayElement getPayElement(String appid);

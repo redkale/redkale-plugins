@@ -19,7 +19,7 @@ public class PayNotifyResponse extends PayResponse {
 
     protected String payno = ""; //自己的订单号
 
-    protected long payedmoney; //到账的金额，单位：分
+    protected long payedmoney = -1; //到账的金额，单位：分
 
     protected String thirdpayno = ""; //第三方的支付流水号
 

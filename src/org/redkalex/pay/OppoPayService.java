@@ -122,7 +122,7 @@ public class OppoPayService extends AbstractPayService {
             map.put("currency", "CNY");
             map.put("ip", request.getClientAddr());
             map.put("callBackUrl", ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl));
-            map.put("sign", createSign(element, map));
+            map.put("sign", createSign(element, map, null));
 
             return postHttpContentAsync("	https://jits.open.oppomobile.com/jitsopen/api/pay/v1.0/preOrder", joinMap(map)).thenApply(responseText -> {
                 result.setResponsetext(responseText);
@@ -141,7 +141,7 @@ public class OppoPayService extends AbstractPayService {
                 signmap.put("appKey ", element.appkey);
                 signmap.put("orderNo ", preresult.data.orderNo);
                 signmap.put("timestamp ", "" + timestamp);
-                retmap.put("paySign", createSign(element, signmap));
+                retmap.put("paySign", createSign(element, signmap, null));
                 result.setResult(retmap);
                 return result;
             });
@@ -173,7 +173,7 @@ public class OppoPayService extends AbstractPayService {
         if ("NOTPAY".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(rstext).toFuture();
         if (!"SUCCESS".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext).toFuture();
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
-        if (!checkSign(element, map)) return result.retcode(RETPAY_FALSIFY_ERROR).notifytext(rstext).toFuture();
+        if (!checkSign(element, map, null)) return result.retcode(RETPAY_FALSIFY_ERROR).notifytext(rstext).toFuture();
         String state = map.get("trade_state");
         if (state == null && "SUCCESS".equals(map.get("result_code")) && Long.parseLong(map.get("total_fee")) > 0) {
             state = "SUCCESS";
@@ -234,7 +234,7 @@ public class OppoPayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, ?> map) { //计算签名
+    protected String createSign(final PayElement element, Map<String, ?> map, String text) { //计算签名
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> {
             if (!((String) y).isEmpty()) sb.append(x).append('=').append(y).append('&');
@@ -256,7 +256,7 @@ public class OppoPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map) {  //验证签名
+    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text) {  //验证签名
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         String sign = (String) map.remove("sign");
         final StringBuilder sb = new StringBuilder();

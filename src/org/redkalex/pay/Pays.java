@@ -32,6 +32,9 @@ public abstract class Pays {
 
     //OPPO支付
     public static final short PAYTYPE_OPPO = 15;
+    
+    //Facebook支付
+    public static final short PAYTYPE_FACEBOOK = 16;
 
     //自定义的支付服务的paytype最小值, 50以下被框架占用
     public static final short MIN_DIY_PAYTYPE = 50;

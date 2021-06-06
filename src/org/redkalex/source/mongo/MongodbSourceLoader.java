@@ -3,23 +3,24 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkalex.source.mongodb;
+package org.redkalex.source.mongo;
 
 import org.redkale.source.*;
+import org.redkale.util.AnyValue;
 
 /**
  *
  * @author zhangjx
  */
-public class MongodbSourceLoader implements SourceLoader {
+public class MongodbSourceLoader implements DataSourceLoader {
 
     @Override
-    public String dbtype() {
-        return "mongodb";
+    public boolean match(AnyValue config) {
+        return "mongodb".equalsIgnoreCase(config.getValue("dbtype"));
     }
 
     @Override
-    public Class<? extends DataSource> dataSourceClass() {
+    public Class<? extends DataSource> sourceClass() {
         return MongodbDataSource.class;
     }
 }

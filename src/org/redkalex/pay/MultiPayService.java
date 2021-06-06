@@ -29,10 +29,13 @@ public class MultiPayService extends AbstractPayService {
     private WeiXinPayService weiXinPayService;
 
     @Resource
-    private OppoPayService oppoPayService;
+    private AliPayService aliPayService;
 
     @Resource
-    private AliPayService aliPayService;
+    private FacebookPayService facebookPayService;
+
+    @Resource
+    private OppoPayService oppoPayService;
 
     @Resource
     private ResourceFactory resourceFactory;
@@ -60,6 +63,7 @@ public class MultiPayService extends AbstractPayService {
         if (paytype == PAYTYPE_UNION) return unionPayService.supportPayType(paytype);
         if (paytype == PAYTYPE_WEIXIN) return weiXinPayService.supportPayType(paytype);
         if (paytype == PAYTYPE_ALIPAY) return aliPayService.supportPayType(paytype);
+        if (paytype == PAYTYPE_FACEBOOK) return facebookPayService.supportPayType(paytype);
         if (paytype == PAYTYPE_OPPO) return oppoPayService.supportPayType(paytype);
         AbstractPayService service = diyPayServiceMap.get(paytype);
         if (service == null) return false;
@@ -75,6 +79,8 @@ public class MultiPayService extends AbstractPayService {
             weiXinPayService.reloadConfig(paytype);
         } else if (paytype == PAYTYPE_ALIPAY) {
             aliPayService.reloadConfig(paytype);
+        } else if (paytype == PAYTYPE_FACEBOOK) {
+            facebookPayService.reloadConfig(paytype);
         } else if (paytype == PAYTYPE_OPPO) {
             oppoPayService.reloadConfig(paytype);
         } else {
@@ -88,6 +94,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.prepay(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.prepay(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.prepay(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.prepay(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.prepay(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.prepay(request);
@@ -99,6 +106,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.prepayAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.prepayAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.prepayAsync(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.prepayAsync(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.prepayAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.prepayAsync(request);
@@ -110,6 +118,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.notify(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.notify(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.notify(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.notify(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.notify(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.notify(request);
@@ -121,6 +130,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.notifyAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.notifyAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.notifyAsync(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.notifyAsync(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.notifyAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.notifyAsync(request);
@@ -132,6 +142,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.create(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.create(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.create(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.create(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.create(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.create(request);
@@ -143,6 +154,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.createAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.createAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.createAsync(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.createAsync(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.createAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.createAsync(request);
@@ -154,6 +166,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.query(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.query(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.query(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.query(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.query(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.query(request);
@@ -165,6 +178,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.queryAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.queryAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.queryAsync(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.queryAsync(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.queryAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.queryAsync(request);
@@ -176,6 +190,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.close(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.close(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.close(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.close(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.close(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.close(request);
@@ -187,6 +202,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.closeAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.closeAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.closeAsync(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.closeAsync(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.closeAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.closeAsync(request);
@@ -198,6 +214,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.refund(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.refund(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.refund(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.refund(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.refund(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.refund(request);
@@ -209,6 +226,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.refundAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.refundAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.refundAsync(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.refundAsync(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.refundAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.refundAsync(request);
@@ -220,6 +238,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.queryRefund(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.queryRefund(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.queryRefund(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.queryRefund(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.queryRefund(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.queryRefund(request);
@@ -231,6 +250,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.paytype == PAYTYPE_UNION) return unionPayService.queryRefundAsync(request);
         if (request.paytype == PAYTYPE_WEIXIN) return weiXinPayService.queryRefundAsync(request);
         if (request.paytype == PAYTYPE_ALIPAY) return aliPayService.queryRefundAsync(request);
+        if (request.paytype == PAYTYPE_FACEBOOK) return facebookPayService.queryRefundAsync(request);
         if (request.paytype == PAYTYPE_OPPO) return oppoPayService.queryRefundAsync(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.paytype);
         if (diyPayService != null) return diyPayService.queryRefundAsync(request);
@@ -238,12 +258,12 @@ public class MultiPayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, ?> map) {
+    protected String createSign(final PayElement element, Map<String, ?> map, String text) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map) {
+    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -260,6 +280,8 @@ public class MultiPayService extends AbstractPayService {
             element = weiXinPayService.getPayElement(appid);
         } else if (paytype == PAYTYPE_ALIPAY) {
             element = aliPayService.getPayElement(appid);
+        } else if (paytype == PAYTYPE_FACEBOOK) {
+            element = facebookPayService.getPayElement(appid);
         } else {
             AbstractPayService diyPayService = diyPayServiceMap.get(paytype);
             if (diyPayService == null) throw new RuntimeException("paytype = " + paytype + " is illegal");
@@ -282,6 +304,14 @@ public class MultiPayService extends AbstractPayService {
 
     public AliPayService getAliPayService() {
         return aliPayService;
+    }
+
+    public FacebookPayService getFacebookPayService() {
+        return facebookPayService;
+    }
+
+    public OppoPayService getOppoPayService() {
+        return oppoPayService;
     }
 
 }

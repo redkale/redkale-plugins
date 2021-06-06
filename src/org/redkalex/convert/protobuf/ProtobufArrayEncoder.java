@@ -28,7 +28,7 @@ public class ProtobufArrayEncoder<T> extends ArrayEncoder<T> {
     }
 
     @Override
-    protected void writeMemberValue(Writer out, EnMember member, Encodeable<Writer, Object> encoder, Object item, boolean first) {
+    protected void writeMemberValue(Writer out, EnMember member, Encodeable<Writer, Object> encoder, Object item, int index) {
         if (simple) {
             if (item == null) {
                 ((ProtobufWriter) out).writeUInt32(0);

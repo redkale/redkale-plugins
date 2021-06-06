@@ -21,6 +21,8 @@ public class KafkaMessageAgent extends MessageAgent {
 
     protected String servers;
 
+    protected String controllers;
+
     protected int checkIntervals = 10;
 
     protected Properties consumerConfig = new Properties();
@@ -39,6 +41,8 @@ public class KafkaMessageAgent extends MessageAgent {
     public void init(AnyValue config) {
         super.init(config);
         this.servers = config.getAnyValue("servers").getValue("value");
+        AnyValue cs = config.getAnyValue("controllers");
+        this.controllers = cs == null ? this.servers : cs.getValue("value", this.servers);
         this.checkIntervals = config.getAnyValue("servers").getIntValue("checkintervals", 10);
 
         AnyValue consumerAnyValue = config.getAnyValue("consumer");
@@ -56,7 +60,7 @@ public class KafkaMessageAgent extends MessageAgent {
             }
         }
         Properties props = new Properties();
-        props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, servers);
+        props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, controllers);
         this.adminClient = KafkaAdminClient.create(props);
     }
 
@@ -74,7 +78,7 @@ public class KafkaMessageAgent extends MessageAgent {
     private void retryConnect() {
         if (this.adminClient != null) this.adminClient.close();
         Properties props = new Properties();
-        props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, servers);
+        props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, controllers);
         this.adminClient = KafkaAdminClient.create(props);
         if (queryTopic() != null) {
             logger.log(Level.INFO, getClass().getSimpleName() + " resume connect");

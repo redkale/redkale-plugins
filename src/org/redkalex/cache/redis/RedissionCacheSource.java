@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.redkalex.cache;
+package org.redkalex.cache.redis;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -32,7 +32,7 @@ import org.redkale.util.AnyValue.DefaultAnyValue;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public class RedissionCacheSource<V extends Object> extends AbstractService implements CacheSource<V>, Service, AutoCloseable, Resourcable {
+public class RedissionCacheSource extends AbstractService implements CacheSource, Service, AutoCloseable, Resourcable {
 
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -118,8 +118,14 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
                 config.useSentinelServers().addSentinelAddress(addr);
                 config.useSentinelServers().setDatabase(this.db);
             }
+            if (baseConfig != null) {  //单个进程的不同自定义密码
+                String username = node.getValue("username", "").trim();
+                String password = node.getValue("password", "").trim();
+                if (!username.isEmpty()) baseConfig.setUsername(username);
+                if (!password.isEmpty()) baseConfig.setPassword(password);
+            }
         }
-        if (baseConfig != null) {
+        if (baseConfig != null) { //配置全局密码
             String username = conf.getValue("username", "").trim();
             String password = conf.getValue("password", "").trim();
             String retryAttempts = conf.getValue("retryAttempts", "").trim();
@@ -131,7 +137,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
         }
         this.redisson = Redisson.create(config);
         this.nodeAddrs = addresses;
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
+        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissionCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
 
     }
 
@@ -148,31 +154,12 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     }
 
     @Override
-    @Deprecated
-    public final void initValueType(Type valueType) {
-        this.objValueType = valueType == null ? String.class : valueType;
-    }
-
-    @Override
-    @Deprecated
-    public final void initTransient(boolean flag) {
-    }
-
-    @Override
     public final String getType() {
         return "redis";
     }
 
     protected <T> CompletableFuture<T> completableFuture(CompletionStage<T> rf) {
-        CompletableFuture future = new CompletableFuture();
-        rf.whenComplete((r, t) -> {
-            if (t != null) {
-                future.completeExceptionally(t);
-            } else {
-                future.complete(r);
-            }
-        });
-        return future;
+        return rf.toCompletableFuture();
     }
 
     public static void main(String[] args) throws Exception {
@@ -419,12 +406,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     //--------------------- get ------------------------------
     @Override
-    @Deprecated
-    public CompletableFuture<V> getAsync(String key) {
-        return getAsync(key, objValueType);
-    }
-
-    @Override
     public <T> CompletableFuture<T> getAsync(String key, Type type) {
         final RBucket<byte[]> bucket = redisson.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.getAsync().thenApply(bs -> bs == null ? null : convert.convertFrom(type, bs)));
@@ -440,12 +421,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     public CompletableFuture<Long> getLongAsync(String key, long defValue) {
         final RAtomicLong bucket = redisson.getAtomicLong(key);
         return completableFuture(bucket.getAsync());
-    }
-
-    @Override
-    @Deprecated
-    public V get(String key) {
-        return get(key, objValueType);
     }
 
     @Override
@@ -469,12 +444,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     //--------------------- getAndRefresh ------------------------------
     @Override
-    @Deprecated
-    public CompletableFuture<V> getAndRefreshAsync(String key, int expireSeconds) {
-        return getAndRefreshAsync(key, expireSeconds, objValueType);
-    }
-
-    @Override
     public <T> CompletableFuture<T> getAndRefreshAsync(String key, int expireSeconds, final Type type) {
         final RBucket<byte[]> bucket = redisson.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.getAsync().thenCompose(bs -> {
@@ -482,12 +451,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
             if (rs == null) return CompletableFuture.completedFuture(null);
             return bucket.expireAsync(expireSeconds, TimeUnit.SECONDS).thenApply(v -> rs);
         }));
-    }
-
-    @Override
-    @Deprecated
-    public V getAndRefresh(String key, final int expireSeconds) {
-        return getAndRefresh(key, expireSeconds, objValueType);
     }
 
     @Override
@@ -549,12 +512,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     //--------------------- set ------------------------------
     @Override
-    @Deprecated
-    public CompletableFuture<Void> setAsync(String key, V value) {
-        return setAsync(key, objValueType, value);
-    }
-
-    @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, T value) {
         final RBucket<byte[]> bucket = redisson.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.setAsync((convert0 == null ? this.convert : convert0).convertToBytes(value)));
@@ -570,12 +527,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, final Type type, T value) {
         final RBucket<byte[]> bucket = redisson.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.setAsync((convert0 == null ? this.convert : convert0).convertToBytes(type, value)));
-    }
-
-    @Override
-    @Deprecated
-    public void set(final String key, V value) {
-        set(key, objValueType, value);
     }
 
     @Override
@@ -618,12 +569,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     //--------------------- set ------------------------------    
     @Override
-    @Deprecated
-    public CompletableFuture<Void> setAsync(int expireSeconds, String key, V value) {
-        return setAsync(expireSeconds, key, objValueType, value);
-    }
-
-    @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert0, T value) {
         final RBucket<byte[]> bucket = redisson.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.setAsync((convert0 == null ? convert : convert0).convertToBytes(value)).thenCompose(v -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS)).thenApply(r -> null));
@@ -639,12 +584,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert0, final Type type, T value) {
         final RBucket<byte[]> bucket = redisson.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.setAsync((convert0 == null ? convert : convert0).convertToBytes(type, value)).thenCompose(v -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS)).thenApply(r -> null));
-    }
-
-    @Override
-    @Deprecated
-    public void set(int expireSeconds, String key, V value) {
-        set(expireSeconds, key, objValueType, value);
     }
 
     @Override
@@ -795,7 +734,7 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     @Override
     public long hdecr(final String key, String field, long num) {
         RMap<String, Long> map = redisson.getMap(key, MapLongCodec.instance);
-        return map.addAndGet(field, num);
+        return map.addAndGet(field, -num);
     }
 
     @Override
@@ -1100,12 +1039,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     }
 
     @Override
-    @Deprecated
-    public CompletableFuture<Collection<V>> getCollectionAsync(String key) {
-        return getCollectionAsync(key, objValueType);
-    }
-
-    @Override
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return completableFuture(redisson.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
             if (String.valueOf(type).contains("list")) {
@@ -1243,12 +1176,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
             }
         });
         return rsFuture;
-    }
-
-    @Override
-    @Deprecated
-    public Collection<V> getCollection(String key) {
-        return getCollection(key, objValueType);
     }
 
     @Override
@@ -1423,20 +1350,8 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     //--------------------- getCollectionAndRefresh ------------------------------  
     @Override
-    @Deprecated
-    public CompletableFuture<Collection<V>> getCollectionAndRefreshAsync(String key, int expireSeconds) {
-        return getCollectionAndRefreshAsync(key, expireSeconds, objValueType);
-    }
-
-    @Override
     public <T> CompletableFuture<Collection<T>> getCollectionAndRefreshAsync(String key, int expireSeconds, final Type componentType) {
         return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
-    }
-
-    @Override
-    @Deprecated
-    public Collection<V> getCollectionAndRefresh(String key, final int expireSeconds) {
-        return getCollectionAndRefresh(key, expireSeconds, objValueType);
     }
 
     @Override
@@ -1466,21 +1381,9 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     //--------------------- existsItem ------------------------------  
     @Override
-    @Deprecated
-    public boolean existsSetItem(String key, V value) {
-        return existsSetItem(key, objValueType, value);
-    }
-
-    @Override
     public <T> boolean existsSetItem(String key, final Type componentType, T value) {
         final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return bucket.contains(convert.convertToBytes(componentType, value));
-    }
-
-    @Override
-    @Deprecated
-    public CompletableFuture<Boolean> existsSetItemAsync(String key, V value) {
-        return existsSetItemAsync(key, objValueType, value);
     }
 
     @Override
@@ -1515,21 +1418,9 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     //--------------------- appendListItem ------------------------------  
     @Override
-    @Deprecated
-    public CompletableFuture<Void> appendListItemAsync(String key, V value) {
-        return appendListItemAsync(key, objValueType, value);
-    }
-
-    @Override
     public <T> CompletableFuture<Void> appendListItemAsync(String key, final Type componentType, T value) {
         final RList<byte[]> bucket = redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.addAsync(convert.convertToBytes(componentType, value)).thenApply(r -> null));
-    }
-
-    @Override
-    @Deprecated
-    public void appendListItem(String key, V value) {
-        appendListItem(key, objValueType, value);
     }
 
     @Override
@@ -1564,20 +1455,8 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     //--------------------- removeListItem ------------------------------  
     @Override
-    @Deprecated
-    public CompletableFuture<Integer> removeListItemAsync(String key, V value) {
-        return removeListItemAsync(key, objValueType, value);
-    }
-
-    @Override
     public <T> CompletableFuture<Integer> removeListItemAsync(String key, final Type componentType, T value) {
         return completableFuture(redisson.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertToBytes(componentType, value)).thenApply(r -> r ? 1 : 0));
-    }
-
-    @Override
-    @Deprecated
-    public int removeListItem(String key, V value) {
-        return removeListItem(key, objValueType, value);
     }
 
     @Override
@@ -1607,13 +1486,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     }
 
     //--------------------- appendSetItem ------------------------------  
-    @Override
-    @Deprecated
-    public CompletableFuture<Void> appendSetItemAsync(String key, V value) {
-        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.addAsync(convert.convertToBytes(objValueType, value)).thenApply(r -> null));
-    }
-
     @Override
     public <T> CompletableFuture<Void> appendSetItemAsync(String key, Type componentType, T value) {
         final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
@@ -1661,13 +1533,6 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
     public CompletableFuture<List<Long>> spopLongSetItemAsync(String key, int count) {
         final RSet<Long> bucket = redisson.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
         return completableFuture(bucket.removeRandomAsync(count).thenApply(r -> r == null ? null : new ArrayList<>(r)));
-    }
-
-    @Override
-    @Deprecated
-    public void appendSetItem(String key, V value) {
-        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        bucket.add(convert.convertToBytes(objValueType, value));
     }
 
     @Override
@@ -1747,21 +1612,8 @@ public class RedissionCacheSource<V extends Object> extends AbstractService impl
 
     //--------------------- removeSetItem ------------------------------  
     @Override
-    @Deprecated
-    public CompletableFuture<Integer> removeSetItemAsync(String key, V value) {
-        return removeSetItemAsync(key, objValueType, value);
-    }
-
-    @Override
     public <T> CompletableFuture<Integer> removeSetItemAsync(String key, final Type componentType, T value) {
         return completableFuture(redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).removeAsync(convert.convertToBytes(componentType, value)).thenApply(r -> r ? 1 : 0));
-    }
-
-    @Override
-    @Deprecated
-    public int removeSetItem(String key, V value) {
-        final RSet<byte[]> bucket = redisson.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        return bucket.remove(convert.convertToBytes(objValueType, value)) ? 1 : 0;
     }
 
     @Override

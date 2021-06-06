@@ -43,10 +43,10 @@ public class PayNotifyRequest {
         if ((this.text == null || this.text.isEmpty()) && (this.attach == null || this.attach.isEmpty())) throw new RuntimeException("text and attach both is empty");
     }
 
-    public Map<String, String> attach(String key, Object value) {
+    public PayNotifyRequest addAttach(String key, Object value) {
         if (this.attach == null) this.attach = new TreeMap<>();
         this.attach.put(key, String.valueOf(value));
-        return this.attach;
+        return this;
     }
 
     public String attach(String name) {
