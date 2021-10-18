@@ -1,0 +1,212 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package org.redkalex.source.pgsql;
+
+import java.io.Serializable;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.redkale.convert.json.JsonConvert;
+import org.redkale.net.client.ClientConnection;
+import org.redkale.util.*;
+
+/**
+ *
+ * @author zhangjx
+ */
+public class PgReqExtended extends PgClientRequest {
+
+    static final int TENTHOUSAND_MAX = 10001;
+
+    static final byte[][] TENTHOUSAND_BYTES = new byte[TENTHOUSAND_MAX][];
+
+    static {
+        for (int i = 0; i < TENTHOUSAND_BYTES.length; i++) {
+            TENTHOUSAND_BYTES[i] = String.valueOf(i).getBytes();
+        }
+    }
+
+    static final byte[] SYNC_BYTES = new ByteArray(128).putByte('S').putInt(4).getBytes();
+
+    static final byte[] EXECUTE_BYTES = new ByteArray(128).putByte('E').putInt(4 + 1 + 4).putByte(0).putInt(0).getBytes();
+
+    protected int type;
+
+    protected int fetchSize;
+
+    protected String sql;
+
+    protected Attribute[] resultAttrs;
+
+    protected Attribute[] paramAttrs;
+
+    protected Object[][] paramValues;
+
+    protected boolean finds;
+    
+    protected boolean tworeq; //第一次prepare时参数也会发送，相当于两个request
+
+    public PgReqExtended() {
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', type = " + getType() + ", paramValues = " + JsonConvert.root().convertTo(paramValues) + "}";
+    }
+
+    @Override
+    public int getType() {
+        return type;
+    }
+
+    public <T> void prepare(int type, String sql, int fetchSize, final Attribute<T, Serializable>[] resultAttrs, final Attribute<T, Serializable>[] paramAttrs, final Object[]... paramValues) {
+        super.prepare();
+        this.type = type;
+        this.sql = sql;
+        this.fetchSize = fetchSize;
+        this.resultAttrs = resultAttrs;
+        this.paramAttrs = paramAttrs;
+        this.paramValues = paramValues;
+    }
+
+    private void writeParse(ByteArray array, Long statementIndex) { // PARSE
+        array.putByte('P');
+        int start = array.length();
+        array.putInt(0);
+        if (statementIndex == null) {
+            array.putByte(0); // unnamed prepared statement
+        } else {
+            array.putLong(statementIndex);
+        }
+        writeUTF8String(array, sql);
+        array.putShort(0); // no parameter types
+        array.putInt(start, array.length() - start);
+    }
+
+    private void writeDescribe(ByteArray array, Long statementIndex) { // DESCRIBE
+        array.putByte('D');
+        array.putInt(4 + 1 + (statementIndex == null ? 1 : 8));
+        if (statementIndex == null) {
+            array.putByte('S');
+            array.putByte(0);
+        } else {
+            array.putByte('S');
+            array.putLong(statementIndex);
+        }
+    }
+
+    private void writeBind(ByteArray array, Long statementIndex) { // BIND
+        if (paramValues != null && paramValues.length > 0) {
+            for (Object[] params : paramValues) {
+                { // BIND
+                    array.putByte('B');
+                    int start = array.length();
+                    array.putInt(0);
+                    array.putByte(0); // portal
+                    if (statementIndex == null) {
+                        array.putByte(0); // prepared statement
+                    } else {
+                        array.putLong(statementIndex);
+                    }
+
+                    int size = params == null ? 0 : params.length;
+                    // number of format codes  // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
+                    if (size == 0 || paramAttrs == null) {
+                        array.putShort(0);  //参数全部为文本格式
+                    } else {
+                        array.putShort(0);
+                    }
+
+                    // number of parameters //number of format codes 参数格式代码。目前每个都必须是0(文本)或者1(二进制)。
+                    if (size == 0) {
+                        array.putShort(0); //结果全部为文本格式
+                    } else {
+                        array.putShort(size);
+                        int i = -1;
+                        for (Object param : params) {
+                            PgsqlFormatter.encodePrepareParamValue(array, info, false, paramAttrs == null ? null : paramAttrs[++i], param);
+                        }
+                    }
+
+                    if (type == REQ_TYPE_EXTEND_QUERY && resultAttrs != null) {   //Text format
+                        // Result columns are all in Binary format
+                        array.putShort(1);
+                        array.putShort(1);
+                    } else {
+                        array.putShort(0);
+                    }
+                    array.putInt(start, array.length() - start);
+                }
+                { // EXECUTE
+                    if (fetchSize == 0) {
+                        array.put(EXECUTE_BYTES);
+                    } else {
+                        array.putByte('E');
+                        array.putInt(4 + 1 + 4);
+                        array.putByte(0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
+                        array.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
+                    }
+                }
+            }
+        } else {
+            { // BIND
+                array.putByte('B');
+                int start = array.length();
+                array.putInt(0);
+                array.putByte(0); // portal  
+                if (statementIndex == null) {
+                    array.putByte(0); // prepared statement
+                } else {
+                    array.putLong(statementIndex);
+                }
+                array.putShort(0); // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
+                array.putShort(0);  //number of format codes 参数格式代码。目前每个都必须是0(文本)或者1(二进制)。
+
+                if (type == REQ_TYPE_EXTEND_QUERY && resultAttrs != null) {   //Text format
+                    // Result columns are all in Binary format
+                    array.putShort(1);
+                    array.putShort(1);
+                } else {
+                    array.putShort(0);
+                }
+                array.putInt(start, array.length() - start);
+            }
+            { // EXECUTE
+                if (fetchSize == 0) {
+                    array.put(EXECUTE_BYTES);
+                } else {
+                    array.putByte('E');
+                    array.putInt(4 + 1 + 4);
+                    array.putByte(0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
+                    array.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
+                }
+            }
+        }
+    }
+
+    private void writeSync(ByteArray array) { // SYNC
+        array.put(SYNC_BYTES);
+    }
+
+    @Override
+    public void accept(ClientConnection conn, ByteArray array) {
+        PgClientConnection pgconn = (PgClientConnection) conn;
+        AtomicBoolean prepared = pgconn.getPrepareFlag(sql);
+        if (prepared.get()) {
+            writeBind(array, pgconn.getStatementIndex(sql));
+            writeSync(array);
+        } else {
+            Long statementIndex = pgconn.createStatementIndex(sql);
+            prepared.set(true);
+            writeParse(array, statementIndex);
+            writeDescribe(array, statementIndex);
+            writeSync(array);
+            tworeq = true;
+            writeBind(array, statementIndex);
+            writeSync(array);
+        }
+    }
+
+}

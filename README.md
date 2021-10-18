@@ -1,4 +1,4 @@
-<h1>项目介绍</h1>
+<b>项目介绍</b>
 <p>
    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RedKale的扩展插件库。
 </p>
@@ -17,4 +17,4 @@
 </ol>
 
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<h5>详情请访问:&nbsp;&nbsp;&nbsp;&nbsp;<a href='http://redkale.org' target='_blank'>http://redkale.org</a></h5>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>详情请访问:&nbsp;&nbsp;&nbsp;&nbsp;<a href='http://redkale.org' target='_blank'>http://redkale.org</a></b>

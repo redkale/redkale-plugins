@@ -1,0 +1,5 @@
+org.redkalex.source.vertx.VertxSqlDataSourceProvider
+org.redkalex.source.mysql.MysqlDataSourceProvider
+org.redkalex.source.pgsql.PgsqlDataSourceProvider
+org.redkalex.source.mongo.MongodbDriverDataSourceProvider
+org.redkalex.source.search.OpenSearchSourceProvider

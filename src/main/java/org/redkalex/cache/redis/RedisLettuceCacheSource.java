@@ -1,0 +1,1821 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package org.redkalex.cache.redis;
+
+import io.lettuce.core.*;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.codec.*;
+import io.lettuce.core.support.*;
+import java.io.Serializable;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.logging.*;
+import javax.annotation.Resource;
+import org.redkale.convert.Convert;
+import org.redkale.convert.json.*;
+import org.redkale.service.*;
+import org.redkale.source.*;
+import org.redkale.util.*;
+
+/**
+ *
+ * @author zhangjx
+ */
+@Local
+@AutoLoad(false)
+@ResourceType(CacheSource.class)
+public class RedisLettuceCacheSource extends AbstractService implements CacheSource, Service, AutoCloseable, Resourcable {
+
+    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+
+    @Resource
+    protected JsonConvert defaultConvert;
+
+    @Resource(name = "$_convert")
+    protected JsonConvert convert;
+
+    protected Type objValueType = String.class;
+
+    protected List<String> nodeAddrs;
+
+    protected int db;
+
+    protected io.lettuce.core.RedisClient client;
+
+    protected BoundedAsyncPool<StatefulRedisConnection<String, byte[]>> bytesConnPool;
+
+    protected BoundedAsyncPool<StatefulRedisConnection<String, String>> stringConnPool;
+
+    protected RedisCodec<String, byte[]> stringByteArrayCodec;
+
+    protected RedisCodec<String, String> stringStringCodec;
+
+    @Override
+    public void init(AnyValue conf) {
+        if (this.convert == null) this.convert = this.defaultConvert;
+        if (conf == null) conf = new AnyValue.DefaultAnyValue();
+        this.stringByteArrayCodec = (RedisCodec) RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE);
+        this.stringStringCodec = StringCodec.UTF8;
+
+        final List<String> addresses = new ArrayList<>();
+        AnyValue[] nodes = conf.getAnyValues("node");
+        final int maxconns = conf.getIntValue("maxconns", Utility.cpus() * 2);
+        List<RedisURI> uris = new ArrayList(nodes.length);
+        String gdb = conf.getValue("db", "").trim();
+        String gusername = conf.getValue("username", "").trim();
+        String gpassword = conf.getValue("password", "").trim();
+        for (AnyValue node : nodes) {
+            String addr = node.getValue("addr");
+            addresses.add(addr);
+            String dbstr = node.getValue("db", "").trim();
+            String username = node.getValue("username", "").trim();
+            String password = node.getValue("password", "").trim();
+            RedisURI uri = RedisURI.create(addr);
+            if (!dbstr.isEmpty()) {
+                db = Integer.parseInt(dbstr);
+                uri.setDatabase(db);
+            } else if (!gdb.isEmpty()) {
+                uri.setDatabase(Integer.parseInt(gdb));
+            }
+            if (!username.isEmpty()) {
+                uri.setUsername(username);
+            } else if (!gusername.isEmpty()) {
+                uri.setUsername(gusername);
+            }
+            if (!password.isEmpty()) {
+                uri.setPassword(password.toCharArray());
+            } else if (!gpassword.isEmpty()) {
+                uri.setPassword(gpassword.toCharArray());
+            }
+            uris.add(uri);
+        }
+        final RedisURI redisURI = uris.get(0);
+        this.client = io.lettuce.core.RedisClient.create(redisURI);
+        this.nodeAddrs = addresses;
+        BoundedPoolConfig config = BoundedPoolConfig.builder().maxTotal(maxconns).minIdle(maxconns / 2 + 1).build();
+        this.bytesConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(stringByteArrayCodec, redisURI), config);
+        this.stringConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(stringStringCodec, redisURI), config);
+        //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisLettuceCacheSource.class.getSimpleName() + ": addrs=" + addresses);
+    }
+
+    @Override //ServiceLoader时判断配置是否符合当前实现类
+    public boolean acceptsConf(AnyValue config) {
+        if (config == null) return false;
+        AnyValue[] nodes = config.getAnyValues("node");
+        if (nodes == null || nodes.length == 0) return false;
+        for (AnyValue node : nodes) {
+            String val = node.getValue("addr");
+            if (val != null && val.startsWith("redis://")) return true;
+            if (val != null && val.startsWith("rediss://")) return true;
+            if (val != null && val.startsWith("redis-socket://")) return true;
+            if (val != null && val.startsWith("redis-sentinel://")) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public final String getType() {
+        return "redis";
+    }
+
+    @Local
+    public io.lettuce.core.RedisClient getRedisClient() {
+        return this.client;
+    }
+
+    protected <T> List<T> formatCollection(List<byte[]> collection, Convert convert0, final Type componentType) {
+        List<T> rs = new ArrayList<>();
+        if (collection == null) return rs;
+        for (byte[] bs : collection) {
+            if (bs == null) continue;
+            rs.add((T) convert0.convertFrom(componentType, bs));
+        }
+        return rs;
+    }
+
+    protected <T> Set<T> formatCollection(Set<byte[]> collection, Convert convert0, final Type componentType) {
+        Set<T> rs = new LinkedHashSet<>();
+        if (collection == null) return rs;
+        for (byte[] bs : collection) {
+            if (bs == null) continue;
+            rs.add((T) convert0.convertFrom(componentType, bs));
+        }
+        return rs;
+    }
+
+    protected Collection<Long> formatLongCollection(boolean set, Collection<String> list) {
+        if (set) {
+            Set<Long> rs = new LinkedHashSet<>();
+            for (String str : list) {
+                rs.add(Long.parseLong(str));
+            }
+            return rs;
+        } else {
+            List<Long> rs = new ArrayList<>();
+            for (String str : list) {
+                rs.add(Long.parseLong(str));
+            }
+            return rs;
+        }
+    }
+
+    @Override
+    public void close() throws Exception {  //在 Application 关闭时调用
+        destroy(null);
+    }
+
+    @Override
+    public String resourceName() {
+        Resource res = this.getClass().getAnnotation(Resource.class);
+        return res == null ? "" : res.name();
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + " (name='" + resourceName() + "', db=" + this.db + ")";
+    }
+
+    @Override
+    public void destroy(AnyValue conf) {
+        if (client != null) client.shutdown();
+    }
+
+    protected RedisAsyncCommands<String, byte[]> connectBytesAsync() {
+        //return client.connect(stringByteArrayCodec).async();
+        return bytesConnPool.acquire().join().async();
+    }
+
+    protected RedisAsyncCommands<String, String> connectStringAsync() {
+        //return client.connect(stringStringCodec).async();
+        return stringConnPool.acquire().join().async();
+    }
+
+    protected <T, U> CompletableFuture<U> completableBytesFuture(RedisAsyncCommands<String, byte[]> command, CompletionStage<T> rf) {
+        bytesConnPool.release(command.getStatefulConnection());
+        return (CompletableFuture) rf.toCompletableFuture();
+    }
+
+    protected <T, U> CompletableFuture<U> completableStringFuture(RedisAsyncCommands<String, String> command, CompletionStage<T> rf) {
+        stringConnPool.release(command.getStatefulConnection());
+        return (CompletableFuture) rf.toCompletableFuture();
+    }
+
+    protected <T> CompletableFuture<Long> completableLongFuture(RedisAsyncCommands<String, String> command, CompletionStage<T> rf) {
+        stringConnPool.release(command.getStatefulConnection());
+        return (CompletableFuture) rf.toCompletableFuture();
+    }
+
+    protected RedisCommands<String, byte[]> connectBytes() {
+        //return client.connect(stringByteArrayCodec).sync();
+        return bytesConnPool.acquire().join().sync();
+    }
+
+    protected RedisCommands<String, String> connectString() {
+        //return client.connect(stringStringCodec).sync();
+        return stringConnPool.acquire().join().sync();
+    }
+
+    protected void releaseBytesCommand(RedisCommands<String, byte[]> command) {
+        bytesConnPool.release(command.getStatefulConnection()).join();
+    }
+
+    protected void releaseStringCommand(RedisCommands<String, String> command) {
+        stringConnPool.release(command.getStatefulConnection()).join();
+    }
+
+    //--------------------- exists ------------------------------
+    @Override
+    public CompletableFuture<Boolean> existsAsync(String key) {
+        RedisAsyncCommands<String, byte[]> comand = connectBytesAsync();
+        return completableBytesFuture(comand, comand.exists(key).thenApply(v -> v > 0));
+    }
+
+    @Override
+    public boolean exists(String key) {
+        RedisCommands<String, byte[]> comnand = connectBytes();
+        boolean rs = comnand.exists(key) > 0;
+        releaseBytesCommand(comnand);
+        return rs;
+    }
+
+    //--------------------- get ------------------------------
+    @Override
+    public <T> CompletableFuture<T> getAsync(String key, Type type) {
+        RedisAsyncCommands<String, byte[]> comand = connectBytesAsync();
+        CompletableFuture<byte[]> rf = completableBytesFuture(comand, comand.get(key));
+        return rf.thenApply(bs -> bs == null ? null : convert.convertFrom(type, bs));
+    }
+
+    @Override
+    public CompletableFuture<String> getStringAsync(String key) {
+        RedisAsyncCommands<String, String> comand = connectStringAsync();
+        return completableStringFuture(comand, comand.get(key));
+    }
+
+    @Override
+    public CompletableFuture<Long> getLongAsync(String key, long defValue) {
+        RedisAsyncCommands<String, String> comand = connectStringAsync();
+        return completableLongFuture(comand, comand.get(key).thenApply(v -> v == null ? defValue : Long.parseLong(v)));
+    }
+
+    @Override
+    public <T> T get(String key, final Type type) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        byte[] bs = command.get(key);
+        releaseBytesCommand(command);
+        return bs == null ? null : convert.convertFrom(type, bs);
+    }
+
+    @Override
+    public String getString(String key) {
+        final RedisCommands<String, String> command = connectString();
+        String rs = command.get(key);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public long getLong(String key, long defValue) {
+        final RedisCommands<String, String> command = connectString();
+        final String v = command.get(key);
+        releaseStringCommand(command);
+        return v == null ? defValue : Long.parseLong(v);
+    }
+
+    //--------------------- getAndRefresh ------------------------------
+    @Override
+    public <T> CompletableFuture<T> getAndRefreshAsync(String key, int expireSeconds, final Type type) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.get(key).thenCompose(v -> {
+            if (v == null) return CompletableFuture.completedFuture(null);
+            return command.expire(key, Duration.ofSeconds(expireSeconds)).thenApply(s -> convert.convertFrom(type, v));
+        }));
+    }
+
+    @Override
+    public <T> T getAndRefresh(String key, final int expireSeconds, final Type type) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        byte[] bs = command.get(key);
+        if (bs == null) {
+            releaseBytesCommand(command);
+            return null;
+        }
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseBytesCommand(command);
+        return convert.convertFrom(type, bs);
+    }
+
+    @Override
+    public CompletableFuture<String> getStringAndRefreshAsync(String key, int expireSeconds) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.get(key).thenCompose(v -> {
+            if (v == null) return CompletableFuture.completedFuture(null);
+            return command.expire(key, Duration.ofSeconds(expireSeconds)).thenApply(s -> v);
+        }));
+    }
+
+    @Override
+    public String getStringAndRefresh(String key, final int expireSeconds) {
+        final RedisCommands<String, String> command = connectString();
+        String v = command.get(key);
+        if (v == null) {
+            releaseStringCommand(command);
+            return null;
+        }
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseStringCommand(command);
+        return v;
+    }
+
+    @Override
+    public CompletableFuture<Long> getLongAndRefreshAsync(String key, int expireSeconds, long defValue) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.get(key).thenCompose(v -> {
+            if (v == null) return CompletableFuture.completedFuture(defValue);
+            return command.expire(key, Duration.ofSeconds(expireSeconds)).thenApply(s -> Long.parseLong(v));
+        }));
+    }
+
+    @Override
+    public long getLongAndRefresh(String key, final int expireSeconds, long defValue) {
+        final RedisCommands<String, String> command = connectString();
+        String v = command.get(key);
+        if (v == null) {
+            releaseStringCommand(command);
+            return defValue;
+        }
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseStringCommand(command);
+        return Long.parseLong(v);
+    }
+
+//    //--------------------- refresh ------------------------------
+    @Override
+    public CompletableFuture<Void> refreshAsync(String key, int expireSeconds) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.expire(key, Duration.ofSeconds(expireSeconds)).thenApply(s -> null));
+    }
+
+    @Override
+    public void refresh(String key, final int expireSeconds) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseBytesCommand(command);
+    }
+
+//    //--------------------- set ------------------------------
+    @Override
+    public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.set(key, (convert0 == null ? this.convert : convert0).convertToBytes(value)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setAsync(String key, final Type type, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.set(key, this.convert.convertToBytes(type, value)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, final Type type, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.set(key, (convert0 == null ? this.convert : convert0).convertToBytes(type, value)));
+    }
+
+    @Override
+    public <T> void set(final String key, final Convert convert0, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, (convert0 == null ? this.convert : convert0).convertToBytes(value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> void set(final String key, final Type type, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, this.convert.convertToBytes(type, value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> void set(String key, final Convert convert0, final Type type, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, (convert0 == null ? this.convert : convert0).convertToBytes(type, value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public CompletableFuture<Void> setStringAsync(String key, String value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.set(key, value));
+    }
+
+    @Override
+    public void setString(String key, String value) {
+        final RedisCommands<String, String> command = connectString();
+        command.set(key, value);
+        releaseStringCommand(command);
+    }
+
+    @Override
+    public CompletableFuture<Void> setLongAsync(String key, long value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.set(key, String.valueOf(value)));
+    }
+
+    @Override
+    public void setLong(String key, long value) {
+        final RedisCommands<String, String> command = connectString();
+        command.set(key, String.valueOf(value));
+        releaseStringCommand(command);
+    }
+
+//    //--------------------- set ------------------------------    
+    @Override
+    public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert0, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.set(key, (convert0 == null ? convert : convert0).convertToBytes(value)).thenCompose(v -> command.expire(key, Duration.ofSeconds(expireSeconds))).thenApply(r -> null));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, final Type type, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.set(key, convert.convertToBytes(type, value)).thenCompose(v -> command.expire(key, Duration.ofSeconds(expireSeconds))).thenApply(r -> null));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert0, final Type type, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.set(key, (convert0 == null ? convert : convert0).convertToBytes(type, value)).thenCompose(v -> command.expire(key, Duration.ofSeconds(expireSeconds))).thenApply(r -> null));
+    }
+
+    @Override
+    public <T> void set(int expireSeconds, String key, Convert convert0, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, (convert0 == null ? convert : convert0).convertToBytes(value));
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> void set(int expireSeconds, String key, final Type type, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, convert.convertToBytes(type, value));
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> void set(int expireSeconds, String key, Convert convert0, final Type type, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, (convert0 == null ? convert : convert0).convertToBytes(type, value));
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public CompletableFuture<Void> setStringAsync(int expireSeconds, String key, String value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.set(key, value).thenCompose(v -> command.expire(key, Duration.ofSeconds(expireSeconds))).thenApply(r -> null));
+    }
+
+    @Override
+    public void setString(int expireSeconds, String key, String value) {
+        final RedisCommands<String, String> command = connectString();
+        command.set(key, value);
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseStringCommand(command);
+    }
+
+    @Override
+    public CompletableFuture<Void> setLongAsync(int expireSeconds, String key, long value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.set(key, String.valueOf(value)).thenCompose(v -> command.expire(key, Duration.ofSeconds(expireSeconds))).thenApply(r -> null));
+    }
+
+    @Override
+    public void setLong(int expireSeconds, String key, long value) {
+        final RedisCommands<String, String> command = connectString();
+        command.set(key, String.valueOf(value));
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseStringCommand(command);
+    }
+
+//    //--------------------- setExpireSeconds ------------------------------    
+    @Override
+    public CompletableFuture<Void> setExpireSecondsAsync(String key, int expireSeconds) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.expire(key, Duration.ofSeconds(expireSeconds)).thenApply(r -> null));
+    }
+
+    @Override
+    public void setExpireSeconds(String key, int expireSeconds) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        releaseBytesCommand(command);
+    }
+
+//    //--------------------- remove ------------------------------    
+    @Override
+    public CompletableFuture<Integer> removeAsync(String key) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.del(key).thenApply(rs -> rs > 0 ? 1 : 0));
+    }
+
+    @Override
+    public int remove(String key) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        int rs = command.del(key) > 0 ? 1 : 0;
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+//    //--------------------- incr ------------------------------    
+    @Override
+    public long incr(final String key) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        long rs = command.incr(key);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public CompletableFuture<Long> incrAsync(final String key) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.incr(key));
+    }
+
+    @Override
+    public long incr(final String key, long num) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        long rs = command.incrby(key, num);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public CompletableFuture<Long> incrAsync(final String key, long num) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.incrby(key, num));
+    }
+
+//    //--------------------- decr ------------------------------    
+    @Override
+    public long decr(final String key) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        long rs = command.decr(key);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public CompletableFuture<Long> decrAsync(final String key) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.decr(key));
+    }
+
+    @Override
+    public long decr(final String key, long num) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        long rs = command.decrby(key, num);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public CompletableFuture<Long> decrAsync(final String key, long num) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.decrby(key, num));
+    }
+
+    @Override
+    public int hremove(final String key, String... fields) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        int rs = command.hdel(key, fields).intValue();
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public int hsize(final String key) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        int rs = command.hlen(key).intValue();
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public List<String> hkeys(final String key) {
+        final RedisCommands<String, String> command = connectString();
+        List<String> rs = command.hkeys(key);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public long hincr(final String key, String field) {
+        final RedisCommands<String, String> command = connectString();
+        long rs = command.hincrby(key, field, 1L);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public long hincr(final String key, String field, long num) {
+        final RedisCommands<String, String> command = connectString();
+        long rs = command.hincrby(key, field, num);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public long hdecr(final String key, String field) {
+        final RedisCommands<String, String> command = connectString();
+        long rs = command.hincrby(key, field, -1L);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public long hdecr(final String key, String field, long num) {
+        final RedisCommands<String, String> command = connectString();
+        long rs = command.hincrby(key, field, -num);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public boolean hexists(final String key, String field) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        boolean rs = command.hget(key, field) != null;
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+//    //--------------------- getKeySize ------------------------------  
+    @Override
+    public int getKeySize() {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        List<String> keys = command.keys("*");
+        releaseBytesCommand(command);
+        return keys == null ? 0 : keys.size();
+    }
+
+    @Override
+    public CompletableFuture<Integer> getKeySizeAsync() {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.keys("*").thenApply(v -> v == null ? 0 : v.size()));
+    }
+
+    @Override
+    public <T> void hset(final String key, final String field, final Convert convert0, final T value) {
+        if (value == null) return;
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.hset(key, field, (convert0 == null ? convert : convert0).convertToBytes(objValueType, value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> void hset(final String key, final String field, final Type type, final T value) {
+        if (value == null) return;
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.hset(key, field, this.convert.convertToBytes(type, value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> void hset(final String key, final String field, final Convert convert0, final Type type, final T value) {
+        if (value == null) return;
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.hset(key, field, (convert0 == null ? convert : convert0).convertToBytes(type, value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public void hsetString(final String key, final String field, final String value) {
+        if (value == null) return;
+        final RedisCommands<String, String> command = connectString();
+        command.hset(key, field, value);
+        releaseStringCommand(command);
+    }
+
+    @Override
+    public void hsetLong(final String key, final String field, final long value) {
+        final RedisCommands<String, String> command = connectString();
+        command.hset(key, field, String.valueOf(value));
+        releaseStringCommand(command);
+    }
+
+    @Override
+    public void hmset(final String key, final Serializable... values) {
+        Map<String, byte[]> vals = new LinkedHashMap<>();
+        for (int i = 0; i < values.length; i += 2) {
+            vals.put(String.valueOf(values[i]), values[i + 1] instanceof String ? values[i + 1].toString().getBytes(StandardCharsets.UTF_8) : this.convert.convertToBytes(values[i + 1]));
+        }
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.hmset(key, vals);
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public List<Serializable> hmget(final String key, final Type type, final String... fields) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        List<KeyValue<String, byte[]>> rs = command.hmget(key, fields);
+        releaseBytesCommand(command);
+        List<Serializable> list = new ArrayList<>(fields.length);
+        for (String field : fields) {
+            byte[] bs = null;
+            for (KeyValue<String, byte[]> kv : rs) {
+                if (kv.getKey().equals(field)) {
+                    bs = kv.hasValue() ? kv.getValue() : null;
+                    break;
+                }
+            }
+            if (bs == null) {
+                list.add(null);
+            } else {
+                list.add(convert.convertFrom(type, bs));
+            }
+        }
+        return list;
+    }
+
+    @Override
+    public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit, String pattern) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        ScanArgs args = ScanArgs.Builder.limit(limit);
+        if (pattern != null) args = args.match(pattern);
+        MapScanCursor<String, byte[]> rs = command.hscan(key, new ScanCursor(String.valueOf(offset), false), args);
+        releaseBytesCommand(command);
+        final Map<String, T> map = new LinkedHashMap<>();
+        rs.getMap().forEach((k, v) -> map.put(k, v == null ? null : convert.convertFrom(type, v)));
+        return map;
+    }
+
+    @Override
+    public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit) {
+        return hmap(key, type, offset, limit, null);
+    }
+
+    @Override
+    public <T> T hget(final String key, final String field, final Type type) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        byte[] bs = command.hget(key, field);
+        releaseBytesCommand(command);
+        return bs == null ? null : convert.convertFrom(type, bs);
+    }
+
+    @Override
+    public String hgetString(final String key, final String field) {
+        final RedisCommands<String, String> command = connectString();
+        String rs = command.hget(key, field);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public long hgetLong(final String key, final String field, long defValue) {
+        final RedisCommands<String, String> command = connectString();
+        String rs = command.hget(key, field);
+        releaseStringCommand(command);
+        if (rs == null) return defValue;
+        try {
+            return Long.parseLong(rs);
+        } catch (NumberFormatException e) {
+            return defValue;
+        }
+    }
+
+    @Override
+    public <T> Map<String, T> getMap(final Type componentType, final String... keys) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        List<KeyValue<String, byte[]>> rs = command.mget(keys);
+        releaseBytesCommand(command);
+        Map<String, T> map = new LinkedHashMap(rs.size());
+        rs.forEach(kv -> {
+            if (kv.hasValue()) map.put(kv.getKey(), convert.convertFrom(componentType, kv.getValue()));
+        });
+        return map;
+    }
+
+    @Override
+    public <T> Collection<T> getCollection(String key, final Type componentType) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        Collection<T> rs = getCollection(command, key, componentType);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    protected <T> Collection<T> getCollection(final RedisCommands<String, byte[]> command, String key, final Type componentType) {
+        final String type = command.type(key);
+        if (type.contains("list")) {
+            return formatCollection(command.lrange(key, 0, -1), convert, componentType);
+        } else { //set
+            return formatCollection(command.smembers(key), convert, componentType);
+        }
+    }
+
+    @Override
+    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        final Map<String, Collection<T>> map = new LinkedHashMap<>();
+        if (set) {  //set
+            for (String key : keys) {
+                map.put(key, formatCollection(command.smembers(key), convert, componentType));
+            }
+        } else { //list
+            for (String key : keys) {
+                map.put(key, formatCollection(command.lrange(key, 0, -1), convert, componentType));
+            }
+        }
+        releaseBytesCommand(command);
+        return map;
+    }
+
+    @Override
+    public int getCollectionSize(String key) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        final String type = command.type(key);
+        int rs;
+        if (type.contains("list")) {
+            rs = command.llen(key).intValue();
+        } else { //set
+            rs = command.scard(key).intValue();
+        }
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public <T> Collection<T> getCollectionAndRefresh(String key, final int expireSeconds, final Type componentType) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        Collection<T> rs = getCollection(command, key, componentType);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
+    public <T> void appendListItem(String key, final Type componentType, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.rpush(key, componentType == String.class ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : convert.convertToBytes(componentType, value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> int removeListItem(String key, final Type componentType, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        int rs = command.lrem(key, 1L, componentType == String.class ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : convert.convertToBytes(componentType, value)).intValue();
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public <T> boolean existsSetItem(String key, final Type componentType, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        boolean rs = command.sismember(key, componentType == String.class ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : convert.convertToBytes(componentType, value));
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
+    public <T> void appendSetItem(String key, final Type componentType, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.sadd(key, componentType == String.class ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : convert.convertToBytes(componentType, value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
+    public <T> int removeSetItem(String key, final Type componentType, T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        int rs = command.srem(key, componentType == String.class ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : convert.convertToBytes(componentType, value)).intValue();
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public <T> T spopSetItem(String key, final Type componentType) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        T rs = convert.convertFrom(componentType, command.spop(key));
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public <T> Set<T> spopSetItem(String key, int count, final Type componentType) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        Set<T> rs = formatCollection(command.spop(key, count), convert, componentType);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public byte[] getBytes(final String key) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        byte[] bs = command.get(key);
+        releaseBytesCommand(command);
+        return bs;
+    }
+
+    @Override
+    public byte[] getBytesAndRefresh(final String key, final int expireSeconds) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        byte[] bs = command.get(key);
+        command.expire(key, expireSeconds);
+        releaseBytesCommand(command);
+        return bs;
+    }
+
+    @Override
+    public void setBytes(final String key, final byte[] value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, value);
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public void setBytes(final int expireSeconds, final String key, final byte[] value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, value);
+        command.expire(key, expireSeconds);
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> void setBytes(final String key, final Convert convert0, final Type type, final T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, (convert0 == null ? convert : convert0).convertToBytes(type, value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> void setBytes(final int expireSeconds, final String key, final Convert convert0, final Type type, final T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.set(key, (convert0 == null ? convert : convert0).convertToBytes(type, value));
+        command.expire(key, expireSeconds);
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public List<String> queryKeys() {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        List<String> rs = command.keys("*");
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public List<String> queryKeysStartsWith(String startsWith) {
+        final RedisCommands<String, String> command = connectString();
+        List<String> rs = command.keys(startsWith + "*");
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public List<String> queryKeysEndsWith(String endsWith) {
+        final RedisCommands<String, String> command = connectString();
+        List<String> rs = command.keys("*" + endsWith);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public Map<String, String> getStringMap(final String... keys) {
+        final RedisCommands<String, String> command = connectString();
+        List<KeyValue<String, String>> rs = command.mget(keys);
+        releaseStringCommand(command);
+        Map<String, String> map = new LinkedHashMap<>();
+        rs.forEach(kv -> {
+            if (kv.hasValue()) map.put(kv.getKey(), kv.getValue());
+        });
+        return map;
+    }
+
+    @Override
+    public String[] getStringArray(final String... keys) {
+        final RedisCommands<String, String> command = connectString();
+        List<KeyValue<String, String>> rs = command.mget(keys);
+        releaseStringCommand(command);
+        String[] array = new String[keys.length];
+        for (int i = 0; i < array.length; i++) {
+            String bs = null;
+            for (KeyValue<String, String> kv : rs) {
+                if (kv.getKey().equals(keys[i])) {
+                    bs = kv.hasValue() ? kv.getValue() : null;
+                    break;
+                }
+            }
+            array[i] = bs;
+        }
+        return array;
+    }
+
+    @Override
+    public Collection<String> getStringCollection(String key) {
+        final RedisCommands<String, String> command = connectString();
+        Collection<String> rs = getStringCollection(command, key);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    public Collection<String> getStringCollection(final RedisCommands<String, String> command, String key) {
+        final String type = command.type(key);
+        if (type.contains("list")) { //list
+            return command.lrange(key, 0, -1);
+        } else { //set
+            return command.smembers(key);
+        }
+    }
+
+    @Override
+    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
+        final RedisCommands<String, String> command = connectString();
+        final Map<String, Collection<String>> map = new LinkedHashMap<>();
+        if (set) {
+            for (String key : keys) {
+                map.put(key, command.smembers(key));
+            }
+        } else { //set                
+            for (String key : keys) {
+                map.put(key, command.lrange(key, 0, -1));
+            }
+        }
+        releaseStringCommand(command);
+        return map;
+    }
+
+    @Override
+    public Collection<String> getStringCollectionAndRefresh(String key, final int expireSeconds) {
+        final RedisCommands<String, String> command = connectString();
+        command.expire(key, expireSeconds);
+        Collection<String> rs = getStringCollection(command, key);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public void appendStringListItem(String key, String value) {
+        final RedisCommands<String, String> command = connectString();
+        command.rpush(key, value);
+        releaseStringCommand(command);
+    }
+
+    @Override
+    public String spopStringSetItem(String key) {
+        final RedisCommands<String, String> command = connectString();
+        String rs = command.spop(key);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public Set<String> spopStringSetItem(String key, int count) {
+        final RedisCommands<String, String> command = connectString();
+        Set<String> rs = command.spop(key, count);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public int removeStringListItem(String key, String value) {
+        final RedisCommands<String, String> command = connectString();
+        int rs = command.lrem(key, 1, value).intValue();
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public boolean existsStringSetItem(String key, String value) {
+        final RedisCommands<String, String> command = connectString();
+        boolean rs = command.sismember(key, value);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public void appendStringSetItem(String key, String value) {
+        final RedisCommands<String, String> command = connectString();
+        command.sadd(key, value);
+        releaseStringCommand(command);
+    }
+
+    @Override
+    public int removeStringSetItem(String key, String value) {
+        final RedisCommands<String, String> command = connectString();
+        int rs = command.srem(key, value).intValue();
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public Map<String, Long> getLongMap(String... keys) {
+        final RedisCommands<String, String> command = connectString();
+        List<KeyValue<String, String>> rs = command.mget(keys);
+        releaseStringCommand(command);
+        Map<String, Long> map = new LinkedHashMap<>();
+        rs.forEach(kv -> {
+            if (kv.hasValue()) map.put(kv.getKey(), Long.parseLong(kv.getValue()));
+        });
+        return map;
+    }
+
+    @Override
+    public Long[] getLongArray(String... keys) {
+        final RedisCommands<String, String> command = connectString();
+        List<KeyValue<String, String>> rs = command.mget(keys);
+        releaseStringCommand(command);
+        Long[] array = new Long[keys.length];
+        for (int i = 0; i < array.length; i++) {
+            Long bs = null;
+            for (KeyValue<String, String> kv : rs) {
+                if (kv.getKey().equals(keys[i])) {
+                    bs = kv.hasValue() ? Long.parseLong(kv.getValue()) : null;
+                    break;
+                }
+            }
+            array[i] = bs;
+        }
+        return array;
+    }
+
+    @Override
+    public Collection<Long> getLongCollection(String key) {
+        final RedisCommands<String, String> command = connectString();
+        Collection<Long> rs = getLongCollection(command, key);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    protected Collection<Long> getLongCollection(final RedisCommands<String, String> command, String key) {
+        final String type = command.type(key);
+        Collection<Long> rs;
+        if (type.contains("list")) { //list
+            rs = formatLongCollection(false, command.lrange(key, 0, -1));
+        } else { //set
+            rs = formatLongCollection(true, command.smembers(key));
+        }
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public Map<String, Collection<Long>> getLongCollectionMap(boolean set, String... keys) {
+        final RedisCommands<String, String> command = connectString();
+        final Map<String, Collection<Long>> map = new LinkedHashMap<>();
+        if (set) { //set
+            for (String key : keys) {
+                map.put(key, formatLongCollection(true, command.smembers(key)));
+            }
+        } else { //list                
+            for (String key : keys) {
+                map.put(key, formatLongCollection(false, command.lrange(key, 0, -1)));
+            }
+        }
+        releaseStringCommand(command);
+        return map;
+    }
+
+    @Override
+    public Collection<Long> getLongCollectionAndRefresh(String key, int expireSeconds) {
+        final RedisCommands<String, String> command = connectString();
+        command.expire(key, expireSeconds);
+        releaseStringCommand(command);
+        return getLongCollection(key);
+    }
+
+    @Override
+    public void appendLongListItem(String key, long value) {
+        final RedisCommands<String, String> command = connectString();
+        command.rpush(key, String.valueOf(value));
+        releaseStringCommand(command);
+    }
+
+    @Override
+    public Long spopLongSetItem(String key) {
+        final RedisCommands<String, String> command = connectString();
+        String value = command.spop(key);
+        releaseStringCommand(command);
+        return value == null ? null : Long.parseLong(value);
+    }
+
+    @Override
+    public Set<Long> spopLongSetItem(String key, int count) {
+        final RedisCommands<String, String> command = connectString();
+        Set<Long> rs = (Set) formatLongCollection(true, command.spop(key, count));
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public int removeLongListItem(String key, long value) {
+        final RedisCommands<String, String> command = connectString();
+        int rs = command.lrem(key, 1, String.valueOf(value)).intValue();
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public boolean existsLongSetItem(String key, long value) {
+        final RedisCommands<String, String> command = connectString();
+        boolean rs = command.sismember(key, String.valueOf(value));
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public void appendLongSetItem(String key, long value) {
+        final RedisCommands<String, String> command = connectString();
+        command.sadd(key, String.valueOf(value));
+        releaseStringCommand(command);
+    }
+
+    @Override
+    public int removeLongSetItem(String key, long value) {
+        final RedisCommands<String, String> command = connectString();
+        int rs = command.srem(key, String.valueOf(value)).intValue();
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public CompletableFuture<Integer> hremoveAsync(String key, String... fields) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hdel(key, fields));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> hkeysAsync(String key) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hkeys(key));
+    }
+
+    @Override
+    public CompletableFuture<Integer> hsizeAsync(String key) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hlen(key));
+    }
+
+    @Override
+    public CompletableFuture<Long> hincrAsync(String key, String field) {
+        return hincrAsync(key, field, 1);
+    }
+
+    @Override
+    public CompletableFuture<Long> hincrAsync(String key, String field, long num) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.hincrby(key, field, num));
+    }
+
+    @Override
+    public CompletableFuture<Long> hdecrAsync(String key, String field) {
+        return hincrAsync(key, field, -1);
+    }
+
+    @Override
+    public CompletableFuture<Long> hdecrAsync(String key, String field, long num) {
+        return hincrAsync(key, field, -num);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> hexistsAsync(String key, String field) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hexists(key, field));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> hsetAsync(String key, String field, Convert convert0, T value) {
+        if (value == null) return CompletableFuture.completedFuture(null);
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hset(key, field, (convert0 == null ? convert : convert0).convertToBytes(objValueType, value)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> hsetAsync(String key, String field, Type type, T value) {
+        if (value == null) return CompletableFuture.completedFuture(null);
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hset(key, field, convert.convertToBytes(type, value)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> hsetAsync(String key, String field, Convert convert0, Type type, T value) {
+        if (value == null) return CompletableFuture.completedFuture(null);
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hset(key, field, (convert0 == null ? convert : convert0).convertToBytes(type, value)));
+    }
+
+    @Override
+    public CompletableFuture<Void> hsetStringAsync(String key, String field, String value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.hset(key, field, value));
+    }
+
+    @Override
+    public CompletableFuture<Void> hsetLongAsync(String key, String field, long value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.hset(key, field, String.valueOf(value)));
+    }
+
+    @Override
+    public CompletableFuture<Void> hmsetAsync(String key, Serializable... values) {
+        Map<String, byte[]> vals = new LinkedHashMap<>();
+        for (int i = 0; i < values.length; i += 2) {
+            vals.put(String.valueOf(values[i]), this.convert.convertToBytes(values[i + 1]));
+        }
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hmset(key, vals));
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> hmgetAsync(String key, Type type, String... fields) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hmget(key, fields).thenApply((List<KeyValue<String, byte[]>> rs) -> {
+            List<Serializable> list = new ArrayList<>(fields.length);
+            for (String field : fields) {
+                byte[] bs = null;
+                for (KeyValue<String, byte[]> kv : rs) {
+                    if (kv.getKey().equals(field)) {
+                        bs = kv.hasValue() ? kv.getValue() : null;
+                        break;
+                    }
+                }
+                if (bs == null) {
+                    list.add(null);
+                } else {
+                    list.add(convert.convertFrom(type, bs));
+                }
+            }
+            return list;
+        }));
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(String key, Type type, int offset, int limit) {
+        return hmapAsync(key, type, offset, limit, null);
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(String key, Type type, int offset, int limit, String pattern) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        ScanArgs args = ScanArgs.Builder.limit(limit);
+        if (pattern != null) args = args.match(pattern);
+        return completableBytesFuture(command, command.hscan(key, new ScanCursor(String.valueOf(offset), false), args).thenApply((MapScanCursor<String, byte[]> rs) -> {
+            final Map<String, T> map = new LinkedHashMap<>();
+            rs.getMap().forEach((k, v) -> map.put(k, v == null ? null : convert.convertFrom(type, v)));
+            return map;
+        }));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> hgetAsync(String key, String field, Type type) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.hget(key, field).thenApply(bs -> bs == null ? null : convert.convertFrom(type, bs)));
+    }
+
+    @Override
+    public CompletableFuture<String> hgetStringAsync(String key, String field) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.hget(key, field));
+    }
+
+    @Override
+    public CompletableFuture<Long> hgetLongAsync(String key, String field, long defValue) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.hget(key, field).thenApply(bs -> bs == null ? defValue : Long.parseLong(bs)));
+
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, T>> getMapAsync(Type componentType, String... keys) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.mget(keys).thenApply((List<KeyValue<String, byte[]>> rs) -> {
+            Map<String, T> map = new LinkedHashMap(rs.size());
+            rs.forEach(kv -> {
+                if (kv.hasValue()) map.put(kv.getKey(), convert.convertFrom(componentType, kv.getValue()));
+            });
+            return map;
+        }));
+    }
+
+    @Override
+    public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return getCollectionAsync(command, key, componentType);
+    }
+
+    protected <T> CompletableFuture<Collection<T>> getCollectionAsync(
+        final RedisAsyncCommands<String, byte[]> command, String key, final Type componentType) {
+        return completableBytesFuture(command, command.type(key).thenCompose(type -> {
+            if (type.contains("list")) {
+                return command.lrange(key, 0, -1).thenApply(list -> formatCollection(list, convert, componentType));
+            } else { //set
+                return command.smembers(key).thenApply(set -> formatCollection(set, convert, componentType));
+            }
+        }));
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(boolean set, Type componentType, String... keys) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        final Map<String, Collection<T>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        if (set) {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = command.smembers(key).thenAccept(rs -> {
+                    if (rs != null) {
+                        synchronized (map) {
+                            map.put(key, formatCollection(rs, convert, componentType));
+                        }
+                    }
+                }).toCompletableFuture();
+            }
+        } else {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
+                    if (rs != null) {
+                        synchronized (map) {
+                            map.put(key, formatCollection(rs, convert, componentType));
+                        }
+                    }
+                }).toCompletableFuture();
+            }
+        }
+        return CompletableFuture.allOf(futures).thenApply(v -> map);
+    }
+
+    @Override
+    public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.type(key).thenCompose(type -> {
+            if (type.contains("list")) {
+                return command.llen(key).thenApply(v -> v.intValue());
+            } else { //set 
+                return command.scard(key).thenApply(v -> v.intValue());
+            }
+        }));
+    }
+
+    @Override
+    public <T> CompletableFuture<Collection<T>> getCollectionAndRefreshAsync(String key, int expireSeconds, final Type componentType) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.expire(key, expireSeconds).thenCompose(v -> getCollectionAsync(command, key, componentType)));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> spopSetItemAsync(String key, Type componentType) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.spop(key).thenApply(bs -> bs == null ? null : convert.convertFrom(componentType, bs)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> spopSetItemAsync(String key, int count, Type componentType) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.spop(key, count).thenApply(v -> formatCollection(v, convert, componentType)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> appendListItemAsync(String key, Type componentType, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.rpush(key, convert.convertToBytes(componentType, value)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Integer> removeListItemAsync(String key, Type componentType, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.lrem(key, 1, convert.convertToBytes(componentType, value)).thenApply(v -> v.intValue()));
+    }
+
+    @Override
+    public <T> CompletableFuture<Boolean> existsSetItemAsync(String key, Type componentType, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.sismember(key, convert.convertToBytes(componentType, value)));
+    }
+
+    @Override
+    @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
+    public <T> CompletableFuture<Void> appendSetItemAsync(String key, Type componentType, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.sadd(key, convert.convertToBytes(componentType, value)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Integer> removeSetItemAsync(String key, Type componentType, T value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.srem(key, convert.convertToBytes(componentType, value)).thenApply(v -> v.intValue()));
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getBytesAsync(String key) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.get(key));
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getBytesAndRefreshAsync(String key, int expireSeconds) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.expire(key, expireSeconds).thenCompose(v -> command.get(key)));
+    }
+
+    @Override
+    public CompletableFuture<Void> setBytesAsync(String key, byte[] value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.set(key, value));
+    }
+
+    @Override
+    public CompletableFuture<Void> setBytesAsync(int expireSeconds, String key, byte[] value) {
+        final RedisAsyncCommands<String, byte[]> command = connectBytesAsync();
+        return completableBytesFuture(command, command.expire(key, expireSeconds).thenCompose(v -> command.set(key, value)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setBytesAsync(String key, Convert convert0, Type type, T value) {
+        return setBytesAsync(key, (convert0 == null ? convert : convert0).convertToBytes(type, value));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setBytesAsync(int expireSeconds, String key, Convert convert0, Type type, T value) {
+        return setBytesAsync(expireSeconds, key, (convert0 == null ? convert : convert0).convertToBytes(type, value));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> queryKeysAsync() {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.keys("*"));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> queryKeysStartsWithAsync(String startsWith) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.keys(startsWith + "*"));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> queryKeysEndsWithAsync(String endsWith) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.keys("*" + endsWith));
+    }
+
+    @Override
+    public CompletableFuture<Map<String, String>> getStringMapAsync(String... keys) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
+            Map<String, String> map = new LinkedHashMap<>();
+            rs.forEach(kv -> {
+                if (kv.hasValue()) map.put(kv.getKey(), kv.getValue());
+            });
+            return map;
+        }));
+    }
+
+    @Override
+    public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
+            String[] array = new String[keys.length];
+            for (int i = 0; i < array.length; i++) {
+                String bs = null;
+                for (KeyValue<String, String> kv : rs) {
+                    if (kv.getKey().equals(keys[i])) {
+                        bs = kv.hasValue() ? kv.getValue() : null;
+                        break;
+                    }
+                }
+                array[i] = bs;
+            }
+            return array;
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
+        return getStringCollectionAsync(connectStringAsync(), key);
+    }
+
+    protected CompletableFuture<Collection<String>> getStringCollectionAsync(final RedisAsyncCommands<String, String> command, String key) {
+        return completableStringFuture(command, command.type(key).thenApply(type -> {
+            if (type.contains("list")) {
+                return command.lrange(key, 0, -1);
+            } else { //set
+                return command.smembers(key);
+            }
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(boolean set, String... keys) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        final Map<String, Collection<String>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        if (set) {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = command.smembers(key).thenAccept(rs -> {
+                    if (rs != null) {
+                        synchronized (map) {
+                            map.put(key, rs);
+                        }
+                    }
+                }).toCompletableFuture();
+            }
+        } else {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
+                    if (rs != null) {
+                        synchronized (map) {
+                            map.put(key, rs);
+                        }
+                    }
+                }).toCompletableFuture();
+            }
+        }
+        return CompletableFuture.allOf(futures).thenApply(v -> map);
+    }
+
+    @Override
+    public CompletableFuture<Collection<String>> getStringCollectionAndRefreshAsync(String key, int expireSeconds) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.expire(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(command, key)));
+    }
+
+    @Override
+    public CompletableFuture<Void> appendStringListItemAsync(String key, String value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.rpush(key, value));
+    }
+
+    @Override
+    public CompletableFuture<String> spopStringSetItemAsync(String key) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.spop(key));
+    }
+
+    @Override
+    public CompletableFuture<Set<String>> spopStringSetItemAsync(String key, int count) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.spop(key, count));
+    }
+
+    @Override
+    public CompletableFuture<Integer> removeStringListItemAsync(String key, String value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.lrem(key, 1, value).thenApply(v -> v.intValue()));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> existsStringSetItemAsync(String key, String value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.sismember(key, value));
+    }
+
+    @Override
+    public CompletableFuture<Void> appendStringSetItemAsync(String key, String value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.sadd(key, value));
+    }
+
+    @Override
+    public CompletableFuture<Integer> removeStringSetItemAsync(String key, String value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.srem(key, value).thenApply(v -> v.intValue()));
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Long>> getLongMapAsync(String... keys) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
+            Map<String, Long> map = new LinkedHashMap<>();
+            rs.forEach(kv -> {
+                if (kv.hasValue()) map.put(kv.getKey(), Long.parseLong(kv.getValue()));
+            });
+            return map;
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
+            Long[] array = new Long[keys.length];
+            for (int i = 0; i < array.length; i++) {
+                Long bs = null;
+                for (KeyValue<String, String> kv : rs) {
+                    if (kv.getKey().equals(keys[i])) {
+                        bs = kv.hasValue() ? Long.parseLong(kv.getValue()) : null;
+                        break;
+                    }
+                }
+                array[i] = bs;
+            }
+            return array;
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
+        return getLongCollectionAsync(connectStringAsync(), key);
+    }
+
+    protected CompletableFuture<Collection<Long>> getLongCollectionAsync(final RedisAsyncCommands<String, String> command, String key) {
+        return completableStringFuture(command, command.type(key).thenApply(type -> {
+            if (type.contains("list")) {
+                return command.lrange(key, 0, -1).thenApply(rs -> formatLongCollection(false, rs));
+            } else { //set
+                return command.smembers(key).thenApply(rs -> formatLongCollection(true, rs));
+            }
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(boolean set, String... keys) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        final Map<String, Collection<Long>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        if (set) {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = command.smembers(key).thenAccept(rs -> {
+                    if (rs != null) {
+                        synchronized (map) {
+                            map.put(key, formatLongCollection(set, rs));
+                        }
+                    }
+                }).toCompletableFuture();
+            }
+        } else {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
+                    if (rs != null) {
+                        synchronized (map) {
+                            map.put(key, formatLongCollection(set, rs));
+                        }
+                    }
+                }).toCompletableFuture();
+            }
+        }
+        return CompletableFuture.allOf(futures).thenApply(v -> map);
+    }
+
+    @Override
+    public CompletableFuture<Collection<Long>> getLongCollectionAndRefreshAsync(String key, int expireSeconds) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.expire(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(command, key)));
+    }
+
+    @Override
+    public CompletableFuture<Void> appendLongListItemAsync(String key, long value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.rpush(key, String.valueOf(value)));
+    }
+
+    @Override
+    public CompletableFuture<Long> spopLongSetItemAsync(String key) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.spop(key).thenApply(v -> v == null ? null : Long.parseLong(v)));
+    }
+
+    @Override
+    public CompletableFuture<Set<Long>> spopLongSetItemAsync(String key, int count) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.spop(key, count).thenApply(v -> v == null ? null : formatLongCollection(true, v)));
+    }
+
+    @Override
+    public CompletableFuture<Integer> removeLongListItemAsync(String key, long value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.lrem(key, 1, String.valueOf(value)).thenApply(v -> v.intValue()));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> existsLongSetItemAsync(String key, long value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.sismember(key, String.valueOf(value)));
+    }
+
+    @Override
+    public CompletableFuture<Void> appendLongSetItemAsync(String key, long value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.sadd(key, String.valueOf(value)));
+    }
+
+    @Override
+    public CompletableFuture<Integer> removeLongSetItemAsync(String key, long value) {
+        final RedisAsyncCommands<String, String> command = connectStringAsync();
+        return completableStringFuture(command, command.srem(key, String.valueOf(value)).thenApply(v -> v.intValue()));
+    }
+
+}

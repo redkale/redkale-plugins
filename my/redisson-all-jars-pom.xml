@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.redisson.clients</groupId>
-    <artifactId>redisson-clients</artifactId>
-    <version>3.14.0</version>
+    <groupId>org.redkalex.cache.redisson</groupId>
+    <artifactId>clients-redisson-fat</artifactId>
+    <version>3.15.4</version>
     <packaging>jar</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
     <dependencies> 
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson</artifactId>
-            <version>3.14.0</version>
+            <version>3.15.4</version>
         </dependency>
     </dependencies>
     
@@ -36,6 +36,15 @@
                                 <filter>  
                                     <artifact>*:*</artifact>  
                                     <excludes>  
+                                        <exclude>org/yaml/**</exclude>
+                                        <exclude>reactor/**</exclude>
+                                        <exclude>io/reactivex/**</exclude>
+                                        <exclude>org/reactivestreams/**</exclude>
+                                        <exclude>javax/cache/**</exclude>
+                                        <exclude>net/bytebuddy/**</exclude>
+                                        <exclude>jodd/**</exclude>
+                                        
+                                        <exclude>META-INF/*.SF</exclude>  
                                         <exclude>META-INF/*.SF</exclude>  
                                         <exclude>META-INF/*.DSA</exclude>  
                                         <exclude>META-INF/*.RSA</exclude>  
