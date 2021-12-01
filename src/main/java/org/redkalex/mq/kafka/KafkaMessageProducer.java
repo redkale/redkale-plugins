@@ -91,6 +91,7 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
             }
         }
         final Integer partition0 = partition;
+        //if (finest) logger.log(Level.FINEST, "Kafka.producer prepare send partition=" + partition0 + ", msg=" + message);
         producer.send(new ProducerRecord<>(message.getTopic(), partition, null, message), (metadata, exp) -> {
             if (exp != null) {
                 future.completeExceptionally(exp);
@@ -103,8 +104,8 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
                 logger.log(Level.FINE, "Kafka.producer (mqs.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (e > 100 && finer) {
                 logger.log(Level.FINER, "Kafka.producer (mq.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
-            } else if (finest && e > 5) {
-                logger.log(Level.FINEST, "Kafka.producer (mq.cost = " + e + " ms)，partition=" + partition0);
+            } else if (finest) {
+                logger.log(Level.FINEST, "Kafka.producer (mq.cost = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             }
         });
         return future;

@@ -8,7 +8,7 @@ package org.redkalex.cache.redis;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.logging.Logger;
+import java.util.logging.*;
 import org.redkale.net.client.*;
 import org.redkale.util.*;
 
@@ -60,12 +60,13 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         return recyclableArray;
     }
 
-    protected boolean checkBytesFrame(ByteBuffer buffer, ByteArray array) {
+    private boolean checkBytesFrame(RedisCacheConnection conn, ByteBuffer buffer, ByteArray array) {
 //        byte[] dbs = new byte[buffer.remaining()];
 //        for (int i = 0; i < dbs.length; i++) {
 //            dbs[i] = buffer.get(buffer.position() + i);
 //        }
-//        System.out.println("原始数据: " + new String(dbs).replace("\r\n", "  "));
+//        ArrayDeque<ClientFuture> deque = (ArrayDeque) responseQueue(conn);
+//        logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 原始数据: " + new String(dbs).replace("\r\n", "  ") + ", req=" + deque.getFirst().getRequest());
 
         array.clear();
         byte type = halfFrameCmd == 0 ? buffer.get() : halfFrameCmd;
@@ -141,7 +142,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                         halfFrameCmd = sign;
                         halfFrameArraySize = itemLength;
                         if (!buffer.hasRemaining()) return false;
-                        return checkBytesFrame(buffer, array);
+                        return checkBytesFrame(conn, buffer, array);
                     }
                 }
                 int cha = itemLength - array.length();
@@ -185,7 +186,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         RedisCacheConnection conn = (RedisCacheConnection) conn0;
         if (!realbuf.hasRemaining()) return false;
         ByteBuffer buffer = realbuf;
-        if (!checkBytesFrame(buffer, array)) return false;
+        if (!checkBytesFrame(conn, buffer, array)) return false;
         //buffer必然包含一个完整的frame数据
         boolean first = true;
         boolean hadresult = false;
@@ -193,7 +194,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         Iterator<ClientFuture<RedisCacheRequest>> respIt = (Iterator) responseQueue(conn).iterator();
         while (first || buffer.hasRemaining()) {
             if (request == null) request = respIt.hasNext() ? respIt.next().getRequest() : null;
-            if (!first && !checkBytesFrame(buffer, array)) break;
+            if (!first && !checkBytesFrame(conn, buffer, array)) break;
             if (frameType == TYPE_ERROR) {
                 addResult(new RuntimeException(new String(frameValue, StandardCharsets.UTF_8)));
             } else {

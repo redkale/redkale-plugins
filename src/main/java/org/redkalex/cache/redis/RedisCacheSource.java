@@ -1245,7 +1245,10 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
     private byte[] formatValue(Convert convert0, Type type, Object value) {
         if (value == null) throw new NullPointerException();
         if (value instanceof byte[]) return (byte[]) value;
-        if (convert0 == null) convert0 = convert;
+        if (convert0 == null) {
+            if (convert == null) convert = JsonConvert.root(); //compile模式下convert可能为null
+            convert0 = convert;
+        }
         if (type == null) type = value.getClass();
         Class clz = value.getClass();
         if (clz == String.class || clz == Long.class

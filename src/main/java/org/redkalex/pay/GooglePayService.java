@@ -6,12 +6,13 @@
 package org.redkalex.pay;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.security.*;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
 import javax.annotation.Resource;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import org.redkale.convert.json.*;
 import org.redkale.service.Local;
 import org.redkale.util.*;
@@ -174,25 +175,30 @@ public final class GooglePayService extends AbstractPayService {
         final GoogleElement element = elements.get(request.getAppid());
         if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
         result.setAppid(element.appid);
-        final Map<String, String> rmap = new TreeMap<>();
-        rmap.put("content", request.getPayno());
-        result.setResult(rmap);
+//        final Map<String, String> rmap = new TreeMap<>();
+//        rmap.put("content", request.getPayno());
+//        result.setResult(rmap);
         return result.toFuture();
     }
 
     @Override
     public CompletableFuture<PayNotifyResponse> notifyAsync(PayNotifyRequest request) {
+        String strbean;
         if (request.getAttach() != null && request.getAttach().containsKey("bean")) {
+            strbean = request.attach("bean");
+        } else {
+            strbean = request.getText();
+        }
+        if (strbean != null && !strbean.isEmpty()) {
             final GoogleElement element = elements.get(request.getAppid());
-            String strbean = request.attach("bean");
             GoogleNotifyBean bean = JsonConvert.root().convertFrom(GoogleNotifyBean.class, strbean);
             PayNotifyResponse resp = new PayNotifyResponse();
             resp.setResponsetext(strbean);
             resp.setPayno(bean.payno());
             resp.setPaytype(request.getPaytype());
+            if (!checkSign(element, bean.purchaseData, bean.signature)) return resp.retcode(RETPAY_FALSIFY_ERROR).notifytext(strbean).toFuture();
             return CompletableFuture.completedFuture(resp);
         }
-        //待实现
         return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
     }
 
@@ -203,7 +209,7 @@ public final class GooglePayService extends AbstractPayService {
 
     @Override
     public CompletableFuture<PayQueryResponse> queryAsync(PayRequest request) {
-        return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
+        return CompletableFuture.completedFuture(null); 
     }
 
     @Override
@@ -258,22 +264,22 @@ public final class GooglePayService extends AbstractPayService {
 
     @Override
     protected String createSign(AbstractPayService.PayElement element, Map<String, ?> map, String text) {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     protected boolean checkSign(AbstractPayService.PayElement element, Map<String, ?> map, String text) {
-        String[] signatures = text.split("\\.");
-        byte[] sig = Base64.getDecoder().decode(signatures[0].replace('-', '+').replace('_', '/'));
-        Map<String, String> smp = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, Base64.getDecoder().decode(signatures[1]));
-        if (!"HMAC-SHA256".equals(smp.get("algorithm"))) return false;
-        byte[] keyBytes = ((GoogleElement) element).secret.getBytes();
-        SecretKeySpec signingKey = new SecretKeySpec(keyBytes, "HmacSHA256");
+        return checkSign((GoogleElement) element, (String) map.get("purchaseData"), (String) map.get("signature"));
+    }
+
+    protected boolean checkSign(GoogleElement element, String purchaseData, String sign) {
         try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(signingKey);
-            byte[] rawHmac = mac.doFinal(signatures[1].getBytes());
-            return Arrays.equals(sig, rawHmac);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            PublicKey pubKey = keyFactory.generatePublic(new X509EncodedKeySpec(element.pubkey));
+            Signature signature = Signature.getInstance("SHA1WithRSA");
+            signature.initVerify(pubKey);
+            signature.update(purchaseData.getBytes(StandardCharsets.UTF_8));
+            return signature.verify(Base64.getDecoder().decode(sign));
         } catch (Exception e) {
             return false;
         }
@@ -281,40 +287,18 @@ public final class GooglePayService extends AbstractPayService {
 
     public static class GoogleNotifyBean implements Serializable {
 
-        // ----------- 第一种 -----------
-        public String developerPayload;//payno
+        public String payno;//payno
 
-        public String paymentID;
+        public String purchaseData;
 
-        public String productID;
-
-        public String purchaseTime;
-
-        public String purchaseToken;
-
-        public String signedRequest;
-
-        // ----------- 第二种 -----------
-        public String payment_id;
-
-        public String amount; //5.00
-
-        public String currency; //USD
-
-        public String quantity; //1
-
-        public String request_id; //payno
-
-        public String status;
-
-        public String signed_request;
+        public String signature;
 
         public String signature() {
-            return signed_request == null || signed_request.isEmpty() ? signedRequest : signed_request;
+            return signature;
         }
 
         public String payno() {
-            return request_id == null || request_id.isEmpty() ? developerPayload : request_id;
+            return payno;
         }
 
         @Override
@@ -327,13 +311,17 @@ public final class GooglePayService extends AbstractPayService {
 
         // pay.google.[x].appid
         public String appid = "";  //APP应用ID
+        // pay.google.[x].publickey
 
-        // pay.google.[x].secret
-        public String secret = ""; //签名算法需要用到的密钥
+        public byte[] pubkey;  //publicKey
+
+        // pay.google.[x].certpath
+        public String certpath = ""; //签名算法需要用到的密钥
 
         public static Map<String, GoogleElement> create(Logger logger, Properties properties) {
             String def_appid = properties.getProperty("pay.google.appid", "").trim();
-            String def_secret = properties.getProperty("pay.google.secret", "").trim();
+            String def_publickey = properties.getProperty("pay.google.publickey", "").trim();
+            String def_certpath = properties.getProperty("pay.google.certpath", "").trim();
             String def_notifyurl = properties.getProperty("pay.google.notifyurl", "").trim();
 
             final Map<String, GoogleElement> map = new HashMap<>();
@@ -341,16 +329,18 @@ public final class GooglePayService extends AbstractPayService {
                 final String prefix = appid_key.toString().substring(0, appid_key.toString().length() - ".appid".length());
 
                 String appid = properties.getProperty(prefix + ".appid", def_appid).trim();
-                String secret = properties.getProperty(prefix + ".secret", def_secret).trim();
+                String publickey = properties.getProperty(prefix + ".publickey", def_publickey).trim();
+                String certpath = properties.getProperty(prefix + ".certpath", def_certpath).trim();
                 String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl).trim();
 
-                if (appid.isEmpty() || notifyurl.isEmpty() || secret.isEmpty()) {
+                if (appid.isEmpty() || certpath.isEmpty()) {
                     logger.log(Level.WARNING, properties + "; has illegal google conf by prefix" + prefix);
                     return;
                 }
                 GoogleElement element = new GoogleElement();
                 element.appid = appid;
-                element.secret = secret;
+                element.pubkey = Base64.getDecoder().decode(publickey);
+                element.certpath = certpath;
                 element.notifyurl = notifyurl;
                 if (element.initElement(logger, null)) {
                     map.put(appid, element);

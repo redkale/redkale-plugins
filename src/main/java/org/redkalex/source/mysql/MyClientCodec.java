@@ -169,8 +169,8 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                         } else {
                             lastResult.increUpdateEffectCount((int) ok.affectedRows);
                         }
-                        if (buffer.position() != bufpos + length) {
-                            logger.log(Level.SEVERE, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", buffer-currpos: " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                        if (MysqlDataSource.debug && buffer.position() != bufpos + length) {
+                            logger.log(Level.FINER, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", request=" + request + ", buffer-currpos: " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
                         }
                         buffer.position(bufpos + length);
                         if (MysqlDataSource.debug && conn.isAuthenticated()) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", affectedRows=" + ok.affectedRows + ", statusFlags=" + ok.serverStatusFlags + ", warningCount=" + ok.warningCount);

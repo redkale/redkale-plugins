@@ -88,19 +88,25 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         try {
             if (records0 != null && records0.count() > 0) {
                 if (!this.autoCommit) {
+                    long cs = System.currentTimeMillis();
                     consumer.commitAsync((map, exp) -> {
                         if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
                     });
+                    long ce = System.currentTimeMillis() - cs;
+                    if (finest && ce > 100) logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
                 }
                 long s = System.currentTimeMillis();
                 MessageRecord msg = null;
+                int count = records0.count();
                 try {
-                    processor.begin(records0.count(), s);
+                    processor.begin(count, s);
                     for (ConsumerRecord<String, MessageRecord> r : records0) {
                         msg = r.value();
                         processor.process(msg, null);
                     }
                     processor.commit();
+                    long e = System.currentTimeMillis() - s;
+                    if (finest && e > 10) logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
                 } catch (Throwable e) {
                     logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
                 }
@@ -108,7 +114,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
             ConsumerRecords<String, MessageRecord> records;
             while (!this.closed) {
                 try {
-                    records = this.consumer.poll(Duration.ofMillis(1000));
+                    records = this.consumer.poll(Duration.ofMillis(10_000));
                 } catch (Exception ex) {
                     logger.log(Level.WARNING, getClass().getSimpleName() + " poll error", ex);
                     this.consumer.close();
@@ -126,9 +132,12 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                 int count = records.count();
                 if (count == 0) continue;
                 if (!this.autoCommit) {
+                    long cs = System.currentTimeMillis();
                     this.consumer.commitAsync((map, exp) -> {
                         if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer commitAsync error: " + map, exp);
                     });
+                    long ce = System.currentTimeMillis() - cs;
+                    if (finest && ce > 100) logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
                 }
                 long s = System.currentTimeMillis();
                 MessageRecord msg = null;
@@ -139,6 +148,8 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                         processor.process(msg, null);
                     }
                     processor.commit();
+                    long e = System.currentTimeMillis() - s;
+                    if (finest && e > 10) logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
                 } catch (Throwable e) {
                     logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
                 }
@@ -147,7 +158,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     logger.log(Level.FINE, "Kafka." + processor.getClass().getSimpleName() + ".consumer (mqs.count = " + count + ", mqs.costs = " + e + " ms)， msg=" + msg);
                 } else if (e > 100 && finer) {
                     logger.log(Level.FINER, "Kafka." + processor.getClass().getSimpleName() + ".consumer (mq.count = " + count + ", mq.costs = " + e + " ms)， msg=" + msg);
-                } else if (finest && e > 5) {
+                } else if (finest) {
                     logger.log(Level.FINEST, "Kafka." + processor.getClass().getSimpleName() + ".consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
                 }
             }

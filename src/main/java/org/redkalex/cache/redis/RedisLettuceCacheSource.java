@@ -67,7 +67,7 @@ public class RedisLettuceCacheSource extends AbstractService implements CacheSou
 
         final List<String> addresses = new ArrayList<>();
         AnyValue[] nodes = conf.getAnyValues("node");
-        final int maxconns = conf.getIntValue("maxconns", Utility.cpus() * 2);
+        final int maxconns = conf.getIntValue("maxconns", Utility.cpus());
         List<RedisURI> uris = new ArrayList(nodes.length);
         String gdb = conf.getValue("db", "").trim();
         String gusername = conf.getValue("username", "").trim();
@@ -199,18 +199,15 @@ public class RedisLettuceCacheSource extends AbstractService implements CacheSou
     }
 
     protected <T, U> CompletableFuture<U> completableBytesFuture(RedisAsyncCommands<String, byte[]> command, CompletionStage<T> rf) {
-        bytesConnPool.release(command.getStatefulConnection());
-        return (CompletableFuture) rf.toCompletableFuture();
+        return (CompletableFuture) rf.toCompletableFuture().whenComplete((v, e) -> bytesConnPool.release(command.getStatefulConnection()));
     }
 
     protected <T, U> CompletableFuture<U> completableStringFuture(RedisAsyncCommands<String, String> command, CompletionStage<T> rf) {
-        stringConnPool.release(command.getStatefulConnection());
-        return (CompletableFuture) rf.toCompletableFuture();
+        return (CompletableFuture) rf.toCompletableFuture().whenComplete((v, e) -> stringConnPool.release(command.getStatefulConnection()));
     }
 
     protected <T> CompletableFuture<Long> completableLongFuture(RedisAsyncCommands<String, String> command, CompletionStage<T> rf) {
-        stringConnPool.release(command.getStatefulConnection());
-        return (CompletableFuture) rf.toCompletableFuture();
+        return (CompletableFuture) rf.toCompletableFuture().whenComplete((v, e) -> stringConnPool.release(command.getStatefulConnection()));
     }
 
     protected RedisCommands<String, byte[]> connectBytes() {

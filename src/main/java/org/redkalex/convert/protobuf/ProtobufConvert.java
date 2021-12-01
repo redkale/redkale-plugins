@@ -388,7 +388,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
                 EnMember member = members.get(i);
                 try {
                     sb.append(prefix).append("    ").append(ProtobufFactory.wireTypeString(member.getEncoder().getType(), ((ProtobufFactory) factory).enumtostring))
-                        .append(" ").append(member.getAttribute().field()).append(" = ").append(member.getPosition()).append(";\r\n");
+                        .append(" ").append(member.getAttribute().field()).append(" = ").append(member.getPosition()).append(member.getComment().isEmpty() ? ";\r\n" : ("; //" + member.getComment() + " \r\n"));
                 } catch (RuntimeException e) {
                     System.err.println("member = " + member);
                     throw e;

@@ -104,25 +104,30 @@ public final class IosPayService extends AbstractPayService {
     public CompletableFuture<PayPreResponse> prepayAsync(PayPreRequest request) {
         request.checkVaild();
         final PayPreResponse result = new PayPreResponse();
-        result.setAppid("appid");
-        final Map<String, String> rmap = new TreeMap<>();
-        rmap.put("content", request.getPayno());
-        result.setResult(rmap);
+//        result.setAppid("");
+//        final Map<String, String> rmap = new TreeMap<>();
+//        rmap.put("content", request.getPayno());
+//        result.setResult(rmap);
         return result.toFuture();
     }
 
     @Override
     public CompletableFuture<PayNotifyResponse> notifyAsync(PayNotifyRequest request) {
+        String beanstr;
         if (request.getAttach() != null && request.getAttach().containsKey("bean")) {
-            String strbean = request.attach("bean");
-            IosNotifyBean bean = JsonConvert.root().convertFrom(IosNotifyBean.class, strbean);
+            beanstr = request.attach("bean");
+        } else {
+            beanstr = request.getText();
+        }
+        if (beanstr != null && !beanstr.isEmpty()) {
+            IosNotifyBean bean = JsonConvert.root().convertFrom(IosNotifyBean.class, beanstr);
             PayNotifyResponse resp = new PayNotifyResponse();
-            resp.setResponsetext(strbean);
+            resp.setResponsetext(beanstr);
             resp.setPayno(bean.payno());
             resp.setPaytype(request.getPaytype());
             return verifyRequest(APPSTORE, bean.receiptData, request, resp);
         }
-        //待实现
+        //没有获取参数
         PayNotifyResponse resp = new PayNotifyResponse();
         resp.setPaytype(request.getPaytype());
         resp.setRetcode(RETPAY_PAY_ERROR);
@@ -153,7 +158,7 @@ public final class IosPayService extends AbstractPayService {
 
     @Override
     public CompletableFuture<PayQueryResponse> queryAsync(PayRequest request) {
-        return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override

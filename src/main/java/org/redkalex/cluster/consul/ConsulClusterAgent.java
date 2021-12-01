@@ -197,7 +197,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     private CompletableFuture<Collection<InetSocketAddress>> queryAddress11(final String servicename) {
         final java.net.http.HttpClient client = (java.net.http.HttpClient) httpClient;
         String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + servicename + "\"", StandardCharsets.UTF_8);
-        java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofMillis(6000));
+        java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
         httpHeaders.forEach((n, v) -> builder.header(n, v));
         final Set<InetSocketAddress> set = new CopyOnWriteArraySet<>();
         return client.sendAsync(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenCompose(content -> {
@@ -206,7 +206,7 @@ public class ConsulClusterAgent extends ClusterAgent {
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (Map.Entry<String, AddressEntry> en : map.entrySet()) {
                 String url0 = this.apiurl + "/agent/health/service/id/" + en.getKey() + "?format=text";
-                java.net.http.HttpRequest.Builder builder0 = java.net.http.HttpRequest.newBuilder().uri(URI.create(url0)).timeout(Duration.ofMillis(6000));
+                java.net.http.HttpRequest.Builder builder0 = java.net.http.HttpRequest.newBuilder().uri(URI.create(url0)).expectContinue(true).timeout(Duration.ofMillis(6000));
                 httpHeaders.forEach((n, v) -> builder0.header(n, v));
                 futures.add(client.sendAsync(builder0.build(), java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenApply(irs -> {
                     if ("passing".equalsIgnoreCase(irs)) {
@@ -225,7 +225,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         final HashSet<InetSocketAddress> set = new HashSet<>();
         String rs = null;
         try {
-        String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + servicename + "\"", "UTF_8");
+            String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + servicename + "\"", "UTF_8");
             rs = Utility.remoteHttpContent("GET", url, httpHeaders, (String) null).toString("UTF_8");
             Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, rs);
             map.forEach((serviceid, en) -> {
@@ -280,10 +280,10 @@ public class ConsulClusterAgent extends ClusterAgent {
         String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + host + "\",\"Port\": " + this.appAddress.getPort()
             + ",\"Check\":{\"CheckID\": \"" + generateApplicationCheckId() + "\",\"Name\": \"" + generateApplicationCheckName() + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
-            java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder().uri(URI.create(this.apiurl + "/agent/service/register")).timeout(Duration.ofMillis(6000));
+            java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder().uri(URI.create(this.apiurl + "/agent/service/register")).expectContinue(true).timeout(Duration.ofMillis(6000));
             httpHeaders.forEach((n, v) -> builder.header(n, v));
-            String rs =  httpClient.sendAsync(builder.PUT(HttpRequest.BodyPublishers.ofString(json)).build(), java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).join();
-            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " register error: " + rs); 
+            String rs = httpClient.sendAsync(builder.PUT(HttpRequest.BodyPublishers.ofString(json)).build(), java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).join();
+            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " register error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " register error", ex);
         }

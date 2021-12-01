@@ -147,7 +147,7 @@ public final class FacebookPayService extends AbstractPayService {
 
     @Override
     public CompletableFuture<PayQueryResponse> queryAsync(PayRequest request) {
-        return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
+        return CompletableFuture.completedFuture(null); 
     }
 
     @Override

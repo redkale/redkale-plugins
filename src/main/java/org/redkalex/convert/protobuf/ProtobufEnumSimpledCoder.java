@@ -8,6 +8,7 @@ package org.redkalex.convert.protobuf;
 import java.lang.reflect.Method;
 import java.util.*;
 import org.redkale.convert.*;
+import org.redkale.util.RedkaleClassLoader;
 
 /**
  * 枚举 的SimpledCoder实现
@@ -22,9 +23,7 @@ import org.redkale.convert.*;
  */
 public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E extends Enum> extends SimpledCoder<R, W, E> {
 
-    private final Map<E, Integer> values1 = new HashMap<>();
-
-    private final Map<Integer, E> values2 = new HashMap<>();
+    private final Map<Integer, E> values = new HashMap<>();
 
     private final boolean enumtostring;
 
@@ -33,10 +32,9 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
         this.enumtostring = enumtostring;
         try {
             final Method method = type.getMethod("values");
-            int index = -1;
+            RedkaleClassLoader.putReflectionMethod(type.getName(), method);
             for (E item : (E[]) method.invoke(null)) {
-                values1.put(item, ++index);
-                values2.put(index, item);
+                values.put(item.ordinal(), item);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -50,7 +48,7 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
         } else if (enumtostring) {
             out.writeSmallString(value.toString());
         } else {
-            ((ProtobufWriter) out).writeUInt32(values1.getOrDefault(value, -1));
+            ((ProtobufWriter) out).writeUInt32(value.ordinal());
         }
     }
 
@@ -63,8 +61,7 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
             return (E) Enum.valueOf((Class<E>) type, value);
         }
         int value = ((ProtobufReader) in).readRawVarint32();
-        if (value == -1) return null;
-        return values2.get(value);
+        return values.get(value);
     }
 
     @Override
