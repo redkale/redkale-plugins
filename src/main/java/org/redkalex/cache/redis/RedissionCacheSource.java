@@ -7,6 +7,7 @@ package org.redkalex.cache.redis;
 
 import java.io.*;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -20,6 +21,7 @@ import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
 import org.redkale.source.*;
+import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
 import org.redkale.util.*;
 
 /**
@@ -30,7 +32,7 @@ import org.redkale.util.*;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public class RedissionCacheSource extends AbstractService implements CacheSource, Service, AutoCloseable, Resourcable {
+public class RedissionCacheSource extends AbstractCacheSource {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -55,15 +57,36 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
 
         final List<String> addresses = new ArrayList<>();
         Config config = new Config();
-        AnyValue[] nodes = conf.getAnyValues("node");
-        String type = conf.getOrDefault("type", "");
-        int maxconns = conf.getIntValue("maxconns", 0);
+        AnyValue[] nodes = getNodes(conf);
+        String cluster = conf.getOrDefault("cluster", "");
+        int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, Utility.cpus());
         BaseConfig baseConfig = null;
         for (AnyValue node : nodes) {
-            String addr = node.getValue("addr");
-            addresses.add(addr);
-            String db0 = node.getValue("db", "").trim();
+            String addr = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
+            String db0 = node.getValue(CACHE_SOURCE_DB, "").trim();
             if (!db0.isEmpty()) this.db = Integer.valueOf(db0);
+            String username = node.getValue(CACHE_SOURCE_USER, "").trim();
+            String password = node.getValue(CACHE_SOURCE_PASSWORD, "").trim();
+            if (addr.startsWith("redis")) {
+                URI uri = URI.create(addr);
+                if (uri.getQuery() != null && !uri.getQuery().isEmpty()) {
+                    String[] qrys = uri.getQuery().split("&|=");
+                    for (int i = 0; i < qrys.length; i += 2) {
+                        if (CACHE_SOURCE_USER.equals(qrys[i])) {
+                            username = i == qrys.length - 1 ? "" : qrys[i + 1];
+                        } else if (CACHE_SOURCE_PASSWORD.equals(qrys[i])) {
+                            password = i == qrys.length - 1 ? "" : qrys[i + 1];
+                        } else if (CACHE_SOURCE_DB.equals(qrys[i])) {
+                            String urldb = i == qrys.length - 1 ? "-1" : qrys[i + 1];
+                            this.db = Integer.valueOf(urldb);
+                        }
+                        if (CACHE_SOURCE_MAXCONNS.equals(qrys[i])) {
+                            maxconns = i == qrys.length - 1 ? Utility.cpus() : Integer.parseInt(qrys[i + 1]);
+                        }
+                    }
+                }
+            }
+            addresses.add(addr);
             if (nodes.length == 1) {
                 baseConfig = config.useSingleServer();
                 if (maxconns > 0) {
@@ -72,7 +95,7 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
                 }
                 config.useSingleServer().setAddress(addr);
                 config.useSingleServer().setDatabase(this.db);
-            } else if ("masterslave".equalsIgnoreCase(type)) { //主从
+            } else if ("masterslave".equalsIgnoreCase(cluster)) { //主从
                 baseConfig = config.useMasterSlaveServers();
                 if (maxconns > 0) {
                     config.useMasterSlaveServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
@@ -86,7 +109,7 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
                     config.useMasterSlaveServers().addSlaveAddress(addr);
                 }
                 config.useMasterSlaveServers().setDatabase(this.db);
-            } else if ("cluster".equalsIgnoreCase(type)) { //集群
+            } else if ("cluster".equalsIgnoreCase(cluster)) { //集群
                 baseConfig = config.useClusterServers();
                 if (maxconns > 0) {
                     config.useClusterServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
@@ -95,7 +118,7 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
                     config.useClusterServers().setSlaveConnectionPoolSize(maxconns);
                 }
                 config.useClusterServers().addNodeAddress(addr);
-            } else if ("replicated".equalsIgnoreCase(type)) { //
+            } else if ("replicated".equalsIgnoreCase(cluster)) { //
                 baseConfig = config.useReplicatedServers();
                 if (maxconns > 0) {
                     config.useReplicatedServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
@@ -105,7 +128,7 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
                 }
                 config.useReplicatedServers().addNodeAddress(addr);
                 config.useReplicatedServers().setDatabase(this.db);
-            } else if ("sentinel".equalsIgnoreCase(type)) { //
+            } else if ("sentinel".equalsIgnoreCase(cluster)) { //
                 baseConfig = config.useSentinelServers();
                 if (maxconns > 0) {
                     config.useSentinelServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
@@ -117,15 +140,13 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
                 config.useSentinelServers().setDatabase(this.db);
             }
             if (baseConfig != null) {  //单个进程的不同自定义密码
-                String username = node.getValue("username", "").trim();
-                String password = node.getValue("password", "").trim();
                 if (!username.isEmpty()) baseConfig.setUsername(username);
                 if (!password.isEmpty()) baseConfig.setPassword(password);
             }
         }
         if (baseConfig != null) { //配置全局密码
-            String username = conf.getValue("username", "").trim();
-            String password = conf.getValue("password", "").trim();
+            String username = conf.getValue(CACHE_SOURCE_USER, "").trim();
+            String password = conf.getValue(CACHE_SOURCE_PASSWORD, "").trim();
             String retryAttempts = conf.getValue("retryAttempts", "").trim();
             String retryInterval = conf.getValue("retryInterval", "").trim();
             if (!username.isEmpty()) baseConfig.setUsername(username);
@@ -135,25 +156,49 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
         }
         this.client = Redisson.create(config);
         this.nodeAddrs = addresses;
+//        RTopic topic = client.getTopic("__keyevent@" + db + "__:expired", new StringCodec());
+//        topic.addListener(String.class, (CharSequence cs, String key) -> {
+//            if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissionCacheSource.class.getSimpleName() + "." + db + ": expired key=" + key + ", cs=" + cs);
+//        });
         //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissionCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
 
     }
 
-    @Override //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
-        AnyValue[] nodes = config.getAnyValues("node");
+        AnyValue[] nodes = getNodes(config);
         if (nodes == null || nodes.length == 0) return false;
         for (AnyValue node : nodes) {
-            String val = node.getValue("addr");
+            String val = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
             if (val != null && val.startsWith("redis://")) return true;
+            if (val != null && val.startsWith("rediss://")) return true;
         }
         return false;
     }
 
+    protected AnyValue[] getNodes(AnyValue config) {
+        AnyValue[] nodes = config.getAnyValues(CACHE_SOURCE_NODE);
+        if (nodes == null || nodes.length == 0) {
+            AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
+            if (one == null) {
+                String val = config.getValue(CACHE_SOURCE_URL);
+                if (val == null) return nodes;
+                nodes = new AnyValue[]{config};
+            } else {
+                nodes = new AnyValue[]{one};
+            }
+        }
+        return nodes;
+    }
+    
     @Override
     public final String getType() {
         return "redis";
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{addrs=" + this.nodeAddrs + ", db=" + this.db + "}";
     }
 
     @Local
@@ -174,11 +219,6 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     public String resourceName() {
         Resource res = this.getClass().getAnnotation(Resource.class);
         return res == null ? "" : res.name();
-    }
-
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + " (name='" + resourceName() + "', db=" + this.db + ")";
     }
 
     @Override
@@ -213,9 +253,21 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     }
 
     @Override
+    public CompletableFuture<String> getSetStringAsync(String key, String value) {
+        final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return completableFuture(bucket.getAndSetAsync(value));
+    }
+
+    @Override
     public CompletableFuture<Long> getLongAsync(String key, long defValue) {
         final RAtomicLong bucket = client.getAtomicLong(key);
         return completableFuture(bucket.getAsync());
+    }
+
+    @Override
+    public CompletableFuture<Long> getSetLongAsync(String key, long value, long defValue) {
+        final RAtomicLong bucket = client.getAtomicLong(key);
+        return completableFuture(bucket.getAndSetAsync(value));
     }
 
     @Override
@@ -232,9 +284,21 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     }
 
     @Override
+    public String getSetString(String key, String value) {
+        final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return bucket.getAndSet(value);
+    }
+
+    @Override
     public long getLong(String key, long defValue) {
         final RAtomicLong bucket = client.getAtomicLong(key);
         return bucket.get();
+    }
+
+    @Override
+    public long getSetLong(String key, long value, long defValue) {
+        final RAtomicLong bucket = client.getAtomicLong(key);
+        return bucket.getAndAdd(value);
     }
 
     //--------------------- getAndRefresh ------------------------------
@@ -325,6 +389,21 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     }
 
     @Override
+    public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.getAndSetAsync(type == String.class ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : this.convert.convertToBytes(type, value))
+            .thenApply(old -> old == null ? null : convert.convertFrom(type, old)));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> getSetAsync(String key, Convert convert0, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        Convert c = convert0 == null ? this.convert : convert0;
+        return completableFuture(bucket.getAndSetAsync(type == String.class ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : c.convertToBytes(type, value))
+            .thenApply(old -> old == null ? null : (T) c.convertFrom(type, old)));
+    }
+
+    @Override
     public <T> void set(final String key, final Convert convert0, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         bucket.set(value instanceof String ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : (convert0 == null ? this.convert : convert0).convertToBytes(value));
@@ -340,6 +419,21 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     public <T> void set(String key, final Convert convert0, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         bucket.set((convert0 == null ? this.convert : convert0).convertToBytes(type, value));
+    }
+
+    @Override
+    public <T> T getSet(final String key, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        byte[] old = bucket.getAndSet(type == String.class ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : this.convert.convertToBytes(type, value));
+        return old == null ? null : convert.convertFrom(type, old);
+    }
+
+    @Override
+    public <T> T getSet(String key, final Convert convert0, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        Convert c = convert0 == null ? this.convert : convert0;
+        byte[] old = bucket.getAndSet(c.convertToBytes(type, value));
+        return old == null ? null : (T) c.convertFrom(type, old);
     }
 
     @Override
@@ -366,53 +460,49 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert0, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setAsync((convert0 == null ? convert : convert0).convertToBytes(value)).thenCompose(v -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS)).thenApply(r -> null));
+        return completableFuture(bucket.setAsync((convert0 == null ? convert : convert0).convertToBytes(value), expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(convert.convertToBytes(type, value)).thenCompose(v -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS)).thenApply(r -> null));
+        return completableFuture(bucket.setAsync(convert.convertToBytes(type, value), expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert0, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setAsync((convert0 == null ? convert : convert0).convertToBytes(type, value)).thenCompose(v -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS)).thenApply(r -> null));
+        return completableFuture(bucket.setAsync((convert0 == null ? convert : convert0).convertToBytes(type, value), expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
     }
 
     @Override
     public <T> void set(int expireSeconds, String key, Convert convert0, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        bucket.set((convert0 == null ? convert : convert0).convertToBytes(value));
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.set((convert0 == null ? convert : convert0).convertToBytes(value), expireSeconds, TimeUnit.SECONDS);
     }
 
     @Override
     public <T> void set(int expireSeconds, String key, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        bucket.set(convert.convertToBytes(type, value));
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.set(convert.convertToBytes(type, value), expireSeconds, TimeUnit.SECONDS);
     }
 
     @Override
     public <T> void set(int expireSeconds, String key, Convert convert0, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        bucket.set((convert0 == null ? convert : convert0).convertToBytes(type, value));
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.set((convert0 == null ? convert : convert0).convertToBytes(type, value), expireSeconds, TimeUnit.SECONDS);
     }
 
     @Override
     public CompletableFuture<Void> setStringAsync(int expireSeconds, String key, String value) {
         final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(value).thenCompose(v -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS)).thenApply(r -> null));
+        return completableFuture(bucket.setAsync(value, expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
     }
 
     @Override
     public void setString(int expireSeconds, String key, String value) {
         final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
-        bucket.set(value);
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.set(value, expireSeconds, TimeUnit.SECONDS);
     }
 
     @Override
@@ -1458,6 +1548,12 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     }
 
     @Override
+    public byte[] getSetBytes(final String key, byte[] value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.getAndSet(value);
+    }
+
+    @Override
     public byte[] getBytesAndRefresh(final String key, final int expireSeconds) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         byte[] bs = bucket.get();
@@ -1475,8 +1571,7 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     @Override
     public void setBytes(final int expireSeconds, final String key, final byte[] value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        bucket.set(value);
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.set(value, expireSeconds, TimeUnit.SECONDS);
     }
 
     @Override
@@ -1488,14 +1583,19 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     @Override
     public <T> void setBytes(final int expireSeconds, final String key, final Convert convert0, final Type type, final T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        bucket.set((convert0 == null ? convert : convert0).convertToBytes(type, value));
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.set((convert0 == null ? convert : convert0).convertToBytes(type, value), expireSeconds, TimeUnit.SECONDS);
     }
 
     @Override
     public CompletableFuture<byte[]> getBytesAsync(final String key) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.getAsync());
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getSetBytesAsync(final String key, byte[] value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.getAndSetAsync(value));
     }
 
     @Override
@@ -1513,7 +1613,7 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     @Override
     public CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final byte[] value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(value).thenCompose(r -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS).thenApply(v -> null)));
+        return completableFuture(bucket.setAsync(value, expireSeconds, TimeUnit.SECONDS).thenApply(v -> null));
     }
 
     @Override
@@ -1525,7 +1625,7 @@ public class RedissionCacheSource extends AbstractService implements CacheSource
     @Override
     public <T> CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final Convert convert0, final Type type, final T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setAsync((convert0 == null ? convert : convert0).convertToBytes(type, value)).thenCompose(r -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS).thenApply(v -> null)));
+        return completableFuture(bucket.setAsync((convert0 == null ? convert : convert0).convertToBytes(type, value), expireSeconds, TimeUnit.SECONDS).thenCompose(v -> null));
     }
 
     @Override

@@ -7,7 +7,7 @@ package org.redkalex.source.search;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
-import java.net.URI;
+import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -41,9 +41,10 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     protected final boolean finest = logger.isLoggable(Level.FINEST);
 
-    protected final ConcurrentHashMap<Class, Object> checkedIndexClasses = new ConcurrentHashMap();
+    //key: table, 不能是class，因为存在分表的情况
+    protected final ConcurrentHashMap<String, Object> checkedIndexClasses = new ConcurrentHashMap();
 
-    protected Properties confprops;
+    protected Properties confProps;
 
     protected String name;
 
@@ -54,17 +55,17 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     public OpenSearchSource() {
     }
 
-    public OpenSearchSource(String unitName, Properties readProp) {
-        this.name = unitName;
-        this.confprops = readProp;
-    }
-
     @Override
     public void init(AnyValue config) {
         super.init(config);
+        ProxySelector proxySelector = null;
+        Authenticator authenticator = null;
         if (uris == null) {
+            Properties props = new Properties();
+            config.forEach((k, v) -> props.put(k, v));
+            this.confProps = props;
             List<URI> us = new ArrayList<>();
-            String url = this.confprops.getProperty(DataSources.JDBC_URL);
+            String url = props.getProperty(AbstractDataSource.DATA_SOURCE_URL);
             if (url.startsWith("search://")) {
                 url = url.replace("search://", "http://");
             } else if (url.startsWith("searchs://")) {
@@ -75,8 +76,29 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
                 us.add(URI.create(str.trim()));
             }
             this.uris = us.toArray(new URI[us.size()]);
+
+            String proxyAddr = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_ADDRESS);
+            if (proxyAddr != null && !proxyAddr.isEmpty() && proxyAddr.contains(":")
+                && "true".equalsIgnoreCase(props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_ENABLE, "true"))) {
+                String proxyType = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_TYPE, "HTTP").toUpperCase();
+                int pos = proxyAddr.indexOf(':');
+                SocketAddress addr = new InetSocketAddress(proxyAddr.substring(0, pos), Integer.parseInt(proxyAddr.substring(pos + 1)));
+                proxySelector = SimpleProxySelector.create(new Proxy(Proxy.Type.valueOf(proxyType), addr));
+            }
+            String proxyUser = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_USER);
+            if (proxyUser != null && !proxyUser.isEmpty()) {
+                char[] proxyPassword = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_PASSWORD, "").toCharArray();
+                authenticator = new Authenticator() {
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(proxyUser, proxyPassword);
+                    }
+                };
+            }
         }
-        httpClient = HttpClient.newHttpClient();
+        HttpClient.Builder builder = HttpClient.newBuilder();
+        if (proxySelector != null) builder = builder.proxy(proxySelector);
+        if (authenticator != null) builder = builder.authenticator(authenticator);
+        httpClient = builder.build();
     }
 
     @Override
@@ -86,6 +108,12 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public void close() throws Exception {
+    }
+
+    @Override
+    public String toString() {
+        if (confProps == null) return getClass().getSimpleName() + "{}"; //compileMode模式下会为null
+        return getClass().getSimpleName() + "{url = " + confProps.getProperty(AbstractDataSource.DATA_SOURCE_URL) + "}";
     }
 
     @Override
@@ -145,7 +173,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     }
 
     protected <T> CompletableFuture<RetResult<String>> postAsync(CharSequence path, SearchInfo<T> info, SearchRequest body) {
-        return postAsync(path, convertSearchBean(info, body));
+        return postAsync(path, convertSearchRequest(info, body));
     }
 
     protected <T> CompletableFuture<RetResult<String>> postAsync(CharSequence path, SearchInfo<T> info, UpdatePart body) {
@@ -161,7 +189,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         HttpRequest.BodyPublisher publisher = body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofByteArray(body);
         return httpClient.sendAsync(builder.POST(publisher).build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
             .thenApply(resp -> {
-                if (finest) logger.log(Level.FINEST, path + " post: " + (body == null ? null : new String(body, StandardCharsets.UTF_8)) + " --> " + resp.body());
+                //SearchSource可能作为logging输出源，故此insert不能打印日志
+                //if (finest) logger.log(Level.FINEST, path + " post: " + (body == null ? null : new String(body, StandardCharsets.UTF_8)) + " --> " + resp.body());
                 return new RetResult(resp.body()).retcode(resp.statusCode());
             });
     }
@@ -170,7 +199,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(uris[0].toString() + path)).timeout(Duration.ofMillis(10_000)).header("Content-Type", "application/json");
         return httpClient.sendAsync(builder.PUT(HttpRequest.BodyPublishers.ofByteArray(info.getConvert().convertToBytes(map))).build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
             .thenApply(resp -> {
-                if (finest) logger.log(Level.FINEST, path + " put: " + info.getConvert().convertTo(map) + " --> " + resp.body());
+                //SearchSource可能作为logging输出源，故此insert不能打印日志
+                //if (finest) logger.log(Level.FINEST, path + " put: " + info.getConvert().convertTo(map) + " --> " + resp.body());
                 return new RetResult(resp.body()).retcode(resp.statusCode());
             });
     }
@@ -179,58 +209,54 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(uris[0].toString() + path)).timeout(Duration.ofMillis(10_000)).header("Content-Type", "application/x-ndjson");
         return httpClient.sendAsync(builder.POST(HttpRequest.BodyPublishers.ofString(body.toString())).build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
             .thenApply(resp -> {
-                if (finest) logger.log(Level.FINEST, path + " bulk: " + body + " --> " + resp.body());
+                //SearchSource可能作为logging输出源，故此insert不能打印日志
+                //if (finest) logger.log(Level.FINEST, path + " bulk: " + body + " --> " + resp.body());
                 return new RetResult(resp.body()).retcode(resp.statusCode());
             });
     }
 
     protected <T> CharSequence getQueryTable(SearchInfo<T> info, FilterNode node) {
-        if (node == null) return info.getTable();
-        SearchBean bean = (SearchBean) node.findValue(SearchBean.SEARCH_FILTER_NAME);
-        if (bean == null || bean.searchClasses() == null) return info.getTable();
+        if (node == null) return info.getTable(node);
+        SearchQuery bean = (SearchQuery) node.findValue(SearchQuery.SEARCH_FILTER_NAME);
+        if (bean == null || bean.searchClasses() == null) return info.getTable(node);
         StringBuilder sb = new StringBuilder();
         for (Class clazz : bean.searchClasses()) {
             if (clazz == null) continue;
             if (sb.length() > 0) sb.append(',');
-            sb.append(SearchInfo.load(clazz).getTable());
+            sb.append(SearchInfo.load(clazz).getTable(node));
         }
-        return sb.length() > 0 ? sb : info.getTable();
+        return sb.length() > 0 ? sb : info.getTable(node);
     }
 
-    protected <T> SearchRequest createSearchBean(SearchInfo<T> info, SelectColumn selects, Flipper flipper, FilterNode node) {
-        if (flipper == null && node == null) return SearchRequest.createMatchAllBean();
+    protected <T> SearchRequest createSearchRequest(SearchInfo<T> info, SelectColumn selects, Flipper flipper, FilterNode node) {
+        if (flipper == null && node == null) return SearchRequest.createMatchAll();
         return new SearchRequest().flipper(flipper).filterNode(info, node);
-    }
+    } 
 
-    protected <T> byte[] convertSearchBean(final SearchInfo<T> info, SearchRequest bean) {
+    protected <T> byte[] convertSearchRequest(final SearchInfo<T> info, SearchRequest bean) {
         if (bean == null) return null;
         return info.getConvert().convertToBytes(bean);
     }
 
     protected <T> SearchInfo loadSearchInfo(Class<T> clazz) {
-        return loadSearchInfo(clazz, false);
+        return SearchInfo.load(clazz);
     }
 
-    protected <T> SearchInfo loadSearchInfo(Class<T> clazz, boolean skipCheck) {
-        SearchInfo info = SearchInfo.load(clazz);
-        if (!skipCheck) checkIndexAsync(info);
-        return info;
-    }
-
-    protected <T> void checkIndexAsync(final SearchInfo<T> info) {
+    protected <T> void checkIndexSync(final SearchInfo<T> info, String table0) {
         if (info.isVirtual()) return;
-        checkedIndexClasses.computeIfAbsent(info.getType(), c -> {
-            final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_mapping");
+        String table = table0 == null ? info.getOriginTable() : table0;
+        checkedIndexClasses.computeIfAbsent(table, c -> {
+            final StringBuilder path = new StringBuilder().append('/').append(table).append("/_mapping");
             CompletableFuture future = getAsync(path).thenCompose(resp -> {
                 if (resp.getRetcode() == 404) {//还没有表结构                    
-                    return putAsync("/" + info.getTable(), info, info.createIndexMap())
+                    return putAsync("/" + table, info, info.createIndexMap())
                         .thenApply(resp2 -> resp2.getRetcode() != 200 ? null : resp);
                 }
                 if (resp.getRetcode() != 200) return null;
                 Map<String, SearchMapping> rs = JsonConvert.root().convertFrom(SearchMapping.MAPPING_MAP_TYPE, resp.getResult());
-                SearchMapping sm = rs == null ? null : rs.get(info.getTable());
+                SearchMapping sm = rs == null ? null : rs.get(table);
                 if (sm == null || sm.mappings == null || !sm.mappings.equal(info.getMappingTypes())) {
-                    return updateMappingAsync(info.getType()).thenCompose(v -> v == 1 ? CompletableFuture.completedFuture(1) : null);
+                    return updateMappingAsync(info.getType(), table).thenCompose(v -> v == 1 ? CompletableFuture.completedFuture(1) : null);
                 }
                 return CompletableFuture.completedFuture(1);
             });
@@ -239,7 +265,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     }
 
     protected <T> CompletableFuture<Integer> insertOneAsync(final SearchInfo<T> info, T entity) {
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_create/").append(info.getPrimary().get(entity));
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(entity)).append("/_create/").append(info.getPrimary().get(entity));
         return postEntityAsync(path, info, entity).thenApply(resp -> {
             if (resp.getRetcode() != 200 && resp.getRetcode() != 201) {
                 throw new RuntimeException("insert response code = " + resp.getRetcode() + ", body = " + resp.getResult());
@@ -262,23 +288,38 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final SearchInfo<T> info = loadSearchInfo(entitys[0].getClass());
         if (entitys.length == 1) return insertOneAsync(info, entitys[0]);
         final Attribute<T, Serializable> primary = info.getPrimary();
-        final StringBuilder sb = new StringBuilder();
+        final Map<String, StringBuilder> tables = new LinkedHashMap<>();
         for (T entity : entitys) {
+            String table = info.getTable(entity);
+            StringBuilder sb = tables.computeIfAbsent(table, t -> new StringBuilder());
             sb.append("{\"create\":{\"_id\":\"").append(primary.get(entity)).append("\"}}\n").append(info.getConvert().convertTo(entity)).append('\n');
         }
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_bulk");
-        return bulkAsync(path, sb).thenApply(resp -> {
-            if (resp.getRetcode() != 200) {
-                throw new RuntimeException("insert response code = " + resp.getRetcode() + ", body = " + resp.getResult());
-            } else {
-                BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
-                return rs == null ? -1 : rs.successCount();
+        final List<CompletableFuture<Integer>> futures = new ArrayList<>(tables.size());
+        tables.forEach((table, sb) -> {
+            checkIndexSync(info, table);
+            final StringBuilder path = new StringBuilder().append('/').append(table).append("/_bulk");
+            futures.add(bulkAsync(path, sb).thenApply(resp -> {
+                if (resp.getRetcode() != 200) {
+                    throw new RuntimeException("insert response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                } else {
+                    BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
+                    return rs == null ? -1 : rs.successCount();
+                }
+            }));
+        });
+        if (futures.size() == 1) return futures.get(0);
+        return Utility.allOfFutures(futures).thenApply(list -> {
+            int count = 0;
+            for (Integer c : list) {
+                if (c < 0) return c; //存在失败的直接返回，已成功的暂时无法进行回滚
+                count += c;
             }
+            return count;
         });
     }
 
     protected <T> CompletableFuture<Integer> deleteOneAsync(final SearchInfo<T> info, Class<T> clazz, Serializable pk) {
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_doc/").append(pk);
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(pk)).append("/_doc/").append(pk);
         return deleteAsync(path).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
@@ -302,19 +343,34 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final SearchInfo<T> info = loadSearchInfo(entitys[0].getClass());
         final Attribute<T, Serializable> primary = info.getPrimary();
         if (entitys.length == 1) return deleteOneAsync(info, (Class) entitys[0].getClass(), primary.get(entitys[0]));
-        final StringBuilder sb = new StringBuilder();
+        final Map<String, StringBuilder> tables = new LinkedHashMap<>();
         for (T entity : entitys) {
+            String table = info.getTable(entity);
+            StringBuilder sb = tables.computeIfAbsent(table, t -> new StringBuilder());
             sb.append("{\"delete\":{\"_id\":\"").append(primary.get(entity)).append("\"}}\n");
         }
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_bulk");
-        return bulkAsync(path, sb).thenApply(resp -> {
-            if (resp.getRetcode() == 404) return 0;
-            if (resp.getRetcode() != 200) {
-                throw new RuntimeException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
-            } else {
-                BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
-                return rs == null ? -1 : rs.successCount();
+        final List<CompletableFuture<Integer>> futures = new ArrayList<>(tables.size());
+        tables.forEach((table, sb) -> {
+            checkIndexSync(info, table);
+            final StringBuilder path = new StringBuilder().append('/').append(table).append("/_bulk");
+            futures.add(bulkAsync(path, sb).thenApply(resp -> {
+                if (resp.getRetcode() == 404) return 0;
+                if (resp.getRetcode() != 200) {
+                    throw new RuntimeException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                } else {
+                    BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
+                    return rs == null ? -1 : rs.successCount();
+                }
+            }));
+        });
+        if (futures.size() == 1) return futures.get(0);
+        return Utility.allOfFutures(futures).thenApply(list -> {
+            int count = 0;
+            for (Integer c : list) {
+                if (c < 0) return c; //存在失败的直接返回，已成功的暂时无法进行回滚
+                count += c;
             }
+            return count;
         });
     }
 
@@ -327,19 +383,34 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     public <T> CompletableFuture<Integer> deleteAsync(Class<T> clazz, Serializable... pks) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
         if (pks.length == 1) return deleteOneAsync(info, clazz, pks[0]);
-        final StringBuilder sb = new StringBuilder();
+        final Map<String, StringBuilder> tables = new LinkedHashMap<>();
         for (Serializable pk : pks) {
+            String table = info.getTable(pk);
+            StringBuilder sb = tables.computeIfAbsent(table, t -> new StringBuilder());
             sb.append("{\"delete\":{\"_id\":\"").append(pk).append("\"}}\n");
         }
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_bulk");
-        return bulkAsync(path, sb).thenApply(resp -> {
-            if (resp.getRetcode() == 404) return 0;
-            if (resp.getRetcode() != 200) {
-                throw new RuntimeException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
-            } else {
-                BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
-                return rs == null ? -1 : rs.successCount();
+        final List<CompletableFuture<Integer>> futures = new ArrayList<>(tables.size());
+        tables.forEach((table, sb) -> {
+            checkIndexSync(info, table);
+            final StringBuilder path = new StringBuilder().append('/').append(table).append("/_bulk");
+            futures.add(bulkAsync(path, sb).thenApply(resp -> {
+                if (resp.getRetcode() == 404) return 0;
+                if (resp.getRetcode() != 200) {
+                    throw new RuntimeException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                } else {
+                    BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
+                    return rs == null ? -1 : rs.successCount();
+                }
+            }));
+        });
+        if (futures.size() == 1) return futures.get(0);
+        return Utility.allOfFutures(futures).thenApply(list -> {
+            int count = 0;
+            for (Integer c : list) {
+                if (c < 0) return c; //存在失败的直接返回，已成功的暂时无法进行回滚
+                count += c;
             }
+            return count;
         });
     }
 
@@ -362,7 +433,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     public <T> CompletableFuture<Integer> deleteAsync(Class<T> clazz, Flipper flipper, FilterNode node) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
         final StringBuilder path = new StringBuilder().append('/').append(getQueryTable(info, node)).append("/_delete_by_query");
-        return postAsync(path, info, createSearchBean(info, null, flipper, node)).thenApply(resp -> {
+        return postAsync(path, info, createSearchRequest(info, null, flipper, node)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
                 throw new RuntimeException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
@@ -401,7 +472,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 //                return rs == null || rs._shards == null ? -1 : rs._shards.successful;
 //            }
 //        });
-        final SearchInfo<T> info = loadSearchInfo(clazz, true);
+        final SearchInfo<T> info = loadSearchInfo(clazz);
         final StringBuilder path = new StringBuilder().append("/").append(getQueryTable(info, node));
         return deleteAsync(path).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
@@ -431,7 +502,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T> CompletableFuture<Integer> dropTableAsync(Class<T> clazz, FilterNode node) {
-        final SearchInfo<T> info = loadSearchInfo(clazz, true);
+        final SearchInfo<T> info = loadSearchInfo(clazz);
         final StringBuilder path = new StringBuilder().append('/').append(getQueryTable(info, node));
         return deleteAsync(path).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
@@ -446,7 +517,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     }
 
     protected <T> CompletableFuture<Integer> updateOneAsync(final SearchInfo<T> info, T entity) {
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append('/').append(info.getPrimary().get(entity)).append("/_update");
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(entity)).append('/').append(info.getPrimary().get(entity)).append("/_update");
         return postEntityAsync(path, info, entity).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
@@ -470,19 +541,33 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final SearchInfo<T> info = loadSearchInfo(entitys[0].getClass());
         if (entitys.length == 1) return updateOneAsync(info, entitys[0]);
         final Attribute<T, Serializable> primary = info.getPrimary();
-        final StringBuilder sb = new StringBuilder();
+        final Map<String, StringBuilder> tables = new LinkedHashMap<>();
         for (T entity : entitys) {
+            String table = info.getTable(entity);
+            StringBuilder sb = tables.computeIfAbsent(table, t -> new StringBuilder());
             sb.append("{\"update\":{\"_id\":\"").append(primary.get(entity)).append("\"}}\n").append(info.getConvert().convertTo(entity)).append('\n');
         }
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_bulk");
-        return bulkAsync(path, sb).thenApply(resp -> {
-            if (resp.getRetcode() == 404) return 0;
-            if (resp.getRetcode() != 200) {
-                throw new RuntimeException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
-            } else {
-                BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
-                return rs == null ? -1 : rs.successCount();
+        final List<CompletableFuture<Integer>> futures = new ArrayList<>(tables.size());
+        tables.forEach((table, sb) -> {
+            final StringBuilder path = new StringBuilder().append('/').append(table).append("/_bulk");
+            futures.add(bulkAsync(path, sb).thenApply(resp -> {
+                if (resp.getRetcode() == 404) return 0;
+                if (resp.getRetcode() != 200) {
+                    throw new RuntimeException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                } else {
+                    BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
+                    return rs == null ? -1 : rs.successCount();
+                }
+            }));
+        });
+        if (futures.size() == 1) return futures.get(0);
+        return Utility.allOfFutures(futures).thenApply(list -> {
+            int count = 0;
+            for (Integer c : list) {
+                if (c < 0) return c; //存在失败的直接返回，已成功的暂时无法进行回滚
+                count += c;
             }
+            return count;
         });
     }
 
@@ -494,7 +579,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, Serializable pk, String column, Serializable value) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append('/').append(pk).append("/_update");
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(pk)).append('/').append(pk).append("/_update");
         return postAsync(path, info, new UpdatePart(info, column, value)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
@@ -514,7 +599,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, String column, Serializable value, FilterNode node) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_update_by_query");
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(node)).append("/_update_by_query");
         return postAsync(path, info, new UpdatePart(info, column, value)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
@@ -536,7 +621,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, Serializable pk, ColumnValue... values) {
         if (values.length == 0) return CompletableFuture.completedFuture(0);
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append('/').append(pk).append("/_update");
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(pk)).append('/').append(pk).append("/_update");
         return postAsync(path, info, new UpdatePart(info, values)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
@@ -567,8 +652,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, FilterNode node, Flipper flipper, ColumnValue... values) {
         if (values.length == 0) return CompletableFuture.completedFuture(0);
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_update_by_query");
-        SearchRequest bean = createSearchBean(info, null, flipper, node);
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(node)).append("/_update_by_query");
+        SearchRequest bean = createSearchRequest(info, null, flipper, node);
         if (bean == null) bean = new SearchRequest();
         bean.script = new UpdatePart(info, values).script;
         return postAsync(path, info, bean).thenApply(resp -> {
@@ -592,7 +677,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     public <T> CompletableFuture<Integer> updateColumnAsync(T entity, String... columns) {
         if (columns.length == 0) return CompletableFuture.completedFuture(0);
         final SearchInfo<T> info = loadSearchInfo(entity.getClass());
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append('/').append(info.getPrimary().get(entity)).append("/_update");
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(entity)).append('/').append(info.getPrimary().get(entity)).append("/_update");
         final Map<String, Serializable> map = new LinkedHashMap<>();
         for (String col : columns) {
             Attribute<T, Serializable> attr = info.getUpdateAttribute(col);
@@ -628,8 +713,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     public <T> CompletableFuture<Integer> updateColumnAsync(T entity, FilterNode node, SelectColumn selects) {
         if (entity == null) return CompletableFuture.completedFuture(0);
         final SearchInfo<T> info = loadSearchInfo(entity.getClass());
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_update_by_query");
-        SearchRequest bean = createSearchBean(info, null, null, node);
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(node)).append("/_update_by_query");
+        SearchRequest bean = createSearchRequest(info, null, null, node);
         if (bean == null) bean = new SearchRequest();
         bean.script = new UpdatePart(info, entity, selects);
         return postAsync(path, info, bean).thenApply(resp -> {
@@ -653,8 +738,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final SearchInfo<?> info = loadSearchInfo(entityClass);
         final Attribute keyAttr = (Attribute) info.getAttribute(column);
         if (keyAttr == null) return CompletableFuture.failedFuture(new RuntimeException("not found column " + column + " in " + entityClass));
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_search?_source=false");
-        SearchRequest bean = createSearchBean(info, null, null, node);
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(node)).append("/_search?_source=false");
+        SearchRequest bean = createSearchRequest(info, null, null, node);
         SearchRequest.QueryFilterItem aggs = new SearchRequest.QueryFilterItem();
         String funcesname = func == FilterFunc.COUNT ? "value_count" : (func == FilterFunc.DISTINCTCOUNT ? "cardinality" : func.name().toLowerCase()); //func_count:为BucketItem类其中的字段名
         String field = column == null ? info.getPrimary().field() : column;
@@ -713,8 +798,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final Attribute<T, Serializable> funcAttr = funcColumn == null ? null : (Attribute) info.getAttribute(funcColumn);
         if (keyAttr == null) return CompletableFuture.failedFuture(new RuntimeException("not found column " + keyColumn + " in " + entityClass));
         if (funcColumn != null && funcAttr == null) return CompletableFuture.failedFuture(new RuntimeException("not found column " + funcColumn + " in " + entityClass));
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_search?_source=false");
-        SearchRequest bean = createSearchBean(info, null, null, node);
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(node)).append("/_search?_source=false");
+        SearchRequest bean = createSearchRequest(info, null, null, node);
         SearchRequest.QueryFilterItem aggs = new SearchRequest.QueryFilterItem();
         String funcesname = func == FilterFunc.COUNT ? "value_count" : (func == FilterFunc.DISTINCTCOUNT ? "cardinality" : func.name().toLowerCase()); //func_count:为BucketItem类其中的字段名
         String field = funcColumn == null ? info.getPrimary().field() : funcColumn;
@@ -791,7 +876,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public <T> CompletableFuture<T> findAsync(Class<T> clazz, SelectColumn selects, Serializable pk) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_doc/").append(pk);
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(pk)).append("/_doc/").append(pk);
         if (selects != null) {
             path.append("?_source").append(selects.isExcludable() ? "_excludes=" : "_includes=").append(Utility.joining(selects.getColumns(), ','));
         }
@@ -814,7 +899,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public <T> CompletableFuture<T> findAsync(Class<T> clazz, String column, Serializable colval) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_search");
+        final String table = info.getTableStrategy() == null ? info.getOriginTable() : info.getTable(FilterNode.filter(column, colval));
+        final StringBuilder path = new StringBuilder().append('/').append(table).append("/_search");
         SearchRequest bean = new SearchRequest();
         bean.query = new SearchRequest.Query();
         bean.query.term = new SearchRequest.QueryFilterItem();
@@ -840,11 +926,11 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public <T> CompletableFuture<T> findAsync(Class<T> clazz, SelectColumn selects, FilterNode node) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_search");
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(node)).append("/_search");
         if (selects != null) {
             path.append("?_source").append(selects.isExcludable() ? "_excludes=" : "_includes=").append(Utility.joining(selects.getColumns(), ','));
         }
-        return postAsync(path, info, createSearchBean(info, selects, null, node)).thenApply(resp -> {
+        return postAsync(path, info, createSearchRequest(info, selects, null, node)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return null;
             if (resp.getRetcode() != 200) {
                 throw new RuntimeException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
@@ -866,7 +952,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final SearchInfo<T> info = loadSearchInfo(clazz);
         if (pks == null || pks.length == 0) return CompletableFuture.completedFuture(info.getArrayer().apply(0));
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(info.getType(), selects, null, FilterNode.create(primary.field(), FilterExpress.IN, pks)).thenApply(list -> {
+        return queryListAsync(info.getType(), selects, null, FilterNode.filter(primary.field(), FilterExpress.IN, pks)).thenApply(list -> {
             T[] rs = info.getArrayer().apply(pks.length);
             for (int i = 0; i < rs.length; i++) {
                 T t = null;
@@ -881,6 +967,18 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
             }
             return rs;
         });
+    }
+
+    @Override
+    public <D extends Serializable, T> List<T> findsList(Class<T> clazz, Stream<D> pks) {
+        return findsListAsync(clazz, pks).join();
+    }
+
+    @Override
+    public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
+        final SearchInfo<T> info = loadSearchInfo(clazz);
+        Serializable[] ids = pks.toArray(v -> new Serializable[v]);
+        return queryListAsync(info.getType(), null, null, FilterNode.filter(info.getPrimary().field(), FilterExpress.IN, ids));
     }
 
     @Override
@@ -931,7 +1029,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public <T> CompletableFuture<Boolean> existsAsync(Class<T> clazz, Serializable pk) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_doc/").append(pk).append("?_source=false");
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(pk)).append("/_doc/").append(pk).append("?_source=false");
         return getAsync(path).thenApply(resp -> {
             if (resp.getRetcode() == 404) return false;
             if (resp.getRetcode() != 200) {
@@ -951,8 +1049,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public <T> CompletableFuture<Boolean> existsAsync(Class<T> clazz, FilterNode node) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_search?_source=false");
-        return postAsync(path, info, createSearchBean(info, null, null, node)).thenApply(resp -> {
+        final StringBuilder path = new StringBuilder().append('/').append(info.getTable(node)).append("/_search?_source=false");
+        return postAsync(path, info, createSearchRequest(info, null, null, node)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return false;
             if (resp.getRetcode() != 200) {
                 throw new RuntimeException("exists response code = " + resp.getRetcode() + ", body = " + resp.getResult());
@@ -966,12 +1064,12 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T, V extends Serializable> Set<V> queryColumnSet(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
-        return (Set) queryColumnSetAsync(selectedColumn, clazz, (Flipper) null, FilterNode.create(column, colval)).join();
+        return (Set) queryColumnSetAsync(selectedColumn, clazz, (Flipper) null, FilterNode.filter(column, colval)).join();
     }
 
     @Override
     public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
-        return queryColumnSetAsync(selectedColumn, clazz, (Flipper) null, FilterNode.create(column, colval));
+        return queryColumnSetAsync(selectedColumn, clazz, (Flipper) null, FilterNode.filter(column, colval));
     }
 
     @Override
@@ -985,7 +1083,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final Attribute<T, V> attr = (Attribute) info.getAttribute(selectedColumn);
         if (attr == null) return CompletableFuture.failedFuture(new RuntimeException("not found column " + selectedColumn + " in " + clazz));
         final StringBuilder path = new StringBuilder().append('/').append(getQueryTable(info, node)).append("/_search?_source_includes=").append(selectedColumn);
-        SearchRequest bean = createSearchBean(info, null, flipper, node);
+        SearchRequest bean = createSearchRequest(info, null, flipper, node);
         SearchRequest.QueryFilterItem aggs = new SearchRequest.QueryFilterItem();
         aggs.put("unique", Utility.ofMap("terms", Utility.ofMap("field", selectedColumn)));
         bean.aggs = aggs;
@@ -1011,7 +1109,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
-        return queryColumnListAsync(selectedColumn, clazz, (Flipper) null, FilterNode.create(column, colval));
+        return queryColumnListAsync(selectedColumn, clazz, (Flipper) null, FilterNode.filter(column, colval));
     }
 
     @Override
@@ -1054,7 +1152,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final ArrayList<K> pks = new ArrayList<>();
         keyStream.forEach(k -> pks.add(k));
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(clazz, FilterNode.create(primary.field(), pks)).thenApply((List<T> rs) -> {
+        return queryListAsync(clazz, FilterNode.filter(primary.field(), pks)).thenApply((List<T> rs) -> {
             Map<K, T> map = new LinkedHashMap<>();
             if (rs.isEmpty()) return new LinkedHashMap<>();
             for (T item : rs) {
@@ -1085,12 +1183,12 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T> Set<T> querySet(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
-        return querySetAsync(clazz, (SelectColumn) null, flipper, FilterNode.create(column, colval)).join();
+        return querySetAsync(clazz, (SelectColumn) null, flipper, FilterNode.filter(column, colval)).join();
     }
 
     @Override
     public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
-        return querySetAsync(clazz, (SelectColumn) null, flipper, FilterNode.create(column, colval));
+        return querySetAsync(clazz, (SelectColumn) null, flipper, FilterNode.filter(column, colval));
     }
 
     @Override
@@ -1105,12 +1203,12 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T> List<T> queryList(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
-        return queryListAsync(clazz, (SelectColumn) null, flipper, FilterNode.create(column, colval)).join();
+        return queryListAsync(clazz, (SelectColumn) null, flipper, FilterNode.filter(column, colval)).join();
     }
 
     @Override
     public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
-        return queryListAsync(clazz, (SelectColumn) null, flipper, FilterNode.create(column, colval));
+        return queryListAsync(clazz, (SelectColumn) null, flipper, FilterNode.filter(column, colval));
     }
 
     @Override
@@ -1139,7 +1237,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         if (selects != null) {
             path.append("?_source").append(selects.isExcludable() ? "_excludes=" : "_includes=").append(Utility.joining(selects.getColumns(), ','));
         }
-        return postAsync(path, info, createSearchBean(info, selects, flipper, node)).thenApply(resp -> {
+        return postAsync(path, info, createSearchRequest(info, selects, flipper, node)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return new Sheet();
             if (resp.getRetcode() != 200) {
                 throw new RuntimeException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
@@ -1153,8 +1251,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     }
 
     @Override
-    public <T> int updateMapping(final Class<T> clazz) {
-        return updateMappingAsync(clazz).join();
+    public <T> int updateMapping(final Class<T> clazz, String table) {
+        return updateMappingAsync(clazz, table).join();
     }
 
     /**
@@ -1179,34 +1277,36 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
      * }
      * </pre></blockquote>
      *
-     * @param <T>   T
-     * @param clazz Class
+     * @param <T>    T
+     * @param clazz  Class
+     * @param table0 String
      *
      * @return int
      */
     @Override
-    public <T> CompletableFuture<Integer> updateMappingAsync(final Class<T> clazz) {
-        final SearchInfo<T> info = loadSearchInfo(clazz, true);//不能用loadSearchInfo(clazz)，因loadSearchInfo内会调用updateMappingAsync
-        final StringBuilder path = new StringBuilder().append('/').append(info.getTable()).append("/_mapping");
+    public <T> CompletableFuture<Integer> updateMappingAsync(final Class<T> clazz, String table0) {
+        final SearchInfo<T> info = loadSearchInfo(clazz);
+        String table = table0 == null ? info.getOriginTable() : table0;
+        final StringBuilder path = new StringBuilder().append('/').append(table).append("/_mapping");
         //更新setting时，必须先关闭索引，再更新， 再打开索引。 更新setting是为了增加自定义的分词器
-        return postAsync("/" + info.getTable() + "/_close?wait_for_active_shards=0", (byte[]) null).thenCompose(c -> {
+        return postAsync("/" + table + "/_close?wait_for_active_shards=0", (byte[]) null).thenCompose(c -> {
             CompletableFuture<RetResult<String>> updateFuture;
             if (!info.getCustomAnalyzerMap().isEmpty()) {
-                updateFuture = putAsync("/" + info.getTable() + "/_settings", info, Utility.ofMap("analysis", Utility.ofMap("analyzer", info.getCustomAnalyzerMap())))
+                updateFuture = putAsync("/" + table + "/_settings", info, Utility.ofMap("analysis", Utility.ofMap("analyzer", info.getCustomAnalyzerMap())))
                     .thenCompose(cv -> putAsync(path, info, Utility.ofMap("properties", info.getMappingTypes())));
             } else {
                 updateFuture = putAsync(path, info, Utility.ofMap("properties", info.getMappingTypes()));
             }
             return updateFuture.thenCompose(resp -> {
-                if (resp.getRetcode() == 404) return postAsync("/" + info.getTable() + "/_open", (byte[]) null).thenApply(cv -> -1);
+                if (resp.getRetcode() == 404) return postAsync("/" + table + "/_open", (byte[]) null).thenApply(cv -> -1);
                 if (resp.getRetcode() != 200) {
-                    return postAsync("/" + info.getTable() + "/_open", (byte[]) null).thenApply(cv -> {
+                    return postAsync("/" + table + "/_open", (byte[]) null).thenApply(cv -> {
                         throw new RuntimeException("updateMapping response code = " + resp.getRetcode() + ", body = " + resp.getResult());
                     });
                 } else {   //{"acknowledged":true}
                     Map<String, String> rs = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, resp.getResult());
                     int val = rs == null || !"true".equals(rs.get("acknowledged")) ? -1 : 1;
-                    return postAsync("/" + info.getTable() + "/_open", (byte[]) null).thenApply(cv -> val);
+                    return postAsync("/" + table + "/_open", (byte[]) null).thenApply(cv -> val);
                 }
             });
         });

@@ -32,6 +32,10 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
 
     Throwable lastExc = null;
 
+    public PgClientCodec(ClientConnection connection) {
+        super(connection);
+    }
+
     protected ByteArray pollArray() {
         if (recyclableArray == null) {
             recyclableArray = new ByteArray();
@@ -42,8 +46,8 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean codecResult(ClientConnection conn0, final ByteBuffer realbuf, ByteArray array) {
-        PgClientConnection conn = (PgClientConnection) conn0;
+    public boolean codecResult(final ByteBuffer realbuf, ByteArray array) {
+        PgClientConnection conn = (PgClientConnection) connection;
         if (!realbuf.hasRemaining()) return false;
         ByteBuffer buffer = realbuf;
         //logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", realbuf读到的长度: " + realbuf.remaining() + ", halfFrameBytes=" + (halfFrameBytes == null ? -1 : halfFrameBytes.length()));
@@ -79,7 +83,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         //buffer必然包含一个完整的frame数据
         boolean hadresult = false;
         PgClientRequest request = null;
-        Iterator<ClientFuture> respIt = responseQueue(conn).iterator();
+        Iterator<ClientFuture> respIt = responseQueue().iterator();
         boolean update_1_to_2 = false;
         while (buffer.hasRemaining()) {
             while (buffer.hasRemaining()) {
@@ -93,7 +97,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                     halfFrameBytes.putByte(cmd);
                     halfFrameBytes.put(buffer);
-                    return false;
+                    return hadresult;
                 }
                 final int bufpos = buffer.position();
                 final int length = buffer.getInt();
@@ -109,7 +113,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     halfFrameBytes.putByte(cmd);
                     halfFrameBytes.putInt(length);
                     halfFrameBytes.put(buffer);
-                    return false;
+                    return hadresult;
                 }
                 if (cmd == 'R') {  //登录鉴权
                     int type = buffer.getInt();
@@ -138,7 +142,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         saslResult = new PgReqAuthScramSaslContinueResult((PgReqAuthScramPassword) request, saslmsg);
                     } else if (type == 12) { //sasl-final
                         String saslmsg = readUTF8Base64String(buffer, array);
-                        ((PgReqAuthScramSaslFinal) request).checkFinal(saslmsg);
+                        ((PgReqAuthScramSaslFinal) request).checkFinal(saslmsg, buffer);
                         //while (buffer.hasRemaining()) buffer.get();
                         authOK = true;
                     } else {
@@ -165,7 +169,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         break;
                     }
                 } else if (cmd == 'C') {
-                    if (lastResult == null) lastResult = conn.pollResultSet();
+                    if (lastResult == null) lastResult = conn.pollResultSet(request == null ? null : request.info);
                     if (request != null && (request.getType() != PgClientRequest.REQ_TYPE_QUERY)) {
                         int count = PgRespCountDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         if (count != Integer.MIN_VALUE) {
@@ -185,7 +189,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     buffer.position(bufpos + length);
                 } else if (cmd == 'T') {  //RowDesc
                     if (request != null) {
-                        if (lastResult == null) lastResult = conn.pollResultSet();
+                        if (lastResult == null) lastResult = conn.pollResultSet(request.info);
                         PgRowDesc rowDesc = PgRespRowDescDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         lastResult.setRowDesc(rowDesc);
                         if ((request.getType() & 0x1) == 1) {
@@ -198,7 +202,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     buffer.position(bufpos + length);
                 } else if (cmd == 'D') {
                     if (request != null) {
-                        if (lastResult == null) lastResult = conn.pollResultSet();
+                        if (lastResult == null) lastResult = conn.pollResultSet(request.info);
                         PgRowData rowData = PgRespRowDataDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         lastResult.addRowData(rowData);
                         if (buffer.position() != bufpos + length) {
@@ -211,6 +215,9 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastExc = PgRespErrorDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         if (buffer.position() != bufpos + length) {
                             logger.log(Level.SEVERE, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", E buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                        }
+                        if ((request.getType() & 0x1) == 1 && ((PgReqExtended) request).sendPrepare) {
+                            conn.getPrepareFlag(((PgReqExtended) request).sql).set(false);
                         }
                     }
                     buffer.position(bufpos + length);
@@ -229,18 +236,30 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     buffer.get(); //'I' TransactionState.IDLE、'T' TransactionState.OPEN、'E' TransactionState.FAILED
                     //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + " , " + request + "----------------------cmd:" + cmd);
                     if (lastResult != null) {
-                        if ((request.getType() & 0x1) == 1) {
+                        if ((request.getType() & 0x1) == 1) { //PgReqExtended
                             PgReqExtended reqext = (PgReqExtended) request;
+                            int mergeCount = reqext.getMergeCount();
+                            if (mergeCount > 0) {
+                                if (reqext.mode == PgReqExtended.PgReqExtendMode.LIST_ALL) {
+                                    int page = lastResult.rowData.size() / (1 + mergeCount);
+                                    if (page > 0) {
+                                        lastResult.page = page;
+                                        lastResult.limit = page;
+                                    }
+                                } else if (reqext.mode == PgReqExtended.PgReqExtendMode.FINDS) {
+                                    int[] pages = reqext.findsCount;
+                                    if (pages != null) {
+                                        lastResult.pages = pages;
+                                        lastResult.limit = pages[0];
+                                    }
+                                }
+                                for (int i = 0; i < mergeCount; i++) {
+                                    if (respIt.hasNext()) respIt.next();
+                                }
+                            }
                             if (lastResult.rowDesc == null) {
                                 PgRowDesc rowDesc = conn.getPrepareDesc(reqext.sql);
                                 if (rowDesc != null) lastResult.setRowDesc(rowDesc);
-                            } else if (reqext.tworeq) {
-                                reqext.tworeq = false;
-                                if (buffer.position() != bufpos + length) {
-                                    logger.log(Level.SEVERE, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", Z buffer-currpos2: " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
-                                }
-                                buffer.position(bufpos + length);
-                                continue; //继续读绑定参数后的结果数据
                             }
                         }
                         lastResult.effectRespCount++;
@@ -255,7 +274,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     halfFrameBytes = null;
                     halfFrameCmd = 0;
                     halfFrameLength = 0;
-                    if (update_1_to_2) return false;
+                    if (update_1_to_2) return hadresult;
                     if (lastExc != null) {
                         addResult(lastExc);
                     } else if (lastResult != null) {
@@ -301,7 +320,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         array.clear();
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
             array.put(c);
-            if (c == '=' && buffer.hasRemaining() && buffer.get(buffer.position()) == 'R') break;
+            if (array.length() > 3 && c == '=' && buffer.hasRemaining() && buffer.get(buffer.position()) == 'R') break;
             if (!buffer.hasRemaining()) break;
         }
         return array.toString(StandardCharsets.UTF_8);

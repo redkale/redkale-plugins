@@ -8,6 +8,8 @@ package org.redkalex.cache.redis;
 import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.*;
@@ -80,6 +82,10 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] key1 GET : " + obj);
         Assertions.assertEquals("value1", obj);
 
+        obj = source.getSet("key1", String.class, "value11");
+        System.out.println("[旧值] key1 GETSET : " + obj);
+        Assertions.assertEquals("value1", obj);
+
         obj = source.get("key2", String.class);
         System.out.println("[无值] key2 GET : " + obj);
         Assertions.assertNull(obj);
@@ -138,7 +144,9 @@ public abstract class RedisAbstractTest {
         source.appendSetItem("sets4", String.class, "setvals1");
         col = source.getCollection("sets3", String.class);
         System.out.println("[两值] sets3 VALUES : " + col);
-        Assertions.assertIterableEquals(col, List.of("setvals2", "setvals1"));
+        List col2 = new ArrayList(col);
+        Collections.sort(col2);
+        Assertions.assertIterableEquals(col2, List.of("setvals1", "setvals2"));
 
         bool = source.exists("sets3");
         System.out.println("[有值] sets3 EXISTS : " + bool);
@@ -179,7 +187,18 @@ public abstract class RedisAbstractTest {
 
         Map<String, Collection> mapcol = (Map) source.getStringCollectionMap(true, "sets3", "sets4");
         System.out.println("sets3&sets4:  " + mapcol);
-        Assertions.assertEquals(mapcol.toString(), Utility.ofMap("sets3", Set.of("setvals2"), "sets4", Set.of("setvals2", "setvals1")).toString());
+        Map<String, Collection> news = new HashMap<>();
+        mapcol.forEach((x, y) -> {
+            if (y instanceof Set) {
+                List newy = new ArrayList(y);
+                Collections.sort(newy);
+                news.put(x, newy);
+            } else {
+                Collections.sort((List) y);
+            }
+        });
+        mapcol.putAll(news);
+        Assertions.assertEquals(mapcol.toString(), Utility.ofMap("sets3", List.of("setvals2"), "sets4", List.of("setvals1", "setvals2")).toString());
 
         System.out.println("------------------------------------");
         InetSocketAddress addr88 = new InetSocketAddress("127.0.0.1", 7788);
@@ -201,7 +220,9 @@ public abstract class RedisAbstractTest {
 
         col = source.getCollection("myaddrs", InetSocketAddress.class);
         System.out.println("myaddrs:  " + col);
-        Assertions.assertIterableEquals(col, List.of(addr88, addr99));
+        List cola2 = new ArrayList(col);
+        Collections.sort(cola2, (o1, o2) -> o1.toString().compareTo(o2.toString()));
+        Assertions.assertIterableEquals(cola2, List.of(addr88, addr99));
 
         source.removeSetItem("myaddrs", InetSocketAddress.class, addr88);
         col = source.getCollection("myaddrs", InetSocketAddress.class);
@@ -212,6 +233,17 @@ public abstract class RedisAbstractTest {
         source.appendSetItem("myaddrs2", InetSocketAddress.class, addr99);
         mapcol = (Map) source.getCollectionMap(true, InetSocketAddress.class, "myaddrs", "myaddrs2");
         System.out.println("myaddrs&myaddrs2:  " + mapcol);
+        Map<String, Collection> news2 = new HashMap<>();
+        mapcol.forEach((x, y) -> {
+            if (y instanceof Set) {
+                List newy = new ArrayList(y);
+                Collections.sort(newy, (o1, o2) -> o1.toString().compareTo(o2.toString()));
+                news2.put(x, newy);
+            } else {
+                Collections.sort((List) y, (o1, o2) -> o1.toString().compareTo(o2.toString()));
+            }
+        });
+        mapcol.putAll(news2);
         Assertions.assertEquals(mapcol.toString(), Utility.ofMap("myaddrs", List.of(addr99), "myaddrs2", List.of(addr88, addr99)).toString());
 
         System.out.println("------------------------------------");
@@ -361,5 +393,49 @@ public abstract class RedisAbstractTest {
 //            System.out.println("内容长度: " + fs.get("val").length());
 //        }
         source.remove("bigmap");
+        {
+            int count = Runtime.getRuntime().availableProcessors() * 10;
+            source.remove("hmap");
+            source.remove("testnumber");
+            source.hincr("hmap", "key1");
+            source.hdecr("hmap", "key1");
+            source.hmset("hmap", "key2", "haha", "key3", 333);
+            source.hmset("hmap", "sm", (HashMap) Utility.ofMap("a", "aa", "b", "bb"));
+            source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING);
+            System.out.println("结果: " + source.getLong("testnumber", -1));
+            source.setLong("testnumber", 0);
+            AtomicInteger ai = new AtomicInteger(count);
+            CountDownLatch start = new CountDownLatch(count * 3);
+            CountDownLatch over = new CountDownLatch(count * 3);
+            long s = System.currentTimeMillis();
+            for (int i = 0; i < count; i++) {
+                new Thread() {
+                    public void run() {
+                        start.countDown();
+                        if (ai.decrementAndGet() == 0) System.out.println("开始了 ");
+                        source.incr("testnumber");
+                        over.countDown();
+                    }
+                }.start();
+                new Thread() {
+                    public void run() {
+                        start.countDown();
+                        source.hincr("hmap", "key1");
+                        over.countDown();
+                    }
+                }.start();
+                new Thread() {
+                    public void run() {
+                        start.countDown();
+                        source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING);
+                        over.countDown();
+                    }
+                }.start();
+            }
+            over.await();
+            long e = System.currentTimeMillis() - s;
+            System.out.println("hmap.key1 = " + source.hgetLong("hmap", "key1", -1));
+            System.out.println("结束了, 耗时: " + e + "ms");
+        }
     }
 }

@@ -15,13 +15,14 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
 import javax.annotation.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 import org.redkale.service.Local;
 import org.redkale.util.*;
-import static org.redkale.util.Utility.getHttpContent;
+import static org.redkale.util.Utility.*;
 
 /**
  * 微信服务号Service
@@ -99,120 +100,121 @@ public final class WeiXinMPService implements Service {
     //-----------------------------------微信服务号接口----------------------------------------------------------
     //仅用于 https://open.weixin.qq.com/connect/oauth2/authorize  &scope=snsapi_base
     //需要在 “开发 - 接口权限 - 网页服务 - 网页帐号 - 网页授权获取用户基本信息”的配置选项中，修改授权回调域名
-    public RetResult<String> getMPOpenidByCode(String code) throws IOException {
+    public CompletableFuture<RetResult<String>> getMPOpenidByCode(String code) {
         if (code != null) code = code.replace("\"", "").replace("'", "");
         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret + "&code=" + code + "&grant_type=authorization_code";
-        String json = getHttpContent(url);
-        if (finest) logger.finest(url + "--->" + json);
-        Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
-        return new RetResult<>(jsonmap.get("openid"));
+        return getHttpContentAsync(url).thenApply(json -> {
+            if (finest) logger.finest(url + "--->" + json);
+            Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
+            return new RetResult<>(jsonmap.get("openid"));
+        });
     }
 
-    public RetResult<String> getMPWxunionidByCode(String code) {
-        try {
-            Map<String, String> wxmap = getMPUserTokenByCode(code);
+    public CompletableFuture<RetResult<String>> getMPWxunionidByCode(String code) {
+        return getMPUserTokenByCode(code).thenApply(wxmap -> {
             final String unionid = wxmap.get("unionid");
             if (unionid != null && !unionid.isEmpty()) return new RetResult<>(unionid);
             return new RetResult<>(1011002);
-        } catch (IOException e) {
-            return new RetResult<>(1011001);
-        }
+        });
     }
 
-    public Map<String, String> getMPUserTokenByCode(String code) throws IOException {
+    public CompletableFuture<Map<String, String>> getMPUserTokenByCode(String code) {
         return getMPUserTokenByCode(miniprogram, appid, appsecret, code, null, null);
     }
 
-    public Map<String, String> getMPUserTokenByCode(String clientid, String code) throws IOException {
+    public CompletableFuture<Map<String, String>> getMPUserTokenByCode(String clientid, String code) {
         MpElement element = this.clientidElements.get(clientid);
         return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code, null, null);
     }
 
-    public Map<String, String> getMPUserTokenByCodeEncryptedData(String clientid, String code, String encryptedData, String iv) throws IOException {
+    public CompletableFuture<Map<String, String>> getMPUserTokenByCodeEncryptedData(String clientid, String code, String encryptedData, String iv) {
         MpElement element = this.clientidElements.get(clientid);
         return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code, encryptedData, iv);
     }
 
-    public Map<String, String> getMPUserTokenByCodeAndAppid(String appid, String code) throws IOException {
+    public CompletableFuture<Map<String, String>> getMPUserTokenByCodeAndAppid(String appid, String code) {
         MpElement element = this.appidElements.get(appid);
         return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code, null, null);
     }
 
-    private Map<String, String> getMPUserTokenByCode(boolean miniprogram, String appid0, String appsecret0, String code, String encryptedData, String iv) throws IOException {
+    private CompletableFuture<Map<String, String>> getMPUserTokenByCode(boolean miniprogram, String appid0, String appsecret0, String code, String encryptedData, String iv) {
         if (code != null) code = code.replace("\"", "").replace("'", "");
-        String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid0 + "&secret=" + appsecret0 + "&code=" + code + "&grant_type=authorization_code";
-        if (miniprogram) url = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid0 + "&secret=" + appsecret0 + "&js_code=" + code + "&grant_type=authorization_code";
-        String json = getHttpContent(url);
-        if (finest) logger.finest("url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + "--->" + json);
-        Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
-        if (miniprogram) {
-            if (encryptedData != null && !encryptedData.isEmpty() && iv != null && !iv.isEmpty()) {
-                try {
-                    String sessionkey = jsonmap.get("session_key");
-                    if (sessionkey == null) return jsonmap;  //{"errcode":40163,"errmsg":"code been used, hints: [ req_id: GEbaO6yFe-g8Msfa ]"}
-                    // 被加密的数据
-                    byte[] dataByte = Base64.getDecoder().decode(encryptedData);
-                    // 加密秘钥
-                    byte[] keyByte = Base64.getDecoder().decode(sessionkey);
-                    // 偏移量
-                    byte[] ivByte = Base64.getDecoder().decode(iv);
-                    int base = 16;
-                    if (keyByte.length % base != 0) {
-                        int groups = keyByte.length / base + (keyByte.length % base != 0 ? 1 : 0);
-                        byte[] temp = new byte[groups * base];
-                        Arrays.fill(temp, (byte) 0);
-                        System.arraycopy(keyByte, 0, temp, 0, keyByte.length);
-                        keyByte = temp;
+        String url0 = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid0 + "&secret=" + appsecret0 + "&code=" + code + "&grant_type=authorization_code";
+        if (miniprogram) url0 = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid0 + "&secret=" + appsecret0 + "&js_code=" + code + "&grant_type=authorization_code";
+        final String url = url0;
+        return getHttpContentAsync(url).thenCompose(json -> {
+            if (finest) logger.finest("url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + "--->" + json);
+            Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
+            if (miniprogram) {
+                if (encryptedData != null && !encryptedData.isEmpty() && iv != null && !iv.isEmpty()) {
+                    try {
+                        String sessionkey = jsonmap.get("session_key");
+                        if (sessionkey == null) return CompletableFuture.completedFuture(jsonmap);  //{"errcode":40163,"errmsg":"code been used, hints: [ req_id: GEbaO6yFe-g8Msfa ]"}
+                        // 被加密的数据
+                        byte[] dataByte = Base64.getDecoder().decode(encryptedData);
+                        // 加密秘钥
+                        byte[] keyByte = Base64.getDecoder().decode(sessionkey);
+                        // 偏移量
+                        byte[] ivByte = Base64.getDecoder().decode(iv);
+                        int base = 16;
+                        if (keyByte.length % base != 0) {
+                            int groups = keyByte.length / base + (keyByte.length % base != 0 ? 1 : 0);
+                            byte[] temp = new byte[groups * base];
+                            Arrays.fill(temp, (byte) 0);
+                            System.arraycopy(keyByte, 0, temp, 0, keyByte.length);
+                            keyByte = temp;
+                        }
+                        SecretKeySpec spec = new SecretKeySpec(keyByte, "AES");
+                        AlgorithmParameters parameters = AlgorithmParameters.getInstance("AES");
+                        parameters.init(new IvParameterSpec(ivByte));
+                        // 解密
+                        Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
+                        cipher.init(Cipher.DECRYPT_MODE, spec, parameters);// 初始化
+                        byte[] resultByte = cipher.doFinal(dataByte);
+                        String result = new String(resultByte, StandardCharsets.UTF_8);
+                        if (finest) logger.finest("url=" + url + ", session_key=" + sessionkey + ", encryptedData=" + encryptedData + ", iv=" + iv + "， decryptedData=" + result);
+                        int pos = result.indexOf("\"watermark\"");
+                        if (pos > 0) {
+                            final String oldresult = result;
+                            int pos1 = result.indexOf('{', pos);
+                            int pos2 = result.indexOf('}', pos);
+                            result = result.substring(0, pos1) + "null" + result.substring(pos2 + 1);
+                            if (finest) logger.finest("olddecrypt=" + oldresult + ", newdescrpty=" + result);
+                        }
+                        Map<String, String> map = convert.convertFrom(TYPE_MAP_STRING_STRING, result);
+                        if (!map.containsKey("unionid") && map.containsKey("unionId")) {
+                            map.put("unionid", map.get("unionId"));
+                        }
+                        if (!map.containsKey("openid") && map.containsKey("openId")) {
+                            map.put("openid", map.get("openId"));
+                        }
+                        if (!map.containsKey("nickname") && map.containsKey("nickName")) {
+                            map.put("nickname", map.get("nickName"));
+                        }
+                        if (!map.containsKey("headimgurl") && map.containsKey("avatarUrl")) {
+                            map.put("headimgurl", map.get("avatarUrl"));
+                        }
+                        if (!map.containsKey("sex") && map.containsKey("gender")) {
+                            map.put("sex", map.get("gender"));
+                        }
+                        jsonmap.putAll(map);
+                    } catch (Exception ex) {
+                        logger.log(Level.SEVERE, "url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + " error", ex);
                     }
-                    SecretKeySpec spec = new SecretKeySpec(keyByte, "AES");
-                    AlgorithmParameters parameters = AlgorithmParameters.getInstance("AES");
-                    parameters.init(new IvParameterSpec(ivByte));
-                    // 解密
-                    Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
-                    cipher.init(Cipher.DECRYPT_MODE, spec, parameters);// 初始化
-                    byte[] resultByte = cipher.doFinal(dataByte);
-                    String result = new String(resultByte, StandardCharsets.UTF_8);
-                    if (finest) logger.finest("url=" + url + ", session_key=" + sessionkey + ", encryptedData=" + encryptedData + ", iv=" + iv + "， decryptedData=" + result);
-                    int pos = result.indexOf("\"watermark\"");
-                    if (pos > 0) {
-                        final String oldresult = result;
-                        int pos1 = result.indexOf('{', pos);
-                        int pos2 = result.indexOf('}', pos);
-                        result = result.substring(0, pos1) + "null" + result.substring(pos2 + 1);
-                        if (finest) logger.finest("olddecrypt=" + oldresult + ", newdescrpty=" + result);
-                    }
-                    Map<String, String> map = convert.convertFrom(TYPE_MAP_STRING_STRING, result);
-                    if (!map.containsKey("unionid") && map.containsKey("unionId")) {
-                        map.put("unionid", map.get("unionId"));
-                    }
-                    if (!map.containsKey("openid") && map.containsKey("openId")) {
-                        map.put("openid", map.get("openId"));
-                    }
-                    if (!map.containsKey("nickname") && map.containsKey("nickName")) {
-                        map.put("nickname", map.get("nickName"));
-                    }
-                    if (!map.containsKey("headimgurl") && map.containsKey("avatarUrl")) {
-                        map.put("headimgurl", map.get("avatarUrl"));
-                    }
-                    if (!map.containsKey("sex") && map.containsKey("gender")) {
-                        map.put("sex", map.get("gender"));
-                    }
-                    jsonmap.putAll(map);
-                } catch (Exception ex) {
-                    logger.log(Level.SEVERE, "url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + " error", ex);
                 }
+                return CompletableFuture.completedFuture(jsonmap);
             }
-            return jsonmap;
-        }
-        return getMPUserTokenByOpenid(jsonmap.get("access_token"), jsonmap.get("openid"));
+            return getMPUserTokenByOpenid(jsonmap.get("access_token"), jsonmap.get("openid"));
+        });
     }
 
-    public Map<String, String> getMPUserTokenByOpenid(String access_token, String openid) throws IOException {
+    public CompletableFuture<Map<String, String>> getMPUserTokenByOpenid(String access_token, String openid) {
         String url = "https://api.weixin.qq.com/sns/userinfo?access_token=" + access_token + "&openid=" + openid;
-        String json = getHttpContent(url);
-        if (finest) logger.finest(url + "--->" + json);
-        Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json.replaceFirst("\\[.*\\]", "null"));
-        return jsonmap;
+        return getHttpContentAsync(url).thenApply(json -> {
+            if (finest) logger.finest(url + "--->" + json);
+            Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json.replaceFirst("\\[.*\\]", "null"));
+            return jsonmap;
+        });
     }
 
     public String verifyMPURL(String msgSignature, String timeStamp, String nonce, String echoStr) {

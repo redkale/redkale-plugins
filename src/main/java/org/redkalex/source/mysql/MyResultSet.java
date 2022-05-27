@@ -48,6 +48,8 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
 
     protected final WorkThread thread = WorkThread.currWorkThread();
 
+    protected EntityInfo info;
+
     protected short status;
 
     int rowColumnDecodeIndex = -1;
@@ -87,13 +89,19 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
         return this.batchEffectCounts;
     }
 
+    @Override //可以为空
+    @ConvertDisabled
+    public EntityInfo getEntityInfo() {
+        return info;
+    }
+
     @Override
     public void close() {
     }
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{\"rowDesc\":" + rowDesc + ", \"rowTable\":" + (request == null || request.info == null ? null : request.info.getOriginTable()) + ", \"rowData_size\":" + (rowData == null ? -1 : rowData.size()) + ", \"updateEffectCount\":" + updateEffectCount + ", \"hashCode\": " + Objects.hashCode(this) + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{\"rowDesc\":" + rowDesc + ", \"rowTable\":" + (request == null || request.info == null ? null : request.info.getOriginTable()) + ", \"rowData_size\":" + (rowData == null ? -1 : rowData.size()) + ", \"updateEffectCount\":" + updateEffectCount + "}";
     }
 
     public MyResultSet increUpdateEffectCount(int c) {

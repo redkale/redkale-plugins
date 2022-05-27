@@ -7,7 +7,7 @@ package org.redkalex.convert.protobuf;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.*;
 import java.util.concurrent.atomic.*;
 import org.redkale.convert.*;
 import org.redkale.util.*;
@@ -158,6 +158,7 @@ public class ProtobufReader extends Reader {
 
     /**
      * 判断下一个非空白字节是否:
+     *
      */
     @Override
     public final void readBlank() {
@@ -188,7 +189,7 @@ public class ProtobufReader extends Reader {
     }
 
     @Override
-    public final DeMember readFieldName(final DeMember[] members) {
+    public final DeMember readFieldName(final DeMember[] members, Map<String, DeMember> memberFieldMap, Map<Integer, DeMember> memberTagMap) {
         int tag = readTag();
         for (DeMember member : members) {
             if (member.getTag() == tag) {

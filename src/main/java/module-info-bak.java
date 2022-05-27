@@ -5,6 +5,7 @@
  * @author zhangjx
  *
  */
+/**
 module redkalex.plugins {
 
     requires java.base;
@@ -54,3 +55,4 @@ module redkalex.plugins {
     exports org.redkalex.weixin;
 
 }
+*/

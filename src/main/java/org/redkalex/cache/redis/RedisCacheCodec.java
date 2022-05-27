@@ -50,10 +50,15 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
 
     private ByteArray recyclableArray;
 
+    public RedisCacheCodec(ClientConnection connection) {
+        super(connection);
+    }
+
     protected ByteArray pollArray(ByteArray array) {
         if (recyclableArray == null) {
             recyclableArray = new ByteArray();
-            return recyclableArray;
+        } else {
+            recyclableArray.clear();
         }
         recyclableArray.clear();
         if (array != null) recyclableArray.put(array, 0, array.length());
@@ -182,8 +187,8 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean codecResult(ClientConnection conn0, ByteBuffer realbuf, ByteArray array) {
-        RedisCacheConnection conn = (RedisCacheConnection) conn0;
+    public boolean codecResult(ByteBuffer realbuf, ByteArray array) {
+        RedisCacheConnection conn = (RedisCacheConnection) connection;
         if (!realbuf.hasRemaining()) return false;
         ByteBuffer buffer = realbuf;
         if (!checkBytesFrame(conn, buffer, array)) return false;
@@ -191,7 +196,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         boolean first = true;
         boolean hadresult = false;
         RedisCacheRequest request = null;
-        Iterator<ClientFuture<RedisCacheRequest>> respIt = (Iterator) responseQueue(conn).iterator();
+        Iterator<ClientFuture<RedisCacheRequest>> respIt = (Iterator) responseQueue().iterator();
         while (first || buffer.hasRemaining()) {
             if (request == null) request = respIt.hasNext() ? respIt.next().getRequest() : null;
             if (!first && !checkBytesFrame(conn, buffer, array)) break;

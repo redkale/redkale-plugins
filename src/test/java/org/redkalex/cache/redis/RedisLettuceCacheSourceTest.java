@@ -6,6 +6,7 @@
 package org.redkalex.cache.redis;
 
 import org.redkale.convert.json.*;
+import static org.redkale.source.AbstractCacheSource.*;
 import org.redkale.util.*;
 
 /**
@@ -15,8 +16,8 @@ import org.redkale.util.*;
 public class RedisLettuceCacheSourceTest extends RedisAbstractTest{
 
     public static void main(String[] args) throws Exception {
-        AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue().addValue("maxconns", "1");
-        conf.addValue("node", new AnyValue.DefaultAnyValue().addValue("addr", "redis://127.0.0.1:6363"));
+        AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_MAXCONNS, "1");
+        conf.addValue(CACHE_SOURCE_NODE, new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_URL, "redis://127.0.0.1:6363"));
 
         RedisLettuceCacheSource source = new RedisLettuceCacheSource();
         source.defaultConvert = JsonFactory.root().getConvert();

@@ -6,6 +6,7 @@
 package org.redkalex.pay;
 
 import java.util.Map;
+import org.redkale.convert.ConvertDisabled;
 
 /**
  *
@@ -15,7 +16,7 @@ import java.util.Map;
  */
 public class PayRefundResponse extends PayResponse {
 
-    protected long refundedmoney; //  已退款金额。 单位:分
+    protected long refundedMoney; //  已退款金额。 单位:分
 
     @Override
     public PayRefundResponse retcode(int retcode) {
@@ -35,13 +36,25 @@ public class PayRefundResponse extends PayResponse {
         this.setResult(result);
         return this;
     }
-    
-    public long getRefundedmoney() {
-        return refundedmoney;
+
+    public long getRefundedMoney() {
+        return refundedMoney;
     }
 
-    public void setRefundedmoney(long refundedmoney) {
-        this.refundedmoney = refundedmoney;
+    public void setRefundedMoney(long refundedMoney) {
+        this.refundedMoney = refundedMoney;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public long getRefundedmoney() {
+        return refundedMoney;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setRefundedmoney(long refundedMoney) {
+        this.refundedMoney = refundedMoney;
     }
 
 }

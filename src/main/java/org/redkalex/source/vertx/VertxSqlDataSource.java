@@ -17,7 +17,6 @@ import java.util.logging.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkale.source.DataSources.*;
 
 /**
  * 只实现了 Mysql 和 Postgresql <br>
@@ -47,21 +46,14 @@ public class VertxSqlDataSource extends DataSqlSource {
 
     protected Pool writeThreadPool;
 
-    VertxSqlDataSource() {
-        this("", null, "", new Properties(), null);
-    }
-
-    public VertxSqlDataSource(String unitName, URL persistxml, String dbtype, Properties readprop, Properties writeprop) {
-        super(unitName, persistxml, dbtype, readprop, writeprop);
-        this.dollar = "postgresql".equalsIgnoreCase(dbtype);
-    }
-
     @Override
     public void init(AnyValue conf) {
+        super.init(conf);
+        this.dollar = "postgresql".equalsIgnoreCase(dbtype);
         this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         {
             this.readOptions = createSqlOptions(readConfProps);
-            int readMaxconns = Math.max(1, Integer.decode(readConfProps.getProperty(JDBC_CONNECTIONS_LIMIT, "" + Utility.cpus())));
+            int readMaxconns = Math.max(1, Integer.decode(readConfProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
             this.readPoolOptions = new PoolOptions().setMaxSize(readMaxconns);
             RedkaleClassLoader.putReflectionClass(readOptions.getClass().getName());
             RedkaleClassLoader.putReflectionPublicConstructors(readOptions.getClass(), readOptions.getClass().getName());
@@ -73,7 +65,7 @@ public class VertxSqlDataSource extends DataSqlSource {
             this.writeThreadPool = this.readThreadPool;
         } else {
             this.writeOptions = createSqlOptions(writeConfProps);
-            int writeMaxconns = Math.max(1, Integer.decode(writeConfProps.getProperty(JDBC_CONNECTIONS_LIMIT, "" + Utility.cpus())));
+            int writeMaxconns = Math.max(1, Integer.decode(writeConfProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
             this.writePoolOptions = new PoolOptions().setMaxSize(writeMaxconns);
             this.writeThreadPool = Pool.pool(vertx, writeOptions, writePoolOptions);
         }
@@ -120,16 +112,16 @@ public class VertxSqlDataSource extends DataSqlSource {
         } else {
             throw new UnsupportedOperationException("dbtype(" + dbtype() + ") not supported yet.");
         }
-        String url = prop.getProperty(JDBC_URL);
+        String url = prop.getProperty(DATA_SOURCE_URL);
         if (url.startsWith("jdbc:")) url = url.substring("jdbc:".length());
         final URI uri = URI.create(url);
         sqlOptions.setHost(uri.getHost());
         if (uri.getPort() > 0) sqlOptions.setPort(uri.getPort());
-        String user = prop.getProperty(JDBC_USER);
+        String user = prop.getProperty(DATA_SOURCE_USER);
         if (user != null && !user.trim().isEmpty()) {
             sqlOptions.setUser(user.trim());
         }
-        String pwd = prop.getProperty(JDBC_PWD);
+        String pwd = prop.getProperty(DATA_SOURCE_PASSWORD);
         if (pwd != null && !pwd.trim().isEmpty()) {
             sqlOptions.setPassword(pwd.trim());
         }
@@ -138,7 +130,7 @@ public class VertxSqlDataSource extends DataSqlSource {
             if (path.startsWith("/")) path = path.substring(1);
             sqlOptions.setDatabase(path);
         }
-        sqlOptions.setCachePreparedStatements("true".equalsIgnoreCase(prop.getProperty("javax.persistence.jdbc.preparecache", "true")));
+        sqlOptions.setCachePreparedStatements("true".equalsIgnoreCase(prop.getProperty("preparecache", "true")));
         String query = uri.getQuery();
         if (query != null && !query.isEmpty()) {
             query = query.replace("&amp;", "&");
@@ -436,24 +428,24 @@ public class VertxSqlDataSource extends DataSqlSource {
                     future.completeExceptionally(ex);
                 } else {  //表不存在
                     if (info.getTableStrategy() == null) {  //没有原始表
-                        String tablesql = createTableSql(info);
-                        if (tablesql == null) { //没有建表DDL
+                        String[] tablesqls = createTableSqls(info);
+                        if (tablesqls == null) { //没有建表DDL
                             future.completeExceptionally(ex);
                         } else {
-                            writePool().query(tablesql).execute((AsyncResult<RowSet<Row>> event2) -> {
+                            writePool().query(tablesqls[0]).execute((AsyncResult<RowSet<Row>> event2) -> {
                                 if (event2.failed()) {
                                     future.completeExceptionally(event2.cause());
                                 } else {
-                                    future.complete(new VertxResultSet(null, null));
+                                    future.complete(new VertxResultSet(info, null, null));
                                 }
                             });
                         }
                     } else {  //没有分表
-                        future.complete(new VertxResultSet(null, null));
+                        future.complete(new VertxResultSet(info, null, null));
                     }
                 }
             } else {
-                future.complete(new VertxResultSet(null, event.result()));
+                future.complete(new VertxResultSet(info, null, event.result()));
             }
         };
     }

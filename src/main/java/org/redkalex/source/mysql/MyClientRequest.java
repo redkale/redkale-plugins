@@ -37,12 +37,16 @@ public abstract class MyClientRequest extends ClientRequest {
 
     //--------------------------------------------------
     protected ObjectPool objpool;
-    
+
     protected EntityInfo info;
 
     protected byte packetIndex;
 
     public abstract int getType();
+
+    public MyClientRequest reuse() {
+        return this;
+    }
 
     public static final MyClientRequest EMPTY = new MyClientRequest() {
         {

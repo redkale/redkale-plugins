@@ -19,8 +19,15 @@ public class MongodbDriverDataSourceProvider implements DataSourceProvider {
     @Override
     public boolean acceptsConf(AnyValue config) {
         try {
+            Object.class.isAssignableFrom(com.mongodb.reactivestreams.client.MongoClient.class); //试图加载MongoClient相关类
             MongodbDriverDataSource source = MongodbDriverDataSource.class.getConstructor().newInstance();
-            return "mongodb".equalsIgnoreCase(config.getValue("dbtype"));
+            String dbtype = config.getValue("dbtype");
+            if (dbtype == null) {
+                AnyValue read = config.getAnyValue("read");
+                AnyValue node = read == null ? config : read;
+                dbtype = AbstractDataSource.parseDbtype(node.getValue(AbstractDataSource.DATA_SOURCE_URL));
+            }
+            return "mongodb".equalsIgnoreCase(dbtype);
         } catch (Throwable e) {
             return false;
         }

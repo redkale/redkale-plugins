@@ -6,17 +6,18 @@
 package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
-import java.net.URL;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 import java.util.logging.Level;
 import org.redkale.net.*;
+import org.redkale.net.client.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
+import org.redkalex.source.pgsql.PgReqExtended.PgReqExtendMode;
 
 /**
  * 部分协议格式参考： http://wp1i.cn/archives/78556.html
@@ -35,13 +36,10 @@ public class PgsqlDataSource extends DataSqlSource {
 
     protected PgClient writePool;
 
-    public PgsqlDataSource(String unitName, URL persistFile, Properties readprop, Properties writeprop) {
-        super(unitName, persistFile, "postgresql", readprop, writeprop);
-    }
-
     @Override
     public void init(AnyValue conf) {
         super.init(conf);
+        this.dbtype = "postgresql";
         this.readPool = createPgPool((readConfProps == writeConfProps) ? "rw" : "read", readConfProps);
         if (readConfProps == writeConfProps) {
             this.writePool = readPool;
@@ -51,16 +49,16 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     private PgClient createPgPool(String rw, Properties prop) {
-        String url = prop.getProperty(JDBC_URL);
-        String username = prop.getProperty(JDBC_USER, "");
-        String password = prop.getProperty(JDBC_PWD, "");
+        String url = prop.getProperty(DATA_SOURCE_URL);
+        String username = prop.getProperty(DATA_SOURCE_USER, "");
+        String password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
         UrlInfo info = parseUrl(url);
         PgReqAuthentication authreq = new PgReqAuthentication(username, password, info.database);
-        int maxConns = Math.max(1, Integer.decode(prop.getProperty(JDBC_CONNECTIONS_LIMIT, "" + Utility.cpus())));
-        int maxPipelines = Math.max(1, Integer.decode(prop.getProperty("javax.persistence.connections.pipelines", "32")));
-        AsyncGroup ioGroup = asyncGroup != null ? asyncGroup : AsyncGroup.create("Redkalex-PgClient-IOThread-" + rw.toUpperCase(),
+        int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
+        int maxPipelines = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
+        AsyncGroup ioGroup = asyncGroup != null && !"write".equalsIgnoreCase(rw) ? asyncGroup : AsyncGroup.create("Redkalex-PgClient-IOThread-" + rw.toUpperCase(),
             workExecutor, 16 * 1024, Utility.cpus() * 4).start();
-        return new PgClient(ioGroup, resourceName() + "." + rw, info.servaddr, maxConns, maxPipelines, prop, authreq);
+        return new PgClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, autoddl(), prop, authreq);
     }
 
     @Override
@@ -110,7 +108,7 @@ public class PgsqlDataSource extends DataSqlSource {
         for (int i = 0; i < values.length; i++) {
             final Object[] params = new Object[attrs.length];
             for (int j = 0; j < attrs.length; j++) {
-                params[j] = attrs[j].get(values[i]);
+                params[j] = getEntityAttrValue(info, attrs[j], values[i]);
             }
             objs[i] = params;
         }
@@ -119,11 +117,15 @@ public class PgsqlDataSource extends DataSqlSource {
         if (pool.cachePreparedStatements()) {
             String sql = info.getInsertDollarPrepareSQL(values[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            return thenApplyQueryUpdateStrategy(info, pool.connect(null).thenCompose(conn -> {
+            AtomicReference<PgClientRequest> reqRef = new AtomicReference();
+            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            return thenApplyInsertStrategy(info, pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_INSERT, sql, 0, null, attrs, objs);
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_INSERT, PgReqExtendMode.OTHER, sql, 0, null, attrs, objs);
+                reqRef.set(req);
+                connRef.set(conn);
                 return pool.writeChannel(conn, req);
-            })).thenApply(g -> g.getUpdateEffectCount());
+            }), reqRef, connRef, values).thenApply(g -> g.getUpdateEffectCount());
         } else {
             return executeUpdate(info, info.getInsertDollarPrepareSQL(values[0]), values, 0, true, attrs, objs);
         }
@@ -158,22 +160,39 @@ public class PgsqlDataSource extends DataSqlSource {
     protected <T> CompletableFuture<Integer> updateEntityDB(EntityInfo<T> info, final T... values) {
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
-        final Object[][] objs = new Object[values.length][];
-        for (int i = 0; i < values.length; i++) {
-            final Object[] params = new Object[attrs.length + 1];
-            for (int j = 0; j < attrs.length; j++) {
-                params[j] = attrs[j].get(values[i]);
-            }
-            params[attrs.length] = primary.get(values[i]); //最后一个是主键
-            objs[i] = params;
-        }
         PgClient pool = writePool();
+        final String casesql = pool.cachePreparedStatements() ? info.getUpdateDollarPrepareCaseSQL(values) : null;
+        Object[][] objs0;
+        if (casesql == null) {
+            objs0 = new Object[values.length][];
+            for (int i = 0; i < values.length; i++) {
+                final Object[] params = new Object[attrs.length + 1];
+                for (int j = 0; j < attrs.length; j++) {
+                    params[j] = getEntityAttrValue(info, attrs[j], values[i]);
+                }
+                params[attrs.length] = primary.get(values[i]); //最后一个是主键
+                objs0[i] = params;
+            }
+        } else {
+            int len = values.length;
+            objs0 = new Object[1][];
+            Object[] params = new Object[len * 2];
+            Attribute<T, Serializable> otherAttr = attrs[0];
+            for (int i = 0; i < values.length; i++) {
+                params[i] = primary.get(values[i]);
+                params[i + len] = getEntityAttrValue(info, otherAttr, values[i]);
+            }
+            objs0[0] = params;
+        }
+        final Object[][] objs = objs0;
         if (pool.cachePreparedStatements()) {
-            String sql = info.getUpdateDollarPrepareSQL(values[0]);
+            String sql = casesql == null ? info.getUpdateDollarPrepareSQL(values[0]) : casesql;
             WorkThread workThread = WorkThread.currWorkThread();
-            return thenApplyQueryUpdateStrategy(info, pool.connect(null).thenCompose(conn -> {
+            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
+                connRef.set(conn);
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, sql, 0, null, Utility.append(attrs, primary), objs);
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, PgReqExtendMode.OTHER, sql, 0, null, casesql == null ? Utility.append(attrs, primary) : null, objs);
                 return pool.writeChannel(conn, req);
             })).thenApply(g -> g.getUpdateEffectCount());
         } else {
@@ -184,7 +203,7 @@ public class PgsqlDataSource extends DataSqlSource {
     @Override
     protected <T> CompletableFuture<Integer> updateColumnDB(EntityInfo<T> info, Flipper flipper, String sql, boolean prepared, Object... params) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
+            final String debugsql = sql; // flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
             if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + debugsql);
         }
         Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
@@ -217,9 +236,11 @@ public class PgsqlDataSource extends DataSqlSource {
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(pk);
             WorkThread workThread = WorkThread.currWorkThread();
-            return thenApplyQueryUpdateStrategy(info, pool.connect(null).thenCompose(conn -> {
+            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
+                connRef.set(conn);
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, sql, 0, info.getQueryAttributes(), new Attribute[]{info.getPrimary()}, new Object[]{pk});
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FIND, sql, 0, info.getQueryAttributes(), new Attribute[]{info.getPrimary()}, new Object[]{pk});
                 return pool.writeChannel(conn, req);
             })).thenApply((PgResultSet dataset) -> {
                 T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
@@ -239,13 +260,15 @@ public class PgsqlDataSource extends DataSqlSource {
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(pks[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            return thenApplyQueryUpdateStrategy(info, pool.connect(null).thenCompose(conn -> {
+            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
+                connRef.set(conn);
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
                 Object[][] params = new Object[pks.length][];
                 for (int i = 0; i < params.length; i++) {
                     params[i] = new Object[]{pks[i]};
                 }
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, sql, 0, info.getQueryAttributes(), new Attribute[]{info.getPrimary()}, params);
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FINDS, sql, 0, info.getQueryAttributes(), new Attribute[]{info.getPrimary()}, params);
                 req.finds = true;
                 return pool.writeChannel(conn, req);
             })).thenApply((PgResultSet dataset) -> {
@@ -259,6 +282,38 @@ public class PgsqlDataSource extends DataSqlSource {
             });
         } else {
             return super.findsComposeAsync(info, selects, pks);
+        }
+    }
+
+    @Override
+    public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final java.util.stream.Stream<D> pks) {
+        final EntityInfo<T> info = loadEntityInfo(clazz);
+        Serializable[] ids = pks.toArray(v -> new Serializable[v]);
+        PgClient pool = readPool();
+        if (info.getTableStrategy() == null && pool.cachePreparedStatements()) {
+            String sql = info.getFindDollarPrepareSQL(ids[0]);
+            WorkThread workThread = WorkThread.currWorkThread();
+            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
+                connRef.set(conn);
+                PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
+                Object[][] params = new Object[ids.length][];
+                for (int i = 0; i < params.length; i++) {
+                    params[i] = new Object[]{ids[i]};
+                }
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FINDS, sql, 0, info.getQueryAttributes(), new Attribute[]{info.getPrimary()}, params);
+                req.finds = true;
+                return pool.writeChannel(conn, req);
+            })).thenApply((PgResultSet dataset) -> {
+                List<T> rs = new ArrayList<>();
+                while (dataset.next()) {
+                    rs.add(getEntityValue(info, null, dataset));
+                }
+                dataset.close();
+                return rs;
+            });
+        } else {
+            return queryListAsync(info.getType(), (SelectColumn) null, (Flipper) null, FilterNode.filter(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
         }
     }
 
@@ -292,9 +347,11 @@ public class PgsqlDataSource extends DataSqlSource {
             CompletableFuture<PgResultSet> listfuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currWorkThread();
-                listfuture = thenApplyQueryUpdateStrategy(info, pool.connect(null).thenCompose(conn -> {
+                AtomicReference<ClientConnection> connRef = new AtomicReference();
+                listfuture = thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                     PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
-                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, listsql, 0, info.getQueryAttributes(), (Attribute[]) null);
+                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.LIST_ALL, listsql, 0, info.getQueryAttributes(), (Attribute[]) null);
+                    connRef.set(conn);
                     return pool.writeChannel(conn, req);
                 }));
             } else {
@@ -328,7 +385,7 @@ public class PgsqlDataSource extends DataSqlSource {
         return flipper == null || flipper.getLimit() <= 0 ? 0 : flipper.getLimit();
     }
 
-    protected <T> CompletableFuture<PgResultSet> thenApplyQueryUpdateStrategy(final EntityInfo<T> info, final CompletableFuture<PgResultSet> future) {
+    protected <T> CompletableFuture<PgResultSet> thenApplyQueryUpdateStrategy(final EntityInfo<T> info, final AtomicReference<ClientConnection> connRef, final CompletableFuture<PgResultSet> future) {
         if (info == null || (info.getTableStrategy() == null && !autoddl())) return future;
         final CompletableFuture<PgResultSet> rs = new CompletableFuture<>();
         future.whenComplete((g, t) -> {
@@ -337,14 +394,14 @@ public class PgsqlDataSource extends DataSqlSource {
                 rs.complete(g);
             } else if (isTableNotExist(info, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {
                 if (info.getTableStrategy() == null) {
-                    String tablesql = createTableSql(info);
-                    if (tablesql == null) {  //没有建表DDL
+                    String[] tablesqls = createTableSqls(info);
+                    if (tablesqls == null) {  //没有建表DDL
                         rs.completeExceptionally(t);
                     } else {
                         //执行一遍建表操作
                         final PgReqUpdate createTableReq = new PgReqUpdate();
-                        createTableReq.prepare(tablesql);
-                        writePool().sendAsync(null, createTableReq).whenComplete((g2, t2) -> {
+                        createTableReq.prepare(tablesqls[0]);
+                        writePool().writeChannel(connRef.get(), createTableReq).whenComplete((g2, t2) -> {
                             if (t2 == null) {
                                 g2.close();
                                 rs.complete(PgResultSet.EMPTY);
@@ -363,7 +420,8 @@ public class PgsqlDataSource extends DataSqlSource {
         return rs;
     }
 
-    protected <T> CompletableFuture<PgResultSet> thenApplyInsertStrategy(final EntityInfo<T> info, final CompletableFuture<PgResultSet> future, final String sql, final T[] values, int fetchSize, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
+    protected <T> CompletableFuture<PgResultSet> thenApplyInsertStrategy(final EntityInfo<T> info, final CompletableFuture<PgResultSet> future,
+        final AtomicReference<PgClientRequest> reqRef, final AtomicReference<ClientConnection> connRef, final T[] values) {
         if (info == null || (info.getTableStrategy() == null && !autoddl())) return future;
         final CompletableFuture<PgResultSet> rs = new CompletableFuture<>();
         future.whenComplete((g, t) -> {
@@ -372,20 +430,18 @@ public class PgsqlDataSource extends DataSqlSource {
                 rs.complete(g);
             } else if (isTableNotExist(info, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {  //表不存在
                 if (info.getTableStrategy() == null) {  //单表模式
-                    String tablesql = createTableSql(info);
-                    if (tablesql == null) {  //没有建表DDL
+                    String[] tablesqls = createTableSqls(info);
+                    if (tablesqls == null) {  //没有建表DDL
                         rs.completeExceptionally(t);
                     } else {
                         //执行一遍建表操作
                         final PgReqUpdate createTableReq = new PgReqUpdate();
-                        createTableReq.prepare(tablesql);
-                        writePool().sendAsync(null, createTableReq).whenComplete((g2, t2) -> {
+                        createTableReq.prepare(tablesqls[0]);
+                        writePool().writeChannel(connRef.get(), createTableReq).whenComplete((g2, t2) -> {
                             if (t2 != null) while (t2 instanceof CompletionException) t2 = t2.getCause();
                             if (t2 == null) { //建表成功
                                 //执行一遍新增操作
-                                PgReqInsert insertReq = new PgReqInsert();
-                                insertReq.prepare(sql, fetchSize, attrs, parameters);
-                                writePool().sendAsync(null, insertReq).whenComplete((g3, t3) -> {
+                                writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g3, t3) -> {
                                     if (t3 == null) {
                                         rs.complete(g3);
                                     } else {
@@ -402,13 +458,11 @@ public class PgsqlDataSource extends DataSqlSource {
                     final String newTable = info.getTable(values[0]);
                     final PgReqUpdate copyTableReq = new PgReqUpdate();
                     copyTableReq.prepare(getTableCopySQL(info, newTable));
-                    writePool().sendAsync(null, copyTableReq).whenComplete((g2, t2) -> {
+                    writePool().writeChannel(connRef.get(), copyTableReq).whenComplete((g2, t2) -> {
                         if (t2 != null) while (t2 instanceof CompletionException) t2 = t2.getCause();
                         if (t2 == null) {
                             //执行一遍新增操作
-                            PgReqInsert insertReq = new PgReqInsert();
-                            insertReq.prepare(sql, fetchSize, attrs, parameters);
-                            writePool().sendAsync(null, insertReq).whenComplete((g3, t3) -> {
+                            writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g3, t3) -> {
                                 if (t3 == null) {
                                     rs.complete(g3);
                                 } else {
@@ -417,24 +471,22 @@ public class PgsqlDataSource extends DataSqlSource {
                             });
                         } else if (isTableNotExist(info, t2 instanceof SQLException ? ((SQLException) t2).getSQLState() : null)) { //还是没有表： 1、没有原始表; 2:没有库
                             if (newTable.indexOf('.') < 0) {  //没有原始表需要建表
-                                String tablesql = createTableSql(info);
-                                if (tablesql == null) {  //没有建表DDL
+                                String[] tablesqls = createTableSqls(info);
+                                if (tablesqls == null) {  //没有建表DDL
                                     rs.completeExceptionally(t2);
                                 } else {
                                     //执行一遍建表操作
                                     final PgReqUpdate createTableReq = new PgReqUpdate();
-                                    createTableReq.prepare(tablesql);
-                                    writePool().sendAsync(null, createTableReq).whenComplete((g4, t4) -> {
+                                    createTableReq.prepare(tablesqls[0]);
+                                    writePool().writeChannel(connRef.get(), createTableReq).whenComplete((g4, t4) -> {
                                         if (t4 == null) { //建表成功
                                             //再执行一遍复制表操作
                                             final PgReqUpdate copyTableReq2 = new PgReqUpdate();
                                             copyTableReq2.prepare(getTableCopySQL(info, newTable));
-                                            writePool().sendAsync(null, copyTableReq2).whenComplete((g5, t5) -> {
+                                            writePool().writeChannel(connRef.get(), copyTableReq2).whenComplete((g5, t5) -> {
                                                 if (t5 == null) {
                                                     //再执行一遍新增操作
-                                                    PgReqInsert insertReq = new PgReqInsert();
-                                                    insertReq.prepare(sql, fetchSize, attrs, parameters);
-                                                    writePool().sendAsync(null, insertReq).whenComplete((g6, t6) -> {
+                                                    writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g6, t6) -> {
                                                         if (t6 == null) {
                                                             rs.complete(g6);
                                                         } else {
@@ -453,18 +505,16 @@ public class PgsqlDataSource extends DataSqlSource {
                             } else {  //没有库需要建库
                                 final PgReqUpdate createDatabaseReq = new PgReqUpdate();
                                 createDatabaseReq.prepare("CREATE SCHEMA IF NOT EXISTS " + newTable.substring(0, newTable.indexOf('.')));
-                                writePool().sendAsync(null, createDatabaseReq).whenComplete((g4, t4) -> {
+                                writePool().writeChannel(connRef.get(), createDatabaseReq).whenComplete((g4, t4) -> {
                                     if (t4 == null) {  //建库成功
                                         //再执行一遍复制表操作
                                         final PgReqUpdate copyTableReq2 = new PgReqUpdate();
                                         copyTableReq2.prepare(getTableCopySQL(info, newTable));
-                                        writePool().sendAsync(null, copyTableReq2).whenComplete((g5, t5) -> {
+                                        writePool().writeChannel(connRef.get(), copyTableReq2).whenComplete((g5, t5) -> {
                                             if (t5 != null) while (t5 instanceof CompletionException) t5 = t5.getCause();
                                             if (t5 == null) {
                                                 //再执行一遍新增操作
-                                                PgReqInsert insertReq = new PgReqInsert();
-                                                insertReq.prepare(sql, fetchSize, attrs, parameters);
-                                                writePool().sendAsync(null, insertReq).whenComplete((g6, t6) -> {
+                                                writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g6, t6) -> {
                                                     if (t6 == null) {
                                                         rs.complete(g6);
                                                     } else {
@@ -472,24 +522,22 @@ public class PgsqlDataSource extends DataSqlSource {
                                                     }
                                                 });
                                             } else if (isTableNotExist(info, t5 instanceof SQLException ? ((SQLException) t5).getSQLState() : null)) { //没有原始表需要建表
-                                                String tablesql = createTableSql(info);
-                                                if (tablesql == null) {  //没有建表DDL
+                                                String[] tablesqls = createTableSqls(info);
+                                                if (tablesqls == null) {  //没有建表DDL
                                                     rs.completeExceptionally(t5);
                                                 } else {
                                                     //执行一遍建表操作
                                                     final PgReqUpdate createTableReq = new PgReqUpdate();
-                                                    createTableReq.prepare(tablesql);
-                                                    writePool().sendAsync(null, createTableReq).whenComplete((g6, t6) -> {
+                                                    createTableReq.prepare(tablesqls[0]);
+                                                    writePool().writeChannel(connRef.get(), createTableReq).whenComplete((g6, t6) -> {
                                                         if (t6 == null) { //建表成功
                                                             //再再执行一遍复制表操作
                                                             final PgReqUpdate copyTableReq3 = new PgReqUpdate();
                                                             copyTableReq3.prepare(getTableCopySQL(info, newTable));
-                                                            writePool().sendAsync(null, copyTableReq3).whenComplete((g7, t7) -> {
+                                                            writePool().writeChannel(connRef.get(), copyTableReq3).whenComplete((g7, t7) -> {
                                                                 if (t7 == null) {
                                                                     //再执行一遍新增操作
-                                                                    PgReqInsert insertReq = new PgReqInsert();
-                                                                    insertReq.prepare(sql, fetchSize, attrs, parameters);
-                                                                    writePool().sendAsync(null, insertReq).whenComplete((g8, t8) -> {
+                                                                    writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g8, t8) -> {
                                                                         if (t8 == null) {
                                                                             rs.complete(g8);
                                                                         } else {
@@ -529,21 +577,27 @@ public class PgsqlDataSource extends DataSqlSource {
     protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String sql, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();
+        AtomicReference<PgClientRequest> reqRef = new AtomicReference();
+        AtomicReference<ClientConnection> connRef = new AtomicReference();
         CompletableFuture<PgResultSet> future = pool.connect(null).thenCompose(conn -> {
             PgReqUpdate req = insert ? ((PgClientConnection) conn).pollReqInsert(workThread, info) : ((PgClientConnection) conn).pollReqUpdate(workThread, info);
             req.prepare(sql, fetchSize, attrs, parameters);
+            reqRef.set(req);
+            connRef.set(conn);
             return pool.writeChannel(conn, req);
         });
         if (info == null || (info.getTableStrategy() == null && !autoddl())) return future.thenApply(g -> g.getUpdateEffectCount());
-        if (insert) return thenApplyInsertStrategy(info, future, sql, values, fetchSize, attrs, parameters).thenApply(g -> g.getUpdateEffectCount());
-        return thenApplyQueryUpdateStrategy(info, future).thenApply(g -> g.getUpdateEffectCount());
+        if (insert) return thenApplyInsertStrategy(info, future, reqRef, connRef, values).thenApply(g -> g.getUpdateEffectCount());
+        return thenApplyQueryUpdateStrategy(info, connRef, future).thenApply(g -> g.getUpdateEffectCount());
     }
 
     //info可以为null,供directQuery
     protected <T> CompletableFuture<PgResultSet> executeQuery(final EntityInfo<T> info, final String sql) {
         final PgClient pool = readPool();
         WorkThread workThread = WorkThread.currWorkThread();
-        return thenApplyQueryUpdateStrategy(info, pool.connect(null).thenCompose(conn -> {
+        AtomicReference<ClientConnection> connRef = new AtomicReference();
+        return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
+            connRef.set(conn);
             PgReqQuery req = ((PgClientConnection) conn).pollReqQuery(workThread, info);
             req.prepare(sql);
             return pool.writeChannel(conn, req);

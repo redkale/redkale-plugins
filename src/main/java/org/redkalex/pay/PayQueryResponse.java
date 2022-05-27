@@ -6,6 +6,7 @@
 package org.redkalex.pay;
 
 import java.util.Map;
+import org.redkale.convert.ConvertDisabled;
 
 /**
  *
@@ -15,11 +16,11 @@ import java.util.Map;
  */
 public class PayQueryResponse extends PayResponse {
 
-    protected short paystatus;
+    protected short payStatus;
 
-    protected long payedmoney;
+    protected long payedMoney;
 
-    protected String thirdpayno = ""; //第三方的支付流水号
+    protected String thirdPayno = ""; //第三方的支付流水号
 
     @Override
     public PayQueryResponse retcode(int retcode) {
@@ -40,27 +41,51 @@ public class PayQueryResponse extends PayResponse {
         return this;
     }
 
-    public long getPayedmoney() {
-        return payedmoney;
+    public long getPayedMoney() {
+        return payedMoney;
     }
 
-    public void setPayedmoney(long payedmoney) {
-        this.payedmoney = payedmoney;
+    public void setPayedMoney(long payedMoney) {
+        this.payedMoney = payedMoney;
     }
 
+    public short getPayStatus() {
+        return payStatus;
+    }
+
+    public void setPayStatus(short payStatus) {
+        this.payStatus = payStatus;
+    }
+
+    public String getThirdPayno() {
+        return thirdPayno;
+    }
+
+    public void setThirdPayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
+    }
+
+    @Deprecated
+    @ConvertDisabled
     public short getPaystatus() {
-        return paystatus;
+        return payStatus;
     }
 
-    public void setPaystatus(short paystatus) {
-        this.paystatus = paystatus;
+    @Deprecated
+    @ConvertDisabled
+    public void setPaystatus(short payStatus) {
+        this.payStatus = payStatus;
     }
 
+    @Deprecated
+    @ConvertDisabled
     public String getThirdpayno() {
-        return thirdpayno;
+        return thirdPayno;
     }
 
-    public void setThirdpayno(String thirdpayno) {
-        this.thirdpayno = thirdpayno;
+    @Deprecated
+    @ConvertDisabled
+    public void setThirdpayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
     }
 }

@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
@@ -41,7 +42,7 @@ public class MyReqExtended extends MyClientRequest {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + ", sendPrepare = " + sendPrepare + ", type = " + getType() + ", params = " + JsonConvert.root().convertTo(parameters) + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', sendPrepare = " + sendPrepare + ", type = " + getType() + ", params = " + (parameters != null && parameters.length > 10 ? ("size " + parameters.length) : JsonConvert.root().convertTo(parameters)) + "}";
     }
 
     @Override
@@ -57,22 +58,41 @@ public class MyReqExtended extends MyClientRequest {
         this.attrs = attrs;
         this.parameters = parameters;
     }
-    
+
+    @Override
+    public MyReqExtended reuse() {
+        this.sendPrepare = false;
+        this.sendBindCount = 0;
+        return this;
+    }
+
+    @Override
+    public boolean isCompleted() {
+        return !sendPrepare;
+    }
+
+    public int getBindCount() {
+        return sendBindCount;
+    }
+
     @Override
     public void accept(ClientConnection conn, ByteArray array) {
         MyClientConnection myconn = (MyClientConnection) conn;
         AtomicBoolean prepared = myconn.getPrepareFlag(sql);
+        Logger logger = myconn.logger();
         if (prepared.get()) {
+            this.sendPrepare = false; //此对象会复用，第二次调用
+            if (MysqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + " 写入请求包 writeBind: " + this);
             writeBind(myconn, array);
         } else {
+            this.sendPrepare = true;
             prepared.set(true);
+            if (MysqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + " 写入请求包 writePrepare: " + this);
             writePrepare(myconn, array);
         }
     }
 
     protected void writePrepare(MyClientConnection conn, ByteArray array) {
-        this.sendPrepare = true;
-        conn.pauseWriting(true);
         byte[] sqlbytes = sql.getBytes(StandardCharsets.UTF_8);
         Mysqls.writeUB3(array, 1 + sqlbytes.length);
         array.put(packetIndex);

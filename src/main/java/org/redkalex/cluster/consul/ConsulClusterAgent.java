@@ -8,8 +8,7 @@ package org.redkalex.cluster.consul;
 import org.redkale.cluster.ClusterAgent;
 import java.lang.reflect.Type;
 import java.net.*;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
+import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
@@ -40,33 +39,31 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected static final Type MAP_STRING_SERVICEENTRY = new TypeToken<Map<String, ServiceEntry>>() {
     }.getType();
 
-    protected String apiurl;
+    protected String apiurl; //不会以/结尾 
 
-    protected java.net.http.HttpClient httpClient; //JDK11里面的HttpClient
+    protected HttpClient httpClient; //JDK11里面的HttpClient
 
     protected int ttls = 10; //定时检查的秒数
 
     protected ScheduledThreadPoolExecutor scheduler;
 
-    //可能被HttpMessageClient用到的服务 key: servicename
+    //可能被HttpMessageClient用到的服务 key: serviceName
     protected final ConcurrentHashMap<String, Collection<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
 
-    //可能被mqtp用到的服务 key: servicename
+    //可能被mqtp用到的服务 key: serviceName
     protected final ConcurrentHashMap<String, Collection<InetSocketAddress>> mqtpAddressMap = new ConcurrentHashMap<>();
 
     @Override
-    public void init(AnyValue config) {
-        super.init(config);
-        AnyValue[] properties = config.getAnyValues("property");
-        for (AnyValue property : properties) {
-            if ("apiurl".equalsIgnoreCase(property.getValue("name"))) {
-                this.apiurl = property.getValue("value", "").trim();
-                if (this.apiurl.endsWith("/")) this.apiurl = this.apiurl.substring(0, this.apiurl.length() - 1);
-            } else if ("ttls".equalsIgnoreCase(property.getValue("name"))) {
-                this.ttls = Integer.parseInt(property.getValue("value", "").trim());
-                if (this.ttls < 5) this.ttls = 10;
-            }
+    public void init(ResourceFactory factory, AnyValue config) {
+        super.init(factory, config);
+
+        this.apiurl = config.getValue("apiurl");
+        if (this.apiurl.endsWith("/")) {
+            this.apiurl = this.apiurl.substring(0, this.apiurl.length() - 1);
         }
+        this.ttls = config.getIntValue("ttls", 10);
+        if (this.ttls < 5) this.ttls = 10;
+
         this.httpClient = HttpClient.newHttpClient();
     }
 
@@ -78,12 +75,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     @Override //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
-        AnyValue[] properties = config.getAnyValues("property");
-        if (properties == null || properties.length == 0) return false;
-        for (AnyValue property : properties) {
-            if ("apiurl".equalsIgnoreCase(property.getValue("name"))) return true;
-        }
-        return false;
+        return config.getValue("apiurl") != null;
     }
 
     @Override
@@ -97,18 +89,18 @@ public class ConsulClusterAgent extends ClusterAgent {
 
             //delay为了错开请求
             this.scheduler.scheduleAtFixedRate(() -> {
-                checkApplicationHealth();
-                checkHttpAddressHealth();
+                beatApplicationHealth();
+                localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
+                    beatLocalHealth(entry);
+                });
             }, 18, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
             this.scheduler.scheduleAtFixedRate(() -> {
-                loadMqtpAddressHealth();
+                reloadMqtpAddressHealth();
             }, 88 * 2, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
             this.scheduler.scheduleAtFixedRate(() -> {
-                localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
-                    checkLocalHealth(entry);
-                });
+                reloadHttpAddressHealth();
             }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
             this.scheduler.scheduleAtFixedRate(() -> {
@@ -119,19 +111,19 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
-    protected void loadMqtpAddressHealth() {
+    protected void reloadMqtpAddressHealth() {
         try {
-            String content = Utility.remoteHttpContent("GET", this.apiurl + "/agent/services", httpHeaders, (String) null).toString("UTF_8");
+            String content = Utility.remoteHttpContent(httpClient, "GET", this.apiurl + "/agent/services", StandardCharsets.UTF_8, httpHeaders);
             final Map<String, ServiceEntry> map = JsonConvert.root().convertFrom(MAP_STRING_SERVICEENTRY, content);
             Set<String> mqtpkeys = new HashSet<>();
             map.forEach((key, en) -> {
                 if (en.Service.startsWith("mqtp:")) mqtpkeys.add(en.Service);
             });
-            mqtpkeys.forEach(servicename -> {
+            mqtpkeys.forEach(serviceName -> {
                 try {
-                    this.mqtpAddressMap.put(servicename, queryAddress(servicename).get(10, TimeUnit.SECONDS));
+                    this.mqtpAddressMap.put(serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
                 } catch (Exception e) {
-                    logger.log(Level.SEVERE, "loadMqtpAddressHealth check " + servicename + " error", e);
+                    logger.log(Level.SEVERE, "loadMqtpAddressHealth check " + serviceName + " error", e);
                 }
             });
         } catch (Exception ex) {
@@ -139,13 +131,13 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
-    protected void checkHttpAddressHealth() {
+    protected void reloadHttpAddressHealth() {
         try {
-            this.httpAddressMap.keySet().stream().forEach(servicename -> {
+            this.httpAddressMap.keySet().stream().forEach(serviceName -> {
                 try {
-                    this.httpAddressMap.put(servicename, queryAddress(servicename).get(10, TimeUnit.SECONDS));
+                    this.httpAddressMap.put(serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
                 } catch (Exception e) {
-                    logger.log(Level.SEVERE, "checkHttpAddressHealth check " + servicename + " error", e);
+                    logger.log(Level.SEVERE, "checkHttpAddressHealth check " + serviceName + " error", e);
                 }
             });
         } catch (Exception ex) {
@@ -153,62 +145,62 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
-    protected void checkLocalHealth(final ClusterEntry entry) {
+    protected void beatLocalHealth(final ClusterEntry entry) {
         String url = this.apiurl + "/agent/check/pass/" + entry.checkid;
         try {
-            String rs = Utility.remoteHttpContent("PUT", url, httpHeaders, (String) null).toString("UTF_8");
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", url, StandardCharsets.UTF_8, httpHeaders);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, entry.checkid + " check error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, entry.checkid + " check error: " + url, ex);
         }
     }
 
-    @Override //获取MQTP的HTTP远程服务的可用ip列表, key = servicename的后半段
+    @Override //获取MQTP的HTTP远程服务的可用ip列表, key = serviceName的后半段
     public CompletableFuture<Map<String, Collection<InetSocketAddress>>> queryMqtpAddress(String protocol, String module, String resname) {
         final Map<String, Collection<InetSocketAddress>> rsmap = new ConcurrentHashMap<>();
-        final String servicenamprefix = generateHttpServiceName(protocol, module, null) + ":";
-        mqtpAddressMap.keySet().stream().filter(k -> k.startsWith(servicenamprefix))
-            .forEach(sn -> rsmap.put(sn.substring(servicenamprefix.length()), mqtpAddressMap.get(sn)));
+        final String serviceNamePrefix = generateHttpServiceName(protocol, module, null) + ":";
+        mqtpAddressMap.keySet().stream().filter(k -> k.startsWith(serviceNamePrefix))
+            .forEach(sn -> rsmap.put(sn.substring(serviceNamePrefix.length()), mqtpAddressMap.get(sn)));
         return CompletableFuture.completedFuture(rsmap);
     }
 
     @Override //获取HTTP远程服务的可用ip列表
     public CompletableFuture<Collection<InetSocketAddress>> queryHttpAddress(String protocol, String module, String resname) {
-        final String servicename = generateHttpServiceName(protocol, module, resname);
-        Collection<InetSocketAddress> rs = httpAddressMap.get(servicename);
+        final String serviceName = generateHttpServiceName(protocol, module, resname);
+        Collection<InetSocketAddress> rs = httpAddressMap.get(serviceName);
         if (rs != null) return CompletableFuture.completedFuture(rs);
-        return queryAddress(servicename).thenApply(t -> {
-            httpAddressMap.put(servicename, t);
+        return queryAddress(serviceName).thenApply(t -> {
+            httpAddressMap.put(serviceName, t);
             return t;
         });
     }
 
     @Override
     protected CompletableFuture<Collection<InetSocketAddress>> queryAddress(final ClusterEntry entry) {
-        return queryAddress(entry.servicename);
+        return queryAddress(entry.serviceName);
     }
 
-    private CompletableFuture<Collection<InetSocketAddress>> queryAddress(final String servicename) {
-        //return (httpClient != null) ? queryAddress11(servicename) : queryAddress8(servicename);
-        return queryAddress11(servicename);
+    private CompletableFuture<Collection<InetSocketAddress>> queryAddress(final String serviceName) {
+        //return (httpClient != null) ? queryAddress11(serviceName) : queryAddress8(serviceName);
+        return queryAddress11(serviceName);
     }
 
     //JDK11+版本以上的纯异步方法
-    private CompletableFuture<Collection<InetSocketAddress>> queryAddress11(final String servicename) {
-        final java.net.http.HttpClient client = (java.net.http.HttpClient) httpClient;
-        String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + servicename + "\"", StandardCharsets.UTF_8);
-        java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
+    private CompletableFuture<Collection<InetSocketAddress>> queryAddress11(final String serviceName) {
+        final HttpClient client = (HttpClient) httpClient;
+        String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
+        HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
         httpHeaders.forEach((n, v) -> builder.header(n, v));
         final Set<InetSocketAddress> set = new CopyOnWriteArraySet<>();
-        return client.sendAsync(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenCompose(content -> {
+        return client.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenCompose(content -> {
             final Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, (String) content);
             if (map.isEmpty()) return CompletableFuture.completedFuture(set);
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (Map.Entry<String, AddressEntry> en : map.entrySet()) {
                 String url0 = this.apiurl + "/agent/health/service/id/" + en.getKey() + "?format=text";
-                java.net.http.HttpRequest.Builder builder0 = java.net.http.HttpRequest.newBuilder().uri(URI.create(url0)).expectContinue(true).timeout(Duration.ofMillis(6000));
+                HttpRequest.Builder builder0 = HttpRequest.newBuilder().uri(URI.create(url0)).expectContinue(true).timeout(Duration.ofMillis(6000));
                 httpHeaders.forEach((n, v) -> builder0.header(n, v));
-                futures.add(client.sendAsync(builder0.build(), java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenApply(irs -> {
+                futures.add(client.sendAsync(builder0.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenApply(irs -> {
                     if ("passing".equalsIgnoreCase(irs)) {
                         set.add(en.getValue().createSocketAddress());
                     } else {
@@ -221,16 +213,17 @@ public class ConsulClusterAgent extends ClusterAgent {
         });
     }
 
-    private CompletableFuture<Collection<InetSocketAddress>> queryAddress8(final String servicename) {
+    @Deprecated
+    CompletableFuture<Collection<InetSocketAddress>> queryAddress8(final String serviceName) {
         final HashSet<InetSocketAddress> set = new HashSet<>();
         String rs = null;
         try {
-            String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + servicename + "\"", "UTF_8");
-            rs = Utility.remoteHttpContent("GET", url, httpHeaders, (String) null).toString("UTF_8");
+            String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
+            rs = Utility.remoteHttpContent(httpClient, "GET", url, StandardCharsets.UTF_8, httpHeaders);
             Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, rs);
             map.forEach((serviceid, en) -> {
                 try {
-                    String irs = Utility.remoteHttpContent("GET", this.apiurl + "/agent/health/service/id/" + serviceid + "?format=text", httpHeaders, (String) null).toString("UTF_8");
+                    String irs = Utility.remoteHttpContent(httpClient, "GET", this.apiurl + "/agent/health/service/id/" + serviceid + "?format=text", StandardCharsets.UTF_8, httpHeaders);
                     if ("passing".equalsIgnoreCase(irs)) {
                         set.add(en.createSocketAddress());
                     } else {
@@ -241,7 +234,7 @@ public class ConsulClusterAgent extends ClusterAgent {
                 }
             });
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, servicename + " queryAddress error, result=" + rs, ex);
+            logger.log(Level.SEVERE, serviceName + " queryAddress error, result=" + rs, ex);
         }
         return CompletableFuture.completedFuture(set);
     }
@@ -249,7 +242,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected boolean isApplicationHealth() {
         String serviceid = generateApplicationServiceId();
         try {
-            String irs = Utility.remoteHttpContent("GET", this.apiurl + "/agent/health/service/id/" + serviceid + "?format=text", httpHeaders, (String) null).toString("UTF_8");
+            String irs = Utility.remoteHttpContent(httpClient, "GET", this.apiurl + "/agent/health/service/id/" + serviceid + "?format=text", StandardCharsets.UTF_8, httpHeaders);
             return "passing".equalsIgnoreCase(irs);
         } catch (java.io.FileNotFoundException ex) {
             return false;
@@ -259,10 +252,10 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
-    protected void checkApplicationHealth() {
+    protected void beatApplicationHealth() {
         String checkid = generateApplicationCheckId();
         try {
-            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + checkid, httpHeaders, (String) null).toString("UTF_8");
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/check/pass/" + checkid, StandardCharsets.UTF_8, httpHeaders);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, checkid + " check error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, checkid + " check error", ex);
@@ -275,14 +268,12 @@ public class ConsulClusterAgent extends ClusterAgent {
         deregister(application);
 
         String serviceid = generateApplicationServiceId();
-        String servicename = generateApplicationServiceName();
+        String serviceName = generateApplicationServiceName();
         String host = this.appAddress.getHostString();
-        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + servicename + "\",\"Address\": \"" + host + "\",\"Port\": " + this.appAddress.getPort()
+        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + serviceName + "\",\"Address\": \"" + host + "\",\"Port\": " + this.appAddress.getPort()
             + ",\"Check\":{\"CheckID\": \"" + generateApplicationCheckId() + "\",\"Name\": \"" + generateApplicationCheckName() + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
-            java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder().uri(URI.create(this.apiurl + "/agent/service/register")).expectContinue(true).timeout(Duration.ofMillis(6000));
-            httpHeaders.forEach((n, v) -> builder.header(n, v));
-            String rs = httpClient.sendAsync(builder.PUT(HttpRequest.BodyPublishers.ofString(json)).build(), java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).join();
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " register error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " register error", ex);
@@ -293,7 +284,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     public void deregister(Application application) {
         String serviceid = generateApplicationServiceId();
         try {
-            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString("UTF_8");
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error", ex);
@@ -305,13 +296,13 @@ public class ConsulClusterAgent extends ClusterAgent {
         deregister(ns, protocol, service, false);
         //
         ClusterEntry clusterEntry = new ClusterEntry(ns, protocol, service);
-        String json = "{\"ID\": \"" + clusterEntry.serviceid + "\",\"Name\": \"" + clusterEntry.servicename + "\",\"Address\": \"" + clusterEntry.address.getHostString() + "\",\"Port\": " + clusterEntry.address.getPort()
+        String json = "{\"ID\": \"" + clusterEntry.serviceid + "\",\"Name\": \"" + clusterEntry.serviceName + "\",\"Address\": \"" + clusterEntry.address.getHostString() + "\",\"Port\": " + clusterEntry.address.getPort()
             + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
-            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/register", httpHeaders, json).toString("UTF_8");
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
             if (rs.isEmpty()) {
                 //需要立马执行下check，否则立即queryAddress可能会得到critical
-                Utility.remoteHttpContent("PUT", this.apiurl + "/agent/check/pass/" + generateCheckId(ns, protocol, service), httpHeaders, (String) null).toString("UTF_8");
+                Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/check/pass/" + generateCheckId(ns, protocol, service), StandardCharsets.UTF_8, httpHeaders);
             } else {
                 logger.log(Level.SEVERE, clusterEntry.serviceid + " register error: " + rs);
             }
@@ -345,7 +336,7 @@ public class ConsulClusterAgent extends ClusterAgent {
             }
         }
         try {
-            String rs = Utility.remoteHttpContent("PUT", this.apiurl + "/agent/service/deregister/" + serviceid, httpHeaders, (String) null).toString("UTF_8");
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
             if (realcanceled && currEntry != null) currEntry.canceled = true;
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
             if (!"mqtp".equals(protocol) && currEntry != null && currEntry.submqtp) deregister(ns, "mqtp", service, realcanceled);
@@ -355,14 +346,14 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     }
 
-    public static class ServiceEntry {
+    public static final class ServiceEntry {
 
         public String ID;  //serviceid
 
-        public String Service; //servicename
+        public String Service; //serviceName
     }
 
-    public static class AddressEntry {
+    public static final class AddressEntry {
 
         public String Address;
 

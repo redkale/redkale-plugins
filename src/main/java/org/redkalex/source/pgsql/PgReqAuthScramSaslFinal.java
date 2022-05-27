@@ -5,6 +5,7 @@
  */
 package org.redkalex.source.pgsql;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
@@ -50,12 +51,12 @@ public class PgReqAuthScramSaslFinal extends PgClientRequest {
         return REQ_TYPE_AUTH;
     }
 
-    public void checkFinal(String serverFinalMessage) {
+    public void checkFinal(String serverFinalMessage, ByteBuffer buffer) {
         String[] msgs = serverFinalMessage.split(",");
         if (msgs[0].startsWith("v=")) {
             byte[] verifier = Base64.getDecoder().decode(msgs[0].substring(2));
             byte[] localsign = hmac(serverKey, authMessage.getBytes(StandardCharsets.UTF_8));
-            if (!Arrays.equals(localsign, verifier)) throw new IllegalArgumentException("Invalid server SCRAM signature");
+            if (!Arrays.equals(localsign, verifier)) throw new IllegalArgumentException("Invalid server SCRAM signature in " + msgs[0] + ", buffer.remain = " + buffer.remaining());
         } else if (msgs[0].startsWith("e=")) {
             throw new IllegalArgumentException(msgs[0].substring(2));
         } else {

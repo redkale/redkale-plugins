@@ -7,6 +7,7 @@ package org.redkalex.source.mysql;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.source.EntityInfo;
@@ -31,13 +32,26 @@ public class MyClientConnection<R extends MyClientRequest> extends ClientConnect
     }
 
     @Override
+    protected ClientCodec createCodec() {
+        return new MyClientCodec(this);
+    }
+
+    @Override
     protected void preComplete(MyResultSet resp, R req, Throwable exc) {
         if (resp != null) resp.request = req;
     }
 
     @Override
-    protected void pauseWriting(boolean flag) {
-        super.pauseWriting(flag);
+    protected void resumeWrite() {
+        super.resumeWrite();
+    }
+
+    protected boolean autoddl() {
+        return ((MyClient) client).autoddl;
+    }
+
+    protected Logger logger() {
+        return ((MyClient) client).logger();
     }
 
     public AtomicBoolean getPrepareFlag(String prepareSql) {
@@ -60,14 +74,9 @@ public class MyClientConnection<R extends MyClientRequest> extends ClientConnect
         cacheExtendedDescs.put(prepareSql, desc);
     }
 
-    public MyResultSet pollResultSet() {
-        return new MyResultSet();
-    }
-
-    public MyReqInsert pollReqInsert(WorkThread workThread, EntityInfo info) {
-        MyReqInsert rs = new MyReqInsert();
+    public MyResultSet pollResultSet(EntityInfo info) {
+        MyResultSet rs = new MyResultSet();
         rs.info = info;
-        rs.currThread(workThread);
         return rs;
     }
 

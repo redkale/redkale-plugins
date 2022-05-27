@@ -28,5 +28,5 @@ public @interface DIYPayService {
      *
      * @return short
      */
-    short paytype();
+    short payType();
 }

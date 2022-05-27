@@ -18,7 +18,13 @@ public class MysqlDataSourceProvider implements DataSourceProvider {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
-        return "mysql".equalsIgnoreCase(config.getValue("dbtype"));
+        String dbtype = config.getValue("dbtype");
+        if (dbtype == null) {
+            AnyValue read = config.getAnyValue("read");
+            AnyValue node = read == null ? config : read;
+            dbtype = AbstractDataSource.parseDbtype(node.getValue(AbstractDataSource.DATA_SOURCE_URL));
+        }
+        return "mysql".equalsIgnoreCase(dbtype);
     }
 
     @Override

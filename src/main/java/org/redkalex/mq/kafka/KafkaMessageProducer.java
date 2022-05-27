@@ -11,7 +11,7 @@ import java.util.logging.Level;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.TopicPartitionInfo;
-import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.*;
 import org.redkale.mq.*;
 
 /**
@@ -56,8 +56,6 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
         props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
         props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
         props.put(ProducerConfig.ACKS_CONFIG, "0");//all:所有follower都响应了才认为消息提交成功，即"committed"
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, MessageRecordSerializer.class);
         props.putAll(producerConfig);
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         this.config = props;
@@ -72,7 +70,7 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
 
     @Override
     public void run() {
-        this.producer = new KafkaProducer<>(this.config);
+        this.producer = new KafkaProducer<>(this.config, new StringSerializer(), new MessageRecordSerializer(messageAgent.getMessageCoder()));
         this.startFuture.complete(null);
         if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + "(name=" + this.name + ") startuped");
     }
@@ -99,7 +97,7 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
                 future.complete(null);
             }
 
-            long e = System.currentTimeMillis() - message.getCreatetime();
+            long e = System.currentTimeMillis() - message.getCreateTime();
             if (e > 1000 && fine) {
                 logger.log(Level.FINE, "Kafka.producer (mqs.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (e > 100 && finer) {
@@ -154,9 +152,15 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
 
     public static class MessageRecordSerializer implements Serializer<MessageRecord> {
 
+        private final MessageCoder<MessageRecord> coder;
+
+        public MessageRecordSerializer(MessageCoder<MessageRecord> coder) {
+            this.coder = coder;
+        }
+
         @Override
         public byte[] serialize(String topic, MessageRecord data) {
-            return MessageRecordCoder.getInstance().encode(data);
+            return this.coder.encode(data);
         }
 
     }

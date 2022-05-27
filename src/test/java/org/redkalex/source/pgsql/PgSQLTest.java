@@ -6,7 +6,7 @@
 package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
-import java.lang.reflect.Field;
+import java.lang.reflect.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -14,13 +14,15 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.BiConsumer;
+import java.util.stream.IntStream;
 import javax.persistence.*;
+import static org.redkale.boot.Application.RESNAME_APP_ASYNCGROUP;
 import org.redkale.net.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkale.boot.Application.RESNAME_APP_ASYNCGROUP;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.Client;
+import static org.redkale.source.AbstractDataSource.*;
 
 /**
  *
@@ -30,41 +32,77 @@ public class PgSQLTest {
 
     private static final Random random = new SecureRandom();
 
-    protected static int randomId() {
-        return random.nextInt(10000) + 1;
-    }
+    private static final String url = "jdbc:postgresql://127.0.0.1:5432/hello_world";
+
+    private static final String user = "postgres";
+
+    private static final String password = "1234";
+
+    private static final int count = Runtime.getRuntime().availableProcessors() * 10;  //4.18秒
 
     public static void main(String[] args) throws Throwable {
+        run(false, true);
+        run(false, false);
+        // run(true, true);
+        // run(true, false);
+    }
+
+    public static void run(final boolean forFortune, final boolean rwSeparate) throws Throwable {
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
         factory.register(RESNAME_APP_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
-        prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.put("javax.persistence.jdbc.preparecache", "true");
-        prop.setProperty(DataSources.JDBC_USER, "postgres");
-        prop.setProperty(DataSources.JDBC_PWD, "1234");
+        if (rwSeparate) { //读写分离
+            prop.setProperty("redkale.datasource[].read.url", url);
+            prop.setProperty("redkale.datasource[].read.table-autoddl", "true");
+            prop.setProperty("redkale.datasource[].read.user", user);
+            prop.setProperty("redkale.datasource[].read.password", password);
 
-        Properties prop2 = new Properties();
-        prop2.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop2.put("javax.persistence.jdbc.preparecache", "true");
-        prop2.setProperty(DataSources.JDBC_USER, "postgres");
-        prop2.setProperty(DataSources.JDBC_PWD, "1234");
-
-        final PgsqlDataSource source = new PgsqlDataSource("", null, prop, prop2);
+            prop.setProperty("redkale.datasource[].write.url", url);
+            prop.setProperty("redkale.datasource[].write.table-autoddl", "true");
+            prop.setProperty("redkale.datasource[].write.user", user);
+            prop.setProperty("redkale.datasource[].write.password", password);
+        } else {
+            prop.setProperty("redkale.datasource[].url", url);
+            prop.setProperty("redkale.datasource[].table-autoddl", "true");
+            prop.setProperty("redkale.datasource[].user", user);
+            prop.setProperty("redkale.datasource[].password", password);
+        }
+        final PgsqlDataSource source = new PgsqlDataSource();
         factory.inject(source);
-        source.init(null);
-        {
+        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
+        System.out.println("-------------------- " + (forFortune ? "Fortune" : "World") + " " + (rwSeparate ? "读写分离" : "读写合并") + " --------------------");
+        if (false) {
             System.out.println("当前机器CPU核数: " + Runtime.getRuntime().availableProcessors());
             final CompletableFuture[] futures = new CompletableFuture[Runtime.getRuntime().availableProcessors()];
             for (int i = 0; i < futures.length; i++) {
-                futures[i] = source.findAsync(World.class, randomId());
+                futures[i] = source.findAsync(World.class, randomId()).thenCompose(v -> source.updateAsync(v));
             }
             CompletableFuture.allOf(futures).join();
-            System.out.println("已连接数: " + prop.getProperty(DataSources.JDBC_CONNECTIONS_LIMIT, "" + Runtime.getRuntime().availableProcessors()));
+            System.out.println("已连接数: " + prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Runtime.getRuntime().availableProcessors()));
+
+            System.out.println("只读池req发送数: " + getWriteReqCounter(source.readPool()));
+            System.out.println("只读池resp处理数: " + getPollRespCounter(source.readPool()));
+            System.out.println("只读池resp等待数: " + getRespWaitingCount(source.readPool()));
+            if (source.readPool() != source.writePool()) {
+                System.out.println("可写池req发送数: " + getWriteReqCounter(source.writePool()));
+                System.out.println("可写池resp处理数: " + getPollRespCounter(source.writePool()));
+                System.out.println("可写池resp等待数: " + getRespWaitingCount(source.writePool()));
+            }
         }
-//        System.out.println(source.queryList(Fortune.class)); 
+        final int fortuneSize = source.queryList(Fortune.class).size();
+        System.out.println("Fortune数量: " + fortuneSize);
+
+//        for (int i = 1; i <= 10000; i++) {
+//            if (!source.exists(World.class, i)) {
+//                World w = new World();
+//                w.id = i;
+//                w.randomNumber = i;
+//                source.insert(w);
+//            }
+//        }
 //        CompletableFuture[] ffs = new CompletableFuture[2];
 //        ffs[0] = source.findAsync(Fortune.class, 1);
 //        ffs[1] = source.findAsync(Fortune.class, 2);
@@ -74,17 +112,14 @@ public class PgSQLTest {
 //        ffs = new CompletableFuture[2];
 //        ffs[0] = source.findAsync(Fortune.class, 1);
 //        ffs[1] = source.findAsync(Fortune.class, 2);
-//        CompletableFuture.allOf(ffs).join();
+//        CompletableFuture.allOf(ffs).join(); 
 //        System.out.println(ffs[0].join());
 //        System.out.println(ffs[1].join());
-        System.out.println("============== 开始 ==============");
+        System.out.println("-------------------- 压测开始 --------------------");
         getWriteReqCounter(source.readPool()).reset();
         getPollRespCounter(source.readPool()).reset();
         getWriteReqCounter(source.writePool()).reset();
         getPollRespCounter(source.writePool()).reset();
-        final int count = 200;  //4.18秒
-        final CountDownLatch cdl = new CountDownLatch(count);
-        final CountDownLatch startcdl = new CountDownLatch(count);
         long s1 = System.currentTimeMillis();
         final AtomicInteger timeouts = new AtomicInteger();
         Field futureCompleteConsumer = DataSqlSource.class.getDeclaredField("futureCompleteConsumer");
@@ -97,6 +132,9 @@ public class PgSQLTest {
                 t.printStackTrace();
             }
         };
+
+        final CountDownLatch cdl = new CountDownLatch(count);
+        final CountDownLatch startcdl = new CountDownLatch(count);
         futureCompleteConsumer.set(source, bc);
         for (int j = 0; j < count; j++) {
             new Thread() {
@@ -110,11 +148,21 @@ public class PgSQLTest {
                         final CompletableFuture[] futures = new CompletableFuture[rs.length];
                         for (int i = 0; i < rs.length; i++) {
                             final int index = i;
-                            futures[index] = source.findAsync(World.class, randomId()).thenAccept(r -> rs[index] = r.randomNumber(randomId()));
+                            int id = randomId();
+                            IntStream ids = ThreadLocalRandom.current().ints(20, 1, 10001);
+                            futures[index] = forFortune ? source.queryListAsync(Fortune.class) : source.findsListAsync(World.class, ids.boxed()).thenApply(v -> {
+                                if (v.size() != 20) System.out.println("数量居然是" + v.size());
+                                return v;
+                            });
                         }
                         CompletableFuture.allOf(futures).thenCompose(v -> {
-                            //return CompletableFuture.completedFuture(null);
-                            return source.updateAsync(sort(rs));
+                            if (forFortune) {
+                                List s = (List) futures[0].join();
+                                if (s.size() != fortuneSize) System.out.println("数量居然是" + s.size());
+                                return CompletableFuture.completedFuture(null);
+                            }
+                            return CompletableFuture.completedFuture(null);
+                            //return source.updateAsync(sort(rs));
                         }).whenComplete((r, t) -> {
                             cdl.countDown();
                             if (t != null) {
@@ -140,20 +188,42 @@ public class PgSQLTest {
         System.out.println("一共耗时: " + e1 + " ms");
         System.out.println("超时异常数: " + timeouts);
         System.out.println("事务总数: " + count * 20);
-        System.out.println("只读池req数: " + getWriteReqCounter(source.readPool()));
-        System.out.println("只读池resp数: " + getPollRespCounter(source.readPool()));
-        System.out.println("---------------------------------");
+        System.out.println("只读池req发送数: " + getWriteReqCounter(source.readPool()));
+        System.out.println("只读池resp处理数: " + getPollRespCounter(source.readPool()));
+        System.out.println("只读池resp等待数: " + getRespWaitingCount(source.readPool()));
+        if (source.readPool() != source.writePool()) {
+            System.out.println("可写池req发送数: " + getWriteReqCounter(source.writePool()));
+            System.out.println("可写池resp处理数: " + getPollRespCounter(source.writePool()));
+            System.out.println("可写池resp等待数: " + getRespWaitingCount(source.writePool()));
+        }
+        System.out.println("-----------------------------------------------------");
 
         s1 = System.currentTimeMillis();
         source.close();
+        asyncGroup.close();
         e1 = System.currentTimeMillis() - s1;
         System.out.println("关闭过程: " + e1 + " ms");
         assert timeouts.get() == 0;
+        System.out.println("\r\n\r\n");
+    }
+
+    protected static long getRespWaitingCount(PgClient client) {
+        try {
+            Method method = Client.class.getDeclaredMethod("getRespWaitingCount");
+            method.setAccessible(true);
+            return (Long) method.invoke(client);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected static int randomId() {
+        return random.nextInt(10000) + 1;
     }
 
     protected static LongAdder getWriteReqCounter(PgClient client) {
         try {
-            Field field = Client.class.getDeclaredField("writeReqCounter");
+            Field field = Client.class.getDeclaredField("reqWritedCounter");
             field.setAccessible(true);
             return (LongAdder) field.get(client);
         } catch (Exception e) {
@@ -163,7 +233,7 @@ public class PgSQLTest {
 
     protected static LongAdder getPollRespCounter(PgClient client) {
         try {
-            Field field = Client.class.getDeclaredField("pollRespCounter");
+            Field field = Client.class.getDeclaredField("respDoneCounter");
             field.setAccessible(true);
             return (LongAdder) field.get(client);
         } catch (Exception e) {

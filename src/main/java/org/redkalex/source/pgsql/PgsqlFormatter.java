@@ -14,6 +14,7 @@ import java.time.format.*;
 import static java.time.format.DateTimeFormatter.*;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.atomic.*;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.EntityInfo;
 import org.redkale.util.*;
 
@@ -33,15 +34,15 @@ public abstract class PgsqlFormatter {
         Class type = attr.type();
         if (type == int.class || type == Integer.class) {
             return buffer.getInt();
-        } else if (type == long.class || type == Long.class) {
-            return buffer.getLong();
-        } else if (type == boolean.class || type == Boolean.class) {
-            return buffer.get() == 1;
         } else if (type == String.class) {
             if (bslen == 0) return "";
             byte[] bs = new byte[bslen];
             buffer.get(bs);
             return new String(bs, StandardCharsets.UTF_8);
+        } else if (type == long.class || type == Long.class) {
+            return buffer.getLong();
+        } else if (type == boolean.class || type == Boolean.class) {
+            return buffer.get() == 1;
         } else if (type == short.class || type == Short.class) {
             return buffer.getShort();
         } else if (type == float.class || type == Float.class) {
@@ -69,7 +70,11 @@ public abstract class PgsqlFormatter {
         } else if (type == java.time.LocalTime.class) {
             return LocalTime.ofNanoOfDay(buffer.getLong() * 1000);
         } else {
-            throw new RuntimeException("Not supported column: " + attr.field() + ", type: " + attr.type());
+            if (bslen == 0) return null;
+            byte[] bs = new byte[bslen];
+            buffer.get(bs);
+            return JsonConvert.root().convertFrom(attr.genericType(), new String(bs, StandardCharsets.UTF_8));
+            //throw new RuntimeException("Not supported column: " + attr.field() + ", type: " + attr.type());
         }
     }
 

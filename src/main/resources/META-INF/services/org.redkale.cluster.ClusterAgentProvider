@@ -1,1 +1,2 @@
+org.redkalex.cluster.nacos.NacosClusterAgentProvider
 org.redkalex.cluster.consul.ConsulClusterAgentProvider

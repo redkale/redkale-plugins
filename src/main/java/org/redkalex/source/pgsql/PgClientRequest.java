@@ -6,6 +6,7 @@
 package org.redkalex.source.pgsql;
 
 import java.nio.charset.StandardCharsets;
+import org.redkale.net.WorkThread;
 import org.redkale.net.client.ClientRequest;
 import org.redkale.source.EntityInfo;
 import org.redkale.util.*;
@@ -27,7 +28,7 @@ public abstract class PgClientRequest extends ClientRequest {
     public static final int REQ_TYPE_DELETE = 1 << 5;
 
     public static final int REQ_TYPE_BATCH = 1 << 6;
-    
+
     public static final int REQ_TYPE_EXTEND_QUERY = (1 << 2) + 1;    //预编译的16进制值都要以1结尾
 
     public static final int REQ_TYPE_EXTEND_UPDATE = (1 << 3) + 1;   //预编译的16进制值都要以1结尾
@@ -38,7 +39,7 @@ public abstract class PgClientRequest extends ClientRequest {
 
     //--------------------------------------------------
     protected EntityInfo info;
-    
+
     public abstract int getType();
 
     protected static ByteArray writeUTF8String(ByteArray array, String string) {
@@ -47,4 +48,11 @@ public abstract class PgClientRequest extends ClientRequest {
         return array;
     }
 
+    protected WorkThread getWorkThread() {
+        return workThread;
+    }
+
+    public PgClientRequest reuse() {
+        return this;
+    }
 }

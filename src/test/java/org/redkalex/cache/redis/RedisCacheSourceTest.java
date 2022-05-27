@@ -8,6 +8,7 @@ package org.redkalex.cache.redis;
 import static org.redkale.boot.Application.RESNAME_APP_ASYNCGROUP;
 import org.redkale.convert.json.*;
 import org.redkale.net.AsyncIOGroup;
+import static org.redkale.source.AbstractCacheSource.*;
 import org.redkale.util.*;
 
 /**
@@ -18,7 +19,7 @@ public class RedisCacheSourceTest extends RedisAbstractTest{
 
     public static void main(String[] args) throws Exception {
         AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue();
-        conf.addValue("node", new AnyValue.DefaultAnyValue().addValue("addr", "redis://127.0.0.1:6363"));
+        conf.addValue(CACHE_SOURCE_NODE, new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_URL, "redis://127.0.0.1:6363"));
         final ResourceFactory factory = ResourceFactory.create();
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         asyncGroup.start();

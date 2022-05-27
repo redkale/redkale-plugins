@@ -30,19 +30,14 @@ public class VertxSqlDataSourceTest {
     public static void main(String[] args) throws Throwable {
 
         Properties prop = new Properties();
-        prop.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.put("javax.persistence.jdbc.preparecache", "true");
-        prop.setProperty(DataSources.JDBC_USER, "postgres");
-        prop.setProperty(DataSources.JDBC_PWD, "1234");
+        prop.setProperty("redkale.datasource[].url", "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty("redkale.datasource[].preparecache", "true");
+        prop.setProperty("redkale.datasource[].table-autoddl", "true");
+        prop.setProperty("redkale.datasource[].user", "postgres");
+        prop.setProperty("redkale.datasource[].password", "1234");
 
-        Properties prop2 = new Properties();
-        prop2.setProperty(DataSources.JDBC_URL, "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop2.put("javax.persistence.jdbc.preparecache", "true");
-        prop2.setProperty(DataSources.JDBC_USER, "postgres");
-        prop2.setProperty(DataSources.JDBC_PWD, "1234");
-
-        final VertxSqlDataSource source = new VertxSqlDataSource("", null, "postgresql", prop, prop2);
-        source.init(null);
+        final VertxSqlDataSource source = new VertxSqlDataSource();
+        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println(source.find(Fortune.class, 5)); 
         System.out.println(source.queryList(Fortune.class));
         Fortune one = source.queryList(Fortune.class).get(0);

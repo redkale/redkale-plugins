@@ -14,7 +14,7 @@ package org.redkalex.pay;
 public abstract class Pays {
 
     //--------------------- 支付类型 -----------------------------
-    //支付类型:  10: 信用/虚拟支付; 11:人工支付; 12:银联支付; 13:微信支付; 14:支付宝支付;15:易宝支付;
+    //支付类型:  10:虚拟支付; 11:人工支付; 12:银联支付; 13:微信支付; 14:支付宝支付; 15:IOS支付; 16:Google支付; 17:Facebook支付; 21:OPPO支付; 
     //信用/虚拟支付
     public static final short PAYTYPE_CREDIT = 10;
 
@@ -30,23 +30,32 @@ public abstract class Pays {
     //支付宝支付
     public static final short PAYTYPE_ALIPAY = 14;
 
-    //OPPO支付
-    public static final short PAYTYPE_OPPO = 15;
-
-    //Facebook支付
-    public static final short PAYTYPE_FACEBOOK = 16;
+    //IOS支付
+    public static final short PAYTYPE_IOS = 15;
 
     //Google支付
-    public static final short PAYTYPE_GOOGLE = 17;
+    public static final short PAYTYPE_GOOGLE = 16;
 
-    //IOS支付
-    public static final short PAYTYPE_IOS = 18;
+    //Facebook支付
+    public static final short PAYTYPE_FACEBOOK = 17;
+
+    //OPPO支付
+    public static final short PAYTYPE_OPPO = 21;
+
+    //Tron钱包支付
+    public static final short PAYTYPE_TPC20 = 31;
+
+    //以太坊钱包支付
+    public static final short PAYTYPE_EPC20 = 32;
+
+    //OKEX钱包支付
+    public static final short PAYTYPE_OEC = 33;
 
     //自定义的支付服务的paytype最小值, 50以下被框架占用
     public static final short MIN_DIY_PAYTYPE = 50;
 
     //--------------------- 支付渠道 -----------------------------
-    //支付渠道:  10: 信用/虚拟支付; 20:人工支付; 30:APP支付; 40:网页支付; 50:机器支付; 60:H5支付;
+    //支付渠道:  10:虚拟支付; 20:人工支付; 30:APP支付; 40:网页支付; 50:H5支付; 60:机器支付;
     //信用/虚拟支付
     public static final short PAYWAY_CREDIT = 10;
 
@@ -59,11 +68,11 @@ public abstract class Pays {
     //网页支付
     public static final short PAYWAY_WEB = 40;
 
-    //机器支付
-    public static final short PAYWAY_NATIVE = 50;
-
     //H5支付
-    public static final short PAYWAY_H5 = 60;
+    public static final short PAYWAY_H5 = 50;
+
+    //机器支付
+    public static final short PAYWAY_NATIVE = 60;
 
     //--------------------- 支付状态 -----------------------------
     //10:待支付;20:支付中;30:已支付;40:支付失败;50:待退款;60退款中;70:已退款;80:退款失败;90:已关闭;95:已取消;

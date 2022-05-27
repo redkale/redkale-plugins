@@ -18,7 +18,12 @@ public class VertxSqlDataSourceProvider implements DataSourceProvider {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
-        final String dbtype = config.getValue("dbtype");
+        String dbtype = config.getValue("dbtype");
+        if (dbtype == null) {
+            AnyValue read = config.getAnyValue("read");
+            AnyValue node = read == null ? config : read;
+            dbtype = AbstractDataSource.parseDbtype(node.getValue(AbstractDataSource.DATA_SOURCE_URL));
+        }
         try {
             boolean pgsql = "postgresql".equalsIgnoreCase(dbtype);
             if (pgsql) {

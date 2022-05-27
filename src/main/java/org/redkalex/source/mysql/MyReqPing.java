@@ -14,7 +14,7 @@ public class MyReqPing extends MyReqQuery {
     public static final MyReqPing INSTANCE = new MyReqPing();
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public <T extends Object> MyReqPing() {
+    public MyReqPing() {
         prepare("SELECT 1");
     }
 }

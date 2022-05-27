@@ -31,10 +31,18 @@ public abstract class MyRespDecoder<T> {
     protected static MyRespOK readOKPacket(MyClientConnection conn, ByteBuffer buffer, int length, byte index, ByteArray array) {
         final MyRespOK rs = new MyRespOK();
         //com.mysql.cj.protocol.a.NativeProtocol
+        //com.mysql.cj.protocol.a.result.OkPacket
+        int pos = buffer.position() - 1; //typeid已经被读了
         rs.affectedRows = Mysqls.readLength(buffer);
         rs.lastInsertId = Mysqls.readLength(buffer);
         rs.serverStatusFlags = Mysqls.readUB2(buffer);
         rs.warningCount = Mysqls.readUB2(buffer);
+        int limit = length + pos - buffer.position();
+        rs.info = Mysqls.readUTF8StringWithTerm(buffer, array, limit);
+        // read session state changes info
+        if ((rs.serverStatusFlags & Mysqls.SERVER_SESSION_STATE_CHANGED) > 0) {
+            Mysqls.readUB2(buffer); //totalLen
+        }
         return rs;
     }
 }

@@ -25,6 +25,8 @@ public class MyRespOK {
 
     public int warningCount;
 
+    public String info;
+
     @Override
     public String toString() {
         return JsonConvert.root().convertTo(this);

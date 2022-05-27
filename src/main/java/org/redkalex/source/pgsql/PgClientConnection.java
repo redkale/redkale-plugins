@@ -29,6 +29,15 @@ public class PgClientConnection<R extends PgClientRequest> extends ClientConnect
     }
 
     @Override
+    protected ClientCodec createCodec() {
+        return new PgClientCodec(this);
+    }
+
+    protected boolean autoddl() {
+        return ((PgClient) client).autoddl;
+    }
+
+    @Override
     protected void preComplete(PgResultSet resp, R req, Throwable exc) {
         if (resp != null) resp.request = req;
     }
@@ -59,8 +68,10 @@ public class PgClientConnection<R extends PgClientRequest> extends ClientConnect
         cacheExtendedDescs.put(prepareSql, desc);
     }
 
-    public PgResultSet pollResultSet() {
-        return new PgResultSet();
+    public PgResultSet pollResultSet(EntityInfo info) {
+        PgResultSet rs = new PgResultSet();
+        rs.info = info;
+        return rs;
     }
 
     public PgReqInsert pollReqInsert(WorkThread workThread, EntityInfo info) {
@@ -89,5 +100,9 @@ public class PgClientConnection<R extends PgClientRequest> extends ClientConnect
         rs.info = info;
         rs.currThread(workThread);
         return rs;
+    }
+
+    public int getIndex() {
+        return index;
     }
 }

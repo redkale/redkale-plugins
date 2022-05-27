@@ -14,7 +14,7 @@ public class PgReqPing extends PgReqQuery {
     public static final PgReqPing INSTANCE = new PgReqPing();
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public <T extends Object> PgReqPing() {
+    public PgReqPing() {
         prepare("SELECT 1");
     }
 }

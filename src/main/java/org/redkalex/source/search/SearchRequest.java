@@ -45,7 +45,7 @@ public class SearchRequest extends BaseBean {
     @ConvertColumn(index = 8)
     public Integer size;  //翻页条数
 
-    public static SearchRequest createMatchAllBean() {
+    public static SearchRequest createMatchAll() {
         SearchRequest bean = new SearchRequest();
         bean.query = new Query();
         bean.query.match_all = Collections.EMPTY_MAP;
@@ -144,7 +144,7 @@ public class SearchRequest extends BaseBean {
         if (node == null) return this;
         this.query = new Query();
         this.query.bool = filterNodeBool(node, false);
-        SearchBean search = (SearchBean) node.findValue(SearchBean.SEARCH_FILTER_NAME);
+        SearchQuery search = (SearchQuery) node.findValue(SearchQuery.SEARCH_FILTER_NAME);
         if (search != null && search.searchKeyword() != null && !search.searchKeyword().isEmpty()) {
             String[] fs = search.searchFields();
             QueryFilterItem match = new QueryFilterItem("query", search.searchKeyword(), "fields", fs);
@@ -164,7 +164,7 @@ public class SearchRequest extends BaseBean {
                 must.add(new QueryFilterItem("multi_match", match));
             }
             if (search.highlight() != null) {
-                SearchBean.SearchHighlightBean hlbean = search.highlight();
+                SearchQuery.SearchHighlight hlbean = search.highlight();
                 QueryFilterItem hl = new QueryFilterItem();
                 if (hlbean.preTag() != null && !hlbean.preTag().isEmpty()) {
                     hl.put("pre_tags", new String[]{hlbean.preTag()});

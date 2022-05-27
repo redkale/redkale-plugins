@@ -21,11 +21,6 @@ public class ProtobufObjectDecoder<T> extends ObjectDecoder<ProtobufReader, T> {
     }
 
     @Override
-    protected boolean hasNext(ProtobufReader in, boolean first) {
-        return in.hasNext();
-    }
-
-    @Override
     protected void initForEachDeMember(ConvertFactory factory, DeMember member) {
         Attribute attr = member.getAttribute();
         setTag(member, ProtobufFactory.getTag(attr.field(), attr.genericType(), member.getPosition(), ((ProtobufFactory) factory).enumtostring));
@@ -38,7 +33,12 @@ public class ProtobufObjectDecoder<T> extends ObjectDecoder<ProtobufReader, T> {
     }
 
     @Override
-    protected Object readMemberValue(ProtobufReader in, DeMember member, boolean first) {
+    protected boolean hasNext(ProtobufReader in, boolean first) {
+        return in.hasNext();
+    }
+
+    @Override
+    protected Object readDeMemberValue(ProtobufReader in, DeMember member, boolean first) {
         Decodeable decoder = member.getDecoder();
         if (decoder instanceof ProtobufArrayDecoder) {
             return ((ProtobufArrayDecoder) decoder).convertFrom(in, member);
@@ -54,7 +54,7 @@ public class ProtobufObjectDecoder<T> extends ObjectDecoder<ProtobufReader, T> {
     }
 
     @Override
-    protected void readMemberValue(ProtobufReader in, DeMember member, T result, boolean first) {
+    protected void readDeMemberValue(ProtobufReader in, DeMember member, T result, boolean first) {
         Decodeable decoder = member.getDecoder();
         if (decoder instanceof ProtobufArrayDecoder) {
             member.getAttribute().set(result, ((ProtobufArrayDecoder) decoder).convertFrom(in, member));

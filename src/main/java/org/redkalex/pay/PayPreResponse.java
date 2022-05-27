@@ -16,10 +16,14 @@ import org.redkale.convert.*;
  */
 public class PayPreResponse extends PayResponse {
 
+    public static final String PREPAY_PREPAYID = "prepayid";
+
+    public static final String PREPAY_PAYURL = "payurl";
+
     @ConvertColumn(ignore = true, type = ConvertType.JSON)
     private String appid = "";
 
-    private String thirdpayno = ""; //第三方的支付流水号
+    private String thirdPayno = ""; //第三方的支付流水号
 
     @Override
     public PayPreResponse retcode(int retcode) {
@@ -40,12 +44,12 @@ public class PayPreResponse extends PayResponse {
         return this;
     }
 
-    public String getThirdpayno() {
-        return thirdpayno;
+    public String getThirdPayno() {
+        return thirdPayno;
     }
 
-    public void setThirdpayno(String thirdpayno) {
-        this.thirdpayno = thirdpayno;
+    public void setThirdPayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
     }
 
     public String getAppid() {
@@ -54,6 +58,18 @@ public class PayPreResponse extends PayResponse {
 
     public void setAppid(String appid) {
         this.appid = appid;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public String getThirdpayno() {
+        return thirdPayno;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setThirdpayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
     }
 
 }

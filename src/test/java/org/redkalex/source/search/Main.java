@@ -5,11 +5,13 @@
  */
 package org.redkalex.source.search;
 
-import java.util.Properties;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.source.*;
 import org.redkale.source.Range.LongRange;
-import org.redkale.util.SelectColumn;
+import org.redkale.util.*;
+import static org.redkale.source.AbstractDataSource.*;
+import static org.redkale.source.FilterNode.filter;
+import static org.redkale.source.SearchQuery.SEARCH_FILTER_NAME;
 
 /**
  *
@@ -19,18 +21,16 @@ public class Main {
 
     public static void main(String[] args) throws Throwable {
         {
-            FilterNode node = FilterNode.create("power", 7).and(FilterNode.create("type", "words").or("createTime", 1621581722242L));
+            FilterNode node = FilterNode.filter("power", 7).and(FilterNode.filter("type", "words").or("createTime", 1621581722242L));
             System.out.println(node.getExpress() + "========" + node.toString());
             System.out.println(new SearchRequest().filterNode(null, node));
-            node = FilterNode.create("power", 7).and("power2", 6).or(FilterNode.create("type", "words").and("createTime", 1621581722242L));
+            node = FilterNode.filter("power", 7).and("power2", 6).or(FilterNode.filter("type", "words").and("createTime", 1621581722242L));
             System.out.println(node.getExpress() + "========" + node.toString());
             System.out.println(new SearchRequest().filterNode(null, node));
         }
         LoggingFileHandler.initDebugLogConfig();
-        Properties confprop = new Properties();
-        confprop.put(DataSources.JDBC_URL, "http://127.0.0.1:9200");
-        OpenSearchSource source = new OpenSearchSource("platfsearch", confprop);
-        source.init(null);
+        OpenSearchSource source = new OpenSearchSource();
+        source.init(AnyValue.create().addValue(DATA_SOURCE_URL, "http://127.0.0.1:9200"));
         final boolean insert = false;
         if (insert) {
             System.out.println("删除表的结果是否成功:" + (source.dropTable(TestPost.class) == 1));
@@ -99,15 +99,15 @@ public class Main {
             System.out.println("第2个find结果: " + source.find(TestPost.class, SelectColumn.excludes("pubContent"), post2.getPostid()));
             System.out.println("第3个find结果: " + source.find(TestPost.class, SelectColumn.includes("pubContent"), post3.getPostid()));
             //System.out.println("第4个delete结果: " + source.delete(TestPost.class, post4.getPostid()));
-            System.out.println(source.queryColumnList("power", TestPost.class, FilterNode.create("createTime", new LongRange(post3.getCreateTime() + 1, -1L))));
+            System.out.println(source.queryColumnList("power", TestPost.class, filter("createTime", new LongRange(post3.getCreateTime() + 1, -1L))));
         }
-        //System.out.println(FilterNode.create("power", new int[]{1, 3}).and("createTime", 1621743242363L));
-        SearchBean.SearchSimpleBean searchBean = SearchBean.create("dddd内容", "title", "content", "pubContent");
-        SearchBean.SearchSimpleHighlightBean highlightBean = SearchBean.SearchHighlightBean.create();
+        //System.out.println(FilterNode.filter("power", new int[]{1, 3}).and("createTime", 1621743242363L));
+        SearchQuery.SearchSimpleQuery searchBean = SearchQuery.create("dddd内容", "title", "content", "pubContent");
+        SearchQuery.SearchSimpleHighlight highlightBean = SearchQuery.createHighlight();
         highlightBean.tag("<font color=red>", "</font>");
         searchBean.setHighlight(highlightBean);
-        System.out.println(source.queryList(TestPost.class, new Flipper(5, 5, "createTime DESC"), FilterNode.create("#search", searchBean).and("createTime", FilterExpress.GREATERTHAN, 1L)));
-        //System.out.println(source.queryColumnSet("power", TestPost.class, FilterNode.create("power", new int[]{1, 3}).and("createTime", 1621581722242L)));
+        System.out.println(source.queryList(TestPost.class, new Flipper(5, 5, "createTime DESC"), filter(SEARCH_FILTER_NAME, searchBean).and("createTime", FilterExpress.GREATERTHAN, 1L)));
+        //System.out.println(source.queryColumnSet("power", TestPost.class, FilterNode.filter("power", new int[]{1, 3}).and("createTime", 1621581722242L)));
         //System.out.println(source.queryColumnMap(TestPost.class, "power", FilterFunc.DISTINCTCOUNT, null));
         //System.out.println(source.getNumberResult(TestPost.class, FilterFunc.MIN, 5, "power", (FilterNode) null));
         //System.out.println(source.delete(TestPost.class, "fqo4-kos8mcmd", "fqo4-koscfh48"));

@@ -5,6 +5,7 @@
  */
 package org.redkalex.pay;
 
+import org.redkale.convert.ConvertDisabled;
 import org.redkale.convert.json.JsonFactory;
 
 /**
@@ -15,15 +16,17 @@ import org.redkale.convert.json.JsonFactory;
  */
 public class PayNotifyResponse extends PayResponse {
 
-    protected short paytype; //支付类型; 
+    protected short payType; //支付类型; 
 
     protected String payno = ""; //自己的订单号
 
-    protected long payedmoney = -1; //到账的金额，单位：分
+    protected long payedMoney = -1; //到账的金额，单位：分
 
-    protected String thirdpayno = ""; //第三方的支付流水号
+    protected long refundedMoney = -1; //退款的金额，单位：分
 
-    protected String notifytext = ""; //返回的文本信息, 常见场景是success字符串
+    protected String thirdPayno = ""; //第三方的支付流水号
+
+    protected String notifyText = ""; //返回的文本信息, 常见场景是success字符串
 
     @Override
     public PayNotifyResponse retcode(int retcode) {
@@ -39,7 +42,7 @@ public class PayNotifyResponse extends PayResponse {
     }
 
     public PayNotifyResponse notifytext(String notifytext) {
-        this.notifytext = notifytext == null ? "" : notifytext;
+        this.notifyText = notifytext == null ? "" : notifytext;
         return this;
     }
 
@@ -48,20 +51,20 @@ public class PayNotifyResponse extends PayResponse {
         return JsonFactory.root().getConvert().convertTo(this);
     }
 
-    public String getNotifytext() {
-        return notifytext;
+    public String getNotifyText() {
+        return notifyText;
     }
 
-    public void setNotifytext(String notifytext) {
-        this.notifytext = notifytext == null ? "" : notifytext;
+    public void setNotifyText(String notifyText) {
+        this.notifyText = notifyText == null ? "" : notifyText;
     }
 
-    public short getPaytype() {
-        return paytype;
+    public short getPayType() {
+        return payType;
     }
 
-    public void setPaytype(short paytype) {
-        this.paytype = paytype;
+    public void setPayType(short payType) {
+        this.payType = payType;
     }
 
     public String getPayno() {
@@ -72,20 +75,75 @@ public class PayNotifyResponse extends PayResponse {
         this.payno = payno;
     }
 
-    public long getPayedmoney() {
-        return payedmoney;
+    public long getPayedMoney() {
+        return payedMoney;
     }
 
-    public void setPayedmoney(long payedmoney) {
-        this.payedmoney = payedmoney;
+    public void setPayedMoney(long payedMoney) {
+        this.payedMoney = payedMoney;
     }
 
+    public String getThirdPayno() {
+        return thirdPayno;
+    }
+
+    public void setThirdPayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
+    }
+
+    public long getRefundedMoney() {
+        return refundedMoney;
+    }
+
+    public void setRefundedMoney(long refundedMoney) {
+        this.refundedMoney = refundedMoney;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public short getPaytype() {
+        return payType;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setPaytype(short payType) {
+        this.payType = payType;
+    }
+
+    @Deprecated
+    @ConvertDisabled
     public String getThirdpayno() {
-        return thirdpayno;
+        return thirdPayno;
     }
 
-    public void setThirdpayno(String thirdpayno) {
-        this.thirdpayno = thirdpayno;
+    @Deprecated
+    @ConvertDisabled
+    public void setThirdpayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
     }
 
+    @Deprecated
+    @ConvertDisabled
+    public String getNotifytext() {
+        return notifyText;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setNotifytext(String notifyText) {
+        this.notifyText = notifyText == null ? "" : notifyText;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public long getPayedmoney() {
+        return payedMoney;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setPayedmoney(long payedMoney) {
+        this.payedMoney = payedMoney;
+    }
 }

@@ -12,7 +12,8 @@ import java.net.URL;
 import java.sql.*;
 import java.time.*;
 import java.util.*;
-import org.redkale.source.DataResultSet;
+import org.redkale.convert.ConvertDisabled;
+import org.redkale.source.*;
 
 /**
  *
@@ -20,13 +21,16 @@ import org.redkale.source.DataResultSet;
  */
 public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
 
+    private EntityInfo info;
+
     private SqlConnection conn;
 
     private RowIterator<Row> it;
 
     private Row currentRow;
 
-    public VertxResultSet(SqlConnection conn, RowSet<Row> rowSet) {
+    public VertxResultSet(EntityInfo info, SqlConnection conn, RowSet<Row> rowSet) {
+        this.info = info;
         this.conn = conn;
         this.it = rowSet == null ? null : rowSet.iterator();
     }
@@ -37,6 +41,12 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
         boolean has = it.hasNext();
         this.currentRow = has ? it.next() : null;
         return has;
+    }
+
+    @Override //可以为空
+    @ConvertDisabled
+    public EntityInfo getEntityInfo() {
+        return info;
     }
 
     @Override

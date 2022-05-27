@@ -28,7 +28,6 @@ public class MyRespRowDataRowDecoder extends MyRespDecoder<MyRowData> {
             MyRespOK ok = MyRespDecoder.readOKPacket(conn, buffer, length, index, array);
             return null;
         }
-
         final MyRowColumn[] columns = dataset.rowDesc.columns;
         int size = columns.length;
         if (binary) { // BINARY row decoding

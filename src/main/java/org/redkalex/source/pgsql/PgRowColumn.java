@@ -30,7 +30,7 @@ public class PgRowColumn {
         this.oid = oid;
     }
 
-    public String getName() { 
+    public String getName() {
         return name;
     }
 
@@ -40,7 +40,7 @@ public class PgRowColumn {
 
     @Override
     public String toString() {
-        return name;
+        return "{\"name\"=\"" + name + "\", \"oid\"=" + oid + "}";
     }
 
     public Serializable getObject(byte[] value) {

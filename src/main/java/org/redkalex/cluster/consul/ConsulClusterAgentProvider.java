@@ -5,6 +5,7 @@
  */
 package org.redkalex.cluster.consul;
 
+import javax.annotation.Priority;
 import org.redkale.cluster.*;
 import org.redkale.util.AnyValue;
 
@@ -12,6 +13,7 @@ import org.redkale.util.AnyValue;
  *
  * @author zhangjx
  */
+@Priority(-900)
 public class ConsulClusterAgentProvider implements ClusterAgentProvider {
 
     @Override

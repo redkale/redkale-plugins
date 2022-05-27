@@ -38,6 +38,8 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
 
     protected PgClientRequest request;
 
+    protected EntityInfo info;
+
     protected PgRowDesc rowDesc;
 
     protected Map<String, Integer> colmap;
@@ -45,6 +47,14 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
     protected final List<PgRowData> rowData = new ArrayList<>(32);
 
     protected int rowIndex = -1;
+
+    protected int limit = -1;
+
+    protected int page = -1; //一页的数据
+
+    protected int[] pages; //一页的数据
+
+    protected int pageIndex;
 
     protected PgRowData currRow;
 
@@ -55,6 +65,12 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
     protected int[] batchEffectCounts;
 
     public PgResultSet() {
+    }
+
+    @Override //可以为空
+    @ConvertDisabled
+    public EntityInfo getEntityInfo() {
+        return info;
     }
 
     @Override
@@ -129,7 +145,7 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
     @Override
     public boolean next() {
         if (this.rowData.isEmpty()) return false;
-        if (++this.rowIndex < this.rowData.size()) {
+        if (++this.rowIndex < (this.limit > 0 ? this.limit : this.rowData.size())) {
             this.currRow = this.rowData.get(this.rowIndex);
             return true;
         }
@@ -138,6 +154,13 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
 
     @Override
     public void close() {
+        if (page > 0) {
+            this.limit += this.page;
+            this.rowIndex--; //merge模式下需要-1
+        } else if (pages != null && pageIndex < pages.length - 1) {
+            this.limit += this.pages[++pageIndex];
+            this.rowIndex--; //merge模式下需要-1
+        }
     }
 
     @Override

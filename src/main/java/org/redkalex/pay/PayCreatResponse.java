@@ -6,6 +6,8 @@
 package org.redkalex.pay;
 
 import java.util.Map;
+import org.redkale.convert.ConvertDisabled;
+import org.redkale.util.Reproduce;
 
 /**
  *
@@ -15,7 +17,16 @@ import java.util.Map;
  */
 public class PayCreatResponse extends PayResponse {
 
-    private String thirdpayno = ""; //第三方的支付流水号
+    private static final Reproduce<PayCreatResponse, PayPreResponse> reproduce = Reproduce.create(PayCreatResponse.class, PayPreResponse.class);
+
+    private String thirdPayno = ""; //第三方的支付流水号
+
+    public PayCreatResponse() {
+    }
+
+    public PayCreatResponse(PayPreResponse resp) {
+        reproduce.apply(this, resp);
+    }
 
     @Override
     public PayCreatResponse retcode(int retcode) {
@@ -36,12 +47,23 @@ public class PayCreatResponse extends PayResponse {
         return this;
     }
 
+    public String getThirdPayno() {
+        return thirdPayno;
+    }
+
+    public void setThirdPayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
+    }
+
+    @Deprecated
+    @ConvertDisabled
     public String getThirdpayno() {
-        return thirdpayno;
+        return thirdPayno;
     }
 
-    public void setThirdpayno(String thirdpayno) {
-        this.thirdpayno = thirdpayno;
+    @Deprecated
+    @ConvertDisabled
+    public void setThirdpayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
     }
-
 }

@@ -22,7 +22,6 @@ import org.bson.conversions.Bson;
 import org.reactivestreams.*;
 import org.redkale.service.*;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
@@ -67,16 +66,10 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     public MongodbDriverDataSource() {
     }
 
-    public MongodbDriverDataSource(String unitName, Properties readprop, Properties writeprop) {
-        this.name = unitName;
-        this.readConfProps = readprop;
-        this.writeConfProps = writeprop;
-    }
-
     @Override
     public void init(AnyValue config) {
         super.init(config);
-        this.cacheForbidden = "NONE".equalsIgnoreCase(readConfProps.getProperty(JDBC_CACHE_MODE));
+        this.cacheForbidden = "NONE".equalsIgnoreCase(readConfProps.getProperty(DATA_SOURCE_CACHEMODE));
         this.readMongoClient = createMongoClient(true, this.readConfProps);
         if (this.readConfProps == this.writeConfProps) {
             this.writeMongoClient = this.readMongoClient;
@@ -87,10 +80,10 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     protected MongoClient createMongoClient(boolean read, Properties prop) {
-        int maxconns = Math.max(1, Integer.decode(prop.getProperty(JDBC_CONNECTIONS_LIMIT, "" + Utility.cpus())));
+        int maxconns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
         // 实体类自动映射
         MongoClientSettings.Builder settingBuilder = MongoClientSettings.builder();
-        String url = prop.getProperty(DataSources.JDBC_URL);
+        String url = prop.getProperty(DATA_SOURCE_URL);
         if (url.indexOf('?') < 0) {
             url += "?maxpoolsize=" + maxconns;
         } else if (!url.contains("maxpoolsize=")) {
@@ -115,6 +108,12 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         if (this.writeMongoClient != null && this.readMongoClient != this.writeMongoClient) {
             this.writeMongoClient.close();
         }
+    }
+
+    @Override
+    public String toString() {
+        if (readConfProps == null) return getClass().getSimpleName() + "{}"; //compileMode模式下会为null
+        return getClass().getSimpleName() + "{url=" + readConfProps.getProperty(DATA_SOURCE_URL) + "}";
     }
 
     @Local
@@ -841,7 +840,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         final EntityInfo<T> info = loadEntityInfo(clazz);
         if (pks == null || pks.length == 0) return CompletableFuture.completedFuture(info.getArrayer().apply(0));
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(info.getType(), selects, null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, pks)).thenApply(list -> {
+        return queryListAsync(info.getType(), selects, null, FilterNode.filter(info.getPrimarySQLColumn(), FilterExpress.IN, pks)).thenApply(list -> {
             T[] rs = info.getArrayer().apply(pks.length);
             for (int i = 0; i < rs.length; i++) {
                 T t = null;
@@ -856,6 +855,18 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             }
             return rs;
         });
+    }
+
+    @Override
+    public <D extends Serializable, T> List<T> findsList(Class<T> clazz, Stream<D> pks) {
+        return findsListAsync(clazz, pks).join();
+    }
+
+    @Override
+    public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
+        final EntityInfo<T> info = loadEntityInfo(clazz);
+        Serializable[] ids = pks.toArray(v -> new Serializable[v]);
+        return queryListAsync(info.getType(), null, null, FilterNode.filter(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
     }
 
     @Override
@@ -990,7 +1001,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         final ArrayList<K> pks = new ArrayList<>();
         keyStream.forEach(k -> pks.add(k));
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(clazz, FilterNode.create(primary.field(), pks)).thenApply((List<T> rs) -> {
+        return queryListAsync(clazz, FilterNode.filter(primary.field(), pks)).thenApply((List<T> rs) -> {
             Map<K, T> map = new LinkedHashMap<>();
             if (rs.isEmpty()) return new LinkedHashMap<>();
             for (T item : rs) {

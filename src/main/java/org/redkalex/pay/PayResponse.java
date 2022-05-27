@@ -20,7 +20,7 @@ import org.redkale.service.RetResult;
 public class PayResponse extends RetResult<Map<String, String>> {
 
     @ConvertColumn(ignore = true, type = ConvertType.JSON)
-    protected String responsetext = ""; //第三方支付返回的原始结果字符串
+    protected String responseText = ""; //第三方支付返回的原始结果字符串
 
     public PayResponse() {
     }
@@ -65,12 +65,12 @@ public class PayResponse extends RetResult<Map<String, String>> {
         return this;
     }
 
-    public String getResponsetext() {
-        return responsetext;
+    public String getResponseText() {
+        return responseText;
     }
 
-    public void setResponsetext(String responsetext) {
-        this.responsetext = responsetext;
+    public void setResponseText(String responseText) {
+        this.responseText = responseText;
     }
 
     @Override
@@ -79,4 +79,17 @@ public class PayResponse extends RetResult<Map<String, String>> {
     }
 
     private static final JsonFactory jf = JsonFactory.create().skipAllIgnore(true);
+
+    @Deprecated
+    @ConvertDisabled
+    public String getResponsetext() {
+        return responseText;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setResponsetext(String responseText) {
+        this.responseText = responseText;
+    }
+
 }

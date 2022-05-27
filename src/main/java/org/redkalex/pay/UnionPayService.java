@@ -93,6 +93,7 @@ public final class UnionPayService extends AbstractPayService {
         this.elements.putAll(elements);
     }
 
+    @Override
     public UnionPayElement getPayElement(String appid) {
         return this.elements.get(appid);
     }
@@ -137,18 +138,18 @@ public final class UnionPayService extends AbstractPayService {
             map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
             map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
             map.put("accType", "01");					 	//账号类型 01：银行卡; 02：存折; 03：IC卡帐号类型(卡介质)
-            map.put("txnAmt", "" + request.getPaymoney());//交易金额 单位为分，不能带小数点
+            map.put("txnAmt", "" + request.getPayMoney());//交易金额 单位为分，不能带小数点
             map.put("currencyCode", "156");                 //境内商户CNY固定 156 人民币
 
             //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址
-            map.put("backUrl", ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl));
+            map.put("backUrl", ((request.notifyUrl != null && !request.notifyUrl.isEmpty()) ? request.notifyUrl : element.notifyurl));
             map.put("signature", createSign(element, map, null));
 
-            return postHttpContentAsync(element.createurl, joinMap(map)).thenApply(responsetext -> {
-                result.responsetext = responsetext;
-                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+            return postHttpContentAsync(element.createurl, joinMap(map)).thenApply(responseText -> {
+                result.responseText = responseText;
+                Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
@@ -160,7 +161,7 @@ public final class UnionPayService extends AbstractPayService {
             });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
     }
@@ -174,20 +175,20 @@ public final class UnionPayService extends AbstractPayService {
     public CompletableFuture<PayNotifyResponse> notifyAsync(PayNotifyRequest request) {
         request.checkVaild();
         final PayNotifyResponse result = new PayNotifyResponse();
-        result.setPaytype(request.getPaytype());
+        result.setPayType(request.getPayType());
         final String rstext = "success";
         Map<String, String> map = request.getAttach();
         result.setPayno(map.getOrDefault("orderId", ""));
-        result.setThirdpayno(map.getOrDefault("queryId", ""));
+        result.setThirdPayno(map.getOrDefault("queryId", ""));
         final UnionPayElement element = elements.get(request.getAppid());
         if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
-        if (!checkSign(element, map, null)) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
+        if (!checkSign(element, map, request.getBody(), request.getHeaders())) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
         //https://open.unionpay.com/upload/download/%E5%B9%B3%E5%8F%B0%E6%8E%A5%E5%85%A5%E6%8E%A5%E5%8F%A3%E8%A7%84%E8%8C%83-%E7%AC%AC5%E9%83%A8%E5%88%86-%E9%99%84%E5%BD%95V2.0.pdf
         if ("70".equals(map.get("respCode"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(map.getOrDefault("respMsg", "unpay")).toFuture();
         if (!"00".equalsIgnoreCase(map.get("respCode")) || Long.parseLong(map.getOrDefault("txnAmt", "0")) < 1) {
             return result.retcode(RETPAY_PAY_ERROR).retinfo(map.getOrDefault("respMsg", null)).toFuture();
         }
-        result.setPayedmoney(Long.parseLong(map.get("txnAmt")));
+        result.setPayedMoney(Long.parseLong(map.get("txnAmt")));
         return result.notifytext(rstext).toFuture();
     }
 
@@ -222,7 +223,7 @@ public final class UnionPayService extends AbstractPayService {
             map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
             map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
             map.put("accType", "01");					 	//账号类型 01：银行卡; 02：存折; 03：IC卡帐号类型(卡介质)
-            map.put("txnAmt", "" + request.getPaymoney());//交易金额 单位为分，不能带小数点
+            map.put("txnAmt", "" + request.getPayMoney());//交易金额 单位为分，不能带小数点
             map.put("currencyCode", "156");                 //境内商户CNY固定 156 人民币
             //contentData.put("reqReserved", "透传字段");           //商户自定义保留域，交易应答时会原样返回
 
@@ -234,20 +235,20 @@ public final class UnionPayService extends AbstractPayService {
             if (!element.notifyurl.isEmpty()) map.put("backUrl", element.notifyurl);
             map.put("signature", createSign(element, map, null));
 
-            return postHttpContentAsync(element.createurl, joinMap(map)).thenApply(responsetext -> {
-                result.responsetext = responsetext;
-                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+            return postHttpContentAsync(element.createurl, joinMap(map)).thenApply(responseText -> {
+                result.responseText = responseText;
+                Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
-                result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
+                result.setThirdPayno(resultmap.getOrDefault("queryId", ""));
                 return result;
             });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
 
@@ -286,11 +287,11 @@ public final class UnionPayService extends AbstractPayService {
 
             map.put("signature", createSign(element, map, null));
 
-            return postHttpContentAsync(element.queryurl, joinMap(map)).thenApply(responsetext -> {
-                result.responsetext = responsetext;
-                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+            return postHttpContentAsync(element.queryurl, joinMap(map)).thenApply(responseText -> {
+                result.responseText = responseText;
+                Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
@@ -306,14 +307,14 @@ public final class UnionPayService extends AbstractPayService {
                     case "TRADE_FINISHED": paystatus = PAYSTATUS_PAYOK;
                         break;
                 }
-                result.setPaystatus(paystatus);
-                result.setThirdpayno(resultmap.getOrDefault("queryId", ""));
-                result.setPayedmoney((long) (Double.parseDouble(resultmap.getOrDefault("txnAmt", "0.0")) * 100));
+                result.setPayStatus(paystatus);
+                result.setThirdPayno(resultmap.getOrDefault("queryId", ""));
+                result.setPayedMoney((long) (Double.parseDouble(resultmap.getOrDefault("txnAmt", "0.0")) * 100));
                 return result;
             });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
 
@@ -349,20 +350,20 @@ public final class UnionPayService extends AbstractPayService {
             map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
             map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
             map.put("accType", "01");					 	//账号类型 01：银行卡; 02：存折; 03：IC卡帐号类型(卡介质)
-            map.put("txnAmt", "" + request.getPaymoney());//交易金额 单位为分，不能带小数点
+            map.put("txnAmt", "" + request.getPayMoney());//交易金额 单位为分，不能带小数点
             map.put("currencyCode", "156");                 //境内商户CNY固定 156 人民币
 
-            map.put("origQryId", request.getThirdpayno());  //【原始交易流水号】，原消费交易返回的的queryId，可以从消费交易后台通知接口中或者交易状态查询接口中获取
+            map.put("origQryId", request.getThirdPayno());  //【原始交易流水号】，原消费交易返回的的queryId，可以从消费交易后台通知接口中或者交易状态查询接口中获取
             //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址，【支付失败的交易银联不会发送后台通知】
             if (!element.notifyurl.isEmpty()) map.put("backUrl", element.notifyurl);
 
             map.put("signature", createSign(element, map, null));
 
-            return postHttpContentAsync(element.closeurl, joinMap(map)).thenApply(responsetext -> {
-                result.responsetext = responsetext;
-                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+            return postHttpContentAsync(element.closeurl, joinMap(map)).thenApply(responseText -> {
+                result.responseText = responseText;
+                Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
@@ -370,7 +371,7 @@ public final class UnionPayService extends AbstractPayService {
             });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
     }
@@ -404,19 +405,19 @@ public final class UnionPayService extends AbstractPayService {
             map.put("accessType", "0");            		 	//接入类型，商户接入填0 ，不需修改（0：直连商户， 1： 收单机构 2：平台商户）
             map.put("orderId", request.getPayno());       //商户订单号，8-40位数字字母，不能含“-”或“_”，可以自行定制规则	
             map.put("txnTime", String.format(format, System.currentTimeMillis())); //订单发送时间，取系统时间，格式为YYYYMMDDhhmmss，必须取当前时间，否则会报txnTime无效
-            map.put("txnAmt", "" + request.getRefundmoney());//****退货金额，单位分，不要带小数点。退货金额小于等于原消费金额，当小于的时候可以多次退货至退货累计金额等于原消费金额		
+            map.put("txnAmt", "" + request.getRefundMoney());//****退货金额，单位分，不要带小数点。退货金额小于等于原消费金额，当小于的时候可以多次退货至退货累计金额等于原消费金额		
             map.put("currencyCode", "156");                 //境内商户CNY固定 156 人民币
 
-            map.put("origQryId", request.getThirdpayno());  //【原始交易流水号】，原消费交易返回的的queryId，可以从消费交易后台通知接口中或者交易状态查询接口中获取
+            map.put("origQryId", request.getThirdPayno());  //【原始交易流水号】，原消费交易返回的的queryId，可以从消费交易后台通知接口中或者交易状态查询接口中获取
             //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址，【支付失败的交易银联不会发送后台通知】
             if (!element.notifyurl.isEmpty()) map.put("backUrl", element.notifyurl);
 
             map.put("signature", createSign(element, map, null));
-            return postHttpContentAsync(element.refundurl, joinMap(map)).thenApply(responsetext -> {
-                result.responsetext = responsetext;
-                Map<String, String> resultmap = formatTextToMap(result.responsetext);
+            return postHttpContentAsync(element.refundurl, joinMap(map)).thenApply(responseText -> {
+                result.responseText = responseText;
+                Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
@@ -424,27 +425,27 @@ public final class UnionPayService extends AbstractPayService {
             });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
 
     }
 
     @Override
-    public PayRefundResponse queryRefund(PayRequest request) {
+    public PayRefundResponse queryRefund(PayRefundQryReq request) {
         return queryRefundAsync(request).join();
     }
 
     @Override
-    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRequest request) {
+    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRefundQryReq request) {
         PayQueryResponse queryResponse = query(request);
         final PayRefundResponse response = new PayRefundResponse();
         response.setRetcode(queryResponse.getRetcode());
         response.setRetinfo(queryResponse.getRetinfo());
-        response.setResponsetext(queryResponse.getResponsetext());
+        response.setResponseText(queryResponse.getResponseText());
         response.setResult(queryResponse.getResult());
         if (queryResponse.isSuccess()) {
-            response.setRefundedmoney(Long.parseLong(response.getResult().get("txnAmt")));
+            response.setRefundedMoney(Long.parseLong(response.getResult().get("txnAmt")));
         }
         return response.toFuture();
     }
@@ -474,7 +475,7 @@ public final class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text) {  //验证签名
+    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {  //验证签名
         if (!((UnionPayElement) element).verifycertid.equals(map.get("certId"))) return false;
         if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
         try {
@@ -502,8 +503,8 @@ public final class UnionPayService extends AbstractPayService {
         //"pay.union.version" //银联协议版本
         public String version = "5.0.0";
 
-        //"pay.union.notifyurl" //回调url
-        //public String notifyurl = "";
+        //"pay.union.notifyUrl" //回调url
+        //public String notifyUrl = "";
         //"pay.union.createurl" //请求付款url
         public String createurl = "https://gateway.95516.com/gateway/api/appTransReq.do";
 

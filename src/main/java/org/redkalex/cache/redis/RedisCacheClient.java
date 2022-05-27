@@ -5,7 +5,6 @@
  */
 package org.redkalex.cache.redis;
 
-import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
@@ -16,10 +15,8 @@ import org.redkale.net.client.*;
  */
 public class RedisCacheClient extends Client<RedisCacheRequest, RedisCacheResult> {
 
-    protected static final int DEFAULT_POOL_SIZE = Integer.getInteger("redkale.client.response.pool.size", 256);
-
-    public RedisCacheClient(AsyncGroup group, String key, SocketAddress address, int maxConns, int maxPipelines, RedisCacheReqAuth authreq, RedisCacheReqDB dbreq) {
-        super(group, true, address, maxConns, maxPipelines, p -> new RedisCacheCodec(), RedisCacheReqPing.INSTANCE, RedisCacheReqClose.INSTANCE, null); //maxConns
+    public RedisCacheClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, RedisCacheReqAuth authreq, RedisCacheReqDB dbreq) {
+        super(group, true, address, maxConns, maxPipelines, RedisCacheReqPing.INSTANCE, RedisCacheReqClose.INSTANCE, null); //maxConns
         this.connectionContextName = "redkalex-redis-client-connection-" + key;
         if (authreq != null || dbreq != null) {
             if (authreq != null && dbreq != null) {

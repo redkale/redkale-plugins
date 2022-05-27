@@ -8,6 +8,7 @@ package org.redkalex.source.search;
 import javax.annotation.Priority;
 import org.redkale.source.*;
 import org.redkale.util.AnyValue;
+import static org.redkale.source.AbstractDataSource.*;
 
 /**
  *
@@ -18,7 +19,13 @@ public class OpenSearchSourceProvider implements DataSourceProvider {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
-        return "search".equalsIgnoreCase(config.getValue("dbtype"));
+        String dbtype = config.getValue("dbtype");
+        if (dbtype == null) {
+            AnyValue read = config.getAnyValue("read");
+            AnyValue node = read == null ? config : read;
+            dbtype = parseDbtype(node.getValue(DATA_SOURCE_URL));
+        }
+        return "search".equalsIgnoreCase(dbtype);
     }
 
     @Override

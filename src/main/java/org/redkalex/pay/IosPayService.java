@@ -117,32 +117,32 @@ public final class IosPayService extends AbstractPayService {
         if (request.getAttach() != null && request.getAttach().containsKey("bean")) {
             beanstr = request.attach("bean");
         } else {
-            beanstr = request.getText();
+            beanstr = request.getBody();
         }
         if (beanstr != null && !beanstr.isEmpty()) {
             IosNotifyBean bean = JsonConvert.root().convertFrom(IosNotifyBean.class, beanstr);
             PayNotifyResponse resp = new PayNotifyResponse();
-            resp.setResponsetext(beanstr);
+            resp.setResponseText(beanstr);
             resp.setPayno(bean.payno());
-            resp.setPaytype(request.getPaytype());
+            resp.setPayType(request.getPayType());
             return verifyRequest(APPSTORE, bean.receiptData, request, resp);
         }
         //没有获取参数
         PayNotifyResponse resp = new PayNotifyResponse();
-        resp.setPaytype(request.getPaytype());
+        resp.setPayType(request.getPayType());
         resp.setRetcode(RETPAY_PAY_ERROR);
         return CompletableFuture.completedFuture(resp);
     }
 
     protected CompletableFuture<PayNotifyResponse> verifyRequest(String url, String receiptData, PayNotifyRequest request, PayNotifyResponse resp) {
         return postHttpContentAsync(client, APPSTORE, "{\"receipt-data\" : \"" + receiptData + "\"}").thenCompose(responseText -> {
-            resp.setResponsetext(responseText);
+            resp.setResponseText(responseText);
             try {
                 final Map<String, String> resultmap = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, responseText);
                 resp.setResult(resultmap);
                 if ("21007".equals(resultmap.get("status"))) return verifyRequest(SANDBOX, receiptData, request, resp);
                 if (!"0".equals(resultmap.get("status"))) return resp.retcode(RETPAY_PAY_ERROR).toFuture();
-                resp.setPayedmoney(0);
+                resp.setPayedMoney(0);
             } catch (Throwable t) {
                 logger.log(Level.SEVERE, "verifyRequest " + request + " error", t);
                 return resp.retcode(RETPAY_PAY_ERROR).toFuture();
@@ -172,7 +172,7 @@ public final class IosPayService extends AbstractPayService {
     }
 
     @Override
-    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRequest request) {
+    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRefundQryReq request) {
         return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
     }
 
@@ -207,7 +207,7 @@ public final class IosPayService extends AbstractPayService {
     }
 
     @Override
-    public PayRefundResponse queryRefund(PayRequest request) {
+    public PayRefundResponse queryRefund(PayRefundQryReq request) {
         return queryRefundAsync(request).join();
     }
 
@@ -217,7 +217,7 @@ public final class IosPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(AbstractPayService.PayElement element, Map<String, ?> map, String text) {
+    protected boolean checkSign(AbstractPayService.PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {
         return true;
     }
 

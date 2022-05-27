@@ -19,6 +19,7 @@ public class RedisLettuceCacheSourceProvider implements CacheSourceProvider {
     @Override
     public boolean acceptsConf(AnyValue config) {
         try {
+            Object.class.isAssignableFrom(io.lettuce.core.support.BoundedPoolConfig.class); //试图加载Lettuce相关类
             RedisLettuceCacheSource source = RedisLettuceCacheSource.class.getConstructor().newInstance();
             return source.acceptsConf(config);
         } catch (Throwable e) {

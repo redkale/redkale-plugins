@@ -5,7 +5,6 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.net.*;
 import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -18,17 +17,18 @@ import org.redkale.net.client.*;
  */
 public class PgClient extends Client<PgClientRequest, PgResultSet> {
 
-    protected static final int DEFAULT_POOL_SIZE = Integer.getInteger("redkale.client.response.pool.size", 256);
-
     private static final AtomicInteger extendedStatementIndex = new AtomicInteger();
 
     protected static final ConcurrentHashMap<String, Long> extendedStatementIndexMap = new ConcurrentHashMap();
 
     protected final boolean cachePreparedStatements;
 
+    protected final boolean autoddl;
+
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public PgClient(AsyncGroup group, String key, SocketAddress address, int maxConns, int maxPipelines, final Properties prop, final PgReqAuthentication authreq) {
-        super(group, true, address, maxConns, maxPipelines, p -> new PgClientCodec(), PgReqPing.INSTANCE, PgReqClose.INSTANCE, null); //maxConns
+    public PgClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, boolean autoddl, final Properties prop, final PgReqAuthentication authreq) {
+        super(group, true, address, maxConns, maxPipelines, PgReqPing.INSTANCE, PgReqClose.INSTANCE, null); //maxConns
+        this.autoddl = autoddl;
         this.connectionContextName = "redkalex-pgsql-client-connection-" + key;
         this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authreq).thenCompose((PgResultSet rs0) -> {
             PgRespAuthResultSet rs = (PgRespAuthResultSet) rs0;
@@ -43,7 +43,7 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
                     return writeChannel(conn, new PgReqAuthScramSaslFinal(cr)).thenApply(pg -> conn);
                 });
         }));
-        this.cachePreparedStatements = prop == null || "true".equalsIgnoreCase(prop.getProperty("javax.persistence.jdbc.preparecache", "true"));
+        this.cachePreparedStatements = prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));
     }
 
     @Override

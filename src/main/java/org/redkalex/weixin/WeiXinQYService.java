@@ -18,6 +18,7 @@ import java.lang.reflect.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.*;
 import java.util.logging.*;
 import javax.annotation.*;
@@ -40,6 +41,8 @@ public final class WeiXinQYService implements Service {
     private final boolean finest = logger.isLoggable(Level.FINEST);
 
     private final boolean finer = logger.isLoggable(Level.FINER);
+    
+    private final boolean fine = logger.isLoggable(Level.FINE);
 
     private static class Token {
 
@@ -85,34 +88,44 @@ public final class WeiXinQYService implements Service {
     }
 
     //-----------------------------------微信企业号接口----------------------------------------------------------
-    public Map<String, String> getQYUserCode(String code, String agentid) throws IOException {
-        String url = "https://qyapi.weixin.qq.com/cgi-bin/user/getuserinfo?access_token=" + getQYAccessToken() + "&code=" + code + "&agentid=" + agentid;
-        String json = getHttpContent(url);
-        if (finest) logger.finest(url + "--->" + json);
-        return convert.convertFrom(MAPTYPE, json);
+    public CompletableFuture<Map<String, String>> getQYUserCode(String code, String agentid) throws IOException {
+        return getQYAccessToken().thenCompose(token -> {
+            String url = "https://qyapi.weixin.qq.com/cgi-bin/user/getuserinfo?access_token=" + token + "&code=" + code + "&agentid=" + agentid;
+            return getHttpContentAsync(url).thenApply(json -> {
+                if (finest) logger.finest(url + "--->" + json);
+                return (Map<String, String>) convert.convertFrom(MAPTYPE, json);
+            });
+        });
     }
 
-    public void sendQYTextMessage(String agentid, String message) {
-        sendQYMessage(new WeiXinQYMessage(agentid, message));
+    public CompletableFuture<Void> sendQYTextMessage(String agentid, String message) {
+        return sendQYMessage(new WeiXinQYMessage(agentid, message));
     }
 
-    public void sendQYTextMessage(String agentid, Supplier<String> contentSupplier) {
-        sendQYMessage(new WeiXinQYMessage(agentid, contentSupplier));
+    public CompletableFuture<Void> sendQYTextMessage(String agentid, Supplier<String> contentSupplier) {
+        return sendQYMessage(new WeiXinQYMessage(agentid, contentSupplier));
     }
 
-    public void sendQYMessage(WeiXinQYMessage message) {
+    public CompletableFuture<Void> sendQYMessage(WeiXinQYMessage message) {
+        CompletableFuture future = new CompletableFuture();
         runAsync(() -> {
             String result = null;
             try {
                 message.supplyContent();
-                if (message.getText() == null) return; //没内容不需要发
+                if (message.getText() == null) { //没内容不需要发
+                    future.complete(null);
+                    return;
+                }
                 String url = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=" + getQYAccessToken();
                 result = postHttpContent(url, convert.convertTo(message));
                 if (finest) logger.finest("sendQYMessage ok: " + message + " -> " + result);
+                future.complete(null);
             } catch (Exception e) {
+                future.completeExceptionally(e);
                 logger.log(Level.WARNING, "sendQYMessage error: " + message + " -> " + result, e);
             }
         });
+        return future;
     }
 
     public String verifyQYURL(String msgSignature, String timeStamp, String nonce, String echoStr) {
@@ -121,19 +134,21 @@ public final class WeiXinQYService implements Service {
         return decryptQY(echoStr);
     }
 
-    protected String getQYAccessToken() throws IOException {
+    protected CompletableFuture<String> getQYAccessToken() throws IOException {
         if (qyAccessToken.accesstime < System.currentTimeMillis() - qyAccessToken.expires) qyAccessToken.token = null;
         if (qyAccessToken.token == null) {
             String url = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=" + qycorpid + "&corpsecret=" + qysecret;
-            String json = getHttpContent(url);
-            if (finest) logger.finest(url + "--->" + json);
-            Map<String, String> jsonmap = convert.convertFrom(MAPTYPE, json);
-            qyAccessToken.accesstime = System.currentTimeMillis();
-            qyAccessToken.token = jsonmap.get("access_token");
-            String exp = jsonmap.get("expires_in");
-            if (exp != null) qyAccessToken.expires = (Integer.parseInt(exp) - 100) * 1000;
+            return getHttpContentAsync(url).thenApply(json -> {
+                if (finest) logger.finest(url + "--->" + json);
+                Map<String, String> jsonmap = convert.convertFrom(MAPTYPE, json);
+                qyAccessToken.accesstime = System.currentTimeMillis();
+                qyAccessToken.token = jsonmap.get("access_token");
+                String exp = jsonmap.get("expires_in");
+                if (exp != null) qyAccessToken.expires = (Integer.parseInt(exp) - 100) * 1000;
+                return qyAccessToken.token;
+            });
         }
-        return qyAccessToken.token;
+        return CompletableFuture.completedFuture(qyAccessToken.token);
     }
 
     /**

@@ -28,11 +28,11 @@ public class UnionPayServiceTest {
 
         //支付
         final PayCreatRequest creatRequest = new PayCreatRequest();
-        creatRequest.setPaytype(Pays.PAYTYPE_UNION);
+        creatRequest.setPayType(Pays.PAYTYPE_UNION);
         creatRequest.setPayno("Redkale100000001");
-        creatRequest.setPaymoney(10); //1毛钱
-        creatRequest.setPaytitle("一斤红菜苔");
-        creatRequest.setPaybody("一斤红菜苔");
+        creatRequest.setPayMoney(10); //1毛钱
+        creatRequest.setPayTitle("一斤红菜苔");
+        creatRequest.setPayBody("一斤红菜苔");
         creatRequest.setClientAddr(Utility.localInetAddress().getHostAddress());
         final PayCreatResponse creatResponse = service.create(creatRequest);
         System.out.println(creatResponse);
@@ -40,7 +40,7 @@ public class UnionPayServiceTest {
         //查询
         //请求不能太频繁，否则 You have been added to the blacklist. Please don't do stress testing. TPS could not be greater than 0.5 . BlackList Will be clear at time 00:00
         PayRequest queryRequest = new PayRequest();
-        queryRequest.setPaytype(Pays.PAYTYPE_UNION);
+        queryRequest.setPayType(Pays.PAYTYPE_UNION);
         queryRequest.setPayno(creatRequest.getPayno());
         //PayQueryResponse queryResponse = service.query(queryRequest);
         //System.out.println(queryResponse);

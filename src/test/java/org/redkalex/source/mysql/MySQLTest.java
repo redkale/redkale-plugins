@@ -14,7 +14,7 @@ import org.redkale.boot.LoggingFileHandler;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.source.*;
-import org.redkale.util.ResourceFactory;
+import org.redkale.util.*;
 import org.redkalex.source.vertx.VertxSqlDataSource;
 
 /**
@@ -32,23 +32,17 @@ public class MySQLTest {
         factory.register(RESNAME_APP_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
-        prop.setProperty(DataSources.JDBC_URL, "jdbc:mysql://127.0.0.1:3306/redsns_platf?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.setProperty(DataSources.JDBC_TABLE_AUTODDL, "true");
-        prop.setProperty(DataSources.JDBC_USER, "root");
-        prop.setProperty(DataSources.JDBC_PWD, "12345678");
+        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/redsns_platf?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty("redkale.datasource[].maxconns", "2");
+        prop.setProperty("redkale.datasource[].table-autoddl", "true");
+        prop.setProperty("redkale.datasource[].user", "root");
+        prop.setProperty("redkale.datasource[].password", "");
 
-        Properties prop2 = new Properties();
-        prop2.setProperty(DataSources.JDBC_URL, "jdbc:mysql://127.0.0.1:3306/redsns_platf?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop2.setProperty(DataSources.JDBC_TABLE_AUTODDL, "true");
-        prop2.setProperty(DataSources.JDBC_USER, "root");
-        prop2.setProperty(DataSources.JDBC_PWD, "12345678");
         if (VertxSqlDataSource.class.isAssignableFrom(DataSqlSource.class)) return;
 
-        DataSqlSource source;
-        source = new MysqlDataSource("", null, prop, prop);
-        //source = new VertxSqlDataSource("", null, "mysql", prop, prop);
+        MysqlDataSource source = new MysqlDataSource();
         factory.inject(source);
-        source.init(null);
+        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println("---------");
         Function<DataResultSet, String> func = set -> set.next() ? ("" + set.getObject(1)) : null;
         //System.out.println("查询结果: " + source.directQuery("SHOW TABLES", func));
@@ -87,8 +81,7 @@ public class MySQLTest {
         int[] cs = source.directExecute("update world set randomNumber =11 where id =2", "update world set randomNumber =11 where id =-1");
         System.out.println("批量处理结果: " + Arrays.toString(cs));
 
-        if (true) return;
-
+        //if (true) return;
         final SmsRecord record = new SmsRecord((short) 2, "12345678901", "这是内容");
         record.setSmsid("sms1-" + record.getCreateTime());
         SmsRecord record2 = new SmsRecord((short) 2, "12345678901", "这是内容");
@@ -100,9 +93,9 @@ public class MySQLTest {
         SmsRecord record4 = new SmsRecord((short) 2, "12345678901", "这是内容");
         record4.setSmsid("sms4-" + record.getCreateTime());
         System.out.println("新增结果: " + source.insert(record4));
+        if (source.find(SmsRecord.class, record.getSmsid()) == null) source.insert(record);
 
-        if (true) return;
-
+        //if (true) return;
         System.out.println(source.find(SmsRecord.class, "sms1-1632282662741"));
         System.out.println("--------------继续查询单个记录------------------");
         SmsRecord sms = source.find(SmsRecord.class, FilterNode.create("smsid", record.getSmsid()));
@@ -116,19 +109,25 @@ public class MySQLTest {
         System.out.println("修改结果: " + source.update(sms));
         System.out.println(source.find(SmsRecord.class, "sms1-1632282662741"));
 
+        System.out.println("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n");
+        System.out.println(" -------------------------------- 压测开始 --------------------------------");
         final String json = JsonConvert.root().convertTo(record);
-        int count = 10;
+        int count = 200;
         CountDownLatch cdl = new CountDownLatch(count);
+        long s = System.currentTimeMillis();
         for (int i = 0; i < count; i++) {
             final int b = i;
             new Thread() {
                 public void run() {
                     try {
-                        if (b % 2 == 0) {
-                            source.find(SmsRecord.class, record.getSmsid());
+                        if (b % 3 == 0) {
+                            String smsid = record.getSmsid().replace("sms1", "sms" + ((b + 1) % 5 + 100));
+                            source.delete(SmsRecord.class, smsid);
+                        } else if (b % 2 == 0) {
+                            source.findAsync(SmsRecord.class, record.getSmsid()).thenCompose(v -> source.updateAsync(v)).join();
                         } else {
                             String smsid = record.getSmsid().replace("sms1", "sms" + (b + 1) % 5);
-                            String content = "这是内容," + b;
+                            String content = "这是内容," + ((b + 1) % 5);
                             SmsRecord s = JsonConvert.root().convertFrom(SmsRecord.class, json);
                             s.setSmsid(smsid);
                             s.setContent(content);
@@ -141,6 +140,8 @@ public class MySQLTest {
             }.start();
         }
         cdl.await();
+        long e = System.currentTimeMillis() - s;
+        System.out.println("并发 " + count + ", 一共耗时: " + e + "ms");
         System.out.println("---------------- 准备关闭DataSource ----------------");
         source.close();
         System.out.println("---------------- 全部执行完毕 ----------------");

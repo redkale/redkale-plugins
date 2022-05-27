@@ -187,15 +187,15 @@ public final class GooglePayService extends AbstractPayService {
         if (request.getAttach() != null && request.getAttach().containsKey("bean")) {
             strbean = request.attach("bean");
         } else {
-            strbean = request.getText();
+            strbean = request.getBody();
         }
         if (strbean != null && !strbean.isEmpty()) {
             final GoogleElement element = elements.get(request.getAppid());
             GoogleNotifyBean bean = JsonConvert.root().convertFrom(GoogleNotifyBean.class, strbean);
             PayNotifyResponse resp = new PayNotifyResponse();
-            resp.setResponsetext(strbean);
+            resp.setResponseText(strbean);
             resp.setPayno(bean.payno());
-            resp.setPaytype(request.getPaytype());
+            resp.setPayType(request.getPayType());
             if (!checkSign(element, bean.purchaseData, bean.signature)) return resp.retcode(RETPAY_FALSIFY_ERROR).notifytext(strbean).toFuture();
             return CompletableFuture.completedFuture(resp);
         }
@@ -223,7 +223,7 @@ public final class GooglePayService extends AbstractPayService {
     }
 
     @Override
-    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRequest request) {
+    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRefundQryReq request) {
         return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
     }
 
@@ -258,7 +258,7 @@ public final class GooglePayService extends AbstractPayService {
     }
 
     @Override
-    public PayRefundResponse queryRefund(PayRequest request) {
+    public PayRefundResponse queryRefund(PayRefundQryReq request) {
         return queryRefundAsync(request).join();
     }
 
@@ -268,7 +268,7 @@ public final class GooglePayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(AbstractPayService.PayElement element, Map<String, ?> map, String text) {
+    protected boolean checkSign(AbstractPayService.PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {
         return checkSign((GoogleElement) element, (String) map.get("purchaseData"), (String) map.get("signature"));
     }
 

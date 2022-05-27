@@ -6,6 +6,8 @@
 package org.redkalex.pay;
 
 import java.util.*;
+import org.redkale.convert.ConvertDisabled;
+import org.redkale.util.Reproduce;
 
 /**
  *
@@ -15,29 +17,35 @@ import java.util.*;
  */
 public class PayCreatRequest extends PayRequest {
 
-    protected long paymoney; //  支付金额。 单位:分 
+    private static final Reproduce<PayPreRequest, PayCreatRequest> reproduce = Reproduce.create(PayPreRequest.class, PayCreatRequest.class);
 
-    protected String paycurrency; //  币种,一般币值*100
+    protected long payMoney; //  支付金额。 单位:分 
 
-    protected String paytitle = ""; //订单标题
+    protected String payCurrency; //  币种,一般币值*100
 
-    protected String paybody = ""; //订单内容描述
+    protected String payTitle = ""; //订单标题
 
-    protected int paytimeout = 600; //支付超时的秒数
+    protected String payBody = ""; //订单内容描述
+
+    protected int payTimeout = 600; //支付超时的秒数
 
     protected String clientAddr = "";  //客户端IP地址
 
     protected Map<String, String> attach; //扩展信息
 
+    public PayPreRequest createPayPreRequest() {
+        return reproduce.apply(new PayPreRequest(), this);
+    }
+
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.paymoney < 1) throw new RuntimeException("paymoney is illegal");
-        if (this.paytitle == null || this.paytitle.isEmpty()) throw new RuntimeException("paytitle is illegal");
-        if (this.paybody == null || this.paybody.isEmpty()) throw new RuntimeException("paybody is illegal");
+        if (this.payMoney < 1) throw new RuntimeException("payMoney is illegal");
+        if (this.payTitle == null || this.payTitle.isEmpty()) throw new RuntimeException("payTitle is illegal");
+        if (this.payBody == null || this.payBody.isEmpty()) throw new RuntimeException("payBody is illegal");
         if (this.clientAddr == null || this.clientAddr.isEmpty()) throw new RuntimeException("clientAddr is illegal");
-        if (this.paytimeout < 300) throw new RuntimeException("paytimeout cannot less 300 seconds");
-        if (this.paytimeout > 24 * 60 * 60) throw new RuntimeException("paytimeout cannot greater 1 day");
+        if (this.payTimeout < 300) throw new RuntimeException("payTimeout cannot less 300 seconds");
+        if (this.payTimeout > 24 * 60 * 60) throw new RuntimeException("payTimeout cannot greater 1 day");
     }
 
     public Map<String, String> attach(String key, Object value) {
@@ -54,44 +62,44 @@ public class PayCreatRequest extends PayRequest {
         return attach == null ? defValue : attach.getOrDefault(name, defValue);
     }
 
-    public long getPaymoney() {
-        return paymoney;
+    public long getPayMoney() {
+        return payMoney;
     }
 
-    public void setPaymoney(long paymoney) {
-        this.paymoney = paymoney;
+    public void setPayMoney(long payMoney) {
+        this.payMoney = payMoney;
     }
 
-    public String getPaycurrency() {
-        return paycurrency;
+    public String getPayCurrency() {
+        return payCurrency;
     }
 
-    public void setPaycurrency(String paycurrency) {
-        this.paycurrency = paycurrency;
+    public void setPayCurrency(String payCurrency) {
+        this.payCurrency = payCurrency;
     }
 
-    public String getPaytitle() {
-        return paytitle;
+    public String getPayTitle() {
+        return payTitle;
     }
 
-    public void setPaytitle(String paytitle) {
-        this.paytitle = paytitle;
+    public void setPayTitle(String payTitle) {
+        this.payTitle = payTitle;
     }
 
-    public String getPaybody() {
-        return paybody;
+    public String getPayBody() {
+        return payBody;
     }
 
-    public void setPaybody(String paybody) {
-        this.paybody = paybody;
+    public void setPayBody(String payBody) {
+        this.payBody = payBody;
     }
 
-    public int getPaytimeout() {
-        return paytimeout;
+    public int getPayTimeout() {
+        return payTimeout;
     }
 
-    public void setPaytimeout(int paytimeout) {
-        this.paytimeout = paytimeout;
+    public void setPayTimeout(int payTimeout) {
+        this.payTimeout = payTimeout;
     }
 
     public String getClientAddr() {
@@ -118,12 +126,63 @@ public class PayCreatRequest extends PayRequest {
     }
 
     @Deprecated
+    @ConvertDisabled
     public Map<String, String> getMap() {
         return attach;
     }
 
     @Deprecated
+    @ConvertDisabled
     public void setMap(Map<String, String> map) {
         this.attach = map;
     }
+
+    @Deprecated
+    @ConvertDisabled
+    public long getPaymoney() {
+        return payMoney;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setPaymoney(long payMoney) {
+        this.payMoney = payMoney;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public String getPaycurrency() {
+        return payCurrency;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setPaycurrency(String payCurrency) {
+        this.payCurrency = payCurrency;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public String getPaytitle() {
+        return payTitle;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setPaytitle(String payTitle) {
+        this.payTitle = payTitle;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public String getPaybody() {
+        return payBody;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setPaybody(String payBody) {
+        this.payBody = payBody;
+    }
+
 }

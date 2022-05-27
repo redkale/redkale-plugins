@@ -4,13 +4,14 @@ import java.io.Serializable;
 import javax.persistence.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.*;
-import org.redkale.util.ConstructorParameters;
+import org.redkale.util.*;
 
 /**
  *
  * @author zhangjx
  */
 @Entity
+@LogExcludeLevel(levels = {"FINEST"}, keys = {"DELETE"})
 //@DistributeTable(strategy = SmsRecord.TableStrategy.class)
 public class SmsRecord {
 

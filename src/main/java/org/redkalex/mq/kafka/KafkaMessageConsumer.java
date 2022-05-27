@@ -11,8 +11,9 @@ import java.util.concurrent.*;
 import java.util.logging.Level;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.errors.InvalidTopicException;
-import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.*;
 import org.redkale.mq.*;
+import org.redkale.util.Traces;
 
 /**
  *
@@ -47,8 +48,6 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         super(agent, topics, group, processor);
         final Properties props = new Properties();
         props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerid);
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, org.apache.kafka.common.serialization.StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, MessageRecordDeserializer.class);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");// 当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
         props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, "1000");
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
@@ -74,7 +73,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     @Override
     public void run() {
-        this.consumer = new KafkaConsumer<>(this.config);
+        this.consumer = new KafkaConsumer<>(this.config, new StringDeserializer(), new MessageRecordDeserializer(messageAgent.getMessageCoder()));
         this.consumer.subscribe(Arrays.asList(this.topics));
         ConsumerRecords<String, MessageRecord> records0 = null;
         try {
@@ -102,6 +101,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     processor.begin(count, s);
                     for (ConsumerRecord<String, MessageRecord> r : records0) {
                         msg = r.value();
+                        Traces.currTraceid(msg.getTraceid());
                         processor.process(msg, null);
                     }
                     processor.commit();
@@ -145,6 +145,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     processor.begin(count, s);
                     for (ConsumerRecord<String, MessageRecord> r : records) {
                         msg = r.value();
+                        Traces.currTraceid(msg.getTraceid());
                         processor.process(msg, null);
                     }
                     processor.commit();
@@ -202,9 +203,15 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     public static class MessageRecordDeserializer implements Deserializer<MessageRecord> {
 
+        private final MessageCoder<MessageRecord> coder;
+
+        public MessageRecordDeserializer(MessageCoder<MessageRecord> coder) {
+            this.coder = coder;
+        }
+
         @Override
         public MessageRecord deserialize(String topic, byte[] data) {
-            return MessageRecordCoder.getInstance().decode(data);
+            return coder.decode(data);
         }
 
     }

@@ -7,12 +7,13 @@ package org.redkalex.source.mongo;
 
 import org.junit.jupiter.api.Assertions;
 import com.mongodb.reactivestreams.client.MongoClient;
-import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.*;
+import static org.redkale.source.AbstractDataSource.*;
 import org.redkale.util.*;
+import org.redkale.util.AnyValue.DefaultAnyValue;
 
 /**
  *
@@ -22,11 +23,11 @@ public class MongodbDriverDataSourceTest {
 
     //需要本地装MongoDB，故不用Junit
     public static void main(String[] args) throws Throwable {
-        Properties conf = new Properties();
-        conf.put(DataSources.JDBC_URL, "mongodb://localhost/admin");
-        conf.put(DataSources.JDBC_CONNECTIONS_LIMIT, "2");
-        final MongodbDriverDataSource source = (MongodbDriverDataSource) DataSources.createDataSource("", conf);
-        source.init(null);
+        DefaultAnyValue conf = DefaultAnyValue.create();
+        conf.addValue(DATA_SOURCE_URL, "mongodb://localhost/admin");
+        conf.addValue(DATA_SOURCE_MAXCONNS, "2");
+        final MongodbDriverDataSource source = new MongodbDriverDataSource();
+        source.init(conf);
         MongoClient mongoClient = source.readMongoClient;
         MongodbDriverDataSource.ReatorListFuture<String> future = new MongodbDriverDataSource.ReatorListFuture<>();
         mongoClient.listDatabaseNames().subscribe(future);

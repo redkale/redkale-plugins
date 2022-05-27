@@ -5,9 +5,9 @@
  */
 package org.redkalex.source.mysql;
 
-import java.net.*;
 import java.util.Properties;
 import java.util.concurrent.*;
+import java.util.logging.Logger;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 
@@ -17,14 +17,15 @@ import org.redkale.net.client.*;
  */
 public class MyClient extends Client<MyClientRequest, MyResultSet> {
 
-    protected static final int DEFAULT_POOL_SIZE = Integer.getInteger("redkale.client.response.pool.size", 256);
-
     protected final boolean cachePreparedStatements;
 
+    protected final boolean autoddl;
+
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public MyClient(AsyncGroup group, String key, SocketAddress address, int maxConns, int maxPipelines, final Properties prop,
-        final String username, final String password, final String database, final String encoding, final Properties attributes) {
-        super(group, true, address, maxConns, maxPipelines, p -> new MyClientCodec(), MyReqPing.INSTANCE, MyReqClose.INSTANCE, null); //maxConns
+    public MyClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, final Properties prop,
+        final String username, final String password, final String database, final String encoding, boolean autoddl, final Properties attributes) {
+        super(group, true, address, maxConns, maxPipelines, MyReqPing.INSTANCE, MyReqClose.INSTANCE, null); //maxConns
+        this.autoddl = autoddl;
         this.connectionContextName = "redkalex-mysql-client-connection-" + key;
         this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, MyClientRequest.EMPTY).thenCompose((MyResultSet rs) -> {
             MyRespHandshakeResultSet handshake = (MyRespHandshakeResultSet) rs;
@@ -35,7 +36,7 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
                 return CompletableFuture.completedFuture(authrs);
             }).thenApply(v -> conn);
         }));
-        this.cachePreparedStatements = prop == null || "true".equalsIgnoreCase(prop.getProperty("javax.persistence.jdbc.preparecache", "true"));
+        this.cachePreparedStatements = prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));
     }
 
     @Override
@@ -56,6 +57,10 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
     @Override
     protected void handlePingResult(ClientConnection conn, MyResultSet result) {
         if (result != null) result.close();
+    }
+
+    protected Logger logger() {
+        return logger;
     }
 
     public boolean cachePreparedStatements() {

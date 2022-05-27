@@ -113,9 +113,9 @@ public final class FacebookPayService extends AbstractPayService {
             String strbean = request.attach("bean");
             NotifyBean bean = JsonConvert.root().convertFrom(NotifyBean.class, strbean);
             PayNotifyResponse resp = new PayNotifyResponse();
-            resp.setResponsetext(strbean);
+            resp.setResponseText(strbean);
             resp.setPayno(bean.payno());
-            resp.setPaytype(request.getPaytype());
+            resp.setPayType(request.getPayType());
 
             String[] signatures = bean.signature().split("\\.");
             byte[] sig = Base64.getDecoder().decode(signatures[0].replace('-', '+').replace('_', '/'));
@@ -133,7 +133,7 @@ public final class FacebookPayService extends AbstractPayService {
             byte[] rawHmac = mac.doFinal(signatures[1].getBytes());
             if (!Arrays.equals(sig, rawHmac)) return CompletableFuture.completedFuture(resp.retcode(RETPAY_FALSIFY_ERROR));
             if (map.containsKey("amount")) {
-                resp.setPayedmoney((long) (Float.parseFloat(map.get("amount")) * 100));
+                resp.setPayedMoney((long) (Float.parseFloat(map.get("amount")) * 100));
             }
             return CompletableFuture.completedFuture(resp);
         }
@@ -161,7 +161,7 @@ public final class FacebookPayService extends AbstractPayService {
     }
 
     @Override
-    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRequest request) {
+    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRefundQryReq request) {
         return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
     }
 
@@ -196,7 +196,7 @@ public final class FacebookPayService extends AbstractPayService {
     }
 
     @Override
-    public PayRefundResponse queryRefund(PayRequest request) {
+    public PayRefundResponse queryRefund(PayRefundQryReq request) {
         return queryRefundAsync(request).join();
     }
 
@@ -206,7 +206,7 @@ public final class FacebookPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(PayElement element, Map<String, ?> map, String text) {
+    protected boolean checkSign(PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {
         String[] signatures = text.split("\\.");
         byte[] sig = Base64.getDecoder().decode(signatures[0].replace('-', '+').replace('_', '/'));
         Map<String, String> smp = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, Base64.getDecoder().decode(signatures[1]));

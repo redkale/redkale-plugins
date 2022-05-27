@@ -6,13 +6,13 @@
 package org.redkalex.pay;
 
 import java.io.*;
-import java.net.URLEncoder;
 import java.nio.charset.*;
 import java.security.*;
 import java.security.spec.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
+import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import org.redkale.util.*;
 import org.redkale.convert.json.*;
@@ -32,6 +32,10 @@ import org.redkale.service.Local;
 public final class AliPayService extends AbstractPayService {
 
     protected static final String format = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; //yyyy-MM-dd HH:mm:ss
+
+    protected static final Map<String, String> headers = Utility.ofMap("Content-Type", "application/x-www-form-urlencoded", "Accept", "application/json");
+
+    protected static final Charset CHARSET_GBK = Charset.forName("GBK");
 
     //配置集合
     protected Map<String, AliPayElement> elements = new HashMap<>();
@@ -101,6 +105,11 @@ public final class AliPayService extends AbstractPayService {
         return prepayAsync(request).join();
     }
 
+    protected String joinEncodeMap(Map<String, ?> map, Charset charset) {
+        if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
+        return map.entrySet().stream().map((e -> e.getKey() + "=" + urlEncode(e.getValue(), charset))).collect(Collectors.joining("&"));
+    }
+
     @Override
     public CompletableFuture<PayPreResponse> prepayAsync(final PayPreRequest request) {
         request.checkVaild();
@@ -111,83 +120,57 @@ public final class AliPayService extends AbstractPayService {
             if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
             result.setAppid(element.appid);
             long now = System.currentTimeMillis();
-            // 签约合作者身份ID
-            String param = "";
-            if (element.merchno == null || element.merchno.isEmpty()) {
-                TreeMap<String, String> paramap = new TreeMap<>();
-                paramap.put("app_id", element.appid);
-                paramap.put("method", "alipay.trade.wap.pay");
-                paramap.put("format", "JSON");
-                //paramap.put("return_url", "");
-                paramap.put("charset", "utf-8");
-                paramap.put("sign_type", "RSA2");
-                paramap.put("timestamp", Utility.formatTime(now));
-                if (request.notifyurl != null && !request.notifyurl.isEmpty()) {
-                    paramap.put("notify_url", request.notifyurl);
-                }
-                final TreeMap<String, String> biz_content = new TreeMap<>();
-                if (request.getAttach() != null) biz_content.putAll(request.getAttach());
-                biz_content.put("subject", "" + request.getPaytitle());
-                biz_content.put("out_trade_no", request.getPayno());
-                paramap.put("time_expire", Utility.formatTime(now + request.getTimeoutms()));
-                biz_content.put("total_amount", "" + (request.getPaymoney() / 100.0));
-                biz_content.put("quit_url", element.notifyurl); //返回url
-                biz_content.put("product_code", "QUICK_WAP_WAY");
-                biz_content.put("goods_id", "gid-" + request.getPayno());
-                biz_content.put("goods_name", request.getPaytitle());
-                biz_content.put("quantity", "1");
-                biz_content.put("price", "" + (request.getPaymoney() / 100.0));
 
-                paramap.put("biz_content", convert.convertTo(biz_content));
-                Signature signature = Signature.getInstance("SHA256WithRSA");
-                signature.initSign(element.priKey);
-                signature.update(joinMap(paramap).getBytes(StandardCharsets.UTF_8));
-                paramap.put("sign", URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), StandardCharsets.UTF_8));
-                return postHttpContentAsync("https://openapi.alipay.com/gateway.do", joinMap(paramap)).thenApply(responseText -> {
-                    result.setResponsetext(responseText);
-                    Map<String, String> resultmap = convert.convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, responseText);
+            TreeMap<String, String> paramap = new TreeMap<>();
+            paramap.put("app_id", element.appid);
+            paramap.put("charset", element.charsetname);
+            paramap.put("format", "json");
+            paramap.put("sign_type", "RSA2");
+            paramap.put("version", "1.0");
+            paramap.put("timestamp", Utility.formatTime(now));
 
-                    return result;
-                });
+            if (request.getPayWay() == PAYWAY_WEB) {
+                paramap.put("qr_pay_mode", "2");
+                paramap.put("method", "alipay.trade.page.pay");
+            } else if (request.getPayWay() == PAYWAY_APP) {
+                paramap.put("method", "alipay.trade.app.pay");
             } else {
-                param = "partner=" + "\"" + element.merchno + "\"";
-                // 签约卖家支付宝账号(也可用身份ID)
-                param += "&seller_id=" + "\"" + element.sellerid + "\"";
-                // 商户网站唯一订单号
-                param += "&out_trade_no=" + "\"" + request.getPayno() + "\"";
-                // 商品名称
-                param += "&subject=" + "\"" + request.getPaytitle() + "\"";
-                // 商品详情
-                param += "&body=" + "\"" + request.getPaybody() + "\"";
-                // 商品金额
-                param += "&total_fee=" + "\"" + (request.getPaymoney() / 100.0) + "\"";
-                // 服务器异步通知页面路径
-                param += "&notify_url=" + "\"" + ((request.notifyurl != null && !request.notifyurl.isEmpty()) ? request.notifyurl : element.notifyurl) + "\"";
-                // 服务接口名称， 固定值
-                param += "&service=\"mobile.securitypay.pay\"";
-                // 支付类型， 固定值
-                param += "&payment_type=\"1\"";
-                // 参数编码， 固定值
-                param += "&_input_charset=\"utf-8\"";
-
-                // 设置未付款交易的超时时间
-                // 默认30分钟，一旦超时，该笔交易就会自动被关闭。
-                // 取值范围：1m～15d。 m-分钟，h-小时，d-天，1c-当天（无论交易何时创建，都在0点关闭）。
-                // 该参数数值不接受小数点，如1.5h，可转换为90m。
-                param += "&it_b_pay=\"" + request.getTimeoutms() + "m\"";
-
-                Signature signature = Signature.getInstance("SHA256WithRSA");
-                signature.initSign(element.priKey);
-                signature.update(param.getBytes(StandardCharsets.UTF_8));
-                param += "&sign=\"" + URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), StandardCharsets.UTF_8) + "\"";
-                param += "&sign_type=\"RSA2\"";
+                paramap.put("method", "alipay.trade.wap.pay");
             }
-            final Map<String, String> rmap = new TreeMap<>();
-            rmap.put("content", param);
-            result.setResult(rmap);
+
+            if (request.notifyUrl != null && !request.notifyUrl.isEmpty()) {
+                paramap.put("notify_url", request.notifyUrl);
+            } else if (element.notifyurl != null && !element.notifyurl.isEmpty()) {
+                paramap.put("notify_url", element.notifyurl);
+            }
+            if (request.returnUrl != null && !request.returnUrl.isEmpty()) {
+                paramap.put("return_url", request.returnUrl);
+            }
+            paramap.put("alipay_sdk", "alipay-sdk-java-dynamicVersionNo");
+            //paramap.put("return_url", "");
+
+            final TreeMap<String, String> biz_content = new TreeMap<>();
+            if (request.getAttach() != null) biz_content.putAll(request.getAttach());
+            biz_content.put("out_trade_no", request.getPayno());
+            biz_content.put("total_amount", "" + (request.getPayMoney() / 100.0));
+            biz_content.put("subject", "" + request.getPayTitle());
+            if (request.getPayWay() == PAYWAY_WEB) {
+                biz_content.put("product_code", "FAST_INSTANT_TRADE_PAY");
+            } else if (request.getPayWay() == PAYWAY_APP) {
+                biz_content.put("product_code", "QUICK_MSECURITY_PAY");
+            } else {
+                biz_content.put("product_code", "QUICK_WAP_PAY");
+                biz_content.put("quit_url", paramap.get("notify_url")); //返回url 
+            }
+            if (request.getTimeoutSeconds() > 0) {
+                biz_content.put("time_expire", Utility.formatTime(now + request.getTimeoutSeconds() * 1000));
+            }
+            paramap.put("biz_content", convert.convertTo(biz_content));
+            paramap.put("sign", createSign(element, paramap, null));
+            result.setResult(Utility.ofMap(PayPreResponse.PREPAY_PAYURL, "https://openapi.alipay.com/gateway.do?" + joinEncodeMap(paramap, element.charset)));
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responseText, e);
         }
         return result.toFuture();
     }
@@ -203,18 +186,18 @@ public final class AliPayService extends AbstractPayService {
     public CompletableFuture<PayNotifyResponse> notifyAsync(PayNotifyRequest request) {
         request.checkVaild();
         final PayNotifyResponse result = new PayNotifyResponse();
-        result.setPaytype(request.getPaytype());
+        result.setPayType(request.getPayType());
         final String rstext = "success";
         Map<String, String> map = request.getAttach();
         final AliPayElement element = elements.get(request.getAppid());
         if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
         result.setPayno(map.getOrDefault("out_trade_no", ""));
-        result.setThirdpayno(map.getOrDefault("trade_no", ""));
-        if (!checkSign(element, map, null)) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
+        result.setThirdPayno(map.getOrDefault("trade_no", ""));
+        if (!checkSign(element, map, request.getBody(), request.getHeaders())) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
         String state = map.getOrDefault("trade_status", "");
         if ("WAIT_BUYER_PAY".equals(state)) return result.retcode(RETPAY_PAY_WAITING).toFuture();
         if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).toFuture();
-        result.setPayedmoney((long) (Float.parseFloat(map.get("total_fee")) * 100));
+        result.setPayedMoney((long) (Float.parseFloat(map.get("total_amount")) * 100));
         return result.notifytext(rstext).toFuture();
     }
 
@@ -234,7 +217,7 @@ public final class AliPayService extends AbstractPayService {
             map.put("app_id", element.appid);
             map.put("method", "alipay.trade.create");
             map.put("format", "JSON");
-            map.put("charset", element.charset);
+            map.put("charset", element.charsetname);
             map.put("sign_type", "RSA2");
             map.put("timestamp", String.format(format, System.currentTimeMillis()));
             map.put("version", "1.0");
@@ -243,17 +226,17 @@ public final class AliPayService extends AbstractPayService {
             final TreeMap<String, String> biz_content = new TreeMap<>();
             if (request.getAttach() != null) biz_content.putAll(request.getAttach());
             biz_content.put("out_trade_no", request.getPayno());
-            biz_content.putIfAbsent("scene", "bar_code");
-            biz_content.put("total_amount", "" + (request.getPaymoney() / 100.0));
-            biz_content.put("subject", "" + request.getPaytitle());
-            biz_content.put("body", request.getPaybody());
+            //biz_content.putIfAbsent("scene", "bar_code");
+            biz_content.put("total_amount", "" + (request.getPayMoney() / 100.0));
+            biz_content.put("subject", "" + request.getPayTitle());
+            biz_content.put("body", request.getPayBody());
             map.put("biz_content", convert.convertTo(biz_content));
 
             map.put("sign", createSign(element, map, null));
 
-            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
+            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", element.charset, headers, joinEncodeMap(map, element.charset)).thenApply(responseText -> {
                 //{"alipay_trade_create_response":{"code":"40002","msg":"Invalid Arguments","sub_code":"isv.invalid-signature","sub_msg":"无效签名"},"sign":"xxxxxxxxxxxx"}
-                result.setResponsetext(responseText);
+                result.setResponseText(responseText);
                 final InnerCreateResponse resp = convert.convertFrom(InnerCreateResponse.class, responseText);
                 resp.responseText = responseText; //原始的返回内容            
                 if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
@@ -262,12 +245,12 @@ public final class AliPayService extends AbstractPayService {
                 if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
                 }
-                result.setThirdpayno(resultmap.getOrDefault("trade_no", ""));
+                result.setThirdPayno(resultmap.getOrDefault("trade_no", ""));
                 return result;
             });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "create_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
     }
@@ -287,10 +270,9 @@ public final class AliPayService extends AbstractPayService {
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("sign_type", "RSA2");
-            map.put("charset", element.charset);
+            map.put("charset", element.charsetname);
             map.put("format", "json");
             map.put("version", "1.0");
-            //if (this.notifyurl != null && !this.notifyurl.isEmpty()) map.put("notify_url", this.notifyurl); // 查询不需要
             map.put("timestamp", String.format(format, System.currentTimeMillis()));
             map.put("method", "alipay.trade.query");
 
@@ -300,12 +282,19 @@ public final class AliPayService extends AbstractPayService {
 
             map.put("sign", createSign(element, map, null));
 
-            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
-
-                result.setResponsetext(responseText);
-                final InnerQueryResponse resp = convert.convertFrom(InnerQueryResponse.class, responseText);
+            return postHttpBytesContentAsync("https://openapi.alipay.com/gateway.do", headers, joinEncodeMap(map, element.charset)).thenApply(bytes -> {
+                String responseText = new String(bytes, element.charset);
+                result.setResponseText(responseText);
+                InnerQueryResponse resp = convert.convertFrom(InnerQueryResponse.class, responseText);
                 resp.responseText = responseText; //原始的返回内容            
-                if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resp)) { //可能会乱码, ALipay的bug?
+                    String responseText2 = new String(bytes, CHARSET_GBK);
+                    InnerQueryResponse resp2 = convert.convertFrom(InnerQueryResponse.class, responseText2);
+                    resp2.responseText = responseText2; //原始的返回内容     
+                    if (!checkSign(element, resp2)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                    resp = resp2;
+                    result.setResponseText(responseText2);
+                }
                 final Map<String, String> resultmap = resp.alipay_trade_query_response;
                 result.setResult(resultmap);
                 if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
@@ -323,14 +312,14 @@ public final class AliPayService extends AbstractPayService {
                     case "TRADE_FINISHED": paystatus = PAYSTATUS_PAYOK;
                         break;
                 }
-                result.setPaystatus(paystatus);
-                result.setThirdpayno(resultmap.getOrDefault("trade_no", ""));
-                result.setPayedmoney((long) (Double.parseDouble(resultmap.get("receipt_amount")) * 100));
+                result.setPayStatus(paystatus);
+                result.setThirdPayno(resultmap.getOrDefault("trade_no", ""));
+                result.setPayedMoney((long) (Double.parseDouble(resultmap.get("total_amount")) * 100));
                 return result;
             });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
     }
@@ -350,12 +339,12 @@ public final class AliPayService extends AbstractPayService {
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("sign_type", "RSA2");
-            map.put("charset", element.charset);
+            map.put("charset", element.charsetname);
             map.put("format", "json");
             map.put("version", "1.0");
-            if (element.notifyurl != null && !element.notifyurl.isEmpty()) map.put("notify_url", element.notifyurl);
             map.put("timestamp", String.format(format, System.currentTimeMillis()));
             map.put("method", "alipay.trade.close");
+            if (element.notifyurl != null && !element.notifyurl.isEmpty()) map.put("notify_url", element.notifyurl);
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
             biz_content.put("out_trade_no", request.getPayno());
@@ -363,9 +352,9 @@ public final class AliPayService extends AbstractPayService {
 
             map.put("sign", createSign(element, map, null));
 
-            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
+            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", element.charset, headers, joinEncodeMap(map, element.charset)).thenApply(responseText -> {
 
-                result.setResponsetext(responseText);
+                result.setResponseText(responseText);
                 final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
                 resp.responseText = responseText; //原始的返回内容            
                 if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
@@ -378,7 +367,7 @@ public final class AliPayService extends AbstractPayService {
             });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
     }
@@ -399,7 +388,7 @@ public final class AliPayService extends AbstractPayService {
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("sign_type", "RSA2");
-            map.put("charset", element.charset);
+            map.put("charset", element.charsetname);
             map.put("format", "json");
             map.put("version", "1.0");
             map.put("timestamp", String.format(format, System.currentTimeMillis()));
@@ -407,14 +396,14 @@ public final class AliPayService extends AbstractPayService {
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
             biz_content.put("out_trade_no", request.getPayno());
-            biz_content.put("refund_amount", "" + (request.getRefundmoney() / 100.0));
+            biz_content.put("refund_amount", "" + (request.getRefundMoney() / 100.0));
             map.put("biz_content", convert.convertTo(biz_content));
 
             map.put("sign", createSign(element, map, null));
 
-            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", Charset.forName(element.charset), joinMap(map)).thenApply(responseText -> {
+            return postHttpContentAsync("https://openapi.alipay.com/gateway.do", element.charset, headers, joinEncodeMap(map, element.charset)).thenApply(responseText -> {
 
-                result.setResponsetext(responseText);
+                result.setResponseText(responseText);
                 final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
                 resp.responseText = responseText; //原始的返回内容            
                 if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
@@ -423,47 +412,67 @@ public final class AliPayService extends AbstractPayService {
                 if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("sub_msg"));
                 }
-                result.setRefundedmoney((long) (Double.parseDouble(resultmap.get("refund_fee")) * 100));
+                result.setRefundedMoney((long) (Double.parseDouble(resultmap.get("refund_fee")) * 100));
                 return result;
             });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
-            logger.log(Level.WARNING, "refund_pay_error req=" + request + ", resp=" + result.responsetext, e);
+            logger.log(Level.WARNING, "refund_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
     }
 
     @Override
-    public PayRefundResponse queryRefund(PayRequest request) {
+    public PayRefundResponse queryRefund(PayRefundQryReq request) {
         return queryRefundAsync(request).join();
     }
 
     @Override
-    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRequest request) {
+    public CompletableFuture<PayRefundResponse> queryRefundAsync(PayRefundQryReq request) {
         PayQueryResponse queryResponse = query(request);
         final PayRefundResponse response = new PayRefundResponse();
         response.setRetcode(queryResponse.getRetcode());
         response.setRetinfo(queryResponse.getRetinfo());
-        response.setResponsetext(queryResponse.getResponsetext());
+        response.setResponseText(queryResponse.getResponseText());
         response.setResult(queryResponse.getResult());
         if (queryResponse.isSuccess()) {
-            response.setRefundedmoney((long) (Double.parseDouble(response.getResult().get("receipt_amount")) * 100));
+            response.setRefundedMoney((long) (Double.parseDouble(response.getResult().get("receipt_amount")) * 100));
         }
         return response.toFuture();
     }
 
     protected boolean checkSign(final PayElement element, InnerResponse response) {
-        if (((AliPayElement) element).pubKey == null) return true;
+        if (((AliPayElement) element).aliKey == null) return true;
         try {
             String text = response.responseText;
             text = text.substring(text.indexOf(':') + 1, text.indexOf(",\"sign\""));
 
             Signature signature = Signature.getInstance("SHA256WithRSA");
-            signature.initVerify(((AliPayElement) element).pubKey);
+            signature.initVerify(((AliPayElement) element).aliKey);
             signature.update(text.getBytes(((AliPayElement) element).charset));
             return signature.verify(Base64.getDecoder().decode(response.sign.getBytes()));
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "checkSign error: element =" + element + ", response =" + response);
+            return false;
+        }
+    }
+
+    @Override
+    protected boolean checkSign(final PayElement element, Map<String, ?> map0, String text0, Map<String, String> respHeaders) { //支付宝玩另类
+        if (((AliPayElement) element).aliKey == null) return true;
+        Map<String, String> map = (Map<String, String>) map0;
+        String sign = (String) map.remove("sign");
+        if (sign == null) return false;
+        String sign_type = (String) map.remove("sign_type");
+        String text = joinMap(map);
+        map.put("sign", sign);
+        if (sign_type != null) map.put("sign_type", sign_type);
+        try {
+            Signature signature = Signature.getInstance("SHA256WithRSA");
+            signature.initVerify(((AliPayElement) element).aliKey);
+            signature.update(text.getBytes(StandardCharsets.UTF_8));
+            return signature.verify(Base64.getDecoder().decode(sign.getBytes()));
+        } catch (Exception e) {
             return false;
         }
     }
@@ -474,30 +483,9 @@ public final class AliPayService extends AbstractPayService {
             Signature signature = Signature.getInstance("SHA256WithRSA");
             signature.initSign(((AliPayElement) element).priKey);
             signature.update(joinMap(map).getBytes(((AliPayElement) element).charset));
-            return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), StandardCharsets.UTF_8);
+            return Base64.getEncoder().encodeToString(signature.sign());
         } catch (Exception ex) {
             throw new RuntimeException(ex);
-        }
-    }
-
-    @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map0, String text0) { //支付宝玩另类
-        if (((AliPayElement) element).pubKey == null) return true;
-        Map<String, String> map = (Map<String, String>) map0;
-        String sign = (String) map.remove("sign");
-        if (sign == null) return false;
-        String sign_type = (String) map.remove("sign_type");
-        String text = joinMap(map);
-        map.put("sign", sign);
-        if (sign_type != null) map.put("sign_type", sign_type);
-        try {
-            Signature signature = Signature.getInstance("SHA256WithRSA");
-            signature.initVerify(((AliPayElement) element).pubKey);
-            signature.update(text.getBytes(StandardCharsets.UTF_8));
-            return signature.verify(Base64.getDecoder().decode(sign.getBytes()));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
         }
     }
 
@@ -540,33 +528,40 @@ public final class AliPayService extends AbstractPayService {
         public String sellerid = ""; //商户账号，为空时则使用 merchno
 
         // pay.alipay.[x].charset
-        public String charset = "UTF-8"; //字符集 
+        public String charsetname = "UTF-8"; //字符集 
+
+        public Charset charset;
 
         // pay.alipay.[x].appid
         public String appid = "";  //APP应用ID
 
-        // pay.alipay.[x].notifyurl
-        //public String notifyurl = ""; //回调url
-        // pay.alipay.[x].signcertkey
-        public String signcertkey = ""; //签名算法需要用到的密钥
+        // pay.alipay.[x].appprikeybase64
+        public String appprikeybase64 = ""; //应用私钥
 
-        // pay.alipay.[x].verifycertkey
-        public String verifycertkey = ""; //公钥
+        // pay.alipay.[x].apppubkeybase64
+        public String apppubkeybase64 = ""; //应用公钥
+
+        // pay.alipay.[x].alipubkeybase64
+        public String alipubkeybase64 = ""; //支付宝公钥
 
         //        
-        protected PrivateKey priKey; //私钥
+        protected PrivateKey priKey; //应用私钥
 
         //  
-        protected PublicKey pubKey; //公钥
+        protected PublicKey pubKey; //应用公钥
+
+        //
+        protected PublicKey aliKey; //支付宝公钥
 
         public static Map<String, AliPayElement> create(Logger logger, Properties properties) {
             String def_appid = properties.getProperty("pay.alipay.appid", "").trim();
             String def_merchno = properties.getProperty("pay.alipay.merchno", "").trim();
             String def_sellerid = properties.getProperty("pay.alipay.sellerid", "").trim();
-            String def_charset = properties.getProperty("pay.alipay.charset", "UTF-8").trim();
+            String def_charsetname = properties.getProperty("pay.alipay.charsetname", "UTF-8").trim();
             String def_notifyurl = properties.getProperty("pay.alipay.notifyurl", "").trim();
-            String def_signcertkey = properties.getProperty("pay.alipay.signcertkey", "").trim();
-            String def_verifycertkey = properties.getProperty("pay.alipay.verifycertkey", "").trim();
+            String def_appprikeybase64 = properties.getProperty("pay.alipay.appprikeybase64", "").trim();
+            String def_apppubkeybase64 = properties.getProperty("pay.alipay.apppubkeybase64", "").trim();
+            String def_alipubkeybase64 = properties.getProperty("pay.alipay.alipubkeybase64", "").trim();
 
             final Map<String, AliPayElement> map = new HashMap<>();
             properties.keySet().stream().filter(x -> x.toString().startsWith("pay.alipay.") && x.toString().endsWith(".appid")).forEach(appid_key -> {
@@ -575,23 +570,26 @@ public final class AliPayService extends AbstractPayService {
                 String appid = properties.getProperty(prefix + ".appid", def_appid).trim();
                 String merchno = properties.getProperty(prefix + ".merchno", def_merchno).trim();
                 String sellerid = properties.getProperty(prefix + ".sellerid", def_sellerid).trim();
-                String charset = properties.getProperty(prefix + ".charset", def_charset).trim();
+                String charsetname = properties.getProperty(prefix + ".charsetname", def_charsetname).trim();
                 String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl).trim();
-                String signcertkey = properties.getProperty(prefix + ".signcertkey", def_signcertkey).trim();
-                String verifycertkey = properties.getProperty(prefix + ".verifycertkey", def_verifycertkey).trim();
+                String appprikeybase64 = properties.getProperty(prefix + ".appprikeybase64", def_appprikeybase64).trim();
+                String apppubkeybase64 = properties.getProperty(prefix + ".apppubkeybase64", def_apppubkeybase64).trim();
+                String alipubkeybase64 = properties.getProperty(prefix + ".alipubkeybase64", def_alipubkeybase64).trim();
 
-                if (appid.isEmpty() || notifyurl.isEmpty() || signcertkey.isEmpty()) {
+                if (appid.isEmpty() || notifyurl.isEmpty() || appprikeybase64.isEmpty()) {
                     logger.log(Level.WARNING, properties + "; has illegal alipay conf by prefix" + prefix);
                     return;
                 }
                 AliPayElement element = new AliPayElement();
                 element.appid = appid;
                 element.merchno = merchno;
-                element.sellerid = sellerid.isEmpty() ? merchno : sellerid;
-                element.charset = charset;
+                element.charsetname = charsetname;
                 element.notifyurl = notifyurl;
-                element.signcertkey = signcertkey;
-                element.verifycertkey = verifycertkey;
+                element.appprikeybase64 = appprikeybase64;
+                element.apppubkeybase64 = apppubkeybase64;
+                element.alipubkeybase64 = alipubkeybase64;
+                element.sellerid = sellerid.isEmpty() ? merchno : sellerid;
+                element.charset = Charset.forName(charsetname);
                 if (element.initElement(logger, null)) {
                     map.put(appid, element);
                     if (def_appid.equals(appid)) map.put("", element);
@@ -603,14 +601,20 @@ public final class AliPayService extends AbstractPayService {
         @Override
         public boolean initElement(Logger logger, File home) {
             try {
-                final KeyFactory factory = KeyFactory.getInstance("RSA2");
-                if (this.verifycertkey != null && !this.verifycertkey.isEmpty()) {
-                    this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.verifycertkey)));
+                final KeyFactory factory = KeyFactory.getInstance("RSA");
+                if (this.apppubkeybase64 != null && !this.apppubkeybase64.isEmpty()) {
+                    this.pubKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.apppubkeybase64)));
                 } else {
                     this.pubKey = null;
                 }
-                PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.signcertkey));
+                PKCS8EncodedKeySpec priPKCS8 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.appprikeybase64));
                 this.priKey = factory.generatePrivate(priPKCS8);
+
+                if (this.alipubkeybase64 != null && !this.alipubkeybase64.isEmpty()) {
+                    this.aliKey = factory.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.alipubkeybase64)));
+                } else {
+                    this.aliKey = null;
+                }
                 return true;
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init alipay sslcontext error", e);

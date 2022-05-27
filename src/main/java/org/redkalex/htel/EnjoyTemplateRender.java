@@ -6,6 +6,7 @@
 package org.redkalex.htel;
 
 import java.io.*;
+import java.util.Collection;
 import java.util.logging.*;
 import javax.annotation.Resource;
 import org.redkale.convert.Convert;
@@ -24,6 +25,9 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
     @Resource(name = "APP_HOME")
     private File home;
 
+    @Resource(name = "SERVER_ROOT")
+    private String root;
+
     private com.jfinal.template.Engine engine;
 
     @Override
@@ -33,7 +37,9 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
         if (this.engine == null) this.engine = com.jfinal.template.Engine.create(engineName);
         this.engine.setDevMode(logger.isLoggable(Level.FINE));
         final com.jfinal.template.EngineConfig engineConfig = this.engine.getEngineConfig();
-        String path = config == null ? new File(home, "templates").getPath() : config.getOrDefault("path", new File(home, "templates").getPath());
+        String defroot = root == null ? new File(home, "templates").getPath() : root;
+        String path = config == null ? defroot : config.getOrDefault("path", defroot);
+        if (path.isEmpty()) path = defroot;  //path可能会配置为""
         engineConfig.setBaseTemplatePath(path);
         if (config != null) {
             for (AnyValue kit : config.getAnyValues("sharekit")) {
@@ -50,12 +56,20 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
                 try {
                     Class clazz = Thread.currentThread().getContextClassLoader().loadClass(resvalue);
                     Object val = context.getResourceFactory().find(resname == null ? "" : resname, clazz);
+                    if (val == null) { //class可能不是Service，不会被自动注入
+                        val = clazz.getConstructor().newInstance();
+                    }
                     engineConfig.addSharedObject(name, val);
                     RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
                 } catch (Exception e) {
                     logger.log(Level.WARNING, "sharekit name=" + name + " inject error", e);
                 }
             }
+        }
+        if (engineConfig.getDirective("size") == null) {
+            engineConfig.addDirective("size", Size.class);
+            RedkaleClassLoader.putReflectionPublicConstructors(Size.class, Size.class.getName());
+            engineConfig.addSharedMethod(new Size());
         }
         if (engineConfig.getDirective("brescape") == null) {
             engineConfig.addDirective("brescape", BrEscape.class);
@@ -64,8 +78,10 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
                 Class clz = com.jfinal.template.ext.directive.EscapeDirective.class;
                 RedkaleClassLoader.putReflectionPublicConstructors(clz, clz.getName());
                 clz = com.jfinal.kit.StrKit.class;
+                engineConfig.addSharedMethod(new com.jfinal.kit.StrKit());
                 RedkaleClassLoader.putReflectionPublicConstructors(clz, clz.getName());
                 clz = com.jfinal.kit.HashKit.class;
+                engineConfig.addSharedMethod(new com.jfinal.kit.HashKit());
                 RedkaleClassLoader.putReflectionPublicConstructors(clz, clz.getName());
                 clz = com.jfinal.kit.PropKit.class;
                 RedkaleClassLoader.putReflectionPublicConstructors(clz, clz.getName());
@@ -78,6 +94,48 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         engine.getTemplate(scope.getReferid()).render(scope.getAttributes(), out);
         response.finish(out.toByteArray());
+    }
+
+    public static class Size extends com.jfinal.template.Directive {
+
+        @Override
+        public void exec(com.jfinal.template.Env env, com.jfinal.template.stat.Scope scope, com.jfinal.template.io.Writer writer) {
+            try {
+                writer.write(size(exprList.eval(scope)));
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new com.jfinal.template.TemplateException(e.getMessage(), location, e);
+            }
+        }
+
+        public static int size(Object value) {
+            if (value == null) {
+                return (0);
+            } else if (value instanceof String) {
+                return (value.toString().length());
+            } else if (value instanceof boolean[]) {
+                return (((boolean[]) value).length);
+            } else if (value instanceof byte[]) {
+                return (((byte[]) value).length);
+            } else if (value instanceof short[]) {
+                return (((short[]) value).length);
+            } else if (value instanceof char[]) {
+                return (((char[]) value).length);
+            } else if (value instanceof int[]) {
+                return (((int[]) value).length);
+            } else if (value instanceof long[]) {
+                return (((long[]) value).length);
+            } else if (value instanceof float[]) {
+                return (((float[]) value).length);
+            } else if (value instanceof double[]) {
+                return (((double[]) value).length);
+            } else if (value instanceof Collection) {
+                return (((Collection) value).size());
+            } else {
+                return (((Object[]) value).length);
+            }
+        }
     }
 
     public static class BrEscape extends com.jfinal.template.Directive {

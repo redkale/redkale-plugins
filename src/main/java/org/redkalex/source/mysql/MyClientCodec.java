@@ -34,6 +34,10 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
 
     Throwable lastExc = null;
 
+    public MyClientCodec(ClientConnection connection) {
+        super(connection);
+    }
+
     protected ByteArray pollArray() {
         if (recyclableArray == null) {
             recyclableArray = new ByteArray();
@@ -44,8 +48,8 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean codecResult(ClientConnection conn0, final ByteBuffer realbuf, ByteArray array) {
-        MyClientConnection conn = (MyClientConnection) conn0;
+    public boolean codecResult(final ByteBuffer realbuf, ByteArray array) {
+        MyClientConnection conn = (MyClientConnection) connection;
         if (!realbuf.hasRemaining()) return false;
         ByteBuffer buffer = realbuf;
         //logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", realbuf读到的长度: " + realbuf.remaining() + ", halfFrameBytes=" + (halfFrameBytes == null ? -1 : halfFrameBytes.length()));
@@ -78,7 +82,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
         //buffer必然包含一个完整的frame数据
         boolean hadresult = false;
         MyClientRequest request = null;
-        Iterator<ClientFuture> respIt = responseQueue(conn).iterator();
+        Iterator<ClientFuture> respIt = responseQueue().iterator();
         while (buffer.hasRemaining()) {
             while (buffer.hasRemaining()) {
                 if (request == null) request = respIt.hasNext() ? (MyClientRequest) respIt.next().getRequest() : null;
@@ -97,7 +101,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                     halfFrameLength = length + 4;
                     Mysqls.writeUB3(halfFrameBytes, length);
                     halfFrameBytes.put(buffer);
-                    return false;
+                    return hadresult;
                 }
                 final byte index = buffer.get();
                 final int bufpos = buffer.position();
@@ -127,13 +131,14 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
 
                 if (typeid == TYPE_ID_ERROR) {
                     if ((reqtype & 0x1) > 0 && ((MyReqExtended) request).sendPrepare) {
-                        conn.pauseWriting(false);
+                        conn.resumeWrite();
                         conn.getPrepareFlag(((MyReqExtended) request).sql).set(false);
                     }
                     lastExc = MyRespDecoder.readErrorPacket(conn, buffer, length, index, array);
+                    //if (!conn.autoddl()) logger.log(Level.WARNING, "mysql.request = " + request, lastExc);
                 } else {
                     if (lastResult == null && reqtype != REQ_TYPE_AUTH) {
-                        lastResult = conn.pollResultSet();
+                        lastResult = conn.pollResultSet(request == null ? null : request.info);
                     }
                     if (reqtype == REQ_TYPE_AUTH) { //登录
                         MyRespAuthResultSet authResult = new MyRespAuthResultSet();
@@ -242,12 +247,12 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                                 continue;
                             }
                             //prepare结束
-                            conn.pauseWriting(false);
+                            conn.resumeWrite();
                             lastResult.status = 0;
                             conn.putPrepareDesc(reqext.sql, new MyPrepareDesc(prepare));
                             conn.putStatementIndex(reqext.sql, prepare.statementId);
-                            if (MysqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 解析完paramColumn后缓存MyPrepareDesc = " + prepare);
-                            if (reqext.sendBindCount > 0) continue;
+                            if (MysqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", sendBindCount = " + reqext.getBindCount() + ", 解析完paramColumn后缓存MyPrepareDesc = " + prepare);
+                            if (reqext.getBindCount() > 0) continue;
                         } else if (lastResult.status == STATUS_PREPARE_COLUMN) {
                             MyRespPrepare prepare = lastResult.prepare;
                             MyRowColumn column = MyRespRowColumnDecoder.instance.read(conn, buffer, length, index, array, request, lastResult);
@@ -257,12 +262,12 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                             prepare.columnDescs.columns[prepare.columnDecodeIndex++] = column;
                             if (prepare.columnDecodeIndex < prepare.columnDescs.columns.length) continue;
                             //prepare结束
-                            conn.pauseWriting(false);
+                            conn.resumeWrite();
                             lastResult.status = 0;
                             conn.putPrepareDesc(reqext.sql, new MyPrepareDesc(prepare));
                             conn.putStatementIndex(reqext.sql, prepare.statementId);
                             if (MysqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 解析完columnColumn后缓存MyPrepareDesc = " + prepare + "\r\n");
-                            if (reqext.sendBindCount > 0) continue;
+                            if (reqext.getBindCount() > 0) continue;
                         } else if (lastResult.status == STATUS_EXTEND_COLUMN) {
                             MyRowColumn column = MyRespRowColumnDecoder.instance.read(conn, buffer, length, index, array, request, lastResult);
                             buffer.position(bufpos + length);
@@ -285,7 +290,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                             lastResult.status = 0; //row全部读取完毕
                             lastResult.effectRespCount++;
                             if (reqext.finds && lastResult.rowData.size() < lastResult.effectRespCount) lastResult.addRowData(null);
-                            if (lastResult.effectRespCount < reqext.sendBindCount) continue;
+                            if (lastResult.effectRespCount < reqext.getBindCount()) continue;
                         } else if (reqext.sendPrepare && lastResult.status == 0) { //Prepare第一个响应包
                             if (length == 7) {
                                 MyRespOK ok = MyRespDecoder.readOKPacket(conn, buffer, length, index, array);
@@ -293,6 +298,8 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                                     logger.log(Level.SEVERE, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", prepareok buffer-currpos: " + buffer.position() + ", unread-byte-len=" + (bufpos + length - buffer.position()) + ", startpos=" + bufpos + ", length=" + length);
                                 }
                                 buffer.position(bufpos + length);
+                                if (MysqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 读到Prepare第一个响应包");
+
                                 continue;
                             }
                             MyRespPrepare prepare = MyRespPrepareDecoder.instance.read(conn, buffer, length, index, array, request, lastResult);
@@ -326,7 +333,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                             }
                             buffer.position(bufpos + length);
                             if (MysqlDataSource.debug && conn.isAuthenticated()) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 增删改结果: affectedRows=" + ok.affectedRows + ", statusFlags=" + ok.serverStatusFlags + ", warningCount=" + ok.warningCount);
-                            if (lastResult.effectRespCount < reqext.sendBindCount) continue;
+                            if (lastResult.effectRespCount < reqext.getBindCount()) continue;
                         }
                         //REQ_TYPE_EXTEND_XXX 结束
                     } else {
@@ -341,9 +348,13 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                 halfFrameLength = 0;
                 if (lastExc != null) {
                     addResult(lastExc);
+                    if (MysqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 返回结果异常 = " + lastExc);
                 } else if (lastResult != null) {
                     addResult(lastResult);
+                    if (MysqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 返回结果 = " + lastResult);
                     lastResult = null;
+                } else {
+                    if (MysqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 返回无结果");
                 }
                 lastExc = null;
                 hadresult = true;

@@ -18,7 +18,13 @@ public class PgsqlDataSourceProvider implements DataSourceProvider {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
-        return "postgresql".equalsIgnoreCase(config.getValue("dbtype"));
+        String dbtype = config.getValue("dbtype");
+        if (dbtype == null) {
+            AnyValue read = config.getAnyValue("read");
+            AnyValue node = read == null ? config : read;
+            dbtype = AbstractDataSource.parseDbtype(node.getValue(AbstractDataSource.DATA_SOURCE_URL));
+        }
+        return "postgresql".equalsIgnoreCase(dbtype);
     }
 
     @Override

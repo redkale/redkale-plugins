@@ -6,6 +6,7 @@
 package org.redkalex.pay;
 
 import java.util.*;
+import org.redkale.convert.ConvertDisabled;
 
 /**
  *
@@ -15,21 +16,21 @@ import java.util.*;
  */
 public class PayPreRequest extends PayRequest {
 
-    protected short payway;  //支付途径; APP WEB NATIVE
+    protected long payMoney; //  支付金额。 单位:分 
 
-    protected long paymoney; //  支付金额。 单位:分 
+    protected String payCurrency; //  币种,一般币值*100
 
-    protected String paycurrency; //  币种,一般币值*100
+    protected String payTitle = ""; //订单标题
 
-    protected String paytitle = ""; //订单标题
+    protected String payBody = ""; //订单内容描述
 
-    protected String paybody = ""; //订单内容描述
+    protected String notifyUrl = ""; //回调url 不为空时会替换默认的回调url
+    
+    protected String returnUrl = ""; //页面返回url
 
-    protected String notifyurl = ""; //回调url 不为空时会替换默认的回调url
+    protected int timeoutSeconds = 10 * 60; //支付超时的分钟数
 
-    protected int timeoutms = 10; //支付超时的分钟数
-
-    protected String clienthost = ""; //HTTP请求的Host
+    protected String clientHost = ""; //HTTP请求的Host
 
     protected String clientAddr = "";  //客户端IP地址
 
@@ -38,12 +39,12 @@ public class PayPreRequest extends PayRequest {
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.paymoney < 1) throw new RuntimeException("paymoney is illegal");
-        if (this.paytitle == null || this.paytitle.isEmpty() || this.paytitle.indexOf('"') >= 0) throw new RuntimeException("paytitle is illegal");
-        if (this.paybody == null || this.paybody.isEmpty() || this.paybody.indexOf('"') >= 0) throw new RuntimeException("paybody is illegal");
+        if (this.payMoney < 1) throw new RuntimeException("payMoney is illegal");
+        if (this.payTitle == null || this.payTitle.isEmpty() || this.payTitle.indexOf('"') >= 0) throw new RuntimeException("payTitle is illegal");
+        if (this.payBody == null || this.payBody.isEmpty() || this.payBody.indexOf('"') >= 0) throw new RuntimeException("payBody is illegal");
         if (this.clientAddr == null || this.clientAddr.isEmpty()) throw new RuntimeException("clientAddr is illegal");
-        if (this.timeoutms < 5) throw new RuntimeException("timeoutms cannot less 5 minutes");
-        if (this.timeoutms > 24 * 60) throw new RuntimeException("timeoutms cannot greater 1 day");
+        if (this.timeoutSeconds != 0 && this.timeoutSeconds < 3 * 60) throw new RuntimeException("timeoutms cannot less 3 minutes");
+        if (this.timeoutSeconds > 24 * 60) throw new RuntimeException("timeoutms cannot greater 1 day");
     }
 
     public Map<String, String> attach(String key, Object value) {
@@ -60,68 +61,152 @@ public class PayPreRequest extends PayRequest {
         return attach == null ? defValue : attach.getOrDefault(name, defValue);
     }
 
+    public long getPayMoney() {
+        return payMoney;
+    }
+
+    public void setPayMoney(long payMoney) {
+        this.payMoney = payMoney;
+    }
+
+    public String getPayCurrency() {
+        return payCurrency;
+    }
+
+    public void setPayCurrency(String payCurrency) {
+        this.payCurrency = payCurrency;
+    }
+
+    public String getPayTitle() {
+        return payTitle;
+    }
+
+    public void setPayTitle(String payTitle) {
+        this.payTitle = payTitle;
+    }
+
+    public String getPayBody() {
+        return payBody;
+    }
+
+    public void setPayBody(String payBody) {
+        this.payBody = payBody;
+    }
+
+    public String getNotifyUrl() {
+        return notifyUrl;
+    }
+
+    public void setNotifyUrl(String notifyUrl) {
+        this.notifyUrl = notifyUrl;
+    }
+
+    public String getReturnUrl() {
+        return returnUrl;
+    }
+
+    public void setReturnUrl(String returnUrl) {
+        this.returnUrl = returnUrl;
+    }
+
+    @Deprecated
+    @ConvertDisabled
     public short getPayway() {
-        return payway;
+        return payWay;
     }
 
-    public void setPayway(short payway) {
-        this.payway = payway;
+    @Deprecated
+    @ConvertDisabled
+    public void setPayway(short payWay) {
+        this.payWay = payWay;
     }
 
+    @Deprecated
+    @ConvertDisabled
     public long getPaymoney() {
-        return paymoney;
+        return payMoney;
     }
 
-    public void setPaymoney(long paymoney) {
-        this.paymoney = paymoney;
+    @Deprecated
+    @ConvertDisabled
+    public void setPaymoney(long payMoney) {
+        this.payMoney = payMoney;
     }
 
+    @Deprecated
+    @ConvertDisabled
     public String getPaycurrency() {
-        return paycurrency;
+        return payCurrency;
     }
 
-    public void setPaycurrency(String paycurrency) {
-        this.paycurrency = paycurrency;
+    @Deprecated
+    @ConvertDisabled
+    public void setPaycurrency(String payCurrency) {
+        this.payCurrency = payCurrency;
     }
 
+    @Deprecated
+    @ConvertDisabled
     public String getPaytitle() {
-        return paytitle;
+        return payTitle;
     }
 
-    public void setPaytitle(String paytitle) {
-        this.paytitle = paytitle;
+    @Deprecated
+    @ConvertDisabled
+    public void setPaytitle(String payTitle) {
+        this.payTitle = payTitle;
     }
 
+    @Deprecated
+    @ConvertDisabled
     public String getPaybody() {
-        return paybody;
+        return payBody;
     }
 
-    public void setPaybody(String paybody) {
-        this.paybody = paybody;
+    @Deprecated
+    @ConvertDisabled
+    public void setPaybody(String payBody) {
+        this.payBody = payBody;
     }
 
+    @Deprecated
+    @ConvertDisabled
     public String getNotifyurl() {
-        return notifyurl;
+        return notifyUrl;
     }
 
-    public void setNotifyurl(String notifyurl) {
-        this.notifyurl = notifyurl;
+    @Deprecated
+    @ConvertDisabled
+    public void setNotifyurl(String notifyUrl) {
+        this.notifyUrl = notifyUrl;
     }
 
-    public int getTimeoutms() {
-        return timeoutms;
-    }
-
-    public void setTimeoutms(int timeoutms) {
-        this.timeoutms = timeoutms;
-    }
-
+    @Deprecated
+    @ConvertDisabled
     public String getClienthost() {
-        return clienthost;
+        return clientHost;
     }
 
-    public void setClienthost(String clienthost) {
-        this.clienthost = clienthost;
+    @Deprecated
+    @ConvertDisabled
+    public void setClienthost(String clientHost) {
+        this.clientHost = clientHost;
+    }
+
+    public int getTimeoutSeconds() {
+        return timeoutSeconds;
+    }
+
+    public void setTimeoutSeconds(int timeoutSeconds) {
+        this.timeoutSeconds = timeoutSeconds;
+    }
+
+    public String getClientHost() {
+        return clientHost;
+    }
+
+    public void setClientHost(String clientHost) {
+        this.clientHost = clientHost;
     }
 
     public String getClientAddr() {

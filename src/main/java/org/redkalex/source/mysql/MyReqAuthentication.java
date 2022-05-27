@@ -144,6 +144,10 @@ public class MyReqAuthentication extends MyClientRequest {
                 scrambledPassword = Mysqls.scrambleCachingSha2(password, seed);
             } else if ("mysql_native_password".equals(pluginName)) {
                 scrambledPassword = Mysqls.scramble411(password, seed);
+            } else if ("mysql_clear_password".equals(pluginName)) {
+                scrambledPassword = password.getBytes(StandardCharsets.UTF_8);
+            } else {
+                throw new UnsupportedOperationException("Not supported password plugin: " + pluginName);
             }
         }
 

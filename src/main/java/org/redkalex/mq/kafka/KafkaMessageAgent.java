@@ -38,8 +38,8 @@ public class KafkaMessageAgent extends MessageAgent {
     protected boolean reconnecting;
 
     @Override
-    public void init(AnyValue config) {
-        super.init(config);
+    public void init(ResourceFactory factory, AnyValue config) {
+        super.init(factory, config);
         this.servers = config.getAnyValue("servers").getValue("value");
         AnyValue cs = config.getAnyValue("controllers");
         this.controllers = cs == null ? this.servers : cs.getValue("value", this.servers);

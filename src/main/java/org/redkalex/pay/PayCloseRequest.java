@@ -6,6 +6,7 @@
 package org.redkalex.pay;
 
 import java.util.*;
+import org.redkale.convert.ConvertDisabled;
 
 /**
  *
@@ -15,19 +16,19 @@ import java.util.*;
  */
 public class PayCloseRequest extends PayRequest {
 
-    protected String thirdpayno = ""; //第三方的支付流水号
+    protected String thirdPayno = ""; //第三方的支付流水号
 
-    protected long paymoney; //  支付金额。 单位:分 
+    protected long payMoney; //  支付金额。 单位:分 
 
-    protected String paycurrency; //  币种,一般币值*100
+    protected String payCurrency; //  币种,一般币值*100
 
     protected Map<String, String> attach; //扩展信息
 
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.paymoney < 1) throw new RuntimeException("paymoney is illegal");
-        if (this.thirdpayno == null || this.thirdpayno.isEmpty()) throw new RuntimeException("thirdpayno is illegal");
+        if (this.payMoney < 1) throw new RuntimeException("payMoney is illegal");
+        if (this.thirdPayno == null || this.thirdPayno.isEmpty()) throw new RuntimeException("thirdPayno is illegal");
     }
 
     public Map<String, String> attach(String key, Object value) {
@@ -44,28 +45,28 @@ public class PayCloseRequest extends PayRequest {
         return attach == null ? defValue : attach.getOrDefault(name, defValue);
     }
 
-    public String getThirdpayno() {
-        return thirdpayno;
+    public String getThirdPayno() {
+        return thirdPayno;
     }
 
-    public void setThirdpayno(String thirdpayno) {
-        this.thirdpayno = thirdpayno;
+    public void setThirdPayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
     }
 
-    public long getPaymoney() {
-        return paymoney;
+    public long getPayMoney() {
+        return payMoney;
     }
 
-    public void setPaymoney(long paymoney) {
-        this.paymoney = paymoney;
+    public void setPayMoney(long payMoney) {
+        this.payMoney = payMoney;
     }
 
-    public String getPaycurrency() {
-        return paycurrency;
+    public String getPayCurrency() {
+        return payCurrency;
     }
 
-    public void setPaycurrency(String paycurrency) {
-        this.paycurrency = paycurrency;
+    public void setPayCurrency(String payCurrency) {
+        this.payCurrency = payCurrency;
     }
 
     public Map<String, String> getAttach() {
@@ -74,5 +75,41 @@ public class PayCloseRequest extends PayRequest {
 
     public void setAttach(Map<String, String> attach) {
         this.attach = attach;
+    }
+    
+    @Deprecated
+    @ConvertDisabled
+    public long getPaymoney() {
+        return payMoney;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setPaymoney(long payMoney) {
+        this.payMoney = payMoney;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public String getPaycurrency() {
+        return payCurrency;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setPaycurrency(String payCurrency) {
+        this.payCurrency = payCurrency;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public String getThirdpayno() {
+        return thirdPayno;
+    }
+
+    @Deprecated
+    @ConvertDisabled
+    public void setThirdpayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
     }
 }

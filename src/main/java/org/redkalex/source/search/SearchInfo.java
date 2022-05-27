@@ -80,6 +80,9 @@ public final class SearchInfo<T> {
     //所有可更新字段，即排除了主键字段和标记为&#064;Column(updatable=false)的字段
     private final Map<String, Attribute<T, Serializable>> updateAttributeMap = new HashMap<>();
 
+    //分表 策略
+    private final DistributeTableStrategy<T> tableStrategy;
+
     //数据库中所有字段
     private final Attribute<T, Serializable>[] queryAttributes;
 
@@ -182,6 +185,16 @@ public final class SearchInfo<T> {
         Table t = type.getAnnotation(Table.class);
         this.table = (t == null || t.name().isEmpty()) ? type.getSimpleName().toLowerCase() : t.name();
 
+        DistributeTable dt = type.getAnnotation(DistributeTable.class);
+        DistributeTableStrategy dts = null;
+        try {
+            dts = (dt == null) ? null : dt.strategy().getDeclaredConstructor().newInstance();
+            if (dts != null) RedkaleClassLoader.putReflectionDeclaredConstructors(dt.strategy(), dt.strategy().getName());
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, type + " init DistributeTableStrategy error", e);
+        }
+        this.tableStrategy = dts;
+
         this.arrayer = Creator.arrayFunction(type);
         this.creator = Creator.create(type);
         ConstructorParameters cp = null;
@@ -261,17 +274,21 @@ public final class SearchInfo<T> {
                     }
                 }
                 if (attr.type() == boolean.class || attr.type() == Boolean.class) {
-                    mappings.put(attr.field(), Utility.ofMap("type", "boolean"));
+                    mappings.put(attr.field(), Utility.ofMap("type", "boolean", "index", false));
                 } else if (attr.type() == float.class || attr.type() == Float.class) {
-                    mappings.put(attr.field(), Utility.ofMap("type", "double"));
+                    mappings.put(attr.field(), Utility.ofMap("type", "double", "index", false));
                 } else if (attr.type() == double.class || attr.type() == Double.class) {
-                    mappings.put(attr.field(), Utility.ofMap("type", "double"));
+                    mappings.put(attr.field(), Utility.ofMap("type", "double", "index", false));
                 } else if (attr.type().isPrimitive() || Number.class.isAssignableFrom(attr.type())) {
-                    mappings.put(attr.field(), Utility.ofMap("type", "long"));
+                    mappings.put(attr.field(), Utility.ofMap("type", sc != null && sc.date() ? "date" : "long", "index", false));
                 } else if (CharSequence.class.isAssignableFrom(attr.type())) {
                     Map<String, Object> m = new LinkedHashMap<>();
                     if (sc != null && !sc.options().isEmpty()) {
-                        m.put("index_options", sc.options());
+                        if ("false".equalsIgnoreCase(sc.options())) {
+                            m.put("index", false);
+                        } else {
+                            m.put("index_options", sc.options());
+                        }
                     }
                     if (sc != null && (sc.html() || !sc.analyzer().isEmpty())) {
                         String analyzer = (sc.html() ? "html_" : "") + sc.analyzer();
@@ -294,14 +311,18 @@ public final class SearchInfo<T> {
                         m.put("search_analyzer", searchAnalyzer);
                     }
                     if (text) {
-                        m.put("type", "text");
+                        m.put("type", sc != null && sc.date() ? "date" : (sc != null && sc.ip() ? "ip" : "text"));
                     } else {
                         m.put("type", "keyword");
                         m.put("ignore_above", strlen);
                     }
                     mappings.put(attr.field(), m);
                 } else {
-                    mappings.put(attr.field(), Utility.ofMap("type", "object"));
+                    if (sc != null && "false".equalsIgnoreCase(sc.options())) {
+                        mappings.put(attr.field(), Utility.ofMap("type", "object", "index", false));
+                    } else {
+                        mappings.put(attr.field(), Utility.ofMap("type", "object"));
+                    }
                 }
                 queryattrs.add(attr);
                 fields.add(fieldname);
@@ -344,18 +365,55 @@ public final class SearchInfo<T> {
         }
     }
 
-    /**
-     * 根据主键值获取Entity的表名
-     *
-     *
-     * @return String
-     */
-    public String getTable() {
+    public Class<T> getType() {
+        return type;
+    }
+
+    public DistributeTableStrategy<T> getTableStrategy() {
+        return tableStrategy;
+    }
+
+    public String getOriginTable() {
         return table;
     }
 
-    public Class<T> getType() {
-        return type;
+    /**
+     * 根据主键值获取Entity的表名
+     *
+     * @param primary Entity主键值
+     *
+     * @return String
+     */
+    public String getTable(Serializable primary) {
+        if (tableStrategy == null) return table;
+        String t = tableStrategy.getTable(table, primary);
+        return t == null || t.isEmpty() ? table : t;
+    }
+
+    /**
+     * 根据过滤条件获取Entity的表名
+     *
+     * @param node 过滤条件
+     *
+     * @return String
+     */
+    public String getTable(FilterNode node) {
+        if (tableStrategy == null) return table;
+        String t = tableStrategy.getTable(table, node);
+        return t == null || t.isEmpty() ? table : t;
+    }
+
+    /**
+     * 根据Entity对象获取Entity的表名
+     *
+     * @param bean Entity对象
+     *
+     * @return String
+     */
+    public String getTable(T bean) {
+        if (tableStrategy == null) return table;
+        String t = tableStrategy.getTable(table, bean);
+        return t == null || t.isEmpty() ? table : t;
     }
 
     /**

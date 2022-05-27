@@ -43,6 +43,9 @@ public abstract class PayRetCodes {
     @RetLabel("支付超时")
     public static final int RETPAY_PAY_EXPIRED = 20010007;
 
+    @RetLabel("支付信息不存在")
+    public static final int RETPAY_PAY_RECORD_ILLEGAL = 20010008;
+
     @RetLabel("交易签名被篡改")
     public static final int RETPAY_FALSIFY_ERROR = 20010011;
 
@@ -52,8 +55,11 @@ public abstract class PayRetCodes {
     @RetLabel("退款异常")
     public static final int RETPAY_REFUND_ERROR = 20010013;
 
+    @RetLabel("退款失败")
+    public static final int RETPAY_REFUND_FAILED = 20010014;
+
     @RetLabel("用户标识缺失")
-    public static final int RETPAY_OPENID_ERROR = 20010021;
+    public static final int RETPAY_PARAM_ERROR = 20010021;
 
     //-----------------------------------------------------------------------------------------------------------
     protected static final Map<String, Map<Integer, String>> rets = RetLabel.RetLoader.loadMap(PayRetCodes.class);

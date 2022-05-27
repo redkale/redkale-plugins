@@ -20,6 +20,7 @@ import org.redkale.service.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkale.boot.Application.RESNAME_APP_ASYNCGROUP;
+import org.redkale.net.client.ClientAddress;
 
 /**
  * 详情见: https://redkale.org
@@ -30,7 +31,7 @@ import static org.redkale.boot.Application.RESNAME_APP_ASYNCGROUP;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public final class RedisCacheSource extends AbstractService implements CacheSource, Service, AutoCloseable, Resourcable {
+public final class RedisCacheSource extends AbstractCacheSource {
 
     static final boolean debug = false; //System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
 
@@ -66,35 +67,90 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
         if (this.convert == null) this.convert = this.defaultConvert;
         if (conf == null) conf = new AnyValue.DefaultAnyValue();
         String password = null;
-        for (AnyValue node : conf.getAnyValues("node")) {
-            String addrstr = node.getValue("addr");
-            if (addrstr.startsWith("redis://")) {
-                addrstr = addrstr.substring("redis://".length());
-                int pos = addrstr.indexOf(':');
-                address = new InetSocketAddress(addrstr.substring(0, pos), Integer.parseInt(addrstr.substring(pos + 1)));
+        int urlmaxconns = Utility.cpus();
+        int urlpipelines = org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES;
+        for (AnyValue node : getNodes(conf)) {
+            String urluser = "";
+            String urlpwd = "";
+            String urldb = "";
+            String addrstr = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
+            if (addrstr.startsWith("redis://")) { //兼容 redis://:1234@127.0.0.1:6379?db=2
+                URI uri = URI.create(addrstr);
+                address = new InetSocketAddress(uri.getHost(), uri.getPort() > 0 ? uri.getPort() : 6379);
+                String userInfo = uri.getUserInfo();
+                if (userInfo == null || userInfo.isEmpty()) {
+                    String authority = uri.getAuthority();
+                    if (authority != null && authority.indexOf('@') > 0) {
+                        userInfo = authority.substring(0, authority.indexOf('@'));
+                    }
+                }
+                if (userInfo != null && !userInfo.isEmpty()) {
+                    urlpwd = userInfo;
+                    if (urlpwd.startsWith(":")) {
+                        urlpwd = urlpwd.substring(1);
+                    } else {
+                        int index = urlpwd.indexOf(':');
+                        if (index > 0) {
+                            urluser = urlpwd.substring(0, index);
+                            urlpwd = urlpwd.substring(index + 1);
+                        }
+                    }
+                }
+                if (uri.getQuery() != null && !uri.getQuery().isEmpty()) {
+                    String[] qrys = uri.getQuery().split("&|=");
+                    for (int i = 0; i < qrys.length; i += 2) {
+                        if (CACHE_SOURCE_USER.equals(qrys[i])) {
+                            urluser = i == qrys.length - 1 ? "" : qrys[i + 1];
+                        } else if (CACHE_SOURCE_PASSWORD.equals(qrys[i])) {
+                            urlpwd = i == qrys.length - 1 ? "" : qrys[i + 1];
+                        } else if (CACHE_SOURCE_DB.equals(qrys[i])) {
+                            urldb = i == qrys.length - 1 ? "" : qrys[i + 1];
+                        } else if (CACHE_SOURCE_MAXCONNS.equals(qrys[i])) {
+                            urlmaxconns = i == qrys.length - 1 ? Utility.cpus() : Integer.parseInt(qrys[i + 1]);
+                        } else if (CACHE_SOURCE_PIPELINES.equals(qrys[i])) {
+                            urlpipelines = i == qrys.length - 1 ? org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES : Integer.parseInt(qrys[i + 1]);
+                        }
+                    }
+                }
             } else { //兼容addr和port分开
                 address = new InetSocketAddress(addrstr, node.getIntValue("port"));
             }
-            password = node.getValue("password", "").trim();
-            String db0 = node.getValue("db", "").trim();
+            password = node.getValue(CACHE_SOURCE_PASSWORD, urlpwd).trim();
+            String db0 = node.getValue(CACHE_SOURCE_DB, urldb).trim();
             if (!db0.isEmpty()) db = Integer.valueOf(db0);
             break;
         }
-        this.client = new RedisCacheClient(asyncGroup, resourceName() + "." + db, address, Utility.cpus(), 16,
+        int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
+        int pipelines = conf.getIntValue(CACHE_SOURCE_PIPELINES, urlpipelines);
+        this.client = new RedisCacheClient(asyncGroup, resourceName() + "." + db, new ClientAddress(address), maxconns, pipelines,
             password == null || password.isEmpty() ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
-
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" + db);
+        //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" + db);
     }
 
-    @Override //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
-        AnyValue[] nodes = config.getAnyValues("node");
+        AnyValue[] nodes = getNodes(config);
         if (nodes == null || nodes.length == 0) return false;
         for (AnyValue node : nodes) {
-            if (node.getValue("addr") != null && node.getValue("addr").startsWith("redis://")) return true;
+            String val = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
+            if (val != null && val.startsWith("redis://")) return true;
         }
         return false;
+    }
+
+    protected AnyValue[] getNodes(AnyValue config) {
+        AnyValue[] nodes = config.getAnyValues(CACHE_SOURCE_NODE);
+        if (nodes == null || nodes.length == 0) {
+            AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
+            if (one == null) {
+                String val = config.getValue(CACHE_SOURCE_URL);
+                if (val == null) return nodes;
+                nodes = new AnyValue[]{config};
+            } else {
+                nodes = new AnyValue[]{one};
+            }
+        }
+        return nodes;
     }
 
     @Override
@@ -115,7 +171,7 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{addr = " + this.address + ", db=" + this.db + "}";
+        return getClass().getSimpleName() + "{addrs=" + this.address + ", db=" + this.db + "}";
     }
 
     @Override
@@ -146,8 +202,18 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
     }
 
     @Override
+    public CompletableFuture<String> getSetStringAsync(String key, String value) {
+        return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(value)).thenApply(v -> v.getStringValue());
+    }
+
+    @Override
     public CompletableFuture<Long> getLongAsync(String key, long defValue) {
         return sendAsync("GET", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getLongValue(defValue));
+    }
+
+    @Override
+    public CompletableFuture<Long> getSetLongAsync(String key, long value, long defValue) {
+        return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(value)).thenApply(v -> v.getLongValue(defValue));
     }
 
     @Override
@@ -161,8 +227,18 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
     }
 
     @Override
+    public String getSetString(String key, String value) {
+        return getSetStringAsync(key, value).join();
+    }
+
+    @Override
     public long getLong(String key, long defValue) {
         return getLongAsync(key, defValue).join();
+    }
+
+    @Override
+    public long getSetLong(String key, long value, long defValue) {
+        return getSetLongAsync(key, value, defValue).join();
     }
 
     //--------------------- getAndRefresh ------------------------------
@@ -224,6 +300,16 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
     }
 
     @Override
+    public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
+        return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue((Convert) null, type, value)).thenApply(v -> v.getObjectValue(type));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> getSetAsync(String key, Convert convert, final Type type, T value) {
+        return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(convert, type, value)).thenApply(v -> v.getObjectValue(type));
+    }
+
+    @Override
     public <T> void set(final String key, final Convert convert, T value) {
         setAsync(key, convert, value).join();
     }
@@ -236,6 +322,16 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
     @Override
     public <T> void set(String key, final Convert convert, final Type type, T value) {
         setAsync(key, convert, type, value).join();
+    }
+
+    @Override
+    public <T> T getSet(String key, final Type type, T value) {
+        return getSetAsync(key, type, value).join();
+    }
+
+    @Override
+    public <T> T getSet(String key, Convert convert, final Type type, T value) {
+        return getSetAsync(key, convert, type, value).join();
     }
 
     @Override
@@ -261,17 +357,17 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
     //--------------------- set ------------------------------    
     @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert, T value) {
-        return (CompletableFuture) setAsync(key, convert, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(convert, null, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, final Type type, T value) {
-        return (CompletableFuture) setAsync(key, type, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue((Convert) null, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert, final Type type, T value) {
-        return (CompletableFuture) setAsync(key, convert, type, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(convert, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
@@ -291,7 +387,7 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
 
     @Override
     public CompletableFuture<Void> setStringAsync(int expireSeconds, String key, String value) {
-        return (CompletableFuture) setStringAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
@@ -301,7 +397,7 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
 
     @Override
     public CompletableFuture<Void> setLongAsync(int expireSeconds, String key, long value) {
-        return (CompletableFuture) setLongAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
@@ -1134,6 +1230,11 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
     }
 
     @Override
+    public byte[] getSetBytes(final String key, final byte[] value) {
+        return getSetBytesAsync(key, value).join();
+    }
+
+    @Override
     public byte[] getBytesAndRefresh(final String key, final int expireSeconds) {
         return getBytesAndRefreshAsync(key, expireSeconds).join();
     }
@@ -1164,6 +1265,11 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
     }
 
     @Override
+    public CompletableFuture<byte[]> getSetBytesAsync(final String key, final byte[] value) {
+        return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getBytesValue());
+    }
+
+    @Override
     public CompletableFuture<byte[]> getBytesAndRefreshAsync(final String key, final int expireSeconds) {
         return refreshAsync(key, expireSeconds).thenCompose(v -> getBytesAsync(key));
     }
@@ -1176,17 +1282,17 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
 
     @Override
     public CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final byte[] value) {
-        return (CompletableFuture) setBytesAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> CompletableFuture<Void> setBytesAsync(final String key, final Convert convert, final Type type, final T value) {
-        return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), convert.convertToBytes(type, value)).thenApply(v -> v.getVoidValue());
+    public <T> CompletableFuture<Void> setBytesAsync(final String key, final Convert convert0, final Type type, final T value) {
+        return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), (convert0 == null ? convert : convert).convertToBytes(type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final Convert convert, final Type type, final T value) {
-        return (CompletableFuture) setBytesAsync(key, convert.convertToBytes(type, value)).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+    public <T> CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final Convert convert0, final Type type, final T value) {
+        return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), (convert0 == null ? convert : convert).convertToBytes(type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
@@ -1220,7 +1326,19 @@ public final class RedisCacheSource extends AbstractService implements CacheSour
     }
 
     //--------------------- send ------------------------------  
-    private CompletableFuture<RedisCacheResult> sendAsync(final String command, final String key, final byte[]... args) {
+    @Local
+    public CompletableFuture<RedisCacheResult> sendAsync(final String command, final String key, final Serializable... args) {
+        int start = key == null ? 0 : 1;
+        byte[][] bs = new byte[args.length + start][];
+        if (key != null) bs[0] = key.getBytes(StandardCharsets.UTF_8);
+        for (int i = start; i < bs.length; i++) {
+            bs[i] = JsonConvert.root().convertToBytes(args[i - 1]);
+        }
+        return client.pollConnection().thenCompose(conn -> conn.writeChannel(conn.pollRequest(WorkThread.currWorkThread()).prepare(command, key, bs))).orTimeout(6, TimeUnit.SECONDS);
+    }
+
+    @Local
+    public CompletableFuture<RedisCacheResult> sendAsync(final String command, final String key, final byte[]... args) {
         return client.pollConnection().thenCompose(conn -> conn.writeChannel(conn.pollRequest(WorkThread.currWorkThread()).prepare(command, key, args))).orTimeout(6, TimeUnit.SECONDS);
     }
 

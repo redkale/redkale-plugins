@@ -19,6 +19,7 @@ public class RedissionCacheSourceProvider implements CacheSourceProvider {
     @Override
     public boolean acceptsConf(AnyValue config) {
         try {
+            Object.class.isAssignableFrom(org.redisson.config.Config.class); //试图加载Redission相关类
             RedissionCacheSource source = RedissionCacheSource.class.getConstructor().newInstance();
             return source.acceptsConf(config);
         } catch (Throwable e) {

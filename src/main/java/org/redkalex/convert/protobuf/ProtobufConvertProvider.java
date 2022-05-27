@@ -5,12 +5,14 @@
  */
 package org.redkalex.convert.protobuf;
 
+import javax.annotation.Priority;
 import org.redkale.convert.*;
 
 /**
  *
  * @author zhangjx
  */
+@Priority(-900)
 public class ProtobufConvertProvider implements ConvertProvider {
 
     @Override

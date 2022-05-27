@@ -113,6 +113,8 @@ class Mysqls {
 
     static final int SERVER_QUERY_WAS_SLOW = 2048;
 
+    static final int SERVER_SESSION_STATE_CHANGED = 1 << 14; // 16384
+
     //------------------------------- CLIENT -------------------------------------------------
     static final int CLIENT_LONG_PASSWORD = 0x00000001;
 
@@ -362,6 +364,18 @@ class Mysqls {
         byte[] bs = new byte[length];
         buffer.get(bs);
         return new String(bs, StandardCharsets.UTF_8);
+    }
+
+    protected static String readUTF8StringWithTerm(ByteBuffer buffer, ByteArray array, int limit) {
+        if (limit == 0) return "";
+        array.clear();
+        while (limit > 0) {
+            byte b = buffer.get();
+            if (b == 0) break;
+            array.put(b);
+            limit--;
+        }
+        return array.toString(StandardCharsets.UTF_8);
     }
 
     protected static byte[] readBytes(ByteBuffer buffer, byte[] store, int len) {
