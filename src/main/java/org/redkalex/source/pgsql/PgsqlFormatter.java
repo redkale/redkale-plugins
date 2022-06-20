@@ -24,7 +24,8 @@ import org.redkale.util.*;
  */
 public abstract class PgsqlFormatter {
 
-    public static <T> Serializable decodeRowColumnValue(ByteBuffer buffer, Attribute<T, Serializable> attr, int bslen) {
+    //attr为空就返回byte[], 不为空返回attr对应类型的对象
+    public static <T> Serializable decodeRowColumnValue(ByteBuffer buffer, ByteArray tmp, Attribute<T, Serializable> attr, int bslen) {
         if (bslen == -1) return null;
         if (attr == null) {
             byte[] bs = new byte[bslen];
@@ -36,9 +37,8 @@ public abstract class PgsqlFormatter {
             return buffer.getInt();
         } else if (type == String.class) {
             if (bslen == 0) return "";
-            byte[] bs = new byte[bslen];
-            buffer.get(bs);
-            return new String(bs, StandardCharsets.UTF_8);
+            tmp.clear().put(buffer, bslen);
+            return tmp.toString(StandardCharsets.UTF_8);
         } else if (type == long.class || type == Long.class) {
             return buffer.getLong();
         } else if (type == boolean.class || type == Boolean.class) {
@@ -71,9 +71,8 @@ public abstract class PgsqlFormatter {
             return LocalTime.ofNanoOfDay(buffer.getLong() * 1000);
         } else {
             if (bslen == 0) return null;
-            byte[] bs = new byte[bslen];
-            buffer.get(bs);
-            return JsonConvert.root().convertFrom(attr.genericType(), new String(bs, StandardCharsets.UTF_8));
+            tmp.clear().put(buffer, bslen);
+            return JsonConvert.root().convertFrom(attr.genericType(), tmp.toString(StandardCharsets.UTF_8));
             //throw new RuntimeException("Not supported column: " + attr.field() + ", type: " + attr.type());
         }
     }

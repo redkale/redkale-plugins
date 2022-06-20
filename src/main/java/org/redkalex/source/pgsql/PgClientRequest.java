@@ -37,10 +37,46 @@ public abstract class PgClientRequest extends ClientRequest {
 
     public static final int REQ_TYPE_EXTEND_DELETE = (1 << 5) + 1;   //预编译的16进制值都要以1结尾
 
+    private static final byte[] SYNC_BYTES = new ByteArray(128).putByte('S').putInt(4).getBytes();
+
+    private static final byte[] EXECUTE_BYTES = new ByteArray(128).putByte('E').putInt(4 + 1 + 4).putByte(0).putInt(0).getBytes();
+
     //--------------------------------------------------
     protected EntityInfo info;
 
+    protected int syncedCount;
+
     public abstract int getType();
+
+    public boolean isExtendType() {
+        return (getType() & 0x1) == 1;
+    }
+
+    public int getSyncedCount() {
+        return syncedCount;
+    }
+
+    @Override
+    protected void prepare() {
+        super.prepare();
+        this.syncedCount = 0;
+    }
+
+    protected void writeExecute(ByteArray array, int fetchSize) { // EXECUTE
+        if (fetchSize < 1) {
+            array.put(EXECUTE_BYTES);
+        } else {
+            array.putByte('E');
+            array.putInt(4 + 1 + 4);
+            array.putByte(0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
+            array.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
+        }
+    }
+
+    protected void writeSync(ByteArray array) { // SYNC
+        array.put(SYNC_BYTES);
+        this.syncedCount++;
+    }
 
     protected static ByteArray writeUTF8String(ByteArray array, String string) {
         array.put(string.getBytes(StandardCharsets.UTF_8));

@@ -7,9 +7,11 @@ package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.logging.Level;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
+import static org.redkalex.source.pgsql.PgClientCodec.logger;
 
 /**
  *
@@ -87,13 +89,10 @@ public class PgReqUpdate extends PgClientRequest {
                     array.putShort((short) 0);
                     array.putInt(start, array.length() - start);
                 }
-                { // EXECUTE
-                    array.putByte('E');
-                    array.putInt(4 + 1 + 4);
-                    array.putByte(0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
-                    array.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
-                }
+                writeExecute(array, fetchSize); // EXECUTE
             }
+            writeSync(array); // SYNC     
+            if (PgsqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(" + paramValues.length + "), EXECUTE, SYNC");
         } else {
             { // BIND
                 array.putByte('B');
@@ -106,16 +105,9 @@ public class PgReqUpdate extends PgClientRequest {
                 array.putShort((short) 0);// number of parameters 后面跟着的参数值的数目(可能为零)。这些必须和查询需要的参数个数匹配。
                 array.putInt(start, array.length() - start);
             }
-            { // EXECUTE
-                array.putByte('E');
-                array.putInt(4 + 1 + 4);
-                array.putByte(0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
-                array.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
-            }
-        }
-        { // SYNC
-            array.putByte('S');
-            array.putInt(4);
+            writeExecute(array, fetchSize); // EXECUTE
+            writeSync(array); // SYNC
+            if (PgsqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(0), EXECUTE, SYNC");
         }
     }
 

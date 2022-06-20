@@ -8,19 +8,17 @@ package org.redkalex.source.pgsql;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.concurrent.atomic.*;
+import java.util.logging.Level;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.*;
 import org.redkale.util.*;
+import static org.redkalex.source.pgsql.PgClientCodec.logger;
 
 /**
  *
  * @author zhangjx
  */
 public class PgReqExtended extends PgClientRequest {
-
-    static final byte[] SYNC_BYTES = new ByteArray(128).putByte('S').putInt(4).getBytes();
-
-    static final byte[] EXECUTE_BYTES = new ByteArray(128).putByte('E').putInt(4 + 1 + 4).putByte(0).putInt(0).getBytes();
 
     private static final Object[][] ONE_EMPTY_PARAMS = new Object[][]{new Object[0]};
 
@@ -165,16 +163,8 @@ public class PgReqExtended extends PgClientRequest {
                     }
                     array.putInt(start, array.length() - start);
                 }
-                { // EXECUTE
-                    if (fetchSize == 0) {
-                        array.put(EXECUTE_BYTES);
-                    } else {
-                        array.putByte('E');
-                        array.putInt(4 + 1 + 4);
-                        array.putByte(0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
-                        array.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
-                    }
-                }
+                writeExecute(array, fetchSize); // EXECUTE
+            writeSync(array); //SYNC
             }
         } else {
             { // BIND
@@ -199,31 +189,20 @@ public class PgReqExtended extends PgClientRequest {
                 }
                 array.putInt(start, array.length() - start);
             }
-            { // EXECUTE
-                if (fetchSize == 0) {
-                    array.put(EXECUTE_BYTES);
-                } else {
-                    array.putByte('E');
-                    array.putInt(4 + 1 + 4);
-                    array.putByte(0); //portal 要执行的入口的名字(空字符串选定未命名的入口)。
-                    array.putInt(fetchSize); //要返回的最大行数，如果入口包含返回行的查询(否则忽略)。零标识"没有限制"。
-                }
-            }
+            writeExecute(array, fetchSize); // EXECUTE
+            writeSync(array); //SYNC            
         }
-    }
-
-    private void writeSync(ByteArray array) { // SYNC
-        array.put(SYNC_BYTES);
     }
 
     @Override
     public void accept(ClientConnection conn, ByteArray array) {
         PgClientConnection pgconn = (PgClientConnection) conn;
         AtomicBoolean prepared = pgconn.getPrepareFlag(sql);
+        this.syncedCount = 0;
         if (prepared.get()) {
             this.sendPrepare = false;
             writeBind(array, pgconn.getStatementIndex(sql));
-            writeSync(array);
+            if (PgsqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
         } else {
             Long statementIndex = pgconn.createStatementIndex(sql);
             prepared.set(true);
@@ -232,7 +211,7 @@ public class PgReqExtended extends PgClientRequest {
             writeDescribe(array, statementIndex);
             //绑定参数
             writeBind(array, statementIndex);
-            writeSync(array);
+            if (PgsqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
         }
     }
 

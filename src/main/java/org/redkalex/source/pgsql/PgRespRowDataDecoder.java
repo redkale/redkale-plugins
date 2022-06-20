@@ -31,14 +31,14 @@ public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
         if (resultAttrs == null) { //text
             byte[][] byteValues = new byte[buffer.getShort()][];
             for (int i = 0; i < byteValues.length; i++) {
-                byteValues[i] = (byte[]) PgsqlFormatter.decodeRowColumnValue(buffer, null, buffer.getInt());
+                byteValues[i] = (byte[]) PgsqlFormatter.decodeRowColumnValue(buffer, array, null, buffer.getInt());
             }
             return new PgRowData(byteValues, null);
         }
         //binary
         Serializable[] realValues = new Serializable[buffer.getShort()];
         for (int i = 0; i < realValues.length; i++) {
-            realValues[i] = PgsqlFormatter.decodeRowColumnValue(buffer, resultAttrs[i], buffer.getInt());
+            realValues[i] = PgsqlFormatter.decodeRowColumnValue(buffer, array, resultAttrs[i], buffer.getInt());
         }
         return new PgRowData(null, realValues);
     }

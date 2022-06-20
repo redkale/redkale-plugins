@@ -32,6 +32,8 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
 
     Throwable lastExc = null;
 
+    int lastCount;
+
     public PgClientCodec(ClientConnection connection) {
         super(connection);
     }
@@ -164,6 +166,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         addResult(lastResult);
                         lastResult = null;
                         lastExc = null;
+                        lastCount = 0;
                         hadresult = true;
                         request = null;
                         break;
@@ -184,22 +187,26 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         }
                         if (buffer.position() != bufpos + length) {
                             logger.log(Level.SEVERE, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", C buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                            buffer.position(bufpos + length);
                         }
+                    } else {
+                        buffer.position(bufpos + length);
                     }
-                    buffer.position(bufpos + length);
                 } else if (cmd == 'T') {  //RowDesc
                     if (request != null) {
                         if (lastResult == null) lastResult = conn.pollResultSet(request.info);
                         PgRowDesc rowDesc = PgRespRowDescDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         lastResult.setRowDesc(rowDesc);
-                        if ((request.getType() & 0x1) == 1) {
+                        if (request.isExtendType()) {
                             conn.putPrepareDesc(((PgReqExtended) request).sql, rowDesc);
                         }
                         if (buffer.position() != bufpos + length) {
                             logger.log(Level.SEVERE, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", T buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                            buffer.position(bufpos + length);
                         }
+                    } else {
+                        buffer.position(bufpos + length);
                     }
-                    buffer.position(bufpos + length);
                 } else if (cmd == 'D') {
                     if (request != null) {
                         if (lastResult == null) lastResult = conn.pollResultSet(request.info);
@@ -207,16 +214,19 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastResult.addRowData(rowData);
                         if (buffer.position() != bufpos + length) {
                             logger.log(Level.SEVERE, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", D buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                            buffer.position(bufpos + length);
                         }
+                    } else {
+                        buffer.position(bufpos + length);
                     }
-                    buffer.position(bufpos + length);
                 } else if (cmd == 'E') {
                     if (request != null) {
-                        lastExc = PgRespErrorDecoder.instance.read(conn, buffer, length, array, request, lastResult);
+                        Exception exc = PgRespErrorDecoder.instance.read(conn, buffer, length, array, request, lastResult);
+                        if (lastExc == null) lastExc = exc; //以第一个异常为准，例如insert多个，当表不存在prepare异常时，bind的异常不是表不存在异常。
                         if (buffer.position() != bufpos + length) {
                             logger.log(Level.SEVERE, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", E buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
                         }
-                        if ((request.getType() & 0x1) == 1 && ((PgReqExtended) request).sendPrepare) {
+                        if (request.isExtendType() && ((PgReqExtended) request).sendPrepare) {
                             conn.getPrepareFlag(((PgReqExtended) request).sql).set(false);
                         }
                     }
@@ -228,15 +238,17 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         addResult(lastExc);
                         lastResult = null;
                         lastExc = null;
+                        lastCount = 0;
                         hadresult = true;
                         request = null;
                         break;
                     }
                 } else if (cmd == 'Z') { //ReadyForQuery
+                    lastCount++;
                     buffer.get(); //'I' TransactionState.IDLE、'T' TransactionState.OPEN、'E' TransactionState.FAILED
                     //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + " , " + request + "----------------------cmd:" + cmd);
                     if (lastResult != null) {
-                        if ((request.getType() & 0x1) == 1) { //PgReqExtended
+                        if (request.isExtendType()) { //PgReqExtended
                             PgReqExtended reqext = (PgReqExtended) request;
                             int mergeCount = reqext.getMergeCount();
                             if (mergeCount > 0) {
@@ -269,7 +281,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                     buffer.position(bufpos + length);
 
-                    if (lastResult != null && request.getType() == PgClientRequest.REQ_TYPE_BATCH && lastResult.effectRespCount < ((PgReqBatch) request).sqls.length) continue;
+                    if (request != null && lastCount < request.getSyncedCount()) continue;
 
                     halfFrameBytes = null;
                     halfFrameCmd = 0;
@@ -282,6 +294,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastResult = null;
                     }
                     lastExc = null;
+                    lastCount = 0;
                     hadresult = true;
                     request = null;
                     update_1_to_2 = false;
