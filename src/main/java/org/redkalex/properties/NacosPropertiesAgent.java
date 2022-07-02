@@ -19,16 +19,16 @@ public class NacosPropertiesAgent extends PropertiesAgent {
     protected ResourceFactory factory;
 
     @Override
-    public void compile(AnyValue conf) {
+    public void compile(final AnyValue propertiesConf) {
     }
 
     @Override
-    public void init(ResourceFactory factory, Properties globalProperties, AnyValue conf) {
+    public void init(final ResourceFactory factory, final Properties globalProperties, final AnyValue propertiesConf) {
         this.factory = factory;
     }
 
     @Override
-    public void destroy(AnyValue conf) {
+    public void destroy(AnyValue propertiesConf) {
     }
 
 }
