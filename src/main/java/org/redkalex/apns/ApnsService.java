@@ -68,8 +68,10 @@ public final class ApnsService implements Service {
     private SSLSocketFactory sslFactory;
 
     @ResourceListener
-    void changeResource(String name, Object newVal, Object oldVal) {
-        logger.info("@Resource = " + name + " resource changed:  newVal = " + newVal + ", oldVal = " + oldVal);
+    void changeResource(ResourceEvent[] events) {
+        for (ResourceEvent event : events) {
+            logger.info("@Resource = " + event.name() + " resource changed:  newVal = " + event.newValue() + ", oldVal = " + event.oldValue());
+        }
         inited = false;
         cdl = new CountDownLatch(1);
         init(null);
