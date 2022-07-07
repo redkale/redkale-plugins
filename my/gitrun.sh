@@ -6,7 +6,7 @@ rm -fr redkale-plugins
 
 rm -fr src
 
-git clone https://gitee.com/redkale/redkale-plugins.git
+git clone https://github.com/redkale/redkale-plugins.git
 
 cp -fr redkale-plugins/src ./
 
