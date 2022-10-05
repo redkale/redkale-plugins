@@ -12,8 +12,10 @@ import org.redkale.util.AnyValue;
  */
 public interface RedisCryptor {
 
+    //加密
     public String encrypt(String key, String value);
 
+    //解密
     public String decrypt(String key, String value);
 
     public void init(AnyValue conf);
