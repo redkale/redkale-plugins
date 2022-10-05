@@ -87,16 +87,21 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             } else if (!gdb.isEmpty()) {
                 ruri.setDatabase(Integer.parseInt(gdb));
             }
-            if (!username.isEmpty()) {
-                ruri.setUsername(username);
-            } else if (!gusername.isEmpty()) {
-                ruri.setUsername(gusername);
+//            if (!username.isEmpty()) {
+//                ruri.setUsername(username);
+//            } else if (!gusername.isEmpty()) {
+//                ruri.setUsername(gusername);
+//            }
+//            if (!password.isEmpty()) {
+//                ruri.setPassword(password.toCharArray());
+//            } else if (!gpassword.isEmpty()) {
+//                ruri.setPassword(gpassword.toCharArray());
+//            }
+            if (!username.isEmpty() || !gusername.isEmpty()) {
+                RedisCredentials authCredentials = RedisCredentials.just(!username.isEmpty() ? username : gusername, !password.isEmpty() ? password : (!gpassword.isEmpty() ? gpassword : ""));
+                ruri.setCredentialsProvider(RedisCredentialsProvider.from(() -> authCredentials));
             }
-            if (!password.isEmpty()) {
-                ruri.setPassword(password.toCharArray());
-            } else if (!gpassword.isEmpty()) {
-                ruri.setPassword(gpassword.toCharArray());
-            }
+
             uris.add(ruri);
         }
         final int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);

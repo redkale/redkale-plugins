@@ -114,7 +114,7 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
             try {
                 AdminClient adminClient = ((KafkaMessageAgent) messageAgent).adminClient;
                 DescribeTopicsResult rs = adminClient.describeTopics(Arrays.asList(topic));
-                List<TopicPartitionInfo> list = rs.values().get(topic).get(6, TimeUnit.SECONDS).partitions();
+                List<TopicPartitionInfo> list = rs.topicNameValues().get(topic).get(6, TimeUnit.SECONDS).partitions();
                 Integer[] parts = new Integer[list.size()];
                 for (int i = 0; i < parts.length; i++) {
                     parts[i] = list.get(i).partition();

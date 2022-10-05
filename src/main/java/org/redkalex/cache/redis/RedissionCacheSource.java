@@ -9,6 +9,7 @@ import java.io.*;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
@@ -288,7 +289,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(bucket.getAsync().thenCompose(bs -> {
             T rs = convert.convertFrom(type, bs);
             if (rs == null) return CompletableFuture.completedFuture(null);
-            return bucket.expireAsync(expireSeconds, TimeUnit.SECONDS).thenApply(v -> rs);
+            return bucket.expireAsync(Duration.ofSeconds(expireSeconds)).thenApply(v -> rs);
         }));
     }
 
@@ -297,7 +298,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         T rs = convert.convertFrom(type, bucket.get());
         if (rs == null) return rs;
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.expire(Duration.ofSeconds(expireSeconds));
         return rs;
     }
 
@@ -306,7 +307,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
         return completableFuture(bucket.getAsync().thenCompose(rs -> {
             if (rs == null) return CompletableFuture.completedFuture(null);
-            return bucket.expireAsync(expireSeconds, TimeUnit.SECONDS).thenApply(v -> rs);
+            return bucket.expireAsync(Duration.ofSeconds(expireSeconds)).thenApply(v -> rs);
         }));
     }
 
@@ -315,7 +316,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
         String rs = bucket.get();
         if (rs == null) return rs;
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.expire(Duration.ofSeconds(expireSeconds));
         return rs;
     }
 
@@ -324,7 +325,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final RAtomicLong bucket = client.getAtomicLong(key);
         return completableFuture(bucket.getAsync().thenCompose(rs -> {
             if (rs == null) return CompletableFuture.completedFuture(defValue);
-            return bucket.expireAsync(expireSeconds, TimeUnit.SECONDS).thenApply(v -> rs);
+            return bucket.expireAsync(Duration.ofSeconds(expireSeconds)).thenApply(v -> rs);
         }));
     }
 
@@ -332,7 +333,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public long getLongAndRefresh(String key, final int expireSeconds, long defValue) {
         final RAtomicLong bucket = client.getAtomicLong(key);
         long rs = bucket.get();
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.expire(Duration.ofSeconds(expireSeconds));
         return rs;
     }
 
@@ -340,13 +341,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> refreshAsync(String key, int expireSeconds) {
         final RBucket bucket = client.getBucket(key);
-        return completableFuture(bucket.expireAsync(expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
+        return completableFuture(bucket.expireAsync(Duration.ofSeconds(expireSeconds)).thenApply(r -> null));
     }
 
     @Override
     public void refresh(String key, final int expireSeconds) {
         final RBucket bucket = client.getBucket(key);
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.expire(Duration.ofSeconds(expireSeconds));
     }
 
     //--------------------- set ------------------------------
@@ -488,25 +489,25 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> setLongAsync(int expireSeconds, String key, long value) {
         final RAtomicLong bucket = client.getAtomicLong(key);
-        return completableFuture(bucket.setAsync(value).thenCompose(v -> bucket.expireAsync(expireSeconds, TimeUnit.SECONDS)).thenApply(r -> null));
+        return completableFuture(bucket.setAsync(value).thenCompose(v -> bucket.expireAsync(Duration.ofSeconds(expireSeconds))).thenApply(r -> null));
     }
 
     @Override
     public void setLong(int expireSeconds, String key, long value) {
         final RAtomicLong bucket = client.getAtomicLong(key);
         bucket.set(value);
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.expire(Duration.ofSeconds(expireSeconds));
     }
 
     //--------------------- setExpireSeconds ------------------------------    
     @Override
     public CompletableFuture<Void> setExpireSecondsAsync(String key, int expireSeconds) {
-        return completableFuture(client.getBucket(key).expireAsync(expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
+        return completableFuture(client.getBucket(key).expireAsync(Duration.ofSeconds(expireSeconds)).thenApply(r -> null));
     }
 
     @Override
     public void setExpireSeconds(String key, int expireSeconds) {
-        client.getBucket(key).expire(expireSeconds, TimeUnit.SECONDS);
+        client.getBucket(key).expire(Duration.ofSeconds(expireSeconds));
     }
 
     //--------------------- remove ------------------------------    
@@ -1538,7 +1539,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         byte[] bs = bucket.get();
         if (bs == null) return bs;
-        bucket.expire(expireSeconds, TimeUnit.SECONDS);
+        bucket.expire(Duration.ofSeconds(expireSeconds));
         return bs;
     }
 
@@ -1581,7 +1582,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<byte[]> getBytesAndRefreshAsync(final String key, final int expireSeconds) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.getAsync().thenCompose(bs -> bs == null ? CompletableFuture.completedFuture(null) : bucket.expireAsync(expireSeconds, TimeUnit.SECONDS).thenApply(v -> bs)));
+        return completableFuture(bucket.getAsync().thenCompose(bs -> bs == null ? CompletableFuture.completedFuture(null) : bucket.expireAsync(Duration.ofSeconds(expireSeconds)).thenApply(v -> bs)));
     }
 
     @Override
