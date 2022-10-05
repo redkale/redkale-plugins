@@ -19,9 +19,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
-import javax.annotation.Resource;
 import org.redkale.convert.Convert;
-import org.redkale.convert.json.*;
 import org.redkale.service.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
@@ -34,21 +32,13 @@ import org.redkale.util.*;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public class RedisLettuceCacheSource extends AbstractCacheSource {
+public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-
-    @Resource
-    protected JsonConvert defaultConvert;
-
-    @Resource(name = "$_convert")
-    protected JsonConvert convert;
 
     protected Type objValueType = String.class;
 
     protected List<String> nodeAddrs;
-
-    protected int db;
 
     protected io.lettuce.core.RedisClient client;
 
@@ -62,8 +52,9 @@ public class RedisLettuceCacheSource extends AbstractCacheSource {
 
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = this.defaultConvert;
-        if (conf == null) conf = new AnyValue.DefaultAnyValue();
+        super.init(conf);
+        if (conf == null) conf = AnyValue.create();
+
         this.stringByteArrayCodec = (RedisCodec) RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE);
         this.stringStringCodec = StringCodec.UTF8;
 
@@ -146,7 +137,7 @@ public class RedisLettuceCacheSource extends AbstractCacheSource {
         }
         return nodes;
     }
-    
+
     @Override
     public final String getType() {
         return "redis";
@@ -199,18 +190,8 @@ public class RedisLettuceCacheSource extends AbstractCacheSource {
     }
 
     @Override
-    public void close() throws Exception {  //在 Application 关闭时调用
-        destroy(null);
-    }
-
-    @Override
-    public String resourceName() {
-        Resource res = this.getClass().getAnnotation(Resource.class);
-        return res == null ? "" : res.name();
-    }
-
-    @Override
     public void destroy(AnyValue conf) {
+        super.destroy(conf);
         if (client != null) client.shutdown();
     }
 

@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
-import javax.annotation.Resource;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
@@ -30,21 +29,13 @@ import org.redkale.util.ResourceType;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public class RedisVertxCacheSource extends AbstractCacheSource {
+public class RedisVertxCacheSource extends AbstractRedisSource {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-
-    @Resource
-    protected JsonConvert defaultConvert;
-
-    @Resource(name = "$_convert")
-    protected JsonConvert convert;
 
     protected Type objValueType = String.class;
 
     protected List<String> nodeAddrs;
-
-    protected int db = -1;
 
     protected Vertx vertx;
 
@@ -52,8 +43,9 @@ public class RedisVertxCacheSource extends AbstractCacheSource {
 
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = this.defaultConvert;
+        super.init(conf);
         if (conf == null) conf = AnyValue.create();
+        
         String password = null;
         int urlmaxconns = Utility.cpus();
         List<String> addrs = new ArrayList<>();
@@ -112,7 +104,7 @@ public class RedisVertxCacheSource extends AbstractCacheSource {
         }
         return nodes;
     }
-    
+
     @Override
     public final String getType() {
         return "redis";
@@ -121,17 +113,6 @@ public class RedisVertxCacheSource extends AbstractCacheSource {
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{addrs=" + this.nodeAddrs + ", db=" + this.db + "}";
-    }
-
-    @Override
-    public void close() throws Exception {  //在 Application 关闭时调用
-        destroy(null);
-    }
-
-    @Override
-    public String resourceName() {
-        Resource res = this.getClass().getAnnotation(Resource.class);
-        return res == null ? "" : res.name();
     }
 
     @Override

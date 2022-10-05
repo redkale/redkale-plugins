@@ -31,7 +31,7 @@ import org.redkale.net.client.ClientAddress;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public final class RedisCacheSource extends AbstractCacheSource {
+public final class RedisCacheSource extends AbstractRedisSource {
 
     static final boolean debug = false; //System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
 
@@ -50,22 +50,15 @@ public final class RedisCacheSource extends AbstractCacheSource {
     @Resource(name = RESNAME_APP_ASYNCGROUP)
     protected AsyncGroup asyncGroup;
 
-    @Resource
-    protected JsonConvert defaultConvert;
-
-    @Resource(name = "$_convert")
-    protected JsonConvert convert;
-
     protected RedisCacheClient client;
 
     protected InetSocketAddress address;
 
-    protected int db;
-
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = this.defaultConvert;
-        if (conf == null) conf = new AnyValue.DefaultAnyValue();
+        super.init(conf);
+        if (conf == null) conf = AnyValue.create();
+        
         String password = null;
         int urlmaxconns = Utility.cpus();
         int urlpipelines = org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES;
@@ -159,23 +152,13 @@ public final class RedisCacheSource extends AbstractCacheSource {
     }
 
     @Override
-    public void close() throws Exception {  //在 Application 关闭时调用
-        destroy(null);
-    }
-
-    @Override
-    public String resourceName() {
-        Resource res = this.getClass().getAnnotation(Resource.class);
-        return res == null ? "" : res.name();
-    }
-
-    @Override
     public String toString() {
         return getClass().getSimpleName() + "{addrs=" + this.address + ", db=" + this.db + "}";
     }
 
     @Override
     public void destroy(AnyValue conf) {
+        super.destroy(conf);
         if (client != null) client.close();
     }
 

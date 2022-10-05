@@ -13,12 +13,10 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
 import java.util.stream.Collectors;
-import javax.annotation.Resource;
 import org.redisson.Redisson;
 import org.redisson.api.*;
 import org.redisson.config.*;
 import org.redkale.convert.Convert;
-import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
 import org.redkale.source.*;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
@@ -32,28 +30,20 @@ import org.redkale.util.*;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public class RedissionCacheSource extends AbstractCacheSource {
+public class RedissionCacheSource extends AbstractRedisSource {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-
-    @Resource
-    protected JsonConvert defaultConvert;
-
-    @Resource(name = "$_convert")
-    protected JsonConvert convert;
 
     protected Type objValueType = String.class;
 
     protected List<String> nodeAddrs;
 
-    protected int db;
-
     protected RedissonClient client;
 
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = this.defaultConvert;
-        if (conf == null) conf = new AnyValue.DefaultAnyValue();
+        super.init(conf);
+        if (conf == null) conf = AnyValue.create();
 
         final List<String> addresses = new ArrayList<>();
         Config config = new Config();
@@ -190,7 +180,7 @@ public class RedissionCacheSource extends AbstractCacheSource {
         }
         return nodes;
     }
-    
+
     @Override
     public final String getType() {
         return "redis";
@@ -211,18 +201,8 @@ public class RedissionCacheSource extends AbstractCacheSource {
     }
 
     @Override
-    public void close() throws Exception {  //在 Application 关闭时调用
-        destroy(null);
-    }
-
-    @Override
-    public String resourceName() {
-        Resource res = this.getClass().getAnnotation(Resource.class);
-        return res == null ? "" : res.name();
-    }
-
-    @Override
     public void destroy(AnyValue conf) {
+        super.destroy(conf);
         if (client != null) client.shutdown();
     }
 
