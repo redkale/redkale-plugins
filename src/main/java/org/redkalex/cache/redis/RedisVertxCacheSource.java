@@ -52,7 +52,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         for (AnyValue node : getNodes(conf)) {
             String addrstr = node.getValue(CACHE_SOURCE_URL);
             addrs.add(addrstr);
-            password = node.getValue(CACHE_SOURCE_PASSWORD, null).trim();
+            password = node.getValue(CACHE_SOURCE_PASSWORD, null);
             if (db < 0) {
                 String db0 = node.getValue(CACHE_SOURCE_DB, "").trim();
                 if (!db0.isEmpty()) db = Integer.valueOf(db0);
@@ -71,7 +71,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         //Redis链接
         RedisOptions config = new RedisOptions();
         if (maxconns > 0) config.setMaxPoolSize(maxconns);
-        if (password != null) config.setPassword(password);
+        if (password != null) config.setPassword(password.trim());
         if (maxconns > 0) config.setMaxPoolWaiting(maxconns * 10);
         config.setEndpoints(addrs);
         this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));

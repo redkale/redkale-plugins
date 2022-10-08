@@ -105,6 +105,9 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     protected <T> byte[] encryptValue(String key, RedisCryptor cryptor, Type type, Convert c, T value) {
         if (value == null) return null;
         Type t = type == null ? value.getClass() : type;
+        if (cryptor == null && type == String.class) {
+            return value.toString().getBytes(StandardCharsets.UTF_8);
+        }
         return encryptValue(key, cryptor, t, (c == null ? this.convert : c).convertToBytes(t, value));
     }
 
