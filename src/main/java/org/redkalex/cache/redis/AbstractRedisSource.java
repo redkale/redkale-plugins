@@ -4,7 +4,10 @@
  */
 package org.redkalex.cache.redis;
 
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import javax.annotation.Resource;
+import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.AbstractCacheSource;
 import org.redkale.util.*;
@@ -74,4 +77,43 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
         return res == null ? "" : res.name();
     }
 
+    protected String decryptValue(String key, RedisCryptor cryptor, String value) {
+        return cryptor != null ? cryptor.decrypt(key, value) : value;
+    }
+
+    protected <T> T decryptValue(String key, RedisCryptor cryptor, Type type, byte[] bs) {
+        return decryptValue(key, cryptor, convert, type, bs);
+    }
+
+    protected <T> T decryptValue(String key, RedisCryptor cryptor, Convert c, Type type, byte[] bs) {
+        if (bs == null) return null;
+        if (cryptor == null || (type instanceof Class && (((Class) type).isPrimitive() || Number.class.isAssignableFrom((Class) type)))) {
+            return (T) (c == null ? this.convert : c).convertFrom(type, bs);
+        }
+        String deval = cryptor.decrypt(key, new String(bs, StandardCharsets.UTF_8));
+        return deval == null ? null : (T) (c == null ? this.convert : c).convertFrom(type, deval.getBytes(StandardCharsets.UTF_8));
+    }
+
+    protected String encryptValue(String key, RedisCryptor cryptor, String value) {
+        return cryptor != null ? cryptor.encrypt(key, value) : value;
+    }
+
+    protected <T> byte[] encryptValue(String key, RedisCryptor cryptor, Convert c, T value) {
+        return encryptValue(key, cryptor, null, c, value);
+    }
+
+    protected <T> byte[] encryptValue(String key, RedisCryptor cryptor, Type type, Convert c, T value) {
+        if (value == null) return null;
+        Type t = type == null ? value.getClass() : type;
+        return encryptValue(key, cryptor, t, (c == null ? this.convert : c).convertToBytes(t, value));
+    }
+
+    protected byte[] encryptValue(String key, RedisCryptor cryptor, Type type, byte[] bs) {
+        if (bs == null) return null;
+        if (cryptor == null || (type instanceof Class && (((Class) type).isPrimitive() || Number.class.isAssignableFrom((Class) type)))) {
+            return bs;
+        }
+        String enval = cryptor.encrypt(key, new String(bs, StandardCharsets.UTF_8));
+        return enval == null ? null : enval.getBytes(StandardCharsets.UTF_8);
+    }
 }
