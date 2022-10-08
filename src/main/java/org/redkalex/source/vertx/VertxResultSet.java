@@ -133,6 +133,7 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     }
 
     @Override
+    @Deprecated
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
         return currentRow.getBigDecimal(columnIndex - 1);
     }
@@ -167,6 +168,7 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     }
 
     @Override
+    @Deprecated
     public InputStream getUnicodeStream(int columnIndex) throws SQLException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -233,6 +235,7 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     }
 
     @Override
+    @Deprecated
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
         if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
@@ -277,6 +280,7 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     }
 
     @Override
+    @Deprecated
     public InputStream getUnicodeStream(String columnLabel) throws SQLException {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
