@@ -72,7 +72,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         RedisOptions config = new RedisOptions();
         if (maxconns > 0) config.setMaxPoolSize(maxconns);
         if (password != null) config.setPassword(password.trim());
-        if (maxconns > 0) config.setMaxPoolWaiting(maxconns * 10);
+        if (maxconns > 0) config.setMaxPoolWaiting(maxconns != Utility.cpus() ? maxconns : maxconns * 10);
         config.setEndpoints(addrs);
         this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         this.client = RedisAPI.api(Redis.createClient(this.vertx, config));
