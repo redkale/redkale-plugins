@@ -1,20 +1,20 @@
 /*
  */
-package org.redkalex.properties;
+package org.redkalex.properties.nacos;
 
 import java.util.Properties;
 import org.redkale.boot.PropertiesAgent;
 import org.redkale.util.*;
 
 /**
- * Apollo 配置实现 https://github.com/apolloconfig/apollo
+ * Nacos 配置实现 https://github.com/alibaba/nacos
  *
  * TODO: 待实现
  *
  * @author zhangjx
- * @since 2.7.0
+ * @since 2.8.0
  */
-public class ApolloPropertiesAgent extends PropertiesAgent {
+public class NacosPropertiesAgent extends PropertiesAgent {
 
     protected ResourceFactory factory;
 
