@@ -56,7 +56,7 @@ public class PgsqlDataSource extends DataSqlSource {
         PgReqAuthentication authreq = new PgReqAuthentication(username, password, info.database);
         int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
         int maxPipelines = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
-        AsyncGroup ioGroup = asyncGroup != null && !"write".equalsIgnoreCase(rw) ? asyncGroup : AsyncGroup.create("Redkalex-PgClient-IOThread-" + rw.toUpperCase(),
+        AsyncGroup ioGroup = clientAsyncGroup != null && !"write".equalsIgnoreCase(rw) ? clientAsyncGroup : AsyncGroup.create("Redkalex-PgClient-IOThread-" + rw.toUpperCase(),
             workExecutor, 16 * 1024, Utility.cpus() * 4).start();
         return new PgClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, autoddl(), prop, authreq);
     }

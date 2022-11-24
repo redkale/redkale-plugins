@@ -56,7 +56,7 @@ public class MysqlDataSource extends DataSqlSource {
         if (encoding == null || encoding.isEmpty()) encoding = "UTF8MB4";
         int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
         int maxPipelines = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
-        AsyncGroup ioGroup = asyncGroup != null && !"write".equalsIgnoreCase(rw) ? asyncGroup : AsyncGroup.create("Redkalex-MyClient-IOThread-" + rw.toUpperCase(),
+        AsyncGroup ioGroup = clientAsyncGroup != null && !"write".equalsIgnoreCase(rw) ? clientAsyncGroup : AsyncGroup.create("Redkalex-MyClient-IOThread-" + rw.toUpperCase(),
             workExecutor, 16 * 1024, Utility.cpus() * 4).start();
         return new MyClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines,
             prop, username, password, info.database, encoding, autoddl(), info.attributes);
