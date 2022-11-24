@@ -44,12 +44,25 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         String namespace = propertiesConf.getOrDefault(PROP_KEY_NAMESPACE, PROP_NAMESPACE_APPLICATION);
         Config config = ConfigService.getConfig(namespace);
         config.addChangeListener(changeEvent -> {
+            Properties props = new Properties();
             changeEvent.changedKeys().forEach(k -> {
-                factory.register(true, getKeyResourceName(k), changeEvent.getChange(k).getNewValue());
+                String key = getKeyResourceName(k);
+                String val = changeEvent.getChange(k).getNewValue();
+                props.put(key, val);
             });
+            //更新全局配置项
+            globalProperties.putAll(props);
+            //需要一次性提交所有变更的配置项
+            factory.register(props);
         });
+        //初始化配置项
         config.getPropertyNames().forEach(k -> {
-            factory.register(true, getKeyResourceName(k), config.getProperty(k, null));
+            String key = getKeyResourceName(k);
+            String val = config.getProperty(k, null);
+            //更新全局配置项
+            globalProperties.put(key, val);
+            //依赖注入配置项
+            factory.register(false, key, val);
         });
     }
 

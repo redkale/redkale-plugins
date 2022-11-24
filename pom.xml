@@ -32,6 +32,7 @@
         <mongodb.version>4.7.1</mongodb.version>
         <protobuf.version>3.21.7</protobuf.version>
         <apollo-client.version>2.0.1</apollo-client.version>
+        <nacos-client.version>2.1.2</nacos-client.version>
         <flink.version>1.16.0</flink.version>
     </properties>
 
@@ -188,7 +189,14 @@
             <version>${apollo-client.version}</version>
             <scope>provided</scope>
         </dependency>
-        
+
+        <dependency>    
+            <groupId>com.alibaba.nacos</groupId>
+            <artifactId>nacos-client</artifactId>
+            <version>${nacos-client.version}</version>
+            <scope>provided</scope>
+        </dependency>
+                
     </dependencies>
 	
     <licenses>     
