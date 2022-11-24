@@ -9,7 +9,7 @@ package org.redkalex.source.mysql;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
-import static org.redkale.boot.Application.RESNAME_APP_ASYNCGROUP;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.AsyncIOGroup;
@@ -29,7 +29,7 @@ public class MySQLTest {
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
-        factory.register(RESNAME_APP_ASYNCGROUP, asyncGroup);
+        factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
         prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/redsns_platf?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103

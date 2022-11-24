@@ -19,7 +19,7 @@ import org.redkale.net.*;
 import org.redkale.service.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkale.boot.Application.RESNAME_APP_ASYNCGROUP;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.net.client.ClientAddress;
 
 /**
@@ -47,7 +47,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    @Resource(name = RESNAME_APP_ASYNCGROUP)
+    @Resource(name = RESNAME_APP_CLIENT_ASYNCGROUP)
     protected AsyncGroup asyncGroup;
 
     protected RedisCacheClient client;

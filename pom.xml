@@ -13,7 +13,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        
+		
+        <maven-plugin.version>3.2.0</maven-plugin.version>
+        <maven-gpg-plugin.version>3.0.1</maven-gpg-plugin.version>
+        <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
+        <maven-failsafe-plugin.version>3.0.0-M7</maven-failsafe-plugin.version>
+
         <netty.version>4.1.82.Final</netty.version>
         <enjoy.version>5.0.3</enjoy.version>
         <freemarker.version>2.3.31</freemarker.version>
@@ -226,7 +232,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.9.0</version>                                
+                <version>${maven-compiler-plugin.version}</version>                                
                 <configuration>				
                     <encoding>UTF-8</encoding>
                     <compilerArgs>
@@ -238,7 +244,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M6</version>
+                <version>${maven-surefire-plugin.version}</version>
                 <configuration>
                     <forkMode>once</forkMode>
                     <argLine>-Dfile.encoding=UTF-8</argLine>
@@ -248,7 +254,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.2.2</version>
+                <version>${maven-plugin.version}</version>
             </plugin>
            
         </plugins>

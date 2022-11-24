@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.*;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 import javax.persistence.*;
-import static org.redkale.boot.Application.RESNAME_APP_ASYNCGROUP;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.net.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
@@ -51,7 +51,7 @@ public class PgSQLTest {
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
-        factory.register(RESNAME_APP_ASYNCGROUP, asyncGroup);
+        factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
         if (rwSeparate) { //读写分离

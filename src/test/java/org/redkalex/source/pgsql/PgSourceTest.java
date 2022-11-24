@@ -3,7 +3,7 @@
 package org.redkalex.source.pgsql;
 
 import java.util.Properties;
-import static org.redkale.boot.Application.RESNAME_APP_ASYNCGROUP;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.util.*;
@@ -21,7 +21,7 @@ public class PgSourceTest {
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
-        factory.register(RESNAME_APP_ASYNCGROUP, asyncGroup);
+        factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
         prop.setProperty("redkale.datasource[].url", "jdbc:postgresql://127.0.0.1:5432/hello_world");
