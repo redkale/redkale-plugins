@@ -56,11 +56,11 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
                 try {
                     Class clazz = Thread.currentThread().getContextClassLoader().loadClass(resvalue);
                     Object val = context.getResourceFactory().find(resname == null ? "" : resname, clazz);
+                    RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
                     if (val == null) { //class可能不是Service，不会被自动注入
                         val = clazz.getConstructor().newInstance();
                     }
                     engineConfig.addSharedObject(name, val);
-                    RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
                 } catch (Exception e) {
                     logger.log(Level.WARNING, "sharekit name=" + name + " inject error", e);
                 }

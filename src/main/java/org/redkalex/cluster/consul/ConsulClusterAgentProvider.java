@@ -7,7 +7,7 @@ package org.redkalex.cluster.consul;
 
 import javax.annotation.Priority;
 import org.redkale.cluster.*;
-import org.redkale.util.AnyValue;
+import org.redkale.util.*;
 
 /**
  *
@@ -18,17 +18,12 @@ public class ConsulClusterAgentProvider implements ClusterAgentProvider {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
-        try {
-            ConsulClusterAgent source = ConsulClusterAgent.class.getConstructor().newInstance();
-            return source.acceptsConf(config);
-        } catch (Throwable e) {
-            return false;
-        }
+        return new ConsulClusterAgent().acceptsConf(config);
     }
 
     @Override
-    public Class<? extends ClusterAgent> agentClass() {
-        return ConsulClusterAgent.class;
+    public ClusterAgent createInstance() {
+        return new ConsulClusterAgent();
     }
 
 }

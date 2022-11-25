@@ -6,6 +6,7 @@ import com.alibaba.nacos.api.*;
 import com.alibaba.nacos.api.config.ConfigService;
 import com.alibaba.nacos.api.exception.NacosException;
 import java.util.Properties;
+import java.util.logging.Level;
 import org.redkale.boot.PropertiesAgent;
 import org.redkale.util.*;
 
@@ -20,8 +21,21 @@ public class NacosPropertiesAgent extends PropertiesAgent {
 
     protected ResourceFactory factory;
 
+    protected ConfigService configService;
+
     @Override
     public void compile(final AnyValue propertiesConf) {
+    }
+
+    @Override
+    public boolean acceptsConf(AnyValue config) {
+        //支持 nacos.serverAddr、nacos-serverAddr、nacos_serverAddr
+        return config.getValue("nacos." + PropertyKeyConst.SERVER_ADDR) != null
+            || config.getValue("nacos-" + PropertyKeyConst.SERVER_ADDR) != null
+            || config.getValue("nacos_" + PropertyKeyConst.SERVER_ADDR) != null
+            || System.getProperty("nacos." + PropertyKeyConst.SERVER_ADDR) != null
+            || System.getProperty("nacos-" + PropertyKeyConst.SERVER_ADDR) != null
+            || System.getProperty("nacos_" + PropertyKeyConst.SERVER_ADDR) != null;
     }
 
     @Override
@@ -29,8 +43,18 @@ public class NacosPropertiesAgent extends PropertiesAgent {
         this.factory = factory;
         try {
             Properties properties = new Properties();
-            properties.put(PropertyKeyConst.SERVER_ADDR, "");
-            ConfigService configService = NacosFactory.createConfigService(properties);
+            propertiesConf.forEach((k, v) -> {
+                if (k.startsWith("nacos")) {
+                    properties.put(k.substring("nacos".length() + 1), v); //+1指. - _
+                }
+            });
+            System.getProperties().forEach((k, v) -> {
+                //支持 nacos.serverAddr、nacos-serverAddr、nacos_serverAddr
+                if (k.toString().startsWith("nacos.") || k.toString().startsWith("nacos-") || k.toString().startsWith("nacos_")) {
+                    properties.put(k.toString().substring("nacos".length() + 1), v); //+1指. - _
+                }
+            });
+            this.configService = NacosFactory.createConfigService(properties);
         } catch (NacosException e) {
             throw new RuntimeException(e);
         }
@@ -38,6 +62,13 @@ public class NacosPropertiesAgent extends PropertiesAgent {
 
     @Override
     public void destroy(AnyValue propertiesConf) {
+        if (this.configService != null) {
+            try {
+                this.configService.shutDown();
+            } catch (NacosException e) {
+                logger.log(Level.WARNING, "shutDown nacos client error", e);
+            }
+        }
     }
 
 }

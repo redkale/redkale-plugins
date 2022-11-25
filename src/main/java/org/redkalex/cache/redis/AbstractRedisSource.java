@@ -44,6 +44,7 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
             if (!cryptStr.isEmpty()) {
                 try {
                     Class<RedisCryptor> cryptClass = (Class) getClass().getClassLoader().loadClass(cryptStr);
+                    RedkaleClassLoader.putReflectionPublicConstructors(cryptClass, cryptClass.getName());
                     this.cryptor = cryptClass.getConstructor().newInstance();
                 } catch (ReflectiveOperationException e) {
                     throw new RuntimeException(e);

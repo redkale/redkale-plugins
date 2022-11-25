@@ -4,7 +4,9 @@ package org.redkalex.properties.apollo;
 
 import com.ctrip.framework.apollo.*;
 import com.ctrip.framework.apollo.core.ConfigConsts;
+import com.ctrip.framework.apollo.core.dto.ApolloConfig;
 import java.util.Properties;
+import java.util.logging.Level;
 import org.redkale.boot.PropertiesAgent;
 import org.redkale.util.*;
 
@@ -24,25 +26,31 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
+    public boolean acceptsConf(AnyValue config) {
+        return System.getProperty(ConfigConsts.APOLLO_META_KEY) != null
+            || config.getValue(ConfigConsts.APOLLO_META_KEY) != null
+            || config.getValue(ConfigConsts.APOLLO_META_KEY.replace('.', '-')) != null
+            || config.getValue(ConfigConsts.APOLLO_META_KEY.replace('.', '_')) != null;
+    }
+
+    @Override
     public void init(final ResourceFactory factory, final Properties globalProperties, final AnyValue propertiesConf) {
         this.factory = factory;
+        boolean finer = logger.isLoggable(Level.FINER);
         propertiesConf.forEach((k, v) -> {
-            if (k.startsWith("apollo.")) {
-                System.setProperty(k, v);
-            } else if (k.startsWith("apollo_")) {
-                System.setProperty(k.replace('_', '.'), v);
+            String key = k.replace('-', '.').replace('_', '.');
+            if (key.equals("apollo.appid")) key = "apollo.app.id";
+            if (key.startsWith("apollo.") && System.getProperty(key) == null) {
+                if (key.startsWith("apollo.app.")) {
+                    key = key.substring("apollo.".length());
+                }
+                System.setProperty(key, v);
             }
         });
-        String url = propertiesConf.get(PROP_KEY_URL);
-        String meta = System.getProperty(ConfigConsts.APOLLO_META_KEY);
-        if (url == null && meta == null) {
-            throw new IllegalArgumentException("not found " + ConfigConsts.APOLLO_META_KEY + " config value");
-        }
-        if (meta == null && url != null) {
-            System.setProperty(ConfigConsts.APOLLO_META_KEY, meta);
-        }
-        String namespace = propertiesConf.getOrDefault(PROP_KEY_NAMESPACE, PROP_NAMESPACE_APPLICATION);
+        ApolloConfig s;
+        String namespace = propertiesConf.getOrDefault(PROP_KEY_NAMESPACE, ConfigConsts.NAMESPACE_APPLICATION);
         Config config = ConfigService.getConfig(namespace);
+        if (finer) logger.log(Level.FINER, "apollo config size: " + config.getPropertyNames().size());
         config.addChangeListener(changeEvent -> {
             Properties props = new Properties();
             changeEvent.changedKeys().forEach(k -> {

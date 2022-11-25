@@ -4,7 +4,7 @@ package org.redkalex.cache.redis;
 
 import javax.annotation.Priority;
 import org.redkale.source.*;
-import org.redkale.util.AnyValue;
+import org.redkale.util.*;
 
 /**
  *
@@ -17,16 +17,15 @@ public class RedisVertxCacheSourceProvider implements CacheSourceProvider {
     public boolean acceptsConf(AnyValue config) {
         try {
             Object.class.isAssignableFrom(io.vertx.redis.client.RedisOptions.class); //试图加载vertx-redis相关类
-            RedisVertxCacheSource source = RedisVertxCacheSource.class.getConstructor().newInstance();
-            return source.acceptsConf(config);
+            return new RedisVertxCacheSource().acceptsConf(config);
         } catch (Throwable e) {
             return false;
         }
     }
 
     @Override
-    public Class<? extends CacheSource> sourceClass() {
-        return RedisVertxCacheSource.class;
+    public CacheSource createInstance() {
+        return new RedisVertxCacheSource();
     }
 
 }

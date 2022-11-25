@@ -22,8 +22,8 @@ public class RedisCacheSourceProvider implements CacheSourceProvider {
     }
 
     @Override
-    public Class<? extends CacheSource> sourceClass() {
-        return RedisCacheSource.class;
+    public CacheSource createInstance() {
+        return new RedisCacheSource();
     }
 
 }

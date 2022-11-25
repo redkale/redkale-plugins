@@ -28,8 +28,8 @@ public class PgsqlDataSourceProvider implements DataSourceProvider {
     }
 
     @Override
-    public Class<? extends DataSource> sourceClass() {
-        return PgsqlDataSource.class;
+    public DataSource createInstance() {
+        return new PgsqlDataSource();
     }
 
 }

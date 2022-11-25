@@ -99,13 +99,17 @@ public class VertxSqlDataSource extends DataSqlSource {
         SqlConnectOptions sqlOptions;
         if ("mysql".equalsIgnoreCase(dbtype())) {
             try {
-                sqlOptions = (SqlConnectOptions) Thread.currentThread().getContextClassLoader().loadClass("io.vertx.mysqlclient.MySQLConnectOptions").getConstructor().newInstance();
+                Class clazz = Thread.currentThread().getContextClassLoader().loadClass("io.vertx.mysqlclient.MySQLConnectOptions");
+                RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
+                sqlOptions = (SqlConnectOptions) clazz.getConstructor().newInstance();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         } else if ("postgresql".equalsIgnoreCase(dbtype())) {
             try {
-                sqlOptions = (SqlConnectOptions) Thread.currentThread().getContextClassLoader().loadClass("io.vertx.pgclient.PgConnectOptions").getConstructor().newInstance();
+                Class clazz = Thread.currentThread().getContextClassLoader().loadClass("io.vertx.pgclient.PgConnectOptions");
+                RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
+                sqlOptions = (SqlConnectOptions) clazz.getConstructor().newInstance();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

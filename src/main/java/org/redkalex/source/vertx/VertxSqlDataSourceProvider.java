@@ -54,8 +54,8 @@ public class VertxSqlDataSourceProvider implements DataSourceProvider {
     }
 
     @Override
-    public Class<? extends DataSource> sourceClass() {
-        return VertxSqlDataSource.class;
+    public DataSource createInstance() {
+        return new VertxSqlDataSource();
     }
 
 }

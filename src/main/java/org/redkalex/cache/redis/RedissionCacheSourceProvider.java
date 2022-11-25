@@ -7,7 +7,7 @@ package org.redkalex.cache.redis;
 
 import javax.annotation.Priority;
 import org.redkale.source.*;
-import org.redkale.util.AnyValue;
+import org.redkale.util.*;
 
 /**
  *
@@ -20,16 +20,15 @@ public class RedissionCacheSourceProvider implements CacheSourceProvider {
     public boolean acceptsConf(AnyValue config) {
         try {
             Object.class.isAssignableFrom(org.redisson.config.Config.class); //试图加载Redission相关类
-            RedissionCacheSource source = RedissionCacheSource.class.getConstructor().newInstance();
-            return source.acceptsConf(config);
+            return new RedissionCacheSource().acceptsConf(config);
         } catch (Throwable e) {
             return false;
         }
     }
 
     @Override
-    public Class<? extends CacheSource> sourceClass() {
-        return RedissionCacheSource.class;
+    public CacheSource createInstance() {
+        return new RedissionCacheSource();
     }
 
 }

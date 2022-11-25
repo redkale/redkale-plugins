@@ -1,0 +1,2 @@
+org.redkalex.properties.apollo.ApolloPropertiesAgentProvider
+org.redkalex.properties.nacos.NacosPropertiesAgentProvider

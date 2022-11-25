@@ -7,7 +7,7 @@ package org.redkalex.cache.redis;
 
 import javax.annotation.Priority;
 import org.redkale.source.*;
-import org.redkale.util.AnyValue;
+import org.redkale.util.*;
 
 /**
  *
@@ -20,16 +20,15 @@ public class RedisLettuceCacheSourceProvider implements CacheSourceProvider {
     public boolean acceptsConf(AnyValue config) {
         try {
             Object.class.isAssignableFrom(io.lettuce.core.support.BoundedPoolConfig.class); //试图加载Lettuce相关类
-            RedisLettuceCacheSource source = RedisLettuceCacheSource.class.getConstructor().newInstance();
-            return source.acceptsConf(config);
+            return new RedisLettuceCacheSource().acceptsConf(config);
         } catch (Throwable e) {
             return false;
         }
     }
 
     @Override
-    public Class<? extends CacheSource> sourceClass() {
-        return RedisLettuceCacheSource.class;
+    public CacheSource createInstance() {
+        return new RedisLettuceCacheSource();
     }
 
 }

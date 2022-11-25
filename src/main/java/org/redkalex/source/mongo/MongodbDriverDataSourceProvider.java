@@ -7,7 +7,7 @@ package org.redkalex.source.mongo;
 
 import javax.annotation.Priority;
 import org.redkale.source.*;
-import org.redkale.util.AnyValue;
+import org.redkale.util.*;
 
 /**
  *
@@ -20,6 +20,7 @@ public class MongodbDriverDataSourceProvider implements DataSourceProvider {
     public boolean acceptsConf(AnyValue config) {
         try {
             Object.class.isAssignableFrom(com.mongodb.reactivestreams.client.MongoClient.class); //试图加载MongoClient相关类
+            RedkaleClassLoader.putReflectionPublicConstructors(MongodbDriverDataSource.class, MongodbDriverDataSource.class.getName());
             MongodbDriverDataSource source = MongodbDriverDataSource.class.getConstructor().newInstance();
             String dbtype = config.getValue("dbtype");
             if (dbtype == null) {
@@ -34,7 +35,7 @@ public class MongodbDriverDataSourceProvider implements DataSourceProvider {
     }
 
     @Override
-    public Class<? extends DataSource> sourceClass() {
-        return MongodbDriverDataSource.class;
+    public DataSource createInstance() {
+        return new MongodbDriverDataSource();
     }
 }

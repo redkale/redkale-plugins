@@ -28,8 +28,8 @@ public class MysqlDataSourceProvider implements DataSourceProvider {
     }
 
     @Override
-    public Class<? extends DataSource> sourceClass() {
-        return MysqlDataSource.class;
+    public DataSource createInstance() {
+        return new MysqlDataSource();
     }
 
 }
