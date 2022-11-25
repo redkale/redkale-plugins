@@ -54,7 +54,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public void init(final Application application, final ResourceFactory factory, final AnyValue propertiesConf) {
+    public void init(final Application application, final AnyValue propertiesConf) {
         this.factory = factory;
         try {
             Properties properties = new Properties();
@@ -109,34 +109,27 @@ public class NacosPropertiesAgent extends PropertiesAgent {
 
                     @Override
                     public void receiveConfigInfo(String configInfo) {
-                        updateConent(application, factory, dataId, configInfo);
+                        updateConent(application, dataId, configInfo);
                     }
                 });
-                updateConent(application, factory, dataId, content);
+                updateConent(application, dataId, content);
             }
         } catch (NacosException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void updateConent(final Application application, final ResourceFactory factory, String dataId, String content) {
+    private void updateConent(final Application application, String dataId, String content) {
         Properties props = new Properties();
         try {
             props.load(new StringReader(content));
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "load nacos content (dataId = " + dataId + ") error", e);
+            logger.log(Level.SEVERE, "load nacos content (dataId=" + dataId + ") error", e);
             return;
         }
-        if (props.isEmpty()) return;
-        Properties newProps = new Properties();
-        props.forEach((k, v) -> {
-            newProps.put(getKeyResourceName(k.toString()), v);
-        });
         //更新全局配置项
-        putResourceProperties(application, newProps);
-        //需要一次性提交所有变更的配置项
-        factory.register(newProps);
-        logger.log(Level.FINER, "nacos config(" + dataId + ") size: " + newProps.size());
+        putResourceProperties(application, props);
+        logger.log(Level.FINER, "nacos config(dataId=" + dataId + ") size: " + props.size());
     }
 
     @Override
