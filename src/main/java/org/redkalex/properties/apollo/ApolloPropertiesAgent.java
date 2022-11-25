@@ -6,7 +6,7 @@ import com.ctrip.framework.apollo.*;
 import com.ctrip.framework.apollo.core.ConfigConsts;
 import java.util.Properties;
 import java.util.logging.Level;
-import org.redkale.boot.PropertiesAgent;
+import org.redkale.boot.*;
 import org.redkale.util.*;
 
 /**
@@ -33,7 +33,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public void init(final ResourceFactory factory, final Properties appProperties, Properties sourceProperties, final AnyValue propertiesConf) {
+    public void init(final Application application, final ResourceFactory factory, final AnyValue propertiesConf) {
         this.factory = factory;
         boolean finer = logger.isLoggable(Level.FINER);
         propertiesConf.forEach((k, v) -> {
@@ -58,7 +58,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                 props.put(key, val);
             });
             //更新全局配置项
-            putProperties(appProperties, sourceProperties, props);
+            putResourceProperties(application, props);
             //需要一次性提交所有变更的配置项
             factory.register(props);
         });
@@ -67,7 +67,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             String key = getKeyResourceName(k);
             String val = config.getProperty(k, null);
             //更新全局配置项
-            putProperties(appProperties, sourceProperties, key, val);
+            putResourceProperties(application, key, val);
             //依赖注入配置项
             factory.register(false, key, val);
         });

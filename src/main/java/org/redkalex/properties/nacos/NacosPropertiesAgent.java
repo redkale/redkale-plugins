@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
-import org.redkale.boot.PropertiesAgent;
+import org.redkale.boot.*;
 import org.redkale.util.*;
 
 /**
@@ -54,7 +54,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public void init(final ResourceFactory factory, final Properties appProperties, Properties sourceProperties, final AnyValue propertiesConf) {
+    public void init(final Application application, final ResourceFactory factory, final AnyValue propertiesConf) {
         this.factory = factory;
         try {
             Properties properties = new Properties();
@@ -109,17 +109,17 @@ public class NacosPropertiesAgent extends PropertiesAgent {
 
                     @Override
                     public void receiveConfigInfo(String configInfo) {
-                        updateConent(factory, appProperties, sourceProperties, dataId, configInfo);
+                        updateConent(application, factory, dataId, configInfo);
                     }
                 });
-                updateConent(factory, appProperties, sourceProperties, dataId, content);
+                updateConent(application, factory, dataId, content);
             }
         } catch (NacosException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void updateConent(final ResourceFactory factory, final Properties appProperties, Properties sourceProperties, String dataId, String content) {
+    private void updateConent(final Application application, final ResourceFactory factory, String dataId, String content) {
         Properties props = new Properties();
         try {
             props.load(new StringReader(content));
@@ -133,7 +133,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             newProps.put(getKeyResourceName(k.toString()), v);
         });
         //更新全局配置项
-        putProperties(appProperties, sourceProperties, newProps);
+        putResourceProperties(application, newProps);
         //需要一次性提交所有变更的配置项
         factory.register(newProps);
         logger.log(Level.FINER, "nacos config(" + dataId + ") size: " + newProps.size());
