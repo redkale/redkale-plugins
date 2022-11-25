@@ -4,7 +4,6 @@ package org.redkalex.properties.apollo;
 
 import com.ctrip.framework.apollo.*;
 import com.ctrip.framework.apollo.core.ConfigConsts;
-import com.ctrip.framework.apollo.core.dto.ApolloConfig;
 import java.util.Properties;
 import java.util.logging.Level;
 import org.redkale.boot.PropertiesAgent;
@@ -47,7 +46,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                 System.setProperty(key, v);
             }
         });
-        ApolloConfig s;
+
         String namespace = propertiesConf.getOrDefault("namespace", ConfigConsts.NAMESPACE_APPLICATION);
         Config config = ConfigService.getConfig(namespace);
         if (finer) logger.log(Level.FINER, "apollo config size: " + config.getPropertyNames().size());
