@@ -48,7 +48,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             }
         });
         ApolloConfig s;
-        String namespace = propertiesConf.getOrDefault(PROP_KEY_NAMESPACE, ConfigConsts.NAMESPACE_APPLICATION);
+        String namespace = propertiesConf.getOrDefault("namespace", ConfigConsts.NAMESPACE_APPLICATION);
         Config config = ConfigService.getConfig(namespace);
         if (finer) logger.log(Level.FINER, "apollo config size: " + config.getPropertyNames().size());
         config.addChangeListener(changeEvent -> {
