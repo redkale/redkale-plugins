@@ -34,12 +34,18 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
 
     @Override
     public void init(final Application application, final AnyValue propertiesConf) {
-        //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.namespace
+        //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
             String key = k.replace('-', '.').replace('_', '.');
             agentConf.put(key, v);
-            if (key.equals("apollo.appid")) key = "apollo.app.id";
+            if (key.equals("apollo.appid")) {
+                key = "apollo.app.id";
+            } else if (key.equals("apollo.access.key.secret")) {
+                agentConf.remove(key);
+                key = "apollo.access-key.secret";
+                agentConf.put(key, v);
+            }
             if (key.startsWith("apollo.") && System.getProperty(key) == null) {
                 if (key.startsWith("apollo.app.")) {
                     key = key.substring("apollo.".length());
@@ -49,11 +55,11 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         });
         //远程请求具体类: com.ctrip.framework.apollo.internals.RemoteConfigRepository
         //String cluster = System.getProperty(ConfigConsts.APOLLO_CLUSTER_KEY, ConfigConsts.CLUSTER_NAME_DEFAULT);
-        String namespaces = agentConf.getProperty("apollo.namespace", ConfigConsts.NAMESPACE_APPLICATION); //多个用,分隔
+        String namespaces = agentConf.getProperty("apollo.namespace", System.getProperty("apollo.namespace", ConfigConsts.NAMESPACE_APPLICATION)); //多个用,分隔
         for (String namespace : namespaces.split(";|,")) {
             if (namespace.trim().isEmpty()) continue;
             Config config = ConfigService.getConfig(namespace.trim());
-            logger.log(Level.FINER, "apollo config size: " + config.getPropertyNames().size());
+            logger.log(Level.INFO, "apollo config (namespace=" + namespace + ") size: " + config.getPropertyNames().size());
             config.addChangeListener(changeEvent -> {
                 Properties props = new Properties();
                 changeEvent.changedKeys().forEach(k -> {
