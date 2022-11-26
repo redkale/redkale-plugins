@@ -34,7 +34,6 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
 
     @Override
     public void init(final Application application, final AnyValue propertiesConf) {
-        boolean finer = logger.isLoggable(Level.FINER);
         propertiesConf.forEach((k, v) -> {
             String key = k.replace('-', '.').replace('_', '.');
             if (key.equals("apollo.appid")) key = "apollo.app.id";
@@ -45,10 +44,11 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                 System.setProperty(key, v);
             }
         });
-
+        //远程请求具体类: com.ctrip.framework.apollo.internals.RemoteConfigRepository
+        //String cluster = System.getProperty(ConfigConsts.APOLLO_CLUSTER_KEY, ConfigConsts.CLUSTER_NAME_DEFAULT);
         String namespace = propertiesConf.getOrDefault("namespace", ConfigConsts.NAMESPACE_APPLICATION);
         Config config = ConfigService.getConfig(namespace);
-        if (finer) logger.log(Level.FINER, "apollo config size: " + config.getPropertyNames().size());
+        logger.log(Level.FINER, "apollo config size: " + config.getPropertyNames().size());
         config.addChangeListener(changeEvent -> {
             Properties props = new Properties();
             changeEvent.changedKeys().forEach(k -> {
