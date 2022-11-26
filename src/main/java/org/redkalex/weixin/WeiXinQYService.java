@@ -38,12 +38,6 @@ public final class WeiXinQYService implements Service {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    private final boolean finest = logger.isLoggable(Level.FINEST);
-
-    private final boolean finer = logger.isLoggable(Level.FINER);
-    
-    private final boolean fine = logger.isLoggable(Level.FINE);
-
     private static class Token {
 
         public String token;
@@ -92,7 +86,7 @@ public final class WeiXinQYService implements Service {
         return getQYAccessToken().thenCompose(token -> {
             String url = "https://qyapi.weixin.qq.com/cgi-bin/user/getuserinfo?access_token=" + token + "&code=" + code + "&agentid=" + agentid;
             return getHttpContentAsync(url).thenApply(json -> {
-                if (finest) logger.finest(url + "--->" + json);
+                if (logger.isLoggable(Level.FINEST)) logger.finest(url + "--->" + json);
                 return (Map<String, String>) convert.convertFrom(MAPTYPE, json);
             });
         });
@@ -118,7 +112,7 @@ public final class WeiXinQYService implements Service {
                 }
                 String url = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=" + getQYAccessToken();
                 result = postHttpContent(url, convert.convertTo(message));
-                if (finest) logger.finest("sendQYMessage ok: " + message + " -> " + result);
+                if (logger.isLoggable(Level.FINEST)) logger.finest("sendQYMessage ok: " + message + " -> " + result);
                 future.complete(null);
             } catch (Exception e) {
                 future.completeExceptionally(e);
@@ -139,7 +133,7 @@ public final class WeiXinQYService implements Service {
         if (qyAccessToken.token == null) {
             String url = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=" + qycorpid + "&corpsecret=" + qysecret;
             return getHttpContentAsync(url).thenApply(json -> {
-                if (finest) logger.finest(url + "--->" + json);
+                if (logger.isLoggable(Level.FINEST)) logger.finest(url + "--->" + json);
                 Map<String, String> jsonmap = convert.convertFrom(MAPTYPE, json);
                 qyAccessToken.accesstime = System.currentTimeMillis();
                 qyAccessToken.token = jsonmap.get("access_token");

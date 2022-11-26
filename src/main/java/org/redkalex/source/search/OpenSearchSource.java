@@ -37,10 +37,6 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    protected final boolean finer = logger.isLoggable(Level.FINER);
-
-    protected final boolean finest = logger.isLoggable(Level.FINEST);
-
     //key: table, 不能是class，因为存在分表的情况
     protected final ConcurrentHashMap<String, Object> checkedIndexClasses = new ConcurrentHashMap();
 
@@ -159,7 +155,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     protected CompletableFuture<RetResult<String>> deleteAsync(CharSequence path) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(uris[0].toString() + path)).timeout(Duration.ofMillis(10_000)).header("Content-Type", "application/json");
         return httpClient.sendAsync(builder.DELETE().build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> {
-            if (finest) logger.log(Level.FINEST, path + " delete --> " + resp.body());
+            if (logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, path + " delete --> " + resp.body());
             return new RetResult(resp.body()).retcode(resp.statusCode());
         });
     }
@@ -167,7 +163,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     protected CompletableFuture<RetResult<String>> getAsync(CharSequence path) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(uris[0].toString() + path)).timeout(Duration.ofMillis(10_000)).header("Content-Type", "application/json");
         return httpClient.sendAsync(builder.GET().build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> {
-            if (finest) logger.log(Level.FINEST, path + " get --> " + resp.body());
+            if (logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, path + " get --> " + resp.body());
             return new RetResult(resp.body()).retcode(resp.statusCode());
         });
     }

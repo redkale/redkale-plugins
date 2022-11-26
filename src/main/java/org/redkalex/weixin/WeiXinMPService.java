@@ -37,10 +37,6 @@ public final class WeiXinMPService implements Service {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    private final boolean finest = logger.isLoggable(Level.FINEST);
-
-    private final boolean finer = logger.isLoggable(Level.FINER);
-
     //配置集合, key: appid
     protected Map<String, MpElement> appidElements = new HashMap<>();
 
@@ -104,7 +100,7 @@ public final class WeiXinMPService implements Service {
         if (code != null) code = code.replace("\"", "").replace("'", "");
         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret + "&code=" + code + "&grant_type=authorization_code";
         return getHttpContentAsync(url).thenApply(json -> {
-            if (finest) logger.finest(url + "--->" + json);
+            if (logger.isLoggable(Level.FINEST)) logger.finest(url + "--->" + json);
             Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
             return new RetResult<>(jsonmap.get("openid"));
         });
@@ -143,7 +139,7 @@ public final class WeiXinMPService implements Service {
         if (miniprogram) url0 = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid0 + "&secret=" + appsecret0 + "&js_code=" + code + "&grant_type=authorization_code";
         final String url = url0;
         return getHttpContentAsync(url).thenCompose(json -> {
-            if (finest) logger.finest("url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + "--->" + json);
+            if (logger.isLoggable(Level.FINEST)) logger.finest("url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + "--->" + json);
             Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
             if (miniprogram) {
                 if (encryptedData != null && !encryptedData.isEmpty() && iv != null && !iv.isEmpty()) {
@@ -172,14 +168,14 @@ public final class WeiXinMPService implements Service {
                         cipher.init(Cipher.DECRYPT_MODE, spec, parameters);// 初始化
                         byte[] resultByte = cipher.doFinal(dataByte);
                         String result = new String(resultByte, StandardCharsets.UTF_8);
-                        if (finest) logger.finest("url=" + url + ", session_key=" + sessionkey + ", encryptedData=" + encryptedData + ", iv=" + iv + "， decryptedData=" + result);
+                        if (logger.isLoggable(Level.FINEST)) logger.finest("url=" + url + ", session_key=" + sessionkey + ", encryptedData=" + encryptedData + ", iv=" + iv + "， decryptedData=" + result);
                         int pos = result.indexOf("\"watermark\"");
                         if (pos > 0) {
                             final String oldresult = result;
                             int pos1 = result.indexOf('{', pos);
                             int pos2 = result.indexOf('}', pos);
                             result = result.substring(0, pos1) + "null" + result.substring(pos2 + 1);
-                            if (finest) logger.finest("olddecrypt=" + oldresult + ", newdescrpty=" + result);
+                            if (logger.isLoggable(Level.FINEST)) logger.finest("olddecrypt=" + oldresult + ", newdescrpty=" + result);
                         }
                         Map<String, String> map = convert.convertFrom(TYPE_MAP_STRING_STRING, result);
                         if (!map.containsKey("unionid") && map.containsKey("unionId")) {
@@ -211,7 +207,7 @@ public final class WeiXinMPService implements Service {
     public CompletableFuture<Map<String, String>> getMPUserTokenByOpenid(String access_token, String openid) {
         String url = "https://api.weixin.qq.com/sns/userinfo?access_token=" + access_token + "&openid=" + openid;
         return getHttpContentAsync(url).thenApply(json -> {
-            if (finest) logger.finest(url + "--->" + json);
+            if (logger.isLoggable(Level.FINEST)) logger.finest(url + "--->" + json);
             Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json.replaceFirst("\\[.*\\]", "null"));
             return jsonmap;
         });

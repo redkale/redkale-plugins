@@ -29,12 +29,6 @@ public abstract class AbstractPayService implements Service {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    protected final boolean fine = logger.isLoggable(Level.FINE);
-
-    protected final boolean finer = logger.isLoggable(Level.FINER);
-
-    protected final boolean finest = logger.isLoggable(Level.FINEST);
-
     @Comment("判断是否支持指定支付类型")
     public abstract boolean supportPayType(short paytype);
 

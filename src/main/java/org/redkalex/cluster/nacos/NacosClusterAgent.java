@@ -31,12 +31,6 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected static final Map<String, String> httpHeaders = Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
 
-    protected final boolean fine = logger.isLoggable(Level.FINE);
-
-    protected final boolean finer = logger.isLoggable(Level.FINER);
-
-    protected final boolean finest = logger.isLoggable(Level.FINEST);
-
     protected HttpClient httpClient; //JDK11里面的HttpClient
 
     protected String apiurl; //不会以/结尾，且不以/nacos结尾
@@ -206,7 +200,7 @@ public class NacosClusterAgent extends ClusterAgent {
         String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthyOnly=true";
         try {
             String rs = Utility.remoteHttpContent(httpClient, "GET", this.apiurl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
-            if (finest) logger.log(Level.FINEST, "isApplicationHealth: " + querys + " --> " + rs);
+            if (logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "isApplicationHealth: " + querys + " --> " + rs);
             //caused: no service DEFAULT_GROUP@@application.platf.node.20100 found!;
             if (!rs.startsWith("{")) return false;
             InstanceDetail detail = JsonConvert.root().convertFrom(InstanceDetail.class, rs);
@@ -237,7 +231,7 @@ public class NacosClusterAgent extends ClusterAgent {
         String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthy=true&enabled=true&ephemeral=false";
         try {
             String rs = Utility.remoteHttpContent(httpClient, "POST", this.apiurl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
-            if (finest) logger.log(Level.FINEST, "register: " + querys + " --> " + rs);
+            if (logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "register: " + querys + " --> " + rs);
             if (!"ok".equalsIgnoreCase(rs)) logger.log(Level.SEVERE, serviceName + " register error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceName + " register error", ex);
@@ -250,7 +244,7 @@ public class NacosClusterAgent extends ClusterAgent {
         try {
             String rs = Utility.remoteHttpContent(httpClient, "DELETE", this.apiurl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (realCanceled && currEntry != null) currEntry.canceled = true;
-            if (finest) logger.log(Level.FINEST, "deregister: " + querys + " --> " + rs);
+            if (logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "deregister: " + querys + " --> " + rs);
             if (!"ok".equalsIgnoreCase(rs)) logger.log(Level.SEVERE, serviceName + " deregister error: " + rs);
         } catch (RetcodeException e) {
             if (e.getRetcode() != 404) logger.log(Level.SEVERE, serviceName + " deregister error", e);

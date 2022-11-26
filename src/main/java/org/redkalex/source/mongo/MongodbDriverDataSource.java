@@ -39,10 +39,6 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    protected final boolean finer = logger.isLoggable(Level.FINER);
-
-    protected final boolean finest = logger.isLoggable(Level.FINEST);
-
     protected String name;
 
     protected String readdb;
