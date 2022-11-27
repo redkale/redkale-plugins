@@ -13,7 +13,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
-@Priority(-900)
+@Priority(-800)
 public class ConsulClusterAgentProvider implements ClusterAgentProvider {
 
     @Override

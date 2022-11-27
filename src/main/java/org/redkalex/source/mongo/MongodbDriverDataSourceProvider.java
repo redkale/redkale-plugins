@@ -13,7 +13,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
-@Priority(-300)
+@Priority(-700)
 public class MongodbDriverDataSourceProvider implements DataSourceProvider {
 
     @Override

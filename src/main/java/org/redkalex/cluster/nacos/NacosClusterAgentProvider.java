@@ -10,7 +10,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
-@Priority(-700)
+@Priority(-800)
 public class NacosClusterAgentProvider implements ClusterAgentProvider {
 
     @Override

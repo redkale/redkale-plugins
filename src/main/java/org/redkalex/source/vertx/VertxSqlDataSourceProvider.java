@@ -13,7 +13,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
-@Priority(-100)
+@Priority(-700)
 public class VertxSqlDataSourceProvider implements DataSourceProvider {
 
     @Override
