@@ -21,7 +21,7 @@ import org.redkale.util.*;
  * @author zhangjx
  * @since 2.8.0
  */
-public class NacosPropertiesAgent extends PropertiesAgent {
+public class NacosClientPropertiesAgent extends PropertiesAgent {
 
     protected ResourceFactory factory;
 

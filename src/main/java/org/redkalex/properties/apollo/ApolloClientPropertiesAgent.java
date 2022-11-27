@@ -16,7 +16,7 @@ import org.redkale.util.*;
  * @author zhangjx
  * @since 2.8.0
  */
-public class ApolloPropertiesAgent extends PropertiesAgent {
+public class ApolloClientPropertiesAgent extends PropertiesAgent {
 
     protected ResourceFactory factory;
 
