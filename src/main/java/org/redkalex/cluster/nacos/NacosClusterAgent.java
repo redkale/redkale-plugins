@@ -33,7 +33,7 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected HttpClient httpClient; //JDK11里面的HttpClient
 
-    protected String apiurl; //不会以/结尾，且不以/nacos结尾
+    protected String apiurl; //不会以/结尾，且不以/nacos结尾，目前以/nacos/v1结尾
 
     protected int ttls = 5; //定时检查的秒数
 

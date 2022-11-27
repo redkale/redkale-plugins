@@ -54,14 +54,14 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
     @Override
     public void init(final Application application, final AnyValue propertiesConf) {
         try {
-            Properties properties = new Properties();
+            Properties agentConf = new Properties();
             StringWrapper dataGroups = new StringWrapper();
             propertiesConf.forEach((k, v) -> {
                 String key = k.replace('-', '.').replace('_', '.');
                 if (key.equals("nacos.data.group")) {
                     dataGroups.setValue(v);
                 } else if (key.startsWith("nacos.")) {
-                    properties.put(key.substring("nacos.".length()), v);
+                    agentConf.put(key.substring("nacos.".length()), v);
                 }
             });
             System.getProperties().forEach((k, v) -> {
@@ -71,7 +71,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
                     if (key.equals("nacos.data.group")) {
                         dataGroups.setValue(v.toString());
                     } else if (key.startsWith("nacos.")) {
-                        properties.put(key.substring("nacos.".length()), v);
+                        agentConf.put(key.substring("nacos.".length()), v);
                     }
                 }
             });
@@ -82,7 +82,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
                 Thread t = new Thread(r, threadname);
                 return t;
             });
-            this.configService = NacosFactory.createConfigService(properties);
+            this.configService = NacosFactory.createConfigService(agentConf);
             for (String dataGroup : dataGroups.getValue().split(",")) {
                 String dataId0 = null;
                 String group0 = null;
