@@ -10,15 +10,13 @@ import org.redkale.boot.*;
 import org.redkale.util.*;
 
 /**
- * Apollo 配置实现 https://github.com/apolloconfig/apollo
+ * 依赖于apollo-client实现的Apollo配置 https://github.com/apolloconfig/apollo
  *
  *
  * @author zhangjx
  * @since 2.8.0
  */
 public class ApolloClientPropertiesAgent extends PropertiesAgent {
-
-    protected ResourceFactory factory;
 
     @Override
     public void compile(final AnyValue propertiesConf) {

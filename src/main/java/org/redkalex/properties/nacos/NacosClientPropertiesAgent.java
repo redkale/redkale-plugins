@@ -15,15 +15,13 @@ import org.redkale.boot.*;
 import org.redkale.util.*;
 
 /**
- * Nacos 配置实现 https://github.com/alibaba/nacos
+ * 依赖于nacos-client实现的Nacos配置 https://github.com/alibaba/nacos
  *
  *
  * @author zhangjx
  * @since 2.8.0
  */
 public class NacosClientPropertiesAgent extends PropertiesAgent {
-
-    protected ResourceFactory factory;
 
     protected ConfigService configService;
 
@@ -55,7 +53,6 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
 
     @Override
     public void init(final Application application, final AnyValue propertiesConf) {
-        this.factory = factory;
         try {
             Properties properties = new Properties();
             StringWrapper dataGroups = new StringWrapper();
