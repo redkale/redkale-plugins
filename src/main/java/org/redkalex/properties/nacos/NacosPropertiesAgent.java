@@ -20,7 +20,7 @@ import org.redkale.util.*;
  */
 public class NacosPropertiesAgent extends PropertiesAgent {
 
-    protected static final int pullTimeoutMs = 30_000;
+    protected static final Duration pullTimeoutMs = Duration.ofMillis(30_000);
 
     protected HttpClient httpClient; //JDK11里面的HttpClient
 
@@ -85,7 +85,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
         this.apiUrl = "http://" + agentConf.getProperty("serverAddr") + "/nacos/v1";
         this.username = agentConf.getProperty("username");
         this.password = agentConf.getProperty("password");
-        this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(pullTimeoutMs)).build();
+        this.httpClient = HttpClient.newBuilder().connectTimeout(pullTimeoutMs).build();
 
         List<NacosInfo> infos = NacosInfo.parse(dataWrapper.getValue());
         if (infos.isEmpty()) {
@@ -106,8 +106,8 @@ public class NacosPropertiesAgent extends PropertiesAgent {
                 String url = this.apiUrl + "/cs/configs/listener?Listening-Configs=" + urlEncode(NacosInfo.paramBody(infos));
                 if (accessToken != null) url += "&accessToken=" + urlEncode(accessToken);
                 //Listening-Configs=dataId%02group%02contentMD5%02tenant%01
-                HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMillis(pullTimeoutMs))
-                    .header("Long-Pulling-Timeout", String.valueOf(pullTimeoutMs)).POST(HttpRequest.BodyPublishers.noBody()).build();
+                HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(pullTimeoutMs)
+                    .header("Long-Pulling-Timeout", String.valueOf(pullTimeoutMs.toMillis())).POST(HttpRequest.BodyPublishers.noBody()).build();
                 HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
                 String content = resp.body();
                 if (resp.statusCode() != 200) {
@@ -149,7 +149,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
         String content = null;
         try {
             String url = this.apiUrl + "/auth/login?username=" + urlEncode(username) + "&password=" + urlEncode(password);
-            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMillis(pullTimeoutMs))
+            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(pullTimeoutMs)
                 .headers("Content-Type", "application/json", "Accept", "application/json").POST(HttpRequest.BodyPublishers.noBody()).build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             content = resp.body(); //{"accessToken":"xxxx","tokenTtl":18000,"globalAdmin":true}
@@ -176,7 +176,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             String url = this.apiUrl + "/cs/configs?dataId=" + urlEncode(info.dataId) + "&group=" + urlEncode(info.group);
             if (accessToken != null) url += "&accessToken=" + urlEncode(accessToken);
             if (!info.tenant.isEmpty()) url += "&tenant=" + urlEncode(info.tenant);
-            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMillis(pullTimeoutMs))
+            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(pullTimeoutMs)
                 .headers("Content-Type", "application/json", "Accept", "application/json").GET().build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             content = resp.body();

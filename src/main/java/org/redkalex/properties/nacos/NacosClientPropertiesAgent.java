@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import org.redkale.boot.*;
 import org.redkale.util.*;
+import org.redkalex.properties.nacos.NacosPropertiesAgent.NacosInfo;
 
 /**
  * 依赖于nacos-client实现的Nacos配置 https://github.com/alibaba/nacos
@@ -131,59 +132,4 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
         logger.log(Level.FINER, "nacos config(dataId=" + info.dataId + ") size: " + props.size());
     }
 
-    private static class NacosInfo {
-
-        public String dataId;
-
-        public String group = "DEFAULT_GROUP";
-
-        public String tenant = "";
-
-        public String content = "";
-
-        public String contentMD5 = "";
-
-        //nacos.data.group值的数据格式为: dataId1:group1:tenant1,dataId2:group2:tenant2
-        public static List<NacosInfo> parse(String dataGroupStr) {
-            List<NacosInfo> list = new ArrayList<>();
-            String tmpkey = new String(new char[]{2, 3, 4});
-            dataGroupStr = dataGroupStr.replace("\\:", tmpkey);
-            for (String str : dataGroupStr.split(",")) {
-                String[] dataGroup = str.split(":");
-                if (dataGroup[0].trim().isEmpty()) continue;
-                String dataId = dataGroup[0].trim().replace(tmpkey, ":");
-                String group = dataGroup.length > 1 ? dataGroup[1].trim().replace(tmpkey, ":") : "";
-                String tenant = dataGroup.length > 2 ? dataGroup[2].trim().replace(tmpkey, ":") : "";
-                NacosInfo info = new NacosInfo();
-                info.dataId = dataId;
-                if (!group.isEmpty()) info.group = group;
-                info.tenant = tenant;
-                list.add(info);
-            }
-            return list;
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 3;
-            hash = 89 * hash + Objects.hashCode(this.dataId);
-            hash = 89 * hash + Objects.hashCode(this.tenant);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null) return false;
-            if (getClass() != obj.getClass()) return false;
-            final NacosInfo other = (NacosInfo) obj;
-            if (!Objects.equals(this.dataId, other.dataId)) return false;
-            return Objects.equals(this.tenant, other.tenant);
-        }
-
-        @Override
-        public String toString() {
-            return "{dataId:\"" + dataId + "\",group:\"" + group + "\",tenant:\"" + tenant + "\",contentMD5:\"" + contentMD5 + "\"}";
-        }
-    }
 }
