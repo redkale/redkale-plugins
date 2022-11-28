@@ -28,7 +28,6 @@ public class VertxSqlDataSourceProvider implements DataSourceProvider {
             boolean pgsql = "postgresql".equalsIgnoreCase(dbtype);
             if (pgsql) {
                 io.vertx.sqlclient.Pool.class.isAssignableFrom(io.vertx.pgclient.PgPool.class); //试图加载PgClient相关类
-                VertxSqlDataSource.class.getDeclaredConstructor().newInstance();
                 Class clazz = Thread.currentThread().getContextClassLoader().loadClass("io.vertx.pgclient.PgConnectOptions");
                 RedkaleClassLoader.putReflectionClass(clazz.getName());
                 RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
@@ -41,7 +40,6 @@ public class VertxSqlDataSourceProvider implements DataSourceProvider {
             boolean mysql = "mysql".equalsIgnoreCase(dbtype);
             if (mysql) {
                 io.vertx.sqlclient.Pool.class.isAssignableFrom(io.vertx.mysqlclient.MySQLPool.class); //试图加载MySQLClient相关类
-                VertxSqlDataSource.class.getDeclaredConstructor().newInstance();
                 Class clazz = Thread.currentThread().getContextClassLoader().loadClass("io.vertx.mysqlclient.MySQLConnectOptions");
                 RedkaleClassLoader.putReflectionClass(clazz.getName());
                 RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());

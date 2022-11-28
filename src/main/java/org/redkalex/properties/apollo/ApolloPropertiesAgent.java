@@ -15,10 +15,16 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
-        return System.getProperty("apollo.meta") != null
+        return (System.getProperty("apollo.meta") != null
             || config.getValue("apollo.meta") != null
             || config.getValue("apollo-meta") != null
-            || config.getValue("apollo_meta") != null;
+            || config.getValue("apollo_meta") != null)
+            && (System.getProperty("apollo.appid") != null
+            || System.getProperty("app.id") != null
+            || config.getValue("apollo.appid") != null
+            || config.getValue("app.id") != null
+            || config.getValue("apollo-appid") != null
+            || config.getValue("apollo_appid") != null);
     }
 
     @Override

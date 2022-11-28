@@ -33,7 +33,7 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected HttpClient httpClient; //JDK11里面的HttpClient
 
-    protected String apiurl; //不会以/结尾，且不以/nacos结尾，目前以/nacos/v1结尾
+    protected String apiUrl; //不会以/结尾，且不以/nacos结尾，目前以/nacos/v1结尾
 
     protected int ttls = 5; //定时检查的秒数
 
@@ -51,9 +51,9 @@ public class NacosClusterAgent extends ClusterAgent {
     public void init(ResourceFactory factory, AnyValue config) {
         super.init(factory, config);
 
-        this.apiurl = config.getValue("apiurl");
-        if (this.apiurl.endsWith("/")) {
-            this.apiurl = this.apiurl.substring(0, this.apiurl.length() - 1);
+        this.apiUrl = config.getValue("apiurl");
+        if (this.apiUrl.endsWith("/")) {
+            this.apiUrl = this.apiUrl.substring(0, this.apiUrl.length() - 1);
         }
         this.ttls = config.getIntValue("ttls", 5);
         if (this.ttls < 3) this.ttls = 5;
@@ -110,7 +110,7 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected void reloadMqtpAddressHealth() {
         try {
-            String content = Utility.remoteHttpContent(httpClient, "GET", this.apiurl + "/ns/service/list?pageNo=1&pageSize=99999&namespaceId=" + urlEncode(namespaceid), StandardCharsets.UTF_8, httpHeaders);
+            String content = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/ns/service/list?pageNo=1&pageSize=99999&namespaceId=" + urlEncode(namespaceid), StandardCharsets.UTF_8, httpHeaders);
             final ServiceList list = JsonConvert.root().convertFrom(ServiceList.class, content);
             Set<String> mqtpkeys = new HashSet<>();
             if (list != null && list.doms != null) {
@@ -177,7 +177,7 @@ public class NacosClusterAgent extends ClusterAgent {
     //JDK11+版本以上的纯异步方法
     private CompletableFuture<Collection<InetSocketAddress>> queryAddress11(final String serviceName) {
         final HttpClient client = httpClient;
-        String url = this.apiurl + "/ns/instance/list?serviceName=" + urlEncode(serviceName) + "&namespaceId=" + urlEncode(namespaceid);
+        String url = this.apiUrl + "/ns/instance/list?serviceName=" + urlEncode(serviceName) + "&namespaceId=" + urlEncode(namespaceid);
         HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
         httpHeaders.forEach((n, v) -> builder.header(n, v));
         return client.sendAsync(builder.GET().build(), BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> {
@@ -199,7 +199,7 @@ public class NacosClusterAgent extends ClusterAgent {
         int port = generateApplicationPort();
         String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthyOnly=true";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "GET", this.apiurl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "isApplicationHealth: " + querys + " --> " + rs);
             //caused: no service DEFAULT_GROUP@@application.platf.node.20100 found!;
             if (!rs.startsWith("{")) return false;
@@ -217,7 +217,7 @@ public class NacosClusterAgent extends ClusterAgent {
     protected void beatHealth(String serviceName, String serviceType, String host, int port) {
         String beat = "{\"ip\":\"" + host + "\",\"metadata\":{},\"port\":" + port + ",\"scheduled\":true,\"groupName\":\"" + serviceType + "\",\"namespaceId\":\"" + namespaceid + "\",\"serviceName\":\"" + serviceName + "\"}";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/ns/instance/beat?serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid)
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/ns/instance/beat?serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid)
                 + "&beat=" + urlEncode(beat), StandardCharsets.UTF_8, httpHeaders);
             //if (finest) logger.log(Level.FINEST, "checkLocalHealth: " + beat + " --> " + rs);
             if (!rs.startsWith("{")) logger.log(Level.SEVERE, serviceName + " check error: " + rs);
@@ -230,7 +230,7 @@ public class NacosClusterAgent extends ClusterAgent {
         //https://nacos.io/zh-cn/docs/open-api.html#2.1
         String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthy=true&enabled=true&ephemeral=false";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "POST", this.apiurl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(httpClient, "POST", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "register: " + querys + " --> " + rs);
             if (!"ok".equalsIgnoreCase(rs)) logger.log(Level.SEVERE, serviceName + " register error: " + rs);
         } catch (Exception ex) {
@@ -242,7 +242,7 @@ public class NacosClusterAgent extends ClusterAgent {
         //https://nacos.io/zh-cn/docs/open-api.html#2.2
         String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&ephemeral=false";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "DELETE", this.apiurl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(httpClient, "DELETE", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (realCanceled && currEntry != null) currEntry.canceled = true;
             if (logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "deregister: " + querys + " --> " + rs);
             if (!"ok".equalsIgnoreCase(rs)) logger.log(Level.SEVERE, serviceName + " deregister error: " + rs);

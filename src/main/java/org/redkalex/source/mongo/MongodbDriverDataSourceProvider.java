@@ -20,8 +20,6 @@ public class MongodbDriverDataSourceProvider implements DataSourceProvider {
     public boolean acceptsConf(AnyValue config) {
         try {
             Object.class.isAssignableFrom(com.mongodb.reactivestreams.client.MongoClient.class); //试图加载MongoClient相关类
-            RedkaleClassLoader.putReflectionPublicConstructors(MongodbDriverDataSource.class, MongodbDriverDataSource.class.getName());
-            MongodbDriverDataSource source = MongodbDriverDataSource.class.getConstructor().newInstance();
             String dbtype = config.getValue("dbtype");
             if (dbtype == null) {
                 AnyValue read = config.getAnyValue("read");
