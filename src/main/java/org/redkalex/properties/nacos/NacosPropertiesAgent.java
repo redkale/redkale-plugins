@@ -134,27 +134,20 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             String url = this.apiUrl + "/cs/configs?dataId=" + urlEncode(info.dataId) + "&group=" + urlEncode(info.group);
             if (!info.tenant.isEmpty()) url += "&tenant=" + urlEncode(info.tenant);
             String content = Utility.remoteHttpContent(httpClient, "GET", url, StandardCharsets.UTF_8, httpHeaders);
-            updateConent(application, info, content);
+
+            Properties props = new Properties();
+            String oldmd5 = info.contentMD5;
+            info.content = content;
+            info.contentMD5 = Utility.md5Hex(content);
+            props.load(new StringReader(content));
+
+            //更新全局配置项
+            putResourceProperties(application, props);
+            logger.log(Level.FINE, "nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
         } catch (Exception e) {
             logger.log(Level.SEVERE, "load nacos content " + info + " error", e);
             if (!ignoreErr) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
         }
-    }
-
-    protected void updateConent(final Application application, NacosInfo info, String content) {
-        Properties props = new Properties();
-        String oldmd5 = info.contentMD5;
-        try {
-            info.content = content;
-            info.contentMD5 = Utility.md5Hex(content);
-            props.load(new StringReader(content));
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, "load nacos content (dataId=" + info.dataId + ") error", e);
-            return;
-        }
-        //更新全局配置项
-        putResourceProperties(application, props);
-        logger.log(Level.FINER, "nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
     }
 
     protected String urlEncode(String value) {

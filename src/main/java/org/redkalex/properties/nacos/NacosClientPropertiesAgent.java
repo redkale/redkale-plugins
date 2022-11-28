@@ -36,7 +36,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
         //支持 nacos.serverAddr、nacos-serverAddr、nacos_serverAddr
         //nacos.data.group值的数据格式为: dataId1:group1:tenant1,dataId2:group2:tenant2 
         //多组数据用,分隔
-        return false && (config.getValue("nacos.serverAddr") != null
+        return (config.getValue("nacos.serverAddr") != null
             || config.getValue("nacos-serverAddr") != null
             || config.getValue("nacos_serverAddr") != null
             || System.getProperty("nacos.serverAddr") != null
