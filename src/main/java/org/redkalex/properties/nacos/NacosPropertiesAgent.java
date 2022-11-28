@@ -4,13 +4,14 @@ package org.redkalex.properties.nacos;
 
 import java.io.*;
 import java.net.*;
-import java.net.http.HttpClient;
+import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import org.redkale.boot.*;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.*;
 
 /**
@@ -19,18 +20,21 @@ import org.redkale.util.*;
  */
 public class NacosPropertiesAgent extends PropertiesAgent {
 
-    protected static final Map<String, String> httpHeaders = Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
-
     protected static final int pullTimeoutMs = 30_000;
-
-    //https://nacos.io/zh-cn/docs/open-api.html
-    protected static final Map<String, String> pullHeaders = Utility.ofMap("Long-Pulling-Timeout", String.valueOf(pullTimeoutMs));
 
     protected HttpClient httpClient; //JDK11里面的HttpClient
 
     protected String apiUrl; //不会以/结尾，且不以/nacos结尾
 
     protected ScheduledThreadPoolExecutor listenExecutor;
+
+    protected String username = "";
+
+    protected String password = "";
+
+    protected String accessToken; //定时更新
+
+    protected long accessExpireTime; //过期时间点
 
     @Override
     public void compile(final AnyValue propertiesConf) {
@@ -79,6 +83,8 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             }
         });
         this.apiUrl = "http://" + agentConf.getProperty("serverAddr") + "/nacos/v1";
+        this.username = agentConf.getProperty("username");
+        this.password = agentConf.getProperty("password");
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(pullTimeoutMs)).build();
 
         List<NacosInfo> infos = NacosInfo.parse(dataWrapper.getValue());
@@ -93,18 +99,24 @@ public class NacosPropertiesAgent extends PropertiesAgent {
         }
 
         this.listenExecutor = new ScheduledThreadPoolExecutor(1, r -> new Thread(r, "Nacos-Config-Listen-Thread"));
-        this.listenExecutor.scheduleAtFixedRate(() -> {
+        this.listenExecutor.scheduleWithFixedDelay(() -> {
             try {
+                if (!remoteLogin()) return;
                 long s = System.currentTimeMillis();
                 String url = this.apiUrl + "/cs/configs/listener?Listening-Configs=" + urlEncode(NacosInfo.paramBody(infos));
+                if (accessToken != null) url += "&accessToken=" + urlEncode(accessToken);
                 //Listening-Configs=dataId%02group%02contentMD5%02tenant%01
-                String content = Utility.remoteHttpContent(httpClient, "POST", url, pullTimeoutMs, StandardCharsets.UTF_8, pullHeaders);
-                logger.log(Level.INFO, "nacos pulling content: " + (content == null ? "null" : content.trim()) + ", cost " + (System.currentTimeMillis() - s) + " ms");
-                if (content == null || content.trim().isEmpty()) return;
-                if (!content.contains("%02")) {
+                HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMillis(pullTimeoutMs))
+                    .header("Long-Pulling-Timeout", String.valueOf(pullTimeoutMs)).POST(HttpRequest.BodyPublishers.noBody()).build();
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                String content = resp.body();
+                if (resp.statusCode() != 200) {
+                    logger.log(Level.WARNING, "nacos pulling error, statusCode: " + resp.statusCode() + ", content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms");
                     Thread.sleep(5_000);
                     return;
                 }
+                logger.log(Level.INFO, "nacos pulling content: " + (content == null ? "null" : content.trim()) + ", cost " + (System.currentTimeMillis() - s) + " ms");
+                if (content == null || content.trim().isEmpty()) return;
                 String split1 = Character.toString((char) 1);
                 String split2 = Character.toString((char) 2);
                 content = URLDecoder.decode(content.trim(), StandardCharsets.UTF_8);
@@ -119,7 +131,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             } catch (Throwable t) {
                 logger.log(Level.WARNING, "nacos pulling config error", t);
             }
-        }, 1, 2, TimeUnit.SECONDS);
+        }, 1, 1, TimeUnit.SECONDS);
     }
 
     @Override
@@ -129,12 +141,49 @@ public class NacosPropertiesAgent extends PropertiesAgent {
         }
     }
 
+    //https://nacos.io/zh-cn/docs/auth.html
+    protected boolean remoteLogin() {
+        if (username == null || username.isEmpty()) return true;
+        if (accessExpireTime > 0 && accessExpireTime > System.currentTimeMillis()) return true;
+        long s = System.currentTimeMillis();
+        String content = null;
+        try {
+            String url = this.apiUrl + "/auth/login?username=" + urlEncode(username) + "&password=" + urlEncode(password);
+            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMillis(pullTimeoutMs))
+                .headers("Content-Type", "application/json", "Accept", "application/json").POST(HttpRequest.BodyPublishers.noBody()).build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            content = resp.body(); //{"accessToken":"xxxx","tokenTtl":18000,"globalAdmin":true}
+            if (resp.statusCode() != 200) {
+                this.accessExpireTime = 0;
+                logger.log(Level.WARNING, "nacos login error, statusCode: " + resp.statusCode() + ", content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms");
+                return false;
+            }
+            Map<String, String> map = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, content);
+            this.accessToken = map.get("accessToken");
+            this.accessExpireTime = s + Long.parseLong(map.get("tokenTtl")) * 1000 - 1000; //少一秒
+            return true;
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "nacos login error, content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms", e);
+            return false;
+        }
+    }
+
+    //https://nacos.io/zh-cn/docs/open-api.html 
     protected void remoteConfigRequest(final Application application, NacosInfo info, boolean ignoreErr) {
+        if (!remoteLogin()) return;
+        String content = null;
         try {
             String url = this.apiUrl + "/cs/configs?dataId=" + urlEncode(info.dataId) + "&group=" + urlEncode(info.group);
+            if (accessToken != null) url += "&accessToken=" + urlEncode(accessToken);
             if (!info.tenant.isEmpty()) url += "&tenant=" + urlEncode(info.tenant);
-            String content = Utility.remoteHttpContent(httpClient, "GET", url, StandardCharsets.UTF_8, httpHeaders);
-
+            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMillis(pullTimeoutMs))
+                .headers("Content-Type", "application/json", "Accept", "application/json").GET().build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            content = resp.body();
+            if (resp.statusCode() != 200) {
+                logger.log(Level.SEVERE, "load nacos content " + info + " error, statusCode: " + resp.statusCode() + ", content: " + content);
+                return;
+            }
             Properties props = new Properties();
             String oldmd5 = info.contentMD5;
             info.content = content;
@@ -145,7 +194,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             putResourceProperties(application, props);
             logger.log(Level.FINE, "nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "load nacos content " + info + " error", e);
+            logger.log(Level.SEVERE, "load nacos content " + info + " error, content: " + content, e);
             if (!ignoreErr) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
         }
     }
