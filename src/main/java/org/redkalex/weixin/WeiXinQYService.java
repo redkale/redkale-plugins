@@ -25,6 +25,7 @@ import javax.annotation.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 import org.redkale.service.Local;
+import org.redkale.util.*;
 
 /**
  *
@@ -69,7 +70,7 @@ public final class WeiXinQYService implements Service {
     protected String qyaeskey = "";
 
     @Resource(name = "property.wxqy.secret")
-    private String qysecret = "#########################";
+    protected String qysecret = "#########################";
 
     private SecretKeySpec qykeyspec;
 
@@ -79,6 +80,16 @@ public final class WeiXinQYService implements Service {
 
     //------------------------------------------------------------------------------------------------------
     public WeiXinQYService() {
+    }
+
+    @ResourceListener
+    void changeResource(ResourceEvent[] events) {
+        for (ResourceEvent event : events) {
+            if (event.name().contains("aeskey")) {
+                qykeyspec = null;
+            }
+            logger.info("@Resource = " + event.name() + " resource changed");
+        }
     }
 
     //-----------------------------------微信企业号接口----------------------------------------------------------

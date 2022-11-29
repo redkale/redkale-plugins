@@ -68,12 +68,16 @@ public final class ApnsService implements Service {
     private SSLSocketFactory sslFactory;
 
     @ResourceListener
-    void changeResource(ResourceEvent[] events) {
+    synchronized void changeResource(ResourceEvent[] events) {
         for (ResourceEvent event : events) {
-            logger.info("@Resource = " + event.name() + " resource changed:  newVal = " + event.newValue() + ", oldVal = " + event.oldValue());
+            if (event.name().contains("certpwd") || event.name().contains("certbase64")) { //敏感配置不打印日志
+                logger.info("@Resource = " + event.name() + " resource changed");
+            } else {
+                logger.info("@Resource = " + event.name() + " resource changed:  newVal = " + event.newValue() + ", oldVal = " + event.oldValue());
+            }
         }
-        inited = false;
         cdl = new CountDownLatch(1);
+        inited = false;
         init(null);
     }
 
