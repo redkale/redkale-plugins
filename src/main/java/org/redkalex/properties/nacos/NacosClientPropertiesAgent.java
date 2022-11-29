@@ -128,7 +128,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             return;
         }
         //更新全局配置项
-        putResourceProperties(application, props);
+        putEnvironmentProperties(application, props);
         logger.log(Level.FINER, "nacos config(dataId=" + info.dataId + ") size: " + props.size());
     }
 

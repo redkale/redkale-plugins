@@ -185,7 +185,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             props.putAll(rs.configurations);
 
             //更新全局配置项
-            putResourceProperties(application, props);
+            putEnvironmentProperties(application, props);
             logger.log(Level.FINE, "apollo config(namespace=" + info.namespaceName + ") size: " + props.size());
         } catch (Exception e) {
             logger.log(Level.SEVERE, "load apollo content " + info + " error, content: " + content, e);

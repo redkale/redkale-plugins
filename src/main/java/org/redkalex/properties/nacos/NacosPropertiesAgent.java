@@ -191,7 +191,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             props.load(new StringReader(content));
 
             //更新全局配置项
-            putResourceProperties(application, props);
+            putEnvironmentProperties(application, props);
             logger.log(Level.FINE, "nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
         } catch (Exception e) {
             logger.log(Level.SEVERE, "load nacos content " + info + " error, content: " + content, e);
