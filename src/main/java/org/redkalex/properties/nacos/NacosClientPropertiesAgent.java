@@ -128,7 +128,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             return;
         }
         if (changeMode) { //配置项动态变更时需要一次性提交所有配置项
-            putEnvironmentProperties(application, props);
+            updateEnvironmentProperties(application, props);
         } else {
             props.forEach((k, v) -> putEnvironmentProperty(application, k.toString(), v));
         }

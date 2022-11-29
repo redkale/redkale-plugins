@@ -71,7 +71,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
                     props.put(k, val);
                 });
                 //更新全局配置项
-                putEnvironmentProperties(application, props);
+                updateEnvironmentProperties(application, props);
             });
             //初始化配置项
             config.getPropertyNames().forEach(k -> {
