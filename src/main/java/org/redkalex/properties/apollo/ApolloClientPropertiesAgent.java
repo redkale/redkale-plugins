@@ -77,7 +77,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
             config.getPropertyNames().forEach(k -> {
                 String val = config.getProperty(k, null);
                 //更新全局配置项
-                putEnvironmentProperties(application, k, val);
+                putEnvironmentProperty(application, k, val);
             });
         }
     }

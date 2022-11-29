@@ -169,7 +169,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
     }
 
     //https://nacos.io/zh-cn/docs/open-api.html 
-    protected void remoteConfigRequest(final Application application, NacosInfo info, boolean ignoreErr) {
+    protected void remoteConfigRequest(final Application application, NacosInfo info, boolean changeMode) {
         if (!remoteLogin()) return;
         String content = null;
         try {
@@ -190,12 +190,15 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             info.contentMD5 = Utility.md5Hex(content);
             props.load(new StringReader(content));
 
-            //更新全局配置项
-            putEnvironmentProperties(application, props);
+            if (changeMode) { //配置项动态变更时需要一次性提交所有配置项
+                putEnvironmentProperties(application, props);
+            } else {
+                props.forEach((k, v) -> putEnvironmentProperty(application, k.toString(), v));
+            }
             logger.log(Level.FINE, "nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
         } catch (Exception e) {
             logger.log(Level.SEVERE, "load nacos content " + info + " error, content: " + content, e);
-            if (!ignoreErr) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
+            if (!changeMode) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
         }
     }
 

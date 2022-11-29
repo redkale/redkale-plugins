@@ -93,10 +93,10 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
 
                     @Override
                     public void receiveConfigInfo(String configInfo) {
-                        updateConent(application, info, configInfo);
+                        updateConent(application, info, configInfo, true);
                     }
                 });
-                updateConent(application, info, content);
+                updateConent(application, info, content, false);
             }
         } catch (NacosException e) {
             throw new RuntimeException(e);
@@ -117,7 +117,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
         }
     }
 
-    private void updateConent(final Application application, NacosInfo info, String content) {
+    private void updateConent(final Application application, NacosInfo info, String content, boolean changeMode) {
         Properties props = new Properties();
         try {
             info.content = content;
@@ -127,8 +127,11 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             logger.log(Level.SEVERE, "load nacos content (dataId=" + info.dataId + ") error", e);
             return;
         }
-        //更新全局配置项
-        putEnvironmentProperties(application, props);
+        if (changeMode) { //配置项动态变更时需要一次性提交所有配置项
+            putEnvironmentProperties(application, props);
+        } else {
+            props.forEach((k, v) -> putEnvironmentProperty(application, k.toString(), v));
+        }
         logger.log(Level.FINER, "nacos config(dataId=" + info.dataId + ") size: " + props.size());
     }
 

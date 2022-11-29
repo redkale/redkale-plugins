@@ -155,7 +155,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
     }
 
     //https://www.apolloconfig.com/#/zh/usage/other-language-client-user-guide
-    protected void remoteConfigRequest(final Application application, ApolloInfo info, boolean ignoreErr) {
+    protected void remoteConfigRequest(final Application application, ApolloInfo info, boolean changeMode) {
         String content = null;
         try {
             //{config_server_url}/configs/{appId}/{clusterName}/{namespaceName}?ip={clientIp}
@@ -185,11 +185,15 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             props.putAll(rs.configurations);
 
             //更新全局配置项
-            putEnvironmentProperties(application, props);
+            if (changeMode) { //配置项动态变更时需要一次性提交所有配置项
+                putEnvironmentProperties(application, props);
+            } else {
+                props.forEach((k, v) -> putEnvironmentProperty(application, k.toString(), v));
+            }
             logger.log(Level.FINE, "apollo config(namespace=" + info.namespaceName + ") size: " + props.size());
         } catch (Exception e) {
             logger.log(Level.SEVERE, "load apollo content " + info + " error, content: " + content, e);
-            if (!ignoreErr) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
+            if (!changeMode) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
         }
     }
 
