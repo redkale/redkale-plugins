@@ -61,7 +61,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
-            String key = k.replace('-', '.').replace('_', '.');
+            String key = k.contains(".") && k.contains("-") ? k : k.replace('-', '.').replace('_', '.');
             if (!key.startsWith("apollo.")) return;
             if (key.equals("apollo.app.id")) {
                 key = "apollo.appid";
@@ -73,7 +73,8 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         System.getProperties().forEach((k, v) -> {
             //支持 app.id、apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
             if (k.toString().startsWith("apollo") || k.toString().equals("app.id")) {
-                String key = k.toString().replace('-', '.').replace('_', '.');
+                String key = k.toString().contains(".") && k.toString().contains("-")
+                    ? k.toString() : k.toString().replace('-', '.').replace('_', '.');
                 if (key.equals("apollo.app.id") || key.equals("app.id")) {
                     key = "apollo.appid";
                 } else if (key.equals("apollo.access.key.secret")) {

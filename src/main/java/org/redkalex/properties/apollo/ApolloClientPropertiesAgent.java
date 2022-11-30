@@ -41,7 +41,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
         //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
-            String key = k.replace('-', '.').replace('_', '.');
+            String key = k.contains(".") && k.contains("-") ? k : k.replace('-', '.').replace('_', '.');
             agentConf.put(key, v);
             if (key.equals("apollo.appid")) {
                 key = "apollo.app.id";
