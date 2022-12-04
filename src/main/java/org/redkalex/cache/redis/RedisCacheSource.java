@@ -120,6 +120,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
         //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" + db);
     }
 
+    @Override
+    public void onChange(ResourceEvent[] events) {
+    }
+
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
         AnyValue[] nodes = getNodes(config);

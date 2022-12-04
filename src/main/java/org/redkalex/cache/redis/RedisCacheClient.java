@@ -15,16 +15,16 @@ import org.redkale.net.client.*;
  */
 public class RedisCacheClient extends Client<RedisCacheRequest, RedisCacheResult> {
 
-    public RedisCacheClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, RedisCacheReqAuth authreq, RedisCacheReqDB dbreq) {
+    public RedisCacheClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, RedisCacheReqAuth authReq, RedisCacheReqDB dbReq) {
         super(group, true, address, maxConns, maxPipelines, RedisCacheReqPing.INSTANCE, RedisCacheReqClose.INSTANCE, null); //maxConns
         this.connectionContextName = "redkalex-redis-client-connection-" + key;
-        if (authreq != null || dbreq != null) {
-            if (authreq != null && dbreq != null) {
-                this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authreq).thenCompose(v -> writeChannel(conn, dbreq)).thenApply(v -> conn));
-            } else if (authreq != null) {
-                this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authreq).thenApply(v -> conn));
+        if (authReq != null || dbReq != null) {
+            if (authReq != null && dbReq != null) {
+                this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authReq).thenCompose(v -> writeChannel(conn, dbReq)).thenApply(v -> conn));
+            } else if (authReq != null) {
+                this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authReq).thenApply(v -> conn));
             } else {
-                this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, dbreq).thenApply(v -> conn));
+                this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, dbReq).thenApply(v -> conn));
             }
         }
     }

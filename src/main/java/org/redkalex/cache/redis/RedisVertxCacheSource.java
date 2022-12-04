@@ -17,10 +17,7 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
 import org.redkale.source.*;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
-import org.redkale.util.AnyValue;
-import org.redkale.util.Utility;
-import org.redkale.util.AutoLoad;
-import org.redkale.util.ResourceType;
+import org.redkale.util.*;
 
 /**
  *
@@ -76,6 +73,10 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         config.setEndpoints(addrs);
         this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         this.client = RedisAPI.api(Redis.createClient(this.vertx, config));
+    }
+
+    @Override
+    public void onChange(ResourceEvent[] events) {
     }
 
     public boolean acceptsConf(AnyValue config) {

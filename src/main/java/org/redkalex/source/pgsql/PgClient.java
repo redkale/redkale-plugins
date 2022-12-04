@@ -26,17 +26,17 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
     protected final boolean autoddl;
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public PgClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, boolean autoddl, final Properties prop, final PgReqAuthentication authreq) {
+    public PgClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, boolean autoddl, final Properties prop, final PgReqAuthentication authReq) {
         super(group, true, address, maxConns, maxPipelines, PgReqPing.INSTANCE, PgReqClose.INSTANCE, null); //maxConns
         this.autoddl = autoddl;
         this.connectionContextName = "redkalex-pgsql-client-connection-" + key;
-        this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authreq).thenCompose((PgResultSet rs0) -> {
+        this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authReq).thenCompose((PgResultSet rs0) -> {
             PgRespAuthResultSet rs = (PgRespAuthResultSet) rs0;
             if (rs.isAuthOK()) return CompletableFuture.completedFuture(conn);
             if (rs.getAuthSalt() != null) {
-                return writeChannel(conn, new PgReqAuthMd5Password(authreq.username, authreq.password, rs.getAuthSalt())).thenApply(pg -> conn);
+                return writeChannel(conn, new PgReqAuthMd5Password(authReq.username, authReq.password, rs.getAuthSalt())).thenApply(pg -> conn);
             }
-            return writeChannel(conn, new PgReqAuthScramPassword(authreq.username, authreq.password, rs.getAuthMechanisms()))
+            return writeChannel(conn, new PgReqAuthScramPassword(authReq.username, authReq.password, rs.getAuthMechanisms()))
                 .thenCompose((PgResultSet rs2) -> {
                     PgReqAuthScramSaslContinueResult cr = ((PgRespAuthResultSet) rs2).getAuthSaslContinueResult();
                     if (cr == null) return CompletableFuture.completedFuture(conn);

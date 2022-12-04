@@ -114,6 +114,10 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisLettuceCacheSource.class.getSimpleName() + ": addrs=" + addresses);
     }
 
+    @Override
+    public void onChange(ResourceEvent[] events) {
+    }
+
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
         AnyValue[] nodes = getNodes(config);

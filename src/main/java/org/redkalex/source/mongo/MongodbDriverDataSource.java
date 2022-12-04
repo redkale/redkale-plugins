@@ -96,6 +96,10 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
+    public void onChange(ResourceEvent[] events) {
+    }
+
+    @Override
     public void destroy(AnyValue config) {
         super.destroy(config);
         if (this.readMongoClient != null) {

@@ -153,6 +153,10 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     }
 
+    @Override
+    public void onChange(ResourceEvent[] events) {
+    }
+
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
         AnyValue[] nodes = getNodes(config);
