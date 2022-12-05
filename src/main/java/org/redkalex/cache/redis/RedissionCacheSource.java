@@ -154,7 +154,8 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void onChange(ResourceEvent[] events) {
+    public void onChange(AnyValue newConf, ResourceEvent[] events) {
+        //@TODO  待实现
     }
 
     public boolean acceptsConf(AnyValue config) {

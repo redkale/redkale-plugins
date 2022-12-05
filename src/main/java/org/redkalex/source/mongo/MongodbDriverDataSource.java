@@ -96,7 +96,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public void onChange(ResourceEvent[] events) {
+    public void onChange(AnyValue newConf, ResourceEvent[] events) {
+        //@TODO  待实现
     }
 
     @Override
