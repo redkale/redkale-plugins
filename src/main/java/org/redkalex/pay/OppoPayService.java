@@ -39,6 +39,10 @@ public final class OppoPayService extends AbstractPayService {
     //配置对象集合
     protected Map<String, OppoPayElement> elements = new HashMap<>();
 
+    @Resource
+    @Comment("必须存在全局配置项，@ResourceListener才会起作用")
+    protected Environment environment;
+
     @Resource(name = "property.pay.oppo.conf") //支付配置文件路径
     protected String conf = "config.properties";
 
