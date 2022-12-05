@@ -83,12 +83,17 @@ public final class WeiXinQYService implements Service {
     }
 
     @ResourceListener
-    void changeResource(ResourceEvent[] events) {
+    @Comment("通过配置中心更改配置后的回调")
+    void onResourceChanged(ResourceEvent[] events) {
+        StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             if (event.name().contains("aeskey")) {
                 qykeyspec = null;
             }
-            logger.info("@Resource = " + event.name() + " resource changed");
+            sb.append("@Resource = ").append(event.name()).append(" resource changed\r\n");
+        }
+        if (sb.length() > 0) {
+            logger.log(Level.INFO, sb.toString());
         }
     }
 

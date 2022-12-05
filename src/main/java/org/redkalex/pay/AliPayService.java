@@ -37,7 +37,10 @@ public final class AliPayService extends AbstractPayService {
 
     protected static final Charset CHARSET_GBK = Charset.forName("GBK");
 
-    //配置集合
+    //原始的配置
+    protected Properties elementProps = new Properties();
+
+    //配置对象集合
     protected Map<String, AliPayElement> elements = new HashMap<>();
 
     @Resource(name = "property.pay.alipay.conf") //支付配置文件路径
@@ -62,7 +65,7 @@ public final class AliPayService extends AbstractPayService {
     }
 
     @Override
-    @Comment("重新加载配置")
+    @Comment("重新加载本地文件配置")
     public void reloadConfig(short paytype) {
         if (this.conf != null && !this.conf.isEmpty()) { //存在支付宝支付配置
             try {
@@ -77,6 +80,23 @@ public final class AliPayService extends AbstractPayService {
                 logger.log(Level.SEVERE, "init alipay conf error", e);
             }
         }
+    }
+
+    @ResourceListener //    
+    @Comment("通过配置中心更改配置后的回调")
+    synchronized void onResourceChanged(ResourceEvent[] events) {
+        Properties changeProps = new Properties(this.elementProps);
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            if (event.name().startsWith("pay.alipay.")) {
+                changeProps.put(event.name(), event.newValue().toString());
+                sb.append("@Resource = ").append(event.name()).append(" resource changed\r\n");
+            }
+        }
+        if (sb.isEmpty()) return; //无相关配置变化
+        logger.log(Level.INFO, sb.toString());
+        this.elements = AliPayElement.create(logger, changeProps);
+        this.elementProps = changeProps;
     }
 
     public void setPayElements(Map<String, AliPayElement> elements) {

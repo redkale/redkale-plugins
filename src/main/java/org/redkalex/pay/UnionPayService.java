@@ -33,7 +33,10 @@ public final class UnionPayService extends AbstractPayService {
 
     protected static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
 
-    //配置集合
+    //原始的配置
+    protected Properties elementProps = new Properties();
+
+    //配置对象集合
     protected Map<String, UnionPayElement> elements = new HashMap<>();
 
     @Resource(name = "APP_HOME")
@@ -68,7 +71,7 @@ public final class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    @Comment("重新加载配置")
+    @Comment("重新加载本地文件配置")
     public void reloadConfig(short paytype) {
         if (this.conf != null && !this.conf.isEmpty()) { //存在支付宝支付配置
             try {
@@ -83,6 +86,23 @@ public final class UnionPayService extends AbstractPayService {
                 logger.log(Level.SEVERE, "init alipay conf error", e);
             }
         }
+    }
+
+    @ResourceListener //    
+    @Comment("通过配置中心更改配置后的回调")
+    synchronized void onResourceChanged(ResourceEvent[] events) {
+        Properties changeProps = new Properties(this.elementProps);
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            if (event.name().startsWith("pay.union.")) {
+                changeProps.put(event.name(), event.newValue().toString());
+                sb.append("@Resource = ").append(event.name()).append(" resource changed\r\n");
+            }
+        }
+        if (sb.isEmpty()) return; //无相关配置变化
+        logger.log(Level.INFO, sb.toString());
+        this.elements = UnionPayElement.create(logger, changeProps, home);
+        this.elementProps = changeProps;
     }
 
     public void setPayElements(Map<String, UnionPayElement> elements) {

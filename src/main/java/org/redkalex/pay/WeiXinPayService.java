@@ -33,7 +33,7 @@ import static org.redkalex.pay.Pays.*;
  */
 @Local
 @AutoLoad(false)
-public final class WeiXinPayService extends AbstractPayService {
+public class WeiXinPayService extends AbstractPayService {
 
     protected static final String format = "%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS%1$tz"; //yyyy-MM-dd HH:mm:ss
 
@@ -41,7 +41,10 @@ public final class WeiXinPayService extends AbstractPayService {
 
     protected static final Pattern PAYXML = Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
 
-    //配置集合
+    //原始的配置
+    protected Properties elementProps = new Properties();
+
+    //配置对象集合
     protected Map<String, WeixinPayElement> elements = new HashMap<>();
 
     @Comment("定时任务")
@@ -76,6 +79,23 @@ public final class WeiXinPayService extends AbstractPayService {
         }, 60, 60 * 60, TimeUnit.SECONDS);
     }
 
+    @ResourceListener //    
+    @Comment("通过配置中心更改配置后的回调")
+    synchronized void onResourceChanged(ResourceEvent[] events) {
+        Properties changeProps = new Properties(this.elementProps);
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            if (event.name().startsWith("pay.weixin.")) {
+                changeProps.put(event.name(), event.newValue().toString());
+                sb.append("@Resource = ").append(event.name()).append(" resource changed\r\n");
+            }
+        }
+        if (sb.isEmpty()) return; //无相关配置变化
+        logger.log(Level.INFO, sb.toString());
+        this.elements = WeixinPayElement.create(logger, changeProps, home);
+        this.elementProps = changeProps;
+    }
+
     @Override
     public void destroy(AnyValue conf) {
         super.destroy(conf);
@@ -89,7 +109,7 @@ public final class WeiXinPayService extends AbstractPayService {
     }
 
     @Override
-    @Comment("重新加载配置")
+    @Comment("重新加载本地文件配置")
     public void reloadConfig(short payType) {
         if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置
             try {
@@ -100,6 +120,7 @@ public final class WeiXinPayService extends AbstractPayService {
                 properties.load(in);
                 in.close();
                 this.elements = WeixinPayElement.create(logger, properties, home);
+                this.elementProps = properties;
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init WeixinPay conf error", e);
             }

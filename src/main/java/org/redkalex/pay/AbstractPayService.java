@@ -32,7 +32,7 @@ public abstract class AbstractPayService implements Service {
     @Comment("判断是否支持指定支付类型")
     public abstract boolean supportPayType(short paytype);
 
-    @Comment("重新加载配置")
+    @Comment("重新加载本地文件配置")
     public abstract void reloadConfig(short paytype);
 
     //--------------------------- 同步方法 ------------------------------

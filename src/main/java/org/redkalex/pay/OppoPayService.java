@@ -33,7 +33,10 @@ public final class OppoPayService extends AbstractPayService {
 
     protected static final Pattern PAYXML = Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
 
-    //配置集合
+    //原始的配置
+    protected Properties elementProps = new Properties();
+
+    //配置对象集合
     protected Map<String, OppoPayElement> elements = new HashMap<>();
 
     @Resource(name = "property.pay.oppo.conf") //支付配置文件路径
@@ -58,7 +61,7 @@ public final class OppoPayService extends AbstractPayService {
     }
 
     @Override
-    @Comment("重新加载配置")
+    @Comment("重新加载本地文件配置")
     public void reloadConfig(short paytype) {
         if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置
             try {
@@ -73,6 +76,23 @@ public final class OppoPayService extends AbstractPayService {
                 logger.log(Level.SEVERE, "init weixinpay conf error", e);
             }
         }
+    }
+
+    @ResourceListener //    
+    @Comment("通过配置中心更改配置后的回调")
+    synchronized void onResourceChanged(ResourceEvent[] events) {
+        Properties changeProps = new Properties(this.elementProps);
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            if (event.name().startsWith("pay.oppo.")) {
+                changeProps.put(event.name(), event.newValue().toString());
+                sb.append("@Resource = ").append(event.name()).append(" resource changed\r\n");
+            }
+        }
+        if (sb.isEmpty()) return; //无相关配置变化
+        logger.log(Level.INFO, sb.toString());
+        this.elements = OppoPayElement.create(logger, changeProps, home);
+        this.elementProps = changeProps;
     }
 
     public void setPayElements(Map<String, OppoPayElement> elements) {

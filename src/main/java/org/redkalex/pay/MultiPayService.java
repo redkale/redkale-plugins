@@ -79,7 +79,7 @@ public class MultiPayService extends AbstractPayService {
     }
 
     @Override
-    @Comment("重新加载配置")
+    @Comment("重新加载本地文件配置")
     public void reloadConfig(short paytype) {
         if (paytype == PAYTYPE_UNION) {
             unionPayService.reloadConfig(paytype);
