@@ -29,10 +29,13 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
 
     private Row currentRow;
 
+    private List<String> columnsNames;
+
     public VertxResultSet(EntityInfo info, SqlConnection conn, RowSet<Row> rowSet) {
         this.info = info;
         this.conn = conn;
         this.it = rowSet == null ? null : rowSet.iterator();
+        this.columnsNames = rowSet == null ? new ArrayList<>() : new ArrayList<>(rowSet.columnsNames());
     }
 
     @Override
@@ -64,15 +67,21 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     }
 
     @Override
-    public Object getObject(String columnLabel) {
-        int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+    public Object getObject(String columnName) {
+        int columnIndex = currentRow.getColumnIndex(columnName);
+        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnName.toLowerCase());
         return currentRow.getValue(columnIndex);
     }
 
     @Override
     public boolean wasNull() {
         return currentRow == null;
+    }
+
+    @Override
+    @ConvertDisabled
+    public List<String> getColumnLabels() {
+        return columnsNames;
     }
     //------------------- 下面可有可无 ------------------
 

@@ -89,6 +89,16 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
 
     @Override
     @ConvertDisabled
+    public List<String> getColumnLabels() {
+        List<String> labels = new ArrayList<>();
+        for (PgRowColumn col : rowDesc.columns) {
+            labels.add(col.getName());
+        }
+        return labels;
+    }
+
+    @Override
+    @ConvertDisabled
     public Object getObject(String columnLabel) {
         Integer index = colmap().get(columnLabel.toLowerCase());
         if (index == null) throw new RuntimeException("not found column " + columnLabel + " index in " + colmap);

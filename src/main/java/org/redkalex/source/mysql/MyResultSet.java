@@ -140,6 +140,16 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
 
     @Override
     @ConvertDisabled
+    public List<String> getColumnLabels() {
+        List<String> labels = new ArrayList<>();
+        for (MyRowColumn col : rowDesc.columns) {
+            labels.add(col.columnLabel);
+        }
+        return labels;
+    }
+
+    @Override
+    @ConvertDisabled
     public boolean wasNull() {
         return this.currRow == null;
     }
