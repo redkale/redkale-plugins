@@ -34,7 +34,11 @@ public class PgsqlDataSource extends DataSqlSource {
 
     protected PgClient readPool;
 
+    protected AsyncGroup readGroup;
+
     protected PgClient writePool;
+
+    protected AsyncGroup writeGroup;
 
     @Override
     public void init(AnyValue conf) {
@@ -43,6 +47,7 @@ public class PgsqlDataSource extends DataSqlSource {
         this.readPool = createPgPool((readConfProps == writeConfProps) ? "rw" : "read", readConfProps);
         if (readConfProps == writeConfProps) {
             this.writePool = readPool;
+            this.writeGroup = this.readGroup;
         } else {
             this.writePool = createPgPool("write", writeConfProps);
         }
@@ -60,43 +65,75 @@ public class PgsqlDataSource extends DataSqlSource {
         if (clientAsyncGroup == null || "write".equalsIgnoreCase(rw)) {
             ioGroup = AsyncGroup.create("Redkalex-PgClient-IOThread-" + rw.toUpperCase(), workExecutor, 16 * 1024, Utility.cpus() * 4).start();
         }
+        if ("write".equals(rw)) {
+            this.writeGroup = ioGroup;
+        } else {
+            this.readGroup = ioGroup;
+        }
         return new PgClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, autoddl(), prop, authReq);
     }
 
     @Override
     protected void updateOneResourceChange(Properties newProps, ResourceEvent[] events) {
         PgClient oldPool = this.readPool;
+        AsyncGroup oldGroup = this.readGroup;
         this.readPool = createPgPool("rw", newProps);
         this.writePool = readPool;
+        this.writeGroup = this.readGroup;
         if (oldPool != null) oldPool.close();
+        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
     }
 
     @Override
     protected void updateReadResourceChange(Properties newReadProps, ResourceEvent[] events) {
         PgClient oldPool = this.readPool;
+        AsyncGroup oldGroup = this.readGroup;
         this.readPool = createPgPool("read", newReadProps);
         if (oldPool != null) oldPool.close();
+        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
     }
 
     @Override
     protected void updateWriteResourceChange(Properties newWriteProps, ResourceEvent[] events) {
         PgClient oldPool = this.writePool;
+        AsyncGroup oldGroup = this.writeGroup;
         this.writePool = createPgPool("write", newWriteProps);
         if (oldPool != null) oldPool.close();
+        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
     }
 
     @Override
     public void destroy(AnyValue config) {
-        if (readPool != null) readPool.close();
-        if (writePool != null) writePool.close();
+        if (readPool != null) {
+            readPool.close();
+        }
+        if (readGroup != null && readGroup != clientAsyncGroup) {
+            readGroup.close();
+        }
+        if (writePool != null && writePool != readPool) {
+            writePool.close();
+        }
+        if (writeGroup != null && writeGroup != clientAsyncGroup && writeGroup != readGroup) {
+            readGroup.close();
+        }
     }
 
     @Local
     @Override
     public void close() throws Exception {
         super.close();
-        if (readPool != null) readPool.close();
-        if (writePool != null) writePool.close();
+        if (readPool != null) {
+            readPool.close();
+        }
+        if (readGroup != null && readGroup != clientAsyncGroup) {
+            readGroup.close();
+        }
+        if (writePool != null && writePool != readPool) {
+            writePool.close();
+        }
+        if (writeGroup != null && writeGroup != clientAsyncGroup && writeGroup != readGroup) {
+            readGroup.close();
+        }
     }
 
     @Local

@@ -33,7 +33,11 @@ public class MysqlDataSource extends DataSqlSource {
 
     protected MyClient readPool;
 
+    protected AsyncGroup readGroup;
+
     protected MyClient writePool;
+
+    protected AsyncGroup writeGroup;
 
     @Override
     public void init(AnyValue conf) {
@@ -42,6 +46,7 @@ public class MysqlDataSource extends DataSqlSource {
         this.readPool = createMyPool((readConfProps == writeConfProps) ? "rw" : "read", readConfProps);
         if (readConfProps == writeConfProps) {
             this.writePool = readPool;
+            this.writeGroup = this.readGroup;
         } else {
             this.writePool = createMyPool("write", writeConfProps);
         }
@@ -67,37 +72,64 @@ public class MysqlDataSource extends DataSqlSource {
     @Override
     protected void updateOneResourceChange(Properties newProps, ResourceEvent[] events) {
         MyClient oldPool = this.readPool;
+        AsyncGroup oldGroup = this.readGroup;
         this.readPool = createMyPool("rw", newProps);
         this.writePool = readPool;
+        this.writeGroup = this.readGroup;
         if (oldPool != null) oldPool.close();
+        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
     }
 
     @Override
     protected void updateReadResourceChange(Properties newReadProps, ResourceEvent[] events) {
         MyClient oldPool = this.readPool;
+        AsyncGroup oldGroup = this.readGroup;
         this.readPool = createMyPool("read", newReadProps);
         if (oldPool != null) oldPool.close();
+        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
     }
 
     @Override
     protected void updateWriteResourceChange(Properties newWriteProps, ResourceEvent[] events) {
         MyClient oldPool = this.writePool;
+        AsyncGroup oldGroup = this.writeGroup;
         this.writePool = createMyPool("write", newWriteProps);
         if (oldPool != null) oldPool.close();
+        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
     }
 
     @Override
     public void destroy(AnyValue config) {
-        if (readPool != null) readPool.close();
-        if (writePool != null) writePool.close();
+        if (readPool != null) {
+            readPool.close();
+        }
+        if (readGroup != null && readGroup != clientAsyncGroup) {
+            readGroup.close();
+        }
+        if (writePool != null && writePool != readPool) {
+            writePool.close();
+        }
+        if (writeGroup != null && writeGroup != clientAsyncGroup && writeGroup != readGroup) {
+            readGroup.close();
+        }
     }
 
     @Local
     @Override
     public void close() throws Exception {
         super.close();
-        if (readPool != null) readPool.close();
-        if (writePool != null && writePool != readPool) writePool.close();
+        if (readPool != null) {
+            readPool.close();
+        }
+        if (readGroup != null && readGroup != clientAsyncGroup) {
+            readGroup.close();
+        }
+        if (writePool != null && writePool != readPool) {
+            writePool.close();
+        }
+        if (writeGroup != null && writeGroup != clientAsyncGroup && writeGroup != readGroup) {
+            readGroup.close();
+        }
     }
 
     @Local
