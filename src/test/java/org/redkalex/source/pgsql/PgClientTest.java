@@ -12,6 +12,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.net.client.*;
+import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 
 /**
  *
@@ -22,8 +23,12 @@ public class PgClientTest {
     public static void main(String[] args) throws Throwable {
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 2);
         asyncGroup.start();
+        SourceUrlInfo info = new SourceUrlInfo();
+        info.username = "postgres";
+        info.password = "1234";
+        info.database = "hello_world";
         SocketAddress address = new InetSocketAddress("127.0.0.1", 5432);
-        PgReqAuthentication authreq = new PgReqAuthentication("postgres", "1234", "hello_world");
+        PgReqAuthentication authreq = new PgReqAuthentication(info);
         Properties prop = new Properties();
         prop.put("preparecache", "true");
         final PgClient client = new PgClient(asyncGroup, "rw", new ClientAddress(address), 2, 16, false, prop, authreq);

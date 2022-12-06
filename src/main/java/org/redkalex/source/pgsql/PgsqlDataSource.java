@@ -50,15 +50,17 @@ public class PgsqlDataSource extends DataSqlSource {
 
     private PgClient createPgPool(String rw, Properties prop) {
         String url = prop.getProperty(DATA_SOURCE_URL);
-        String username = prop.getProperty(DATA_SOURCE_USER, "");
-        String password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
-        UrlInfo info = parseUrl(url);
-        PgReqAuthentication authreq = new PgReqAuthentication(username, password, info.database);
+        SourceUrlInfo info = parseSourceUrl(url);
+        info.username = prop.getProperty(DATA_SOURCE_USER, "");
+        info.password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
+        PgReqAuthentication authReq = new PgReqAuthentication(info);
         int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
         int maxPipelines = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
-        AsyncGroup ioGroup = clientAsyncGroup != null && !"write".equalsIgnoreCase(rw) ? clientAsyncGroup : AsyncGroup.create("Redkalex-PgClient-IOThread-" + rw.toUpperCase(),
-            workExecutor, 16 * 1024, Utility.cpus() * 4).start();
-        return new PgClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, autoddl(), prop, authreq);
+        AsyncGroup ioGroup = clientAsyncGroup;
+        if (clientAsyncGroup == null || "write".equalsIgnoreCase(rw)) {
+            ioGroup = AsyncGroup.create("Redkalex-PgClient-IOThread-" + rw.toUpperCase(), workExecutor, 16 * 1024, Utility.cpus() * 4).start();
+        }
+        return new PgClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, autoddl(), prop, authReq);
     }
 
     @Override

@@ -63,8 +63,38 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public void init(AnyValue config) {
-        super.init(config);
+    public void init(AnyValue conf) {
+        super.init(conf);
+        this.name = conf.getValue("name", "");
+        if (conf.getAnyValue("read") == null) { //没有读写分离
+            Properties rwConf = new Properties();
+            conf.forEach((k, v) -> rwConf.put(k, v));
+            rwConf.forEach((k, v) -> {
+                String n = decryptProperty(k.toString(), v == null ? null : v.toString());
+                if (!Objects.equals(n, v)) rwConf.put(k, n);
+            });
+            initProperties(rwConf);
+            this.readConfProps = rwConf;
+            this.writeConfProps = rwConf;
+        } else { //读写分离
+            Properties readConf = new Properties();
+            Properties writeConf = new Properties();
+            conf.getAnyValue("read").forEach((k, v) -> readConf.put(k, v));
+            conf.getAnyValue("write").forEach((k, v) -> writeConf.put(k, v));
+            readConf.forEach((k, v) -> {
+                String n = decryptProperty(k.toString(), v == null ? null : v.toString());
+                if (!Objects.equals(n, v)) readConf.put(k, n);
+            });
+            writeConf.forEach((k, v) -> {
+                String n = decryptProperty(k.toString(), v == null ? null : v.toString());
+                if (!Objects.equals(n, v)) writeConf.put(k, n);
+            });
+            initProperties(readConf);
+            initProperties(writeConf);
+            this.readConfProps = readConf;
+            this.writeConfProps = writeConf;
+        }
+
         this.cacheForbidden = "NONE".equalsIgnoreCase(readConfProps.getProperty(DATA_SOURCE_CACHEMODE));
         this.readMongoClient = createMongoClient(true, this.readConfProps);
         if (this.readConfProps == this.writeConfProps) {
@@ -72,6 +102,86 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             this.writedb = this.readdb;
         } else {
             this.writeMongoClient = createMongoClient(false, this.writeConfProps);
+        }
+    }
+
+    @Override
+    @ResourceListener
+    public void onResourceChange(ResourceEvent[] events) {
+        if (events == null || events.length < 1) return;
+        //不支持读写分离模式的动态切换
+        if (readConfProps == writeConfProps
+            && (events[0].name().startsWith("read.") || events[0].name().startsWith("write."))) {
+            throw new RuntimeException("DataSource(name=" + resourceName() + ") not support to change to read/write separation mode");
+        }
+        if (readConfProps != writeConfProps
+            && (!events[0].name().startsWith("read.") && !events[0].name().startsWith("write."))) {
+            throw new RuntimeException("DataSource(name=" + resourceName() + ") not support to change to non read/write separation mode");
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (readConfProps == writeConfProps) {
+            List<ResourceEvent> allEvents = new ArrayList<>();
+            Properties newProps = new Properties(this.readConfProps);
+            for (ResourceEvent event : events) { //可能需要解密
+                String newValue = decryptProperty(event.name(), event.newValue().toString());
+                allEvents.add(ResourceEvent.create(event.name(), newValue, event.oldValue()));
+                newProps.put(event.name(), newValue);
+            }
+            { //更新MongoClient
+                MongoClient oldClient = this.readMongoClient;
+                this.readMongoClient = createMongoClient(true, newProps);
+                this.writeMongoClient = this.readMongoClient;
+                this.writedb = this.readdb;
+                if (oldClient != null) oldClient.close();
+            }
+            for (ResourceEvent event : allEvents) {
+                this.readConfProps.put(event.name(), event.newValue());
+                sb.append("DataSource(name=").append(resourceName()).append(") the ").append(event.name()).append(" resource changed\r\n");
+            }
+        } else {
+            List<ResourceEvent> readEvents = new ArrayList<>();
+            List<ResourceEvent> writeEvents = new ArrayList<>();
+            Properties newReadProps = new Properties(this.readConfProps);
+            Properties newWriteProps = new Properties(this.writeConfProps);
+            for (ResourceEvent event : events) {
+                if (event.name().startsWith("read.")) {
+                    String newName = event.name().substring("read.".length());
+                    String newValue = decryptProperty(event.name(), event.newValue().toString());
+                    readEvents.add(ResourceEvent.create(newName, newValue, event.oldValue()));
+                    newReadProps.put(event.name(), newValue);
+                } else {
+                    String newName = event.name().substring("write.".length());
+                    String newValue = decryptProperty(event.name(), event.newValue().toString());
+                    writeEvents.add(ResourceEvent.create(newName, newValue, event.oldValue()));
+                    newWriteProps.put(event.name(), newValue);
+                }
+                sb.append("DataSource(name=").append(resourceName()).append(") the ").append(event.name()).append(" resource changed\r\n");
+            }
+            if (!readEvents.isEmpty()) { //更新Read MongoClient
+                MongoClient oldClient = this.readMongoClient;
+                this.readMongoClient = createMongoClient(true, newReadProps);
+                if (oldClient != null) oldClient.close();
+            }
+            if (!writeEvents.isEmpty()) {//更新Write MongoClient
+                MongoClient oldClient = this.writeMongoClient;
+                this.writeMongoClient = createMongoClient(false, newReadProps);
+                if (oldClient != null) oldClient.close();
+            }
+            //更新Properties
+            if (!readEvents.isEmpty()) {
+                for (ResourceEvent event : readEvents) {
+                    this.readConfProps.put(event.name(), event.newValue());
+                }
+            }
+            if (!writeEvents.isEmpty()) {
+                for (ResourceEvent event : writeEvents) {
+                    this.writeConfProps.put(event.name(), event.newValue());
+                }
+            }
+        }
+        if (!sb.isEmpty()) {
+            logger.log(Level.INFO, sb.toString());
         }
     }
 
@@ -86,8 +196,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             url += "&maxpoolsize=" + maxconns;
         }
         ConnectionString cc = new ConnectionString(url);
-        if (read && readdb == null) readdb = cc.getDatabase();
-        if (!read && writedb == null) writedb = cc.getDatabase();
+        if (read && readdb == null) this.readdb = cc.getDatabase();
+        if (!read && writedb == null) this.writedb = cc.getDatabase();
         settingBuilder.applyConnectionString(cc);
         CodecRegistry registry = CodecRegistries.fromRegistries(MongoClientSettings.getDefaultCodecRegistry(),
             CodecRegistries.fromProviders(PojoCodecProvider.builder().automatic(true).build()));
@@ -95,10 +205,13 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         return MongoClients.create(settingBuilder.build());
     }
 
-    @Override
-    @ResourceListener
-    public void onResourceChange(ResourceEvent[] events) {
-        //@TODO  待实现
+    //解密可能存在的加密字段, 可重载
+    protected String decryptProperty(String key, String value) {
+        return value;
+    }
+
+    //可重载
+    protected void initProperties(Properties props) {
     }
 
     @Override

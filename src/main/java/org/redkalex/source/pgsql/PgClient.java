@@ -34,9 +34,9 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
             PgRespAuthResultSet rs = (PgRespAuthResultSet) rs0;
             if (rs.isAuthOK()) return CompletableFuture.completedFuture(conn);
             if (rs.getAuthSalt() != null) {
-                return writeChannel(conn, new PgReqAuthMd5Password(authReq.username, authReq.password, rs.getAuthSalt())).thenApply(pg -> conn);
+                return writeChannel(conn, new PgReqAuthMd5Password(authReq.info.username, authReq.info.password, rs.getAuthSalt())).thenApply(pg -> conn);
             }
-            return writeChannel(conn, new PgReqAuthScramPassword(authReq.username, authReq.password, rs.getAuthMechanisms()))
+            return writeChannel(conn, new PgReqAuthScramPassword(authReq.info.username, authReq.info.password, rs.getAuthMechanisms()))
                 .thenCompose((PgResultSet rs2) -> {
                     PgReqAuthScramSaslContinueResult cr = ((PgRespAuthResultSet) rs2).getAuthSaslContinueResult();
                     if (cr == null) return CompletableFuture.completedFuture(conn);

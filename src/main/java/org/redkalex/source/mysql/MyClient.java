@@ -10,6 +10,7 @@ import java.util.concurrent.*;
 import java.util.logging.Logger;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
+import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 
 /**
  *
@@ -21,15 +22,18 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
 
     protected final boolean autoddl;
 
+    protected final SourceUrlInfo info;
+
     @SuppressWarnings("OverridableMethodCallInConstructor")
     public MyClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, final Properties prop,
-        final String username, final String password, final String database, final String encoding, boolean autoddl, final Properties attributes) {
+        final SourceUrlInfo info, boolean autoddl, final Properties attributes) {
         super(group, true, address, maxConns, maxPipelines, MyReqPing.INSTANCE, MyReqClose.INSTANCE, null); //maxConns
+        this.info = info;
         this.autoddl = autoddl;
         this.connectionContextName = "redkalex-mysql-client-connection-" + key;
         this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, MyClientRequest.EMPTY).thenCompose((MyResultSet rs) -> {
             MyRespHandshakeResultSet handshake = (MyRespHandshakeResultSet) rs;
-            CompletableFuture<MyResultSet> authFuture = writeChannel(conn, new MyReqAuthentication(handshake, username, password, database, attributes));
+            CompletableFuture<MyResultSet> authFuture = writeChannel(conn, new MyReqAuthentication(handshake, info.username, info.password, info.database, attributes));
             return authFuture.thenCompose(v -> {
                 MyRespAuthResultSet authrs = (MyRespAuthResultSet) v;
                 if (authrs.authSwitch != null) return writeChannel(conn, authrs.authSwitch);

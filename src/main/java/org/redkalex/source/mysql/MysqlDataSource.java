@@ -49,17 +49,19 @@ public class MysqlDataSource extends DataSqlSource {
 
     private MyClient createMyPool(String rw, Properties prop) {
         String url = prop.getProperty(DATA_SOURCE_URL);
-        String username = prop.getProperty(DATA_SOURCE_USER, "");
-        String password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
-        UrlInfo info = parseUrl(url);
+        SourceUrlInfo info = parseSourceUrl(url);
+        info.username = prop.getProperty(DATA_SOURCE_USER, "");
+        info.password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
         String encoding = prop.getProperty("characterEncoding");
         if (encoding == null || encoding.isEmpty()) encoding = "UTF8MB4";
+        info.encoding = encoding;
         int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
         int maxPipelines = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
-        AsyncGroup ioGroup = clientAsyncGroup != null && !"write".equalsIgnoreCase(rw) ? clientAsyncGroup : AsyncGroup.create("Redkalex-MyClient-IOThread-" + rw.toUpperCase(),
-            workExecutor, 16 * 1024, Utility.cpus() * 4).start();
-        return new MyClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines,
-            prop, username, password, info.database, encoding, autoddl(), info.attributes);
+        AsyncGroup ioGroup = clientAsyncGroup;
+        if (clientAsyncGroup == null || "write".equalsIgnoreCase(rw)) {
+            ioGroup = AsyncGroup.create("Redkalex-MyClient-IOThread-" + rw.toUpperCase(), workExecutor, 16 * 1024, Utility.cpus() * 4).start();
+        }
+        return new MyClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, prop, info, autoddl(), info.attributes);
     }
 
     @Override

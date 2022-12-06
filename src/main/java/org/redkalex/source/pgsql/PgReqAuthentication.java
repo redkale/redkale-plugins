@@ -6,6 +6,7 @@
 package org.redkalex.source.pgsql;
 
 import org.redkale.net.client.ClientConnection;
+import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 import org.redkale.util.*;
 
 /**
@@ -14,16 +15,10 @@ import org.redkale.util.*;
  */
 public class PgReqAuthentication extends PgClientRequest {
 
-    protected String username;
+    protected final SourceUrlInfo info;
 
-    protected String password;
-
-    protected String database;
-
-    public PgReqAuthentication(String username, String password, String database) {
-        this.username = username;
-        this.password = password;
-        this.database = database;
+    public PgReqAuthentication(SourceUrlInfo info) {
+        this.info = info;
     }
 
     @Override
@@ -33,7 +28,7 @@ public class PgReqAuthentication extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqAuthentication{username=" + username + ", password=" + password + ", database=" + database + "}";
+        return "PgReqAuthentication{username=" + info.username + ", password=" + info.password + ", database=" + info.database + "}";
     }
 
     @Override
@@ -41,8 +36,8 @@ public class PgReqAuthentication extends PgClientRequest {
         int start = array.length();
         array.putInt(0);
         array.putInt(196608);
-        writeUTF8String(writeUTF8String(array, "user"), username);
-        writeUTF8String(writeUTF8String(array, "database"), database);
+        writeUTF8String(writeUTF8String(array, "user"), info.username);
+        writeUTF8String(writeUTF8String(array, "database"), info.database);
         writeUTF8String(writeUTF8String(array, "client_encoding"), "UTF8");
         array.putByte(0);
         array.putInt(start, array.length() - start);

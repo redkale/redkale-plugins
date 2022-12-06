@@ -13,6 +13,7 @@ import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.*;
 import org.redkale.net.AsyncThread;
 import org.redkale.net.client.ClientAddress;
+import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 import org.redkale.util.*;
 
 /**
@@ -26,7 +27,10 @@ public class MySQLCodecTest {
         CountDownLatch cdl = new CountDownLatch(1);
         new AsyncThread("", 0, 1, null, null) {
             public void run() {
-                MyClient client = new MyClient(null, "rw", new ClientAddress(new InetSocketAddress("127.0.0.1", 3389)), Utility.cpus(), 16, new Properties(), "root", "", "", null, false, new Properties());
+                SourceUrlInfo info = new SourceUrlInfo();
+                info.username = "root";
+                info.password  = "";
+                MyClient client = new MyClient(null, "rw", new ClientAddress(new InetSocketAddress("127.0.0.1", 3389)), Utility.cpus(), 16, new Properties(), info, false, new Properties());
 
                 MyClientConnection conn = new MyClientConnection(client, 0, new TestAsyncConnection());
                 MyClientCodec codec = (MyClientCodec) conn.getCodec();
