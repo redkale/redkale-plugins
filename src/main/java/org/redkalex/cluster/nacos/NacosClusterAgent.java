@@ -71,6 +71,7 @@ public class NacosClusterAgent extends ClusterAgent {
     @Override  //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
+        if ("nacos".equalsIgnoreCase(config.getValue("type"))) return true;
         String url = config.getValue("apiurl");
         return url != null && url.toLowerCase().contains("/nacos");
     }

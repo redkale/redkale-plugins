@@ -64,6 +64,11 @@ public class KafkaMessageAgent extends MessageAgent {
         this.adminClient = KafkaAdminClient.create(props);
     }
 
+    @ResourceListener
+    public void onResourceChange(ResourceEvent[] events) {
+        //@TODO  待实现
+    }
+    
     @Override
     public void destroy(AnyValue config) {
         super.destroy(config);
@@ -103,6 +108,7 @@ public class KafkaMessageAgent extends MessageAgent {
     @Override //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
+        if ("kafka".equalsIgnoreCase(config.getValue("type"))) return true;
         AnyValue ser = config.getAnyValue("servers");
         if (ser == null) return false;
         if (ser.getValue("value") != null && !ser.getValue("value").contains("pulsar")) return true;

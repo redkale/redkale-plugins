@@ -75,6 +75,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     @Override //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
+        if ("consul".equalsIgnoreCase(config.getValue("type"))) return true;
         return config.getValue("apiurl") != null;
     }
 

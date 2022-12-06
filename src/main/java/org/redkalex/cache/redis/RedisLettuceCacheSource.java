@@ -115,7 +115,8 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void onChange(AnyValue newConf, ResourceEvent[] events) {
+    @ResourceListener
+    public void onResourceChange(ResourceEvent[] events) {
         //@TODO  待实现
     }
 
