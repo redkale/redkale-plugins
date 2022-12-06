@@ -54,47 +54,71 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public void init(AnyValue config) {
         super.init(config);
+        Properties props = new Properties();
+        config.forEach((k, v) -> props.put(k, decryptProperty(k, v)));
+        initFromProperties(props);
+    }
+
+    protected void initFromProperties(Properties props) {
         ProxySelector proxySelector = null;
         Authenticator authenticator = null;
-        if (uris == null) {
-            Properties props = new Properties();
-            config.forEach((k, v) -> props.put(k, v));
-            this.confProps = props;
-            List<URI> us = new ArrayList<>();
-            String url = props.getProperty(AbstractDataSource.DATA_SOURCE_URL);
-            if (url.startsWith("search://")) {
-                url = url.replace("search://", "http://");
-            } else if (url.startsWith("searchs://")) {
-                url = url.replace("searchs://", "https://");
-            }
-            for (String str : url.split(";")) {
-                if (str.trim().isEmpty()) continue;
-                us.add(URI.create(str.trim()));
-            }
-            this.uris = us.toArray(new URI[us.size()]);
+        List<URI> us = new ArrayList<>();
+        String url = props.getProperty(AbstractDataSource.DATA_SOURCE_URL);
+        if (url.startsWith("search://")) {
+            url = url.replace("search://", "http://");
+        } else if (url.startsWith("searchs://")) {
+            url = url.replace("searchs://", "https://");
+        }
+        for (String str : url.split(";")) {
+            if (str.trim().isEmpty()) continue;
+            us.add(URI.create(str.trim()));
+        }
 
-            String proxyAddr = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_ADDRESS);
-            if (proxyAddr != null && !proxyAddr.isEmpty() && proxyAddr.contains(":")
-                && "true".equalsIgnoreCase(props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_ENABLE, "true"))) {
-                String proxyType = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_TYPE, "HTTP").toUpperCase();
-                int pos = proxyAddr.indexOf(':');
-                SocketAddress addr = new InetSocketAddress(proxyAddr.substring(0, pos), Integer.parseInt(proxyAddr.substring(pos + 1)));
-                proxySelector = SimpleProxySelector.create(new Proxy(Proxy.Type.valueOf(proxyType), addr));
-            }
-            String proxyUser = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_USER);
-            if (proxyUser != null && !proxyUser.isEmpty()) {
-                char[] proxyPassword = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_PASSWORD, "").toCharArray();
-                authenticator = new Authenticator() {
-                    protected PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(proxyUser, proxyPassword);
-                    }
-                };
-            }
+        String proxyAddr = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_ADDRESS);
+        if (proxyAddr != null && !proxyAddr.isEmpty() && proxyAddr.contains(":")
+            && "true".equalsIgnoreCase(props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_ENABLE, "true"))) {
+            String proxyType = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_TYPE, "HTTP").toUpperCase();
+            int pos = proxyAddr.indexOf(':');
+            SocketAddress addr = new InetSocketAddress(proxyAddr.substring(0, pos), Integer.parseInt(proxyAddr.substring(pos + 1)));
+            proxySelector = SimpleProxySelector.create(new Proxy(Proxy.Type.valueOf(proxyType), addr));
+        }
+        String proxyUser = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_USER);
+        if (proxyUser != null && !proxyUser.isEmpty()) {
+            char[] proxyPassword = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_PASSWORD, "").toCharArray();
+            authenticator = new Authenticator() {
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(proxyUser, proxyPassword);
+                }
+            };
         }
         HttpClient.Builder builder = HttpClient.newBuilder();
         if (proxySelector != null) builder = builder.proxy(proxySelector);
         if (authenticator != null) builder = builder.authenticator(authenticator);
-        httpClient = builder.build();
+        HttpClient c = builder.build();
+        this.uris = us.toArray(new URI[us.size()]);
+        this.httpClient = c;
+        this.confProps = props;
+    }
+
+    @ResourceListener
+    public void onResourceChange(ResourceEvent[] events) {
+        if (events == null || events.length < 1) return;
+        StringBuilder sb = new StringBuilder();
+        Properties newProps = new Properties(this.confProps);
+        for (ResourceEvent event : events) { //可能需要解密
+            String newValue = decryptProperty(event.name(), event.newValue().toString());
+            newProps.put(event.name(), newValue);
+            sb.append("DataSource(name=").append(resourceName()).append(") the ").append(event.name()).append(" resource changed\r\n");
+        }
+        initFromProperties(newProps);
+        if (!sb.isEmpty()) {
+            logger.log(Level.INFO, sb.toString());
+        }
+    }
+
+    //解密可能存在的加密字段, 可重载
+    protected String decryptProperty(String key, String value) {
+        return value;
     }
 
     @Override
@@ -227,7 +251,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     protected <T> SearchRequest createSearchRequest(SearchInfo<T> info, SelectColumn selects, Flipper flipper, FilterNode node) {
         if (flipper == null && node == null) return SearchRequest.createMatchAll();
         return new SearchRequest().flipper(flipper).filterNode(info, node);
-    } 
+    }
 
     protected <T> byte[] convertSearchRequest(final SearchInfo<T> info, SearchRequest bean) {
         if (bean == null) return null;

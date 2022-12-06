@@ -64,6 +64,28 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
+    protected void updateOneResourceChange(Properties newProps, ResourceEvent[] events) {
+        PgClient oldPool = this.readPool;
+        this.readPool = createPgPool("rw", newProps);
+        this.writePool = readPool;
+        if (oldPool != null) oldPool.close();
+    }
+
+    @Override
+    protected void updateReadResourceChange(Properties newReadProps, ResourceEvent[] events) {
+        PgClient oldPool = this.readPool;
+        this.readPool = createPgPool("read", newReadProps);
+        if (oldPool != null) oldPool.close();
+    }
+
+    @Override
+    protected void updateWriteResourceChange(Properties newWriteProps, ResourceEvent[] events) {
+        PgClient oldPool = this.writePool;
+        this.writePool = createPgPool("write", newWriteProps);
+        if (oldPool != null) oldPool.close();
+    }
+
+    @Override
     public void destroy(AnyValue config) {
         if (readPool != null) readPool.close();
         if (writePool != null) writePool.close();

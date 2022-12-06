@@ -68,27 +68,15 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         this.name = conf.getValue("name", "");
         if (conf.getAnyValue("read") == null) { //没有读写分离
             Properties rwConf = new Properties();
-            conf.forEach((k, v) -> rwConf.put(k, v));
-            rwConf.forEach((k, v) -> {
-                String n = decryptProperty(k.toString(), v == null ? null : v.toString());
-                if (!Objects.equals(n, v)) rwConf.put(k, n);
-            });
+            conf.forEach((k, v) -> rwConf.put(k, decryptProperty(k, v)));
             initProperties(rwConf);
             this.readConfProps = rwConf;
             this.writeConfProps = rwConf;
         } else { //读写分离
             Properties readConf = new Properties();
             Properties writeConf = new Properties();
-            conf.getAnyValue("read").forEach((k, v) -> readConf.put(k, v));
-            conf.getAnyValue("write").forEach((k, v) -> writeConf.put(k, v));
-            readConf.forEach((k, v) -> {
-                String n = decryptProperty(k.toString(), v == null ? null : v.toString());
-                if (!Objects.equals(n, v)) readConf.put(k, n);
-            });
-            writeConf.forEach((k, v) -> {
-                String n = decryptProperty(k.toString(), v == null ? null : v.toString());
-                if (!Objects.equals(n, v)) writeConf.put(k, n);
-            });
+            conf.getAnyValue("read").forEach((k, v) -> readConf.put(k, decryptProperty(k, v)));
+            conf.getAnyValue("write").forEach((k, v) -> writeConf.put(k, decryptProperty(k, v)));
             initProperties(readConf);
             initProperties(writeConf);
             this.readConfProps = readConf;
@@ -127,6 +115,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 String newValue = decryptProperty(event.name(), event.newValue().toString());
                 allEvents.add(ResourceEvent.create(event.name(), newValue, event.oldValue()));
                 newProps.put(event.name(), newValue);
+                sb.append("DataSource(name=").append(resourceName()).append(") the ").append(event.name()).append(" resource changed\r\n");
             }
             { //更新MongoClient
                 MongoClient oldClient = this.readMongoClient;
@@ -137,7 +126,6 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             }
             for (ResourceEvent event : allEvents) {
                 this.readConfProps.put(event.name(), event.newValue());
-                sb.append("DataSource(name=").append(resourceName()).append(") the ").append(event.name()).append(" resource changed\r\n");
             }
         } else {
             List<ResourceEvent> readEvents = new ArrayList<>();

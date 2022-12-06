@@ -71,6 +71,46 @@ public class VertxSqlDataSource extends DataSqlSource {
         }
     }
 
+    @Override
+    protected void updateOneResourceChange(Properties newProps, ResourceEvent[] events) {
+        Pool oldPool = this.readThreadPool;
+        SqlConnectOptions readOpt = createSqlOptions(newProps);
+        int readMaxconns = Math.max(1, Integer.decode(newProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
+        PoolOptions readPoolOpt = new PoolOptions().setMaxSize(readMaxconns);
+        this.readThreadPool = Pool.pool(vertx, readOpt, readPoolOpt);
+        this.readOptions = readOpt;
+        this.readPoolOptions = readPoolOpt;
+
+        this.writeOptions = readOptions;
+        this.writePoolOptions = readPoolOptions;
+        this.writeThreadPool = this.readThreadPool;
+        if (oldPool != null) oldPool.close();
+    }
+
+    @Override
+    protected void updateReadResourceChange(Properties newReadProps, ResourceEvent[] events) {
+        Pool oldPool = this.readThreadPool;
+        SqlConnectOptions readOpt = createSqlOptions(newReadProps);
+        int readMaxconns = Math.max(1, Integer.decode(newReadProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
+        PoolOptions readPoolOpt = new PoolOptions().setMaxSize(readMaxconns);
+        this.readThreadPool = Pool.pool(vertx, readOpt, readPoolOpt);
+        this.readOptions = readOpt;
+        this.readPoolOptions = readPoolOpt;
+        if (oldPool != null) oldPool.close();
+    }
+
+    @Override
+    protected void updateWriteResourceChange(Properties newWriteProps, ResourceEvent[] events) {
+        Pool oldPool = this.writeThreadPool;
+        SqlConnectOptions writeOpt = createSqlOptions(newWriteProps);
+        int writeMaxconns = Math.max(1, Integer.decode(newWriteProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
+        PoolOptions writePoolOpt = new PoolOptions().setMaxSize(writeMaxconns);
+        this.writeThreadPool = Pool.pool(vertx, writeOpt, writePoolOpt);
+        this.writeOptions = writeOpt;
+        this.writePoolOptions = writePoolOpt;
+        if (oldPool != null) oldPool.close();
+    }
+
     protected Pool readPool() {
         return readThreadPool;
     }

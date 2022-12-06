@@ -65,6 +65,28 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
+    protected void updateOneResourceChange(Properties newProps, ResourceEvent[] events) {
+        MyClient oldPool = this.readPool;
+        this.readPool = createMyPool("rw", newProps);
+        this.writePool = readPool;
+        if (oldPool != null) oldPool.close();
+    }
+
+    @Override
+    protected void updateReadResourceChange(Properties newReadProps, ResourceEvent[] events) {
+        MyClient oldPool = this.readPool;
+        this.readPool = createMyPool("read", newReadProps);
+        if (oldPool != null) oldPool.close();
+    }
+
+    @Override
+    protected void updateWriteResourceChange(Properties newWriteProps, ResourceEvent[] events) {
+        MyClient oldPool = this.writePool;
+        this.writePool = createMyPool("write", newWriteProps);
+        if (oldPool != null) oldPool.close();
+    }
+
+    @Override
     public void destroy(AnyValue config) {
         if (readPool != null) readPool.close();
         if (writePool != null) writePool.close();
