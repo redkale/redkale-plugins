@@ -108,7 +108,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         for (ResourceEvent event : events) { //可能需要解密
             String newValue = decryptProperty(event.name(), event.newValue().toString());
             newProps.put(event.name(), newValue);
-            sb.append("DataSource(name=").append(resourceName()).append(") the ").append(event.name()).append(" resource changed\r\n");
+            sb.append("DataSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
         initFromProperties(newProps);
         if (!sb.isEmpty()) {

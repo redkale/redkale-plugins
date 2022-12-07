@@ -91,7 +91,7 @@ public class WeiXinPayService extends AbstractPayService {
         for (ResourceEvent event : events) {
             if (event.name().startsWith("pay.weixin.")) {
                 changeProps.put(event.name(), event.newValue().toString());
-                sb.append("@Resource = ").append(event.name()).append(" resource changed\r\n");
+                sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
         if (sb.isEmpty()) return; //无相关配置变化
