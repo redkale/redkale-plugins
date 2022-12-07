@@ -178,7 +178,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             if (!info.tenant.isEmpty()) url += "&tenant=" + urlEncode(info.tenant);
             HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(pullTimeoutMs)
                 .headers("Content-Type", "application/json", "Accept", "application/json").GET().build();
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             content = resp.body();
             if (resp.statusCode() != 200) {
                 logger.log(Level.SEVERE, "load nacos content " + info + " error, statusCode: " + resp.statusCode() + ", content: " + content);
@@ -187,7 +187,12 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             Properties props = new Properties();
             String oldmd5 = info.contentMD5;
             info.content = content;
-            info.contentMD5 = Utility.md5Hex(content);
+            String md5Header = resp.headers().firstValue("content-md5").orElse("").replace("[", "").replace("]", "");
+            if (md5Header.isEmpty()) {
+                info.contentMD5 = Utility.md5Hex(content);
+            } else {
+                info.contentMD5 = md5Header;
+            }
             props.load(new StringReader(content));
 
             if (changeMode) { //配置项动态变更时需要一次性提交所有配置项
