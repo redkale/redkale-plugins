@@ -943,7 +943,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         final EntityInfo<T> info = loadEntityInfo(clazz);
         if (pks == null || pks.length == 0) return CompletableFuture.completedFuture(info.getArrayer().apply(0));
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(info.getType(), selects, null, FilterNode.filter(info.getPrimarySQLColumn(), FilterExpress.IN, pks)).thenApply(list -> {
+        return queryListAsync(info.getType(), selects, null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, pks)).thenApply(list -> {
             T[] rs = info.getArrayer().apply(pks.length);
             for (int i = 0; i < rs.length; i++) {
                 T t = null;
@@ -969,7 +969,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
         final EntityInfo<T> info = loadEntityInfo(clazz);
         Serializable[] ids = pks.toArray(v -> new Serializable[v]);
-        return queryListAsync(info.getType(), null, null, FilterNode.filter(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
+        return queryListAsync(info.getType(), null, null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
     }
 
     @Override
@@ -1104,7 +1104,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         final ArrayList<K> pks = new ArrayList<>();
         keyStream.forEach(k -> pks.add(k));
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(clazz, FilterNode.filter(primary.field(), pks)).thenApply((List<T> rs) -> {
+        return queryListAsync(clazz, FilterNode.create(primary.field(), pks)).thenApply((List<T> rs) -> {
             Map<K, T> map = new LinkedHashMap<>();
             if (rs.isEmpty()) return new LinkedHashMap<>();
             for (T item : rs) {

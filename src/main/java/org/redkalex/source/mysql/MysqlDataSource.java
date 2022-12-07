@@ -371,7 +371,7 @@ public class MysqlDataSource extends DataSqlSource {
                 return rs;
             });
         } else {
-            return queryListAsync(info.getType(), (SelectColumn) null, (Flipper) null, FilterNode.filter(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
+            return queryListAsync(info.getType(), (SelectColumn) null, (Flipper) null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
         }
     }
 
