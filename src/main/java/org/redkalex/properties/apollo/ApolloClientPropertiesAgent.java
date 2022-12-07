@@ -63,7 +63,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
         for (String namespace : namespaces.split(";|,")) {
             if (namespace.trim().isEmpty()) continue;
             Config config = ConfigService.getConfig(namespace.trim());
-            logger.log(Level.INFO, "apollo config (namespace=" + namespace + ") size: " + config.getPropertyNames().size());
+            logger.log(Level.FINER, "apollo config (namespace=" + namespace + ") size: " + config.getPropertyNames().size());
             config.addChangeListener(changeEvent -> {
                 Properties props = new Properties();
                 changeEvent.changedKeys().forEach(k -> {

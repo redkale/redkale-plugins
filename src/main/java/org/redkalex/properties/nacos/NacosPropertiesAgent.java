@@ -115,8 +115,8 @@ public class NacosPropertiesAgent extends PropertiesAgent {
                     Thread.sleep(5_000);
                     return;
                 }
-                logger.log(Level.INFO, "nacos pulling content: " + (content == null ? "null" : content.trim()) + ", cost " + (System.currentTimeMillis() - s) + " ms");
                 if (content == null || content.trim().isEmpty()) return;
+                logger.log(Level.FINER, "nacos pulling content: " + content.trim() + ", cost " + (System.currentTimeMillis() - s) + " ms");
                 String split1 = Character.toString((char) 1);
                 String split2 = Character.toString((char) 2);
                 content = URLDecoder.decode(content.trim(), StandardCharsets.UTF_8);
@@ -195,7 +195,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             } else {
                 props.forEach((k, v) -> putEnvironmentProperty(application, k.toString(), v));
             }
-            logger.log(Level.FINE, "nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
+            logger.log(Level.FINER, "nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
         } catch (Exception e) {
             logger.log(Level.SEVERE, "load nacos content " + info + " error, content: " + content, e);
             if (!changeMode) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));

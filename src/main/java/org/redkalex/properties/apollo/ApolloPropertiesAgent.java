@@ -126,7 +126,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                     Thread.sleep(5_000);
                     return;
                 }
-                logger.log(Level.INFO, "apollo pulling content: " + (content == null ? "null" : content.trim()) + ", cost " + (System.currentTimeMillis() - s) + " ms");
+                logger.log(Level.FINER, "apollo pulling content: " + (content == null ? "null" : content.trim()) + ", cost " + (System.currentTimeMillis() - s) + " ms");
 
                 List<ApolloInfo> list = JsonConvert.root().convertFrom(ApolloInfo.LIST_TYPE, content);
                 for (ApolloInfo item : list) {
@@ -191,7 +191,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             } else {
                 props.forEach((k, v) -> putEnvironmentProperty(application, k.toString(), v));
             }
-            logger.log(Level.FINE, "apollo config(namespace=" + info.namespaceName + ") size: " + props.size());
+            logger.log(Level.FINER, "apollo config(namespace=" + info.namespaceName + ") size: " + props.size());
         } catch (Exception e) {
             logger.log(Level.SEVERE, "load apollo content " + info + " error, content: " + content, e);
             if (!changeMode) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
