@@ -82,7 +82,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] key1 GET : " + obj);
         Assertions.assertEquals("value1", obj);
 
-        obj = source.setGet("key1", String.class, "value11");
+        obj = source.getSet("key1", String.class, "value11");
         System.out.println("[旧值] key1 GETSET : " + obj);
         Assertions.assertEquals("value1", obj);
 
