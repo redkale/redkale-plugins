@@ -54,7 +54,7 @@ public class WeiXinPayService extends AbstractPayService {
     @Comment("定时任务")
     protected ScheduledThreadPoolExecutor scheduler;
 
-    @Resource(name = "property.pay.weixin.conf") //支付配置文件路径
+    @Resource(name = "property.pay.weixin.conf", required = false) //支付配置文件路径
     protected String conf = "config.properties";
 
     @Resource(name = "APP_HOME")
