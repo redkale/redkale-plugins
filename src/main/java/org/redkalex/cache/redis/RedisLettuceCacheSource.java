@@ -300,7 +300,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<String> getSetStringAsync(String key, String value) {
+    public CompletableFuture<String> setGetStringAsync(String key, String value) {
         return connectStringAsync().thenCompose(command -> {
             return completableStringFuture(key, cryptor, command, command.setGet(key, encryptValue(key, cryptor, value)));
         });
@@ -314,7 +314,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long> getSetLongAsync(String key, long value, long defValue) {
+    public CompletableFuture<Long> setGetLongAsync(String key, long value, long defValue) {
         return connectStringAsync().thenCompose(command -> {
             return completableLongFuture(command, command.setGet(key, String.valueOf(value)).thenApply(v -> v == null ? defValue : Long.parseLong(v)));
         });
@@ -329,7 +329,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> T getSet(String key, final Type type, T value) {
+    public <T> T setGet(String key, final Type type, T value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         byte[] bs = command.setGet(key, encryptValue(key, cryptor, type, convert, value));
         releaseBytesCommand(command);
@@ -337,7 +337,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> T getSet(String key, Convert convert0, final Type type, T value) {
+    public <T> T setGet(String key, Convert convert0, final Type type, T value) {
         Convert c = convert0 == null ? this.convert : convert0;
         final RedisCommands<String, byte[]> command = connectBytes();
         byte[] bs = command.setGet(key, encryptValue(key, cryptor, type, c, value));
@@ -354,7 +354,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public String getSetString(String key, String value) {
+    public String setGetString(String key, String value) {
         final RedisCommands<String, String> command = connectString();
         String rs = command.setGet(key, encryptValue(key, cryptor, value));
         releaseStringCommand(command);
@@ -370,7 +370,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long getSetLong(String key, long value, long defValue) {
+    public long setGetLong(String key, long value, long defValue) {
         final RedisCommands<String, String> command = connectString();
         final String v = command.setGet(key, String.valueOf(value));
         releaseStringCommand(command);
@@ -486,7 +486,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
+    public <T> CompletableFuture<T> setGetAsync(String key, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.setGet(key, encryptValue(key, cryptor, type, this.convert, value))
                 .thenApply(old -> decryptValue(key, cryptor, type, old)));
@@ -494,7 +494,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, Convert convert0, final Type type, T value) {
+    public <T> CompletableFuture<T> setGetAsync(String key, Convert convert0, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
             Convert c = convert0 == null ? this.convert : convert0;
             return completableBytesFuture(command, command.setGet(key, encryptValue(key, cryptor, type, c, value))
@@ -1094,7 +1094,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public byte[] getSetBytes(final String key, byte[] value) {
+    public byte[] setGetBytes(final String key, byte[] value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         byte[] bs = command.setGet(key, value);
         releaseBytesCommand(command);
@@ -1744,7 +1744,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<byte[]> getSetBytesAsync(String key, byte[] value) {
+    public CompletableFuture<byte[]> setGetBytesAsync(String key, byte[] value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.setGet(key, value));
         });

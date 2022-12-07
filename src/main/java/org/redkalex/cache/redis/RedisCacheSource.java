@@ -191,7 +191,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<String> getSetStringAsync(String key, String value) {
+    public CompletableFuture<String> setGetStringAsync(String key, String value) {
         return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getStringValue(key, cryptor));
     }
 
@@ -201,7 +201,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long> getSetLongAsync(String key, long value, long defValue) {
+    public CompletableFuture<Long> setGetLongAsync(String key, long value, long defValue) {
         return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(value)).thenApply(v -> v.getLongValue(defValue));
     }
 
@@ -216,8 +216,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public String getSetString(String key, String value) {
-        return getSetStringAsync(key, value).join();
+    public String setGetString(String key, String value) {
+        return setGetStringAsync(key, value).join();
     }
 
     @Override
@@ -226,8 +226,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long getSetLong(String key, long value, long defValue) {
-        return getSetLongAsync(key, value, defValue).join();
+    public long setGetLong(String key, long value, long defValue) {
+        return setGetLongAsync(key, value, defValue).join();
     }
 
     //--------------------- getAndRefresh ------------------------------
@@ -289,12 +289,12 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
+    public <T> CompletableFuture<T> setGetAsync(String key, final Type type, T value) {
         return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> v.getObjectValue(key, cryptor, type));
     }
 
     @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<T> setGetAsync(String key, Convert convert, final Type type, T value) {
         return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getObjectValue(key, cryptor, type));
     }
 
@@ -314,13 +314,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> T getSet(String key, final Type type, T value) {
-        return getSetAsync(key, type, value).join();
+    public <T> T setGet(String key, final Type type, T value) {
+        return setGetAsync(key, type, value).join();
     }
 
     @Override
-    public <T> T getSet(String key, Convert convert, final Type type, T value) {
-        return getSetAsync(key, convert, type, value).join();
+    public <T> T setGet(String key, Convert convert, final Type type, T value) {
+        return setGetAsync(key, convert, type, value).join();
     }
 
     @Override
@@ -1219,8 +1219,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public byte[] getSetBytes(final String key, final byte[] value) {
-        return getSetBytesAsync(key, value).join();
+    public byte[] setGetBytes(final String key, final byte[] value) {
+        return setGetBytesAsync(key, value).join();
     }
 
     @Override
@@ -1254,7 +1254,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<byte[]> getSetBytesAsync(final String key, final byte[] value) {
+    public CompletableFuture<byte[]> setGetBytesAsync(final String key, final byte[] value) {
         return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getBytesValue());
     }
 

@@ -283,8 +283,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public String getSetString(String key, String value) {
-        return getSetStringAsync(key, value).join();
+    public String setGetString(String key, String value) {
+        return setGetStringAsync(key, value).join();
     }
 
     @Override
@@ -293,8 +293,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long getSetLong(String key, long value, long defValue) {
-        return getSetLongAsync(key, value, defValue).join();
+    public long setGetLong(String key, long value, long defValue) {
+        return setGetLongAsync(key, value, defValue).join();
     }
 
     //--------------------- getAndRefresh ------------------------------
@@ -356,12 +356,12 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
+    public <T> CompletableFuture<T> setGetAsync(String key, final Type type, T value) {
         return sendAsync(Command.GETSET, key, formatValue(key, cryptor, convert, type, value)).thenApply(v -> getObjectValue(key, cryptor, v, type));
     }
 
     @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, Convert convert0, final Type type, T value) {
+    public <T> CompletableFuture<T> setGetAsync(String key, Convert convert0, final Type type, T value) {
         return sendAsync(Command.GETSET, key, formatValue(key, cryptor, convert0, type, value)).thenApply(v -> getObjectValue(key, cryptor, v, type));
     }
 
@@ -381,13 +381,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> T getSet(final String key, final Type type, T value) {
-        return getSetAsync(key, type, value).join();
+    public <T> T setGet(final String key, final Type type, T value) {
+        return setGetAsync(key, type, value).join();
     }
 
     @Override
-    public <T> T getSet(String key, final Convert convert, final Type type, T value) {
-        return getSetAsync(key, convert, type, value).join();
+    public <T> T setGet(String key, final Convert convert, final Type type, T value) {
+        return setGetAsync(key, convert, type, value).join();
     }
 
     @Override
@@ -396,7 +396,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<String> getSetStringAsync(String key, String value) {
+    public CompletableFuture<String> setGetStringAsync(String key, String value) {
         return sendAsync(Command.GETSET, key, formatValue(key, cryptor, value)).thenApply(v -> getStringValue(key, cryptor, v));
     }
 
@@ -411,7 +411,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long> getSetLongAsync(String key, long value, long defvalue) {
+    public CompletableFuture<Long> setGetLongAsync(String key, long value, long defvalue) {
         return sendAsync(Command.GETSET, key, formatValue(value)).thenApply(v -> getLongValue(v, defvalue));
     }
 
@@ -1277,8 +1277,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public byte[] getSetBytes(final String key, byte[] value) {
-        return getSetBytesAsync(key, value).join();
+    public byte[] setGetBytes(final String key, byte[] value) {
+        return setGetBytesAsync(key, value).join();
     }
 
     @Override
@@ -1312,7 +1312,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<byte[]> getSetBytesAsync(final String key, byte[] value) {
+    public CompletableFuture<byte[]> setGetBytesAsync(final String key, byte[] value) {
         return sendAsync(Command.GETSET, key, new String(value, StandardCharsets.UTF_8)).thenApply(v -> v.toBytes());
     }
 
