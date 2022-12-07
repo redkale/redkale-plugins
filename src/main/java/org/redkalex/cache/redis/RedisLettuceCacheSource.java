@@ -54,7 +54,10 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public void init(AnyValue conf) {
         super.init(conf);
         if (conf == null) conf = AnyValue.create();
+        initClient(conf);
+    }
 
+    private void initClient(AnyValue conf) {
         this.stringByteArrayCodec = (RedisCodec) RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE);
         this.stringStringCodec = StringCodec.UTF8;
 
@@ -106,18 +109,28 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         }
         final int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
         final RedisURI redisURI = uris.get(0);
+        io.lettuce.core.RedisClient old = this.client;
         this.client = io.lettuce.core.RedisClient.create(redisURI);
         this.nodeAddrs = addresses;
-        BoundedPoolConfig config = BoundedPoolConfig.builder().maxTotal(maxconns).maxIdle(maxconns).minIdle(0).build();
-        this.bytesConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(stringByteArrayCodec, redisURI), config);
-        this.stringConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(stringStringCodec, redisURI), config);
+        BoundedPoolConfig bpc = BoundedPoolConfig.builder().maxTotal(maxconns).maxIdle(maxconns).minIdle(0).build();
+        this.bytesConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(stringByteArrayCodec, redisURI), bpc);
+        this.stringConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> client.connectAsync(stringStringCodec, redisURI), bpc);
+        if (old != null) old.close();
         //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisLettuceCacheSource.class.getSimpleName() + ": addrs=" + addresses);
     }
 
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        //@TODO  待实现
+        if (events == null || events.length < 1) return;
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+        }
+        initClient(this.config);
+        if (!sb.isEmpty()) {
+            logger.log(Level.INFO, sb.toString());
+        }
     }
 
     public boolean acceptsConf(AnyValue config) {

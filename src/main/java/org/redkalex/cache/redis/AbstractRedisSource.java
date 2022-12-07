@@ -22,6 +22,8 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
 
     public static final String CACHE_SOURCE_CRYPTOR = "cryptor";
 
+    protected String name;
+
     @Resource
     protected ResourceFactory resourceFactory;
 
@@ -35,9 +37,13 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
 
     protected RedisCryptor cryptor;
 
+    protected AnyValue config;
+
     @Override
     public void init(AnyValue conf) {
+        this.config = conf;
         super.init(conf);
+        this.name = conf.getValue("name", "");
         if (this.convert == null) this.convert = this.defaultConvert;
         if (conf != null) {
             String cryptStr = conf.getValue(CACHE_SOURCE_CRYPTOR, "").trim();
@@ -74,8 +80,7 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
 
     @Override
     public String resourceName() {
-        Resource res = this.getClass().getAnnotation(Resource.class);
-        return res == null ? "" : res.name();
+        return name;
     }
 
     protected String decryptValue(String key, RedisCryptor cryptor, String value) {

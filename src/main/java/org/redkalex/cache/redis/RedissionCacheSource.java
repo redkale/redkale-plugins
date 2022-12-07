@@ -43,9 +43,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public void init(AnyValue conf) {
         super.init(conf);
         if (conf == null) conf = AnyValue.create();
+        initClient(conf);
+    }
 
+    private void initClient(AnyValue conf) {
         final List<String> addresses = new ArrayList<>();
-        Config config = new Config();
+        Config redisConfig = new Config();
         AnyValue[] nodes = getNodes(conf);
         String cluster = conf.getOrDefault("cluster", "");
         int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, Utility.cpus());
@@ -77,56 +80,56 @@ public class RedissionCacheSource extends AbstractRedisSource {
             }
             addresses.add(addr);
             if (nodes.length == 1) {
-                baseConfig = config.useSingleServer();
+                baseConfig = redisConfig.useSingleServer();
                 if (maxconns > 0) {
-                    config.useSingleServer().setConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    config.useSingleServer().setConnectionPoolSize(maxconns);
+                    redisConfig.useSingleServer().setConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    redisConfig.useSingleServer().setConnectionPoolSize(maxconns);
                 }
-                config.useSingleServer().setAddress(addr);
-                config.useSingleServer().setDatabase(this.db);
+                redisConfig.useSingleServer().setAddress(addr);
+                redisConfig.useSingleServer().setDatabase(this.db);
             } else if ("masterslave".equalsIgnoreCase(cluster)) { //主从
-                baseConfig = config.useMasterSlaveServers();
+                baseConfig = redisConfig.useMasterSlaveServers();
                 if (maxconns > 0) {
-                    config.useMasterSlaveServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    config.useMasterSlaveServers().setMasterConnectionPoolSize(maxconns);
-                    config.useMasterSlaveServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    config.useMasterSlaveServers().setSlaveConnectionPoolSize(maxconns);
+                    redisConfig.useMasterSlaveServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    redisConfig.useMasterSlaveServers().setMasterConnectionPoolSize(maxconns);
+                    redisConfig.useMasterSlaveServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    redisConfig.useMasterSlaveServers().setSlaveConnectionPoolSize(maxconns);
                 }
                 if (node.get("master") != null) {
-                    config.useMasterSlaveServers().setMasterAddress(addr);
+                    redisConfig.useMasterSlaveServers().setMasterAddress(addr);
                 } else {
-                    config.useMasterSlaveServers().addSlaveAddress(addr);
+                    redisConfig.useMasterSlaveServers().addSlaveAddress(addr);
                 }
-                config.useMasterSlaveServers().setDatabase(this.db);
+                redisConfig.useMasterSlaveServers().setDatabase(this.db);
             } else if ("cluster".equalsIgnoreCase(cluster)) { //集群
-                baseConfig = config.useClusterServers();
+                baseConfig = redisConfig.useClusterServers();
                 if (maxconns > 0) {
-                    config.useClusterServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    config.useClusterServers().setMasterConnectionPoolSize(maxconns);
-                    config.useClusterServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    config.useClusterServers().setSlaveConnectionPoolSize(maxconns);
+                    redisConfig.useClusterServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    redisConfig.useClusterServers().setMasterConnectionPoolSize(maxconns);
+                    redisConfig.useClusterServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    redisConfig.useClusterServers().setSlaveConnectionPoolSize(maxconns);
                 }
-                config.useClusterServers().addNodeAddress(addr);
+                redisConfig.useClusterServers().addNodeAddress(addr);
             } else if ("replicated".equalsIgnoreCase(cluster)) { //
-                baseConfig = config.useReplicatedServers();
+                baseConfig = redisConfig.useReplicatedServers();
                 if (maxconns > 0) {
-                    config.useReplicatedServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    config.useReplicatedServers().setMasterConnectionPoolSize(maxconns);
-                    config.useReplicatedServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    config.useReplicatedServers().setSlaveConnectionPoolSize(maxconns);
+                    redisConfig.useReplicatedServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    redisConfig.useReplicatedServers().setMasterConnectionPoolSize(maxconns);
+                    redisConfig.useReplicatedServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    redisConfig.useReplicatedServers().setSlaveConnectionPoolSize(maxconns);
                 }
-                config.useReplicatedServers().addNodeAddress(addr);
-                config.useReplicatedServers().setDatabase(this.db);
+                redisConfig.useReplicatedServers().addNodeAddress(addr);
+                redisConfig.useReplicatedServers().setDatabase(this.db);
             } else if ("sentinel".equalsIgnoreCase(cluster)) { //
-                baseConfig = config.useSentinelServers();
+                baseConfig = redisConfig.useSentinelServers();
                 if (maxconns > 0) {
-                    config.useSentinelServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    config.useSentinelServers().setMasterConnectionPoolSize(maxconns);
-                    config.useSentinelServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    config.useSentinelServers().setSlaveConnectionPoolSize(maxconns);
+                    redisConfig.useSentinelServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    redisConfig.useSentinelServers().setMasterConnectionPoolSize(maxconns);
+                    redisConfig.useSentinelServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    redisConfig.useSentinelServers().setSlaveConnectionPoolSize(maxconns);
                 }
-                config.useSentinelServers().addSentinelAddress(addr);
-                config.useSentinelServers().setDatabase(this.db);
+                redisConfig.useSentinelServers().addSentinelAddress(addr);
+                redisConfig.useSentinelServers().setDatabase(this.db);
             }
             if (baseConfig != null) {  //单个进程的不同自定义密码
                 if (!username.isEmpty()) baseConfig.setUsername(username);
@@ -143,8 +146,10 @@ public class RedissionCacheSource extends AbstractRedisSource {
             if (!retryAttempts.isEmpty()) baseConfig.setRetryAttempts(Integer.parseInt(retryAttempts));
             if (!retryInterval.isEmpty()) baseConfig.setRetryInterval(Integer.parseInt(retryInterval));
         }
-        this.client = Redisson.create(config);
+        RedissonClient old = this.client;
+        this.client = Redisson.create(redisConfig);
         this.nodeAddrs = addresses;
+        if (old != null) old.shutdown();
 //        RTopic topic = client.getTopic("__keyevent@" + db + "__:expired", new StringCodec());
 //        topic.addListener(String.class, (CharSequence cs, String key) -> {
 //            if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissionCacheSource.class.getSimpleName() + "." + db + ": expired key=" + key + ", cs=" + cs);
@@ -156,7 +161,15 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        //@TODO  待实现
+        if (events == null || events.length < 1) return;
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+        }
+        initClient(this.config);
+        if (!sb.isEmpty()) {
+            logger.log(Level.INFO, sb.toString());
+        }
     }
 
     public boolean acceptsConf(AnyValue config) {

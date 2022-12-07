@@ -58,7 +58,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public void init(AnyValue conf) {
         super.init(conf);
         if (conf == null) conf = AnyValue.create();
+        initClient(conf);
+    }
 
+    private void initClient(AnyValue conf) {
         String password = null;
         int urlmaxconns = Utility.cpus();
         int urlpipelines = org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES;
@@ -115,15 +118,25 @@ public final class RedisCacheSource extends AbstractRedisSource {
         }
         int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
         int pipelines = conf.getIntValue(CACHE_SOURCE_PIPELINES, urlpipelines);
+        RedisCacheClient old = this.client;
         this.client = new RedisCacheClient(asyncGroup, resourceName() + "." + db, new ClientAddress(address), maxconns, pipelines,
             password == null || password.isEmpty() ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
+        if (old != null) old.close();
         //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" + db);
     }
 
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        //@TODO  待实现
+        if (events == null || events.length < 1) return;
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+        }
+        initClient(this.config);
+        if (!sb.isEmpty()) {
+            logger.log(Level.INFO, sb.toString());
+        }
     }
 
     public boolean acceptsConf(AnyValue config) {
@@ -159,7 +172,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{addrs=" + this.address + ", db=" + this.db + "}";
+        return getClass().getSimpleName() + "{name=" + resourceName() + ", addrs=" + this.address + ", db=" + this.db + "}";
     }
 
     @Override

@@ -11,7 +11,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.logging.Logger;
+import java.util.logging.*;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
@@ -42,7 +42,10 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     public void init(AnyValue conf) {
         super.init(conf);
         if (conf == null) conf = AnyValue.create();
+        initClient(conf);
+    }
 
+    private void initClient(AnyValue conf) {
         String password = null;
         int urlmaxconns = Utility.cpus();
         List<String> addrs = new ArrayList<>();
@@ -71,14 +74,26 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         if (password != null) config.setPassword(password.trim());
         if (maxconns > 0) config.setMaxPoolWaiting(maxconns != Utility.cpus() ? maxconns : maxconns * 10);
         config.setEndpoints(addrs);
-        this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));
+        if (this.vertx == null) {
+            this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));
+        }
+        RedisAPI old = this.client;
         this.client = RedisAPI.api(Redis.createClient(this.vertx, config));
+        if (old != null) old.close();
     }
 
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        //@TODO  待实现
+        if (events == null || events.length < 1) return;
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+        }
+        initClient(this.config);
+        if (!sb.isEmpty()) {
+            logger.log(Level.INFO, sb.toString());
+        }
     }
 
     public boolean acceptsConf(AnyValue config) {

@@ -115,7 +115,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 String newValue = decryptProperty(event.name(), event.newValue().toString());
                 allEvents.add(ResourceEvent.create(event.name(), newValue, event.oldValue()));
                 newProps.put(event.name(), newValue);
-                sb.append("DataSource(name=").append(resourceName()).append(") the ").append(event.name()).append(" resource changed\r\n");
+                sb.append("DataSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
             { //更新MongoClient
                 MongoClient oldClient = this.readMongoClient;
