@@ -110,7 +110,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         StringBuilder sb = new StringBuilder();
         if (readConfProps == writeConfProps) {
             List<ResourceEvent> allEvents = new ArrayList<>();
-            Properties newProps = new Properties(this.readConfProps);
+            Properties newProps = new Properties();
+            newProps.putAll(this.readConfProps);
             for (ResourceEvent event : events) { //可能需要解密
                 String newValue = decryptProperty(event.name(), event.newValue().toString());
                 allEvents.add(ResourceEvent.create(event.name(), newValue, event.oldValue()));
@@ -130,8 +131,10 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         } else {
             List<ResourceEvent> readEvents = new ArrayList<>();
             List<ResourceEvent> writeEvents = new ArrayList<>();
-            Properties newReadProps = new Properties(this.readConfProps);
-            Properties newWriteProps = new Properties(this.writeConfProps);
+            Properties newReadProps = new Properties();
+            newReadProps.putAll(this.readConfProps);
+            Properties newWriteProps = new Properties();
+            newWriteProps.putAll(this.writeConfProps); 
             for (ResourceEvent event : events) {
                 if (event.name().startsWith("read.")) {
                     String newName = event.name().substring("read.".length());

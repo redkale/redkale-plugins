@@ -4,6 +4,7 @@ package org.redkalex.properties.apollo;
 
 import com.ctrip.framework.apollo.*;
 import com.ctrip.framework.apollo.core.ConfigConsts;
+import com.ctrip.framework.apollo.model.ConfigChange;
 import java.util.*;
 import java.util.logging.Level;
 import org.redkale.boot.*;
@@ -37,7 +38,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public void init(final Application application, final AnyValue propertiesConf) {
+    public Properties init(final Application application, final AnyValue propertiesConf) {
         //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
@@ -60,26 +61,31 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
         //远程请求具体类: com.ctrip.framework.apollo.internals.RemoteConfigRepository
         //String cluster = System.getProperty(ConfigConsts.APOLLO_CLUSTER_KEY, ConfigConsts.CLUSTER_NAME_DEFAULT);
         String namespaces = agentConf.getProperty("apollo.namespace", System.getProperty("apollo.namespace", ConfigConsts.NAMESPACE_APPLICATION)); //多个用,分隔
+        Properties result = new Properties();
         for (String namespace : namespaces.split(";|,")) {
             if (namespace.trim().isEmpty()) continue;
             Config config = ConfigService.getConfig(namespace.trim());
             logger.log(Level.FINER, "apollo config (namespace=" + namespace + ") size: " + config.getPropertyNames().size());
             config.addChangeListener(changeEvent -> {
-                Properties props = new Properties();
+                List<ResourceEvent> events = new ArrayList<>();
                 changeEvent.changedKeys().forEach(k -> {
-                    String val = changeEvent.getChange(k).getNewValue();
-                    props.put(k, val);
+                    ConfigChange cc = changeEvent.getChange(k);
+                    if (cc != null) {
+                        events.add(ResourceEvent.create(k, cc.getNewValue(), cc.getOldValue()));
+                    }
                 });
                 //更新全局配置项
-                updateEnvironmentProperties(application, props);
+                updateEnvironmentProperties(application, events);
             });
             //初始化配置项
+            Properties props = new Properties();
             config.getPropertyNames().forEach(k -> {
                 String val = config.getProperty(k, null);
-                //更新全局配置项
-                putEnvironmentProperty(application, k, val);
+                props.put(k, val);
             });
+            result.putAll(props);
         }
+        return result;
     }
 
     @Override

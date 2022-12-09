@@ -95,7 +95,8 @@ public final class UnionPayService extends AbstractPayService {
     @ResourceListener //    
     @Comment("通过配置中心更改配置后的回调")
     synchronized void onResourceChanged(ResourceEvent[] events) {
-        Properties changeProps = new Properties(this.elementProps);
+        Properties changeProps = new Properties();
+        changeProps.putAll(this.elementProps); 
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             if (event.name().startsWith("pay.union.")) {

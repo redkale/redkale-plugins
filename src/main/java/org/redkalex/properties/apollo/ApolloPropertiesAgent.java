@@ -57,7 +57,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public void init(final Application application, final AnyValue propertiesConf) {
+    public Properties init(final Application application, final AnyValue propertiesConf) {
         //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
@@ -97,6 +97,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         String namespaces = agentConf.getProperty("apollo.namespace", "application");
         final List<ApolloInfo> infos = new ArrayList<>();
         final Map<String, ApolloInfo> infoMap = new HashMap<>();
+        final Properties result = new Properties();
         for (String namespace : namespaces.split(";|,")) {
             if (namespace.trim().isEmpty()) continue;
             if (infoMap.containsKey(namespace)) continue;
@@ -104,7 +105,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             info.namespaceName = namespace;
             infos.add(info);
             infoMap.put(info.namespaceName, info);
-            remoteConfigRequest(application, info, false);
+            remoteConfigRequest(application, info, result);
         }
 
         this.listenExecutor = new ScheduledThreadPoolExecutor(1, r -> new Thread(r, "Apollo-Config-Listen-Thread"));
@@ -135,13 +136,14 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                         old.notificationId = item.notificationId;
                     } else {
                         old.notificationId = item.notificationId;
-                        remoteConfigRequest(application, old, true);
+                        remoteConfigRequest(application, old, null);
                     }
                 }
             } catch (Throwable t) {
                 logger.log(Level.WARNING, "apollo pulling config error", t);
             }
         }, 1, 1, TimeUnit.SECONDS);
+        return result;
     }
 
     protected HttpRequest.Builder authLogin(HttpRequest.Builder builder, String url) throws IOException {
@@ -156,7 +158,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
     }
 
     //https://www.apolloconfig.com/#/zh/usage/other-language-client-user-guide
-    protected void remoteConfigRequest(final Application application, ApolloInfo info, boolean changeMode) {
+    protected void remoteConfigRequest(final Application application, ApolloInfo info, Properties result) {
         String content = null;
         try {
             //{config_server_url}/configs/{appId}/{clusterName}/{namespaceName}?ip={clientIp}
@@ -186,15 +188,17 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             props.putAll(rs.configurations);
 
             //更新全局配置项
-            if (changeMode) { //配置项动态变更时需要一次性提交所有配置项
-                updateEnvironmentProperties(application, props);
+            if (result == null) { //配置项动态变更时需要一次性提交所有配置项
+                updateEnvironmentProperties(application, ResourceEvent.create(info.properties, props));
+                info.properties = props;
             } else {
-                props.forEach((k, v) -> putEnvironmentProperty(application, k.toString(), v));
+                info.properties = props;
+                result.putAll(props);
             }
             logger.log(Level.FINER, "apollo config(namespace=" + info.namespaceName + ") size: " + props.size());
         } catch (Exception e) {
             logger.log(Level.SEVERE, "load apollo content " + info + " error, content: " + content, e);
-            if (!changeMode) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
+            if (result != null) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
         }
     }
 
@@ -230,6 +234,8 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         public String namespaceName;
 
         public int notificationId = -1;
+
+        Properties properties = new Properties();
 
         @Override
         public String toString() {

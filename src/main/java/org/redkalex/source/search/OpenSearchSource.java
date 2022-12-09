@@ -104,7 +104,8 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     public void onResourceChange(ResourceEvent[] events) {
         if (events == null || events.length < 1) return;
         StringBuilder sb = new StringBuilder();
-        Properties newProps = new Properties(this.confProps);
+        Properties newProps = new Properties();
+        newProps.putAll(this.confProps);
         for (ResourceEvent event : events) { //可能需要解密
             String newValue = decryptProperty(event.name(), event.newValue().toString());
             newProps.put(event.name(), newValue);

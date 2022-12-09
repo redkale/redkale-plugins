@@ -52,7 +52,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public void init(final Application application, final AnyValue propertiesConf) {
+    public Properties init(final Application application, final AnyValue propertiesConf) {
         try {
             Properties agentConf = new Properties();
             StringWrapper dataWrapper = new StringWrapper();
@@ -78,12 +78,13 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             List<NacosInfo> infos = NacosInfo.parse(dataWrapper.getValue());
             if (infos.isEmpty()) {
                 logger.log(Level.WARNING, "nacos.data.group is empty");
-                return;
+                return null;
             }
             final AtomicInteger counter = new AtomicInteger();
             this.listenExecutor = Executors.newFixedThreadPool(infos.size(), r -> new Thread(r, "Nacos-Config-Listen-Thread-" + counter.incrementAndGet()));
 
             this.configService = NacosFactory.createConfigService(agentConf);
+            final Properties result = new Properties();
             for (NacosInfo info : infos) {
                 final String content = configService.getConfigAndSignListener(info.dataId, info.group, 3_000, new Listener() {
                     @Override
@@ -93,11 +94,12 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
 
                     @Override
                     public void receiveConfigInfo(String configInfo) {
-                        updateConent(application, info, configInfo, true);
+                        updateConent(application, info, configInfo, null);
                     }
                 });
-                updateConent(application, info, content, false);
+                updateConent(application, info, content, result);
             }
+            return result;
         } catch (NacosException e) {
             throw new RuntimeException(e);
         }
@@ -117,7 +119,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
         }
     }
 
-    private void updateConent(final Application application, NacosInfo info, String content, boolean changeMode) {
+    private void updateConent(final Application application, NacosInfo info, String content, Properties result) {
         Properties props = new Properties();
         try {
             info.content = content;
@@ -127,10 +129,12 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             logger.log(Level.SEVERE, "load nacos content (dataId=" + info.dataId + ") error", e);
             return;
         }
-        if (changeMode) { //配置项动态变更时需要一次性提交所有配置项
-            updateEnvironmentProperties(application, props);
+        if (result == null) { //配置项动态变更时需要一次性提交所有配置项
+            updateEnvironmentProperties(application, ResourceEvent.create(info.properties, props));                
+            info.properties = props;
         } else {
-            props.forEach((k, v) -> putEnvironmentProperty(application, k.toString(), v));
+            info.properties = props;
+            result.putAll(props);
         }
         logger.log(Level.FINER, "nacos config(dataId=" + info.dataId + ") size: " + props.size());
     }

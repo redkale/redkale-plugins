@@ -60,7 +60,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public void init(final Application application, final AnyValue propertiesConf) {
+    public Properties init(final Application application, final AnyValue propertiesConf) {
         Properties agentConf = new Properties();
         StringWrapper dataWrapper = new StringWrapper();
         propertiesConf.forEach((k, v) -> {
@@ -90,11 +90,12 @@ public class NacosPropertiesAgent extends PropertiesAgent {
         List<NacosInfo> infos = NacosInfo.parse(dataWrapper.getValue());
         if (infos.isEmpty()) {
             logger.log(Level.WARNING, "nacos.data.group is empty");
-            return;
+            return null;
         }
         final Map<String, NacosInfo> infoMap = new HashMap<>(); //key: dataId-tenant
+        final Properties result = new Properties();
         for (NacosInfo info : infos) {
-            remoteConfigRequest(application, info, false);
+            remoteConfigRequest(application, info, result);
             infoMap.put(info.dataId + "-" + info.tenant, info);
         }
 
@@ -125,13 +126,14 @@ public class NacosPropertiesAgent extends PropertiesAgent {
                     String[] items = str.split(split2); //dataId%02group%02tenant%01
                     NacosInfo info = infoMap.get(items[0] + "-" + (items.length > 2 ? items[2] : ""));
                     if (info != null) {
-                        remoteConfigRequest(application, info, true);
+                        remoteConfigRequest(application, info, null);
                     }
                 }
             } catch (Throwable t) {
                 logger.log(Level.WARNING, "nacos pulling config error", t);
             }
         }, 1, 1, TimeUnit.SECONDS);
+        return result;
     }
 
     @Override
@@ -169,7 +171,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
     }
 
     //https://nacos.io/zh-cn/docs/open-api.html 
-    protected void remoteConfigRequest(final Application application, NacosInfo info, boolean changeMode) {
+    protected void remoteConfigRequest(final Application application, NacosInfo info, Properties result) {
         if (!remoteLogin()) return;
         String content = null;
         try {
@@ -195,15 +197,17 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             }
             props.load(new StringReader(content));
 
-            if (changeMode) { //配置项动态变更时需要一次性提交所有配置项
-                updateEnvironmentProperties(application, props);
+            if (result == null) { //配置项动态变更时需要一次性提交所有配置项
+                updateEnvironmentProperties(application, ResourceEvent.create(info.properties, props));
+                info.properties = props;
             } else {
-                props.forEach((k, v) -> putEnvironmentProperty(application, k.toString(), v));
+                info.properties = props;
+                result.putAll(props);
             }
             logger.log(Level.FINER, "nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
         } catch (Exception e) {
             logger.log(Level.SEVERE, "load nacos content " + info + " error, content: " + content, e);
-            if (!changeMode) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
+            if (result != null) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
         }
     }
 
@@ -222,6 +226,8 @@ public class NacosPropertiesAgent extends PropertiesAgent {
         public String content = "";
 
         public String contentMD5 = "";
+
+        public Properties properties = new Properties();
 
         //nacos.data.group值的数据格式为: dataId1:group1:tenant1,dataId2:group2:tenant2
         public static List<NacosInfo> parse(String dataGroupStr) {
