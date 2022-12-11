@@ -52,19 +52,19 @@ public final class WeiXinMPService implements Service {
     @Resource(name = "APP_HOME")
     protected File home;
 
-    @Resource(name = "weixin.mp.clientid", required = false) //客户端ID
+    @Resource(name = "weixin.mp.clientid") //客户端ID
     protected String clientid = "";
 
-    @Resource(name = "weixin.mp.appid", required = false) //公众账号ID
+    @Resource(name = "weixin.mp.appid") //公众账号ID
     protected String appid = "";
 
-    @Resource(name = "weixin.mp.appsecret", required = false) // 
+    @Resource(name = "weixin.mp.appsecret") // 
     protected String appsecret = "";
 
-    @Resource(name = "weixin.mp.token", required = false)
+    @Resource(name = "weixin.mp.token")
     protected String mptoken = "";
 
-    @Resource(name = "weixin.mp.miniprogram", required = false)
+    @Resource(name = "weixin.mp.miniprogram")
     protected boolean miniprogram;
 
     @Override

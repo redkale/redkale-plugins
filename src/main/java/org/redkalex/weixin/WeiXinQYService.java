@@ -60,16 +60,16 @@ public final class WeiXinQYService implements Service {
 
     //------------------------------------------------------------------------------------------------------
     // http://oa.xxxx.com/pipes/wx/verifyqy
-    @Resource(name = "wxqy.token", required = false)
+    @Resource(name = "wxqy.token")
     protected String qytoken = "";
 
-    @Resource(name = "wxqy.corpid", required = false)
+    @Resource(name = "wxqy.corpid")
     protected String qycorpid = "wxYYYYYYYYYYYYYYYY";
 
-    @Resource(name = "wxqy.aeskey", required = false)
+    @Resource(name = "wxqy.aeskey")
     protected String qyaeskey = "";
 
-    @Resource(name = "wxqy.secret", required = false)
+    @Resource(name = "wxqy.secret")
     protected String qysecret = "#########################";
 
     private SecretKeySpec qykeyspec;
