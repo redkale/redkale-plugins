@@ -39,7 +39,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected static final Type MAP_STRING_SERVICEENTRY = new TypeToken<Map<String, ServiceEntry>>() {
     }.getType();
 
-    protected String apiurl; //不会以/结尾 
+    protected String apiUrl; //不会以/结尾 
 
     protected HttpClient httpClient; //JDK11里面的HttpClient
 
@@ -57,14 +57,44 @@ public class ConsulClusterAgent extends ClusterAgent {
     public void init(ResourceFactory factory, AnyValue config) {
         super.init(factory, config);
 
-        this.apiurl = config.getValue("apiurl");
-        if (this.apiurl.endsWith("/")) {
-            this.apiurl = this.apiurl.substring(0, this.apiurl.length() - 1);
+        this.apiUrl = config.getValue("apiurl");
+        if (this.apiUrl.endsWith("/")) {
+            this.apiUrl = this.apiUrl.substring(0, this.apiUrl.length() - 1);
         }
         this.ttls = config.getIntValue("ttls", 10);
         if (this.ttls < 5) this.ttls = 10;
 
         this.httpClient = HttpClient.newHttpClient();
+    }
+
+    @Override
+    @ResourceListener
+    public void onResourceChange(ResourceEvent[] events) {
+        StringBuilder sb = new StringBuilder();
+        int newTtls = this.ttls;
+        String newApiurl = this.apiUrl;
+        for (ResourceEvent event : events) {
+            if ("ttls".equals(event.name())) {
+                newTtls = Integer.parseInt(event.newValue().toString());
+                if (newTtls < 5) {
+                    sb.append(ConsulClusterAgent.class.getSimpleName()).append(" cannot change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                } else {
+                    sb.append(ConsulClusterAgent.class.getSimpleName()).append(" change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                }
+            } else if ("apiurl".equals(event.name())) {
+                newApiurl = event.newValue().toString();
+            } else {
+                sb.append(ConsulClusterAgent.class.getSimpleName()).append(" skip change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+            }
+        }
+        this.apiUrl = newApiurl;
+        if (newTtls != this.ttls) {
+            this.ttls = newTtls;
+            start();
+        }
+        if (!sb.isEmpty()) {
+            logger.log(Level.INFO, sb.toString());
+        }
     }
 
     @Override
@@ -75,7 +105,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     @Override //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
-        if ("consul".equalsIgnoreCase(config.getValue("type"))) return true;
+        if (!"consul".equalsIgnoreCase(config.getValue("type"))) return false;
         return config.getValue("apiurl") != null;
     }
 
@@ -114,7 +144,7 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected void reloadMqtpAddressHealth() {
         try {
-            String content = Utility.remoteHttpContent(httpClient, "GET", this.apiurl + "/agent/services", StandardCharsets.UTF_8, httpHeaders);
+            String content = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/agent/services", StandardCharsets.UTF_8, httpHeaders);
             final Map<String, ServiceEntry> map = JsonConvert.root().convertFrom(MAP_STRING_SERVICEENTRY, content);
             Set<String> mqtpkeys = new HashSet<>();
             map.forEach((key, en) -> {
@@ -147,7 +177,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     protected void beatLocalHealth(final ClusterEntry entry) {
-        String url = this.apiurl + "/agent/check/pass/" + entry.checkid;
+        String url = this.apiUrl + "/agent/check/pass/" + entry.checkid;
         try {
             String rs = Utility.remoteHttpContent(httpClient, "PUT", url, StandardCharsets.UTF_8, httpHeaders);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, entry.checkid + " check error: " + rs);
@@ -189,7 +219,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     //JDK11+版本以上的纯异步方法
     private CompletableFuture<Collection<InetSocketAddress>> queryAddress11(final String serviceName) {
         final HttpClient client = (HttpClient) httpClient;
-        String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
+        String url = this.apiUrl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
         HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
         httpHeaders.forEach((n, v) -> builder.header(n, v));
         final Set<InetSocketAddress> set = new CopyOnWriteArraySet<>();
@@ -198,7 +228,7 @@ public class ConsulClusterAgent extends ClusterAgent {
             if (map.isEmpty()) return CompletableFuture.completedFuture(set);
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (Map.Entry<String, AddressEntry> en : map.entrySet()) {
-                String url0 = this.apiurl + "/agent/health/service/id/" + en.getKey() + "?format=text";
+                String url0 = this.apiUrl + "/agent/health/service/id/" + en.getKey() + "?format=text";
                 HttpRequest.Builder builder0 = HttpRequest.newBuilder().uri(URI.create(url0)).expectContinue(true).timeout(Duration.ofMillis(6000));
                 httpHeaders.forEach((n, v) -> builder0.header(n, v));
                 futures.add(client.sendAsync(builder0.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenApply(irs -> {
@@ -219,12 +249,12 @@ public class ConsulClusterAgent extends ClusterAgent {
         final HashSet<InetSocketAddress> set = new HashSet<>();
         String rs = null;
         try {
-            String url = this.apiurl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
+            String url = this.apiUrl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
             rs = Utility.remoteHttpContent(httpClient, "GET", url, StandardCharsets.UTF_8, httpHeaders);
             Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, rs);
             map.forEach((serviceid, en) -> {
                 try {
-                    String irs = Utility.remoteHttpContent(httpClient, "GET", this.apiurl + "/agent/health/service/id/" + serviceid + "?format=text", StandardCharsets.UTF_8, httpHeaders);
+                    String irs = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/agent/health/service/id/" + serviceid + "?format=text", StandardCharsets.UTF_8, httpHeaders);
                     if ("passing".equalsIgnoreCase(irs)) {
                         set.add(en.createSocketAddress());
                     } else {
@@ -243,7 +273,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected boolean isApplicationHealth() {
         String serviceid = generateApplicationServiceId();
         try {
-            String irs = Utility.remoteHttpContent(httpClient, "GET", this.apiurl + "/agent/health/service/id/" + serviceid + "?format=text", StandardCharsets.UTF_8, httpHeaders);
+            String irs = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/agent/health/service/id/" + serviceid + "?format=text", StandardCharsets.UTF_8, httpHeaders);
             return "passing".equalsIgnoreCase(irs);
         } catch (java.io.FileNotFoundException ex) {
             return false;
@@ -256,7 +286,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected void beatApplicationHealth() {
         String checkid = generateApplicationCheckId();
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/check/pass/" + checkid, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/check/pass/" + checkid, StandardCharsets.UTF_8, httpHeaders);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, checkid + " check error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, checkid + " check error", ex);
@@ -274,7 +304,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + serviceName + "\",\"Address\": \"" + host + "\",\"Port\": " + this.appAddress.getPort()
             + ",\"Check\":{\"CheckID\": \"" + generateApplicationCheckId() + "\",\"Name\": \"" + generateApplicationCheckName() + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " register error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " register error", ex);
@@ -285,7 +315,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     public void deregister(Application application) {
         String serviceid = generateApplicationServiceId();
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error", ex);
@@ -300,10 +330,10 @@ public class ConsulClusterAgent extends ClusterAgent {
         String json = "{\"ID\": \"" + clusterEntry.serviceid + "\",\"Name\": \"" + clusterEntry.serviceName + "\",\"Address\": \"" + clusterEntry.address.getHostString() + "\",\"Port\": " + clusterEntry.address.getPort()
             + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
             if (rs.isEmpty()) {
                 //需要立马执行下check，否则立即queryAddress可能会得到critical
-                Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/check/pass/" + generateCheckId(ns, protocol, service), StandardCharsets.UTF_8, httpHeaders);
+                Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/check/pass/" + generateCheckId(ns, protocol, service), StandardCharsets.UTF_8, httpHeaders);
             } else {
                 logger.log(Level.SEVERE, clusterEntry.serviceid + " register error: " + rs);
             }
@@ -337,7 +367,7 @@ public class ConsulClusterAgent extends ClusterAgent {
             }
         }
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiurl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
             if (realcanceled && currEntry != null) currEntry.canceled = true;
             if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
             if (!"mqtp".equals(protocol) && currEntry != null && currEntry.submqtp) deregister(ns, "mqtp", service, realcanceled);

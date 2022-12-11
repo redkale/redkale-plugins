@@ -64,6 +64,36 @@ public class NacosClusterAgent extends ClusterAgent {
     }
 
     @Override
+    @ResourceListener
+    public void onResourceChange(ResourceEvent[] events) {
+        StringBuilder sb = new StringBuilder();
+        int newTtls = this.ttls;
+        String newApiUrl = this.apiUrl;
+        for (ResourceEvent event : events) {
+            if ("ttls".equals(event.name())) {
+                newTtls = Integer.parseInt(event.newValue().toString());
+                if (newTtls < 5) {
+                    sb.append(NacosClusterAgent.class.getSimpleName()).append(" cannot change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                } else {
+                    sb.append(NacosClusterAgent.class.getSimpleName()).append(" change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                }
+            } else if ("apiurl".equals(event.name())) {
+                newApiUrl = event.newValue().toString();
+            } else {
+                sb.append(NacosClusterAgent.class.getSimpleName()).append(" skip change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+            }
+        }
+        this.apiUrl = newApiUrl;
+        if (newTtls != this.ttls) {
+            this.ttls = newTtls;
+            start();
+        }
+        if (!sb.isEmpty()) {
+            logger.log(Level.INFO, sb.toString());
+        }
+    }
+
+    @Override
     public void destroy(AnyValue config) {
         if (scheduler != null) scheduler.shutdownNow();
     }
@@ -71,7 +101,7 @@ public class NacosClusterAgent extends ClusterAgent {
     @Override  //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) return false;
-        if ("nacos".equalsIgnoreCase(config.getValue("type"))) return true;
+        if (!"nacos".equalsIgnoreCase(config.getValue("type"))) return false;
         String url = config.getValue("apiurl");
         return url != null && url.toLowerCase().contains("/nacos");
     }

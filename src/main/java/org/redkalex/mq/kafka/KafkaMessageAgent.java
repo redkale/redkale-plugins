@@ -64,11 +64,12 @@ public class KafkaMessageAgent extends MessageAgent {
         this.adminClient = KafkaAdminClient.create(props);
     }
 
+    @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        //@TODO  待实现
+        
     }
-    
+
     @Override
     public void destroy(AnyValue config) {
         super.destroy(config);
