@@ -41,24 +41,24 @@ public final class ApnsService implements Service {
     @Resource(name = "APP_HOME")
     protected File home;
 
-    @Resource(name = "property.apns.certpwd")
+    @Resource(name = "apns.certpwd", required = false)
     protected String apnscertpwd = "1"; //证书的密码
 
-    @Resource(name = "property.apns.certpath") //用来加载证书用
+    @Resource(name = "apns.certpath", required = false) //用来加载证书用
     protected String apnscertpath = "apnspushdev_cert.p12";
 
-    @Resource(name = "property.apns.certbase64") //证书内容的64位编码
+    @Resource(name = "apns.certbase64", required = false) //证书内容的64位编码
     protected String apnscertbase64 = "";
 
     //测试环境:  gateway.sandbox.push.apple.com
     //正式环境:  gateway.push.apple.com
-    @Resource(name = "property.apns.pushaddr") //
+    @Resource(name = "apns.pushaddr", required = false) //
     protected String apnspushaddr = "gateway.push.apple.com";
 
-    @Resource(name = "property.apns.pushport") //
+    @Resource(name = "apns.pushport", required = false) //
     protected int apnspushport = 2195;
 
-    @Resource(name = "property.apns.buffersize") //
+    @Resource(name = "apns.buffersize", required = false) //
     protected int apnsbuffersize = 4096;
 
     private boolean inited = false;

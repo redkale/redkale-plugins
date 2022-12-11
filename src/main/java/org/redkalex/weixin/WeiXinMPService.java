@@ -46,25 +46,25 @@ public final class WeiXinMPService implements Service {
     @Resource
     protected JsonConvert convert;
 
-    @Resource(name = "property.weixin.mp.conf") //公众号配置文件路径
+    @Resource(name = "weixin.mp.conf", required = false) //公众号配置文件路径
     protected String conf = "config.properties";
 
     @Resource(name = "APP_HOME")
     protected File home;
 
-    @Resource(name = "property.weixin.mp.clientid") //客户端ID
+    @Resource(name = "weixin.mp.clientid", required = false) //客户端ID
     protected String clientid = "";
 
-    @Resource(name = "property.weixin.mp.appid") //公众账号ID
+    @Resource(name = "weixin.mp.appid", required = false) //公众账号ID
     protected String appid = "";
 
-    @Resource(name = "property.weixin.mp.appsecret") // 
+    @Resource(name = "weixin.mp.appsecret", required = false) // 
     protected String appsecret = "";
 
-    @Resource(name = "property.weixin.mp.token")
+    @Resource(name = "weixin.mp.token", required = false)
     protected String mptoken = "";
 
-    @Resource(name = "property.weixin.mp.miniprogram")
+    @Resource(name = "weixin.mp.miniprogram", required = false)
     protected boolean miniprogram;
 
     @Override

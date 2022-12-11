@@ -46,7 +46,7 @@ public final class UnionPayService extends AbstractPayService {
     @Resource(name = "APP_HOME")
     protected File home;
 
-    @Resource(name = "property.pay.union.conf") //支付配置文件路径
+    @Resource(name = "pay.union.conf", required = false) //支付配置文件路径
     protected String conf = "config.properties";
 
     @Resource

@@ -30,7 +30,7 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     @Resource
     protected JsonConvert defaultConvert;
 
-    @Resource(name = "$_convert")
+    @Resource(name = "$_convert", required = false)
     protected JsonConvert convert;
 
     protected int db;

@@ -41,7 +41,7 @@ public final class GooglePayService extends AbstractPayService {
     @Comment("必须存在全局配置项，@ResourceListener才会起作用")
     protected Environment environment;
 
-    @Resource(name = "property.pay.google.conf") //支付配置文件路径
+    @Resource(name = "pay.google.conf", required = false) //支付配置文件路径
     protected String conf = "config.properties";
 
     @Resource(name = "APP_HOME")
