@@ -67,7 +67,13 @@ public class KafkaMessageAgent extends MessageAgent {
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            sb.append(KafkaMessageAgent.class.getSimpleName()).append(" skip change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+        }
+        if (!sb.isEmpty()) {
+            logger.log(Level.INFO, sb.toString());
+        }
     }
 
     @Override

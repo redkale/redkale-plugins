@@ -47,6 +47,14 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected ScheduledThreadPoolExecutor scheduler;
 
+    protected ScheduledFuture taskFuture1;
+
+    protected ScheduledFuture taskFuture2;
+
+    protected ScheduledFuture taskFuture3;
+
+    protected ScheduledFuture taskFuture4;
+
     //可能被HttpMessageClient用到的服务 key: serviceName
     protected final ConcurrentHashMap<String, Collection<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
 
@@ -72,7 +80,6 @@ public class ConsulClusterAgent extends ClusterAgent {
     public void onResourceChange(ResourceEvent[] events) {
         StringBuilder sb = new StringBuilder();
         int newTtls = this.ttls;
-        String newApiurl = this.apiUrl;
         for (ResourceEvent event : events) {
             if ("ttls".equals(event.name())) {
                 newTtls = Integer.parseInt(event.newValue().toString());
@@ -81,13 +88,10 @@ public class ConsulClusterAgent extends ClusterAgent {
                 } else {
                     sb.append(ConsulClusterAgent.class.getSimpleName()).append(" change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
                 }
-            } else if ("apiurl".equals(event.name())) {
-                newApiurl = event.newValue().toString();
             } else {
                 sb.append(ConsulClusterAgent.class.getSimpleName()).append(" skip change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
-        this.apiUrl = newApiurl;
         if (newTtls != this.ttls) {
             this.ttls = newTtls;
             start();
@@ -117,29 +121,33 @@ public class ConsulClusterAgent extends ClusterAgent {
                 t.setDaemon(true);
                 return t;
             });
-
-            //delay为了错开请求
-            this.scheduler.scheduleAtFixedRate(() -> {
-                beatApplicationHealth();
-                localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
-                    beatLocalHealth(entry);
-                });
-            }, 18, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
-
-            this.scheduler.scheduleAtFixedRate(() -> {
-                reloadMqtpAddressHealth();
-            }, 88 * 2, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
-
-            this.scheduler.scheduleAtFixedRate(() -> {
-                reloadHttpAddressHealth();
-            }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
-
-            this.scheduler.scheduleAtFixedRate(() -> {
-                remoteEntrys.values().stream().filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol)).forEach(entry -> {
-                    updateSncpTransport(entry);
-                });
-            }, 188 * 4, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
         }
+        //delay为了错开请求
+        if (this.taskFuture1 != null) this.taskFuture1.cancel(true);
+        this.taskFuture1 = this.scheduler.scheduleAtFixedRate(() -> {
+            beatApplicationHealth();
+            localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
+                beatLocalHealth(entry);
+            });
+        }, 18, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+
+        if (this.taskFuture2 != null) this.taskFuture2.cancel(true);
+        this.taskFuture2 = this.scheduler.scheduleAtFixedRate(() -> {
+            reloadMqtpAddressHealth();
+        }, 88 * 2, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+
+        if (this.taskFuture3 != null) this.taskFuture4.cancel(true);
+        this.taskFuture3 = this.scheduler.scheduleAtFixedRate(() -> {
+            reloadHttpAddressHealth();
+        }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+
+        if (this.taskFuture4 != null) this.taskFuture4.cancel(true);
+        this.taskFuture4 = this.scheduler.scheduleAtFixedRate(() -> {
+            remoteEntrys.values().stream().filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol)).forEach(entry -> {
+                updateSncpTransport(entry);
+            });
+        }, 188 * 4, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+
     }
 
     protected void reloadMqtpAddressHealth() {
