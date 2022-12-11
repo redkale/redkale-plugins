@@ -52,7 +52,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public Properties init(final Application application, final AnyValue propertiesConf) {
+    public Map<String, Properties> init(final Application application, final AnyValue propertiesConf) {
         try {
             Properties agentConf = new Properties();
             StringWrapper dataWrapper = new StringWrapper();
@@ -84,7 +84,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             this.listenExecutor = Executors.newFixedThreadPool(infos.size(), r -> new Thread(r, "Nacos-Config-Listen-Thread-" + counter.incrementAndGet()));
 
             this.configService = NacosFactory.createConfigService(agentConf);
-            final Properties result = new Properties();
+            Map<String, Properties> result = new LinkedHashMap<>();
             for (NacosInfo info : infos) {
                 final String content = configService.getConfigAndSignListener(info.dataId, info.group, 3_000, new Listener() {
                     @Override
@@ -97,7 +97,8 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
                         updateConent(application, info, configInfo, null);
                     }
                 });
-                updateConent(application, info, content, result);
+                updateConent(application, info, content, new Properties());
+                result.put(info.dataId, info.properties);
             }
             return result;
         } catch (NacosException e) {
@@ -130,7 +131,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             return;
         }
         if (result == null) { //配置项动态变更时需要一次性提交所有配置项
-            updateEnvironmentProperties(application, ResourceEvent.create(info.properties, props));                
+            updateEnvironmentProperties(application, info.dataId, ResourceEvent.create(info.properties, props));
             info.properties = props;
         } else {
             info.properties = props;

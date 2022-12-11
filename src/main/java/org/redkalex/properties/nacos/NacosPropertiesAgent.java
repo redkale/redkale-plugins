@@ -60,7 +60,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public Properties init(final Application application, final AnyValue propertiesConf) {
+    public Map<String, Properties> init(final Application application, final AnyValue propertiesConf) {
         Properties agentConf = new Properties();
         StringWrapper dataWrapper = new StringWrapper();
         propertiesConf.forEach((k, v) -> {
@@ -93,10 +93,11 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             return null;
         }
         final Map<String, NacosInfo> infoMap = new HashMap<>(); //key: dataId-tenant
-        final Properties result = new Properties();
+        Map<String, Properties> result = new LinkedHashMap<>();
         for (NacosInfo info : infos) {
-            remoteConfigRequest(application, info, result);
+            remoteConfigRequest(application, info, new Properties());
             infoMap.put(info.dataId + "-" + info.tenant, info);
+            result.put(info.dataId, info.properties);
         }
 
         this.listenExecutor = new ScheduledThreadPoolExecutor(1, r -> new Thread(r, "Nacos-Config-Listen-Thread"));
@@ -198,7 +199,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             props.load(new StringReader(content));
 
             if (result == null) { //配置项动态变更时需要一次性提交所有配置项
-                updateEnvironmentProperties(application, ResourceEvent.create(info.properties, props));
+                updateEnvironmentProperties(application, info.dataId, ResourceEvent.create(info.properties, props));
                 info.properties = props;
             } else {
                 info.properties = props;

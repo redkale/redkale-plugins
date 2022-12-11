@@ -57,7 +57,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public Properties init(final Application application, final AnyValue propertiesConf) {
+    public Map<String, Properties> init(final Application application, final AnyValue propertiesConf) {
         //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
@@ -97,7 +97,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         String namespaces = agentConf.getProperty("apollo.namespace", "application");
         final List<ApolloInfo> infos = new ArrayList<>();
         final Map<String, ApolloInfo> infoMap = new HashMap<>();
-        final Properties result = new Properties();
+        Map<String, Properties> result = new LinkedHashMap<>();
         for (String namespace : namespaces.split(";|,")) {
             if (namespace.trim().isEmpty()) continue;
             if (infoMap.containsKey(namespace)) continue;
@@ -105,7 +105,8 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             info.namespaceName = namespace;
             infos.add(info);
             infoMap.put(info.namespaceName, info);
-            remoteConfigRequest(application, info, result);
+            remoteConfigRequest(application, info, new Properties());
+            result.put(info.namespaceName, info.properties);
         }
 
         this.listenExecutor = new ScheduledThreadPoolExecutor(1, r -> new Thread(r, "Apollo-Config-Listen-Thread"));
@@ -189,7 +190,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
 
             //更新全局配置项
             if (result == null) { //配置项动态变更时需要一次性提交所有配置项
-                updateEnvironmentProperties(application, ResourceEvent.create(info.properties, props));
+                updateEnvironmentProperties(application, info.namespaceName, ResourceEvent.create(info.properties, props));
                 info.properties = props;
             } else {
                 info.properties = props;

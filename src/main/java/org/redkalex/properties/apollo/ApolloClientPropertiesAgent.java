@@ -38,7 +38,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
     }
 
     @Override
-    public Properties init(final Application application, final AnyValue propertiesConf) {
+    public Map<String, Properties> init(final Application application, final AnyValue propertiesConf) {
         //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
@@ -61,10 +61,11 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
         //远程请求具体类: com.ctrip.framework.apollo.internals.RemoteConfigRepository
         //String cluster = System.getProperty(ConfigConsts.APOLLO_CLUSTER_KEY, ConfigConsts.CLUSTER_NAME_DEFAULT);
         String namespaces = agentConf.getProperty("apollo.namespace", System.getProperty("apollo.namespace", ConfigConsts.NAMESPACE_APPLICATION)); //多个用,分隔
-        Properties result = new Properties();
-        for (String namespace : namespaces.split(";|,")) {
-            if (namespace.trim().isEmpty()) continue;
-            Config config = ConfigService.getConfig(namespace.trim());
+        Map<String, Properties> result = new LinkedHashMap<>();
+        for (String namespace0 : namespaces.split(";|,")) {
+            if (namespace0.trim().isEmpty()) continue;
+            String namespace = namespace0.trim();
+            Config config = ConfigService.getConfig(namespace);
             logger.log(Level.FINER, "apollo config (namespace=" + namespace + ") size: " + config.getPropertyNames().size());
             config.addChangeListener(changeEvent -> {
                 List<ResourceEvent> events = new ArrayList<>();
@@ -75,7 +76,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
                     }
                 });
                 //更新全局配置项
-                updateEnvironmentProperties(application, events);
+                updateEnvironmentProperties(application, namespace, events);
             });
             //初始化配置项
             Properties props = new Properties();
@@ -83,7 +84,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
                 String val = config.getProperty(k, null);
                 props.put(k, val);
             });
-            result.putAll(props);
+            result.put(namespace.trim(), props);
         }
         return result;
     }
