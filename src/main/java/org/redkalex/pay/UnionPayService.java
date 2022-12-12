@@ -70,33 +70,36 @@ public final class UnionPayService extends AbstractPayService {
 
     @Override
     @Comment("判断是否支持指定支付类型")
-    public boolean supportPayType(final short paytype) {
-        return paytype == Pays.PAYTYPE_UNION && !elements.isEmpty();
+    public boolean supportPayType(final short payType) {
+        return payType == Pays.PAYTYPE_UNION && !elements.isEmpty();
     }
 
     @Override
     @Comment("重新加载本地文件配置")
-    public void reloadConfig(short paytype) {
+    public synchronized void reloadConfig(short payType) {
+        Properties properties = new Properties();
         if (this.conf != null && !this.conf.isEmpty()) { //存在支付宝支付配置
             try {
                 File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
                 InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
-                if (in == null) return;
-                Properties properties = new Properties();
-                properties.load(in);
-                in.close();
-                this.elements = UnionPayElement.create(logger, properties, home);
+                if (in != null) {
+                    properties.load(in);
+                    in.close();
+                }
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init alipay conf error", e);
             }
         }
+        this.environment.forEach(k -> k.startsWith("pay.union."), (k, v) -> properties.put(k, v));
+        this.elements = UnionPayElement.create(logger, properties, home);
+        this.elementProps = properties;
     }
 
     @ResourceListener //    
     @Comment("通过配置中心更改配置后的回调")
     synchronized void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();
-        changeProps.putAll(this.elementProps); 
+        changeProps.putAll(this.elementProps);
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             if (event.name().startsWith("pay.union.")) {

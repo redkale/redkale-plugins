@@ -87,7 +87,7 @@ public class WeiXinPayService extends AbstractPayService {
     @Comment("通过配置中心更改配置后的回调")
     synchronized void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();
-        changeProps.putAll(this.elementProps); 
+        changeProps.putAll(this.elementProps);
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             if (event.name().startsWith("pay.weixin.")) {
@@ -115,21 +115,23 @@ public class WeiXinPayService extends AbstractPayService {
 
     @Override
     @Comment("重新加载本地文件配置")
-    public void reloadConfig(short payType) {
+    public synchronized void reloadConfig(short payType) {
+        Properties properties = new Properties();
         if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置
             try {
                 File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
                 InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
-                if (in == null) return;
-                Properties properties = new Properties();
-                properties.load(in);
-                in.close();
-                this.elements = WeixinPayElement.create(logger, properties, home);
-                this.elementProps = properties;
+                if (in != null) {
+                    properties.load(in);
+                    in.close();
+                }
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init WeixinPay conf error", e);
             }
         }
+        this.environment.forEach(k -> k.startsWith("pay.weixin."), (k, v) -> properties.put(k, v));
+        this.elements = WeixinPayElement.create(logger, properties, home);
+        this.elementProps = properties;
     }
 
     public void setPayElements(Map<String, WeixinPayElement> elements) {

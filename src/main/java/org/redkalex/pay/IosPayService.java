@@ -63,34 +63,40 @@ public final class IosPayService extends AbstractPayService {
 
     @Override
     @Comment("判断是否支持指定支付类型")
-    public boolean supportPayType(final short paytype) {
-        return paytype == PAYTYPE_IOS && !elements.isEmpty();
+    public boolean supportPayType(final short payType) {
+        return payType == PAYTYPE_IOS && !elements.isEmpty();
     }
 
     @Override
     @Comment("重新加载本地文件配置")
-    public void reloadConfig(short paytype) {
+    public synchronized void reloadConfig(short payType) {
+        if (client == null) {
+            this.client = HttpClient.newHttpClient();
+        }
+        Properties properties = new Properties();
         if (this.conf != null && !this.conf.isEmpty()) { //存在Ios支付配置
-            if (client == null) this.client = HttpClient.newHttpClient();
             try {
                 File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
                 InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
-                if (in == null) return;
-                Properties properties = new Properties();
-                properties.load(in);
-                in.close();
+                if (in != null) {
+                    properties.load(in);
+                    in.close();
+                }
                 this.elements = IosElement.create(logger, properties);
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "init ios conf error", e);
             }
         }
+        this.environment.forEach(k -> k.startsWith("pay.ios."), (k, v) -> properties.put(k, v));
+        this.elements = IosElement.create(logger, properties);
+        this.elementProps = properties;
     }
 
     @ResourceListener //    
     @Comment("通过配置中心更改配置后的回调")
     synchronized void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();
-        changeProps.putAll(this.elementProps); 
+        changeProps.putAll(this.elementProps);
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             if (event.name().startsWith("pay.ios.")) {
