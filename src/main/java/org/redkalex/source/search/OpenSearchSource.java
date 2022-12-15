@@ -298,6 +298,16 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     }
 
     @Override
+    public int batch(final DataBatch batch) {
+        return batchAsync(batch).join();
+    }
+
+    @Override
+    public CompletableFuture<Integer> batchAsync(final DataBatch batch) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+    
+    @Override
     public <T> int insert(T... entitys) {
         return insertAsync(entitys).join();
     }
