@@ -202,6 +202,7 @@ public class VertxSqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
+        final long s = System.currentTimeMillis();
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final List<Tuple> objs = new ArrayList<>(values.length);
         for (T value : values) {
@@ -214,6 +215,12 @@ public class VertxSqlDataSource extends DataSqlSource {
         final String sql = dollar ? info.getInsertDollarPrepareSQL(values[0]) : info.getInsertQuestionPrepareSQL(values[0]);
         final CompletableFuture<Integer> future = new CompletableFuture<>();
         writePool().preparedQuery(sql).executeBatch(objs, (AsyncResult<RowSet<Row>> event) -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
             if (event.failed()) {
                 future.completeExceptionally(event.cause());
                 return;
@@ -250,6 +257,7 @@ public class VertxSqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Integer> updateEntityDB(EntityInfo<T> info, final T... values) {
+        final long s = System.currentTimeMillis();
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
         final List<Tuple> objs = new ArrayList<>(values.length);
@@ -264,6 +272,12 @@ public class VertxSqlDataSource extends DataSqlSource {
         final String sql = dollar ? info.getUpdateDollarPrepareSQL(values[0]) : info.getUpdateQuestionPrepareSQL(values[0]);
         final CompletableFuture<Integer> future = new CompletableFuture<>();
         writePool().preparedQuery(sql).executeBatch(objs, (AsyncResult<RowSet<Row>> event) -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
             if (event.failed()) {
                 future.completeExceptionally(event.cause());
                 return;
@@ -430,8 +444,15 @@ public class VertxSqlDataSource extends DataSqlSource {
 
     protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String sql, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final List<Tuple> parameters) {
         final CompletableFuture<Integer> future = new CompletableFuture<>();
+        final long s = System.currentTimeMillis();
         if (parameters != null && !parameters.isEmpty()) {
             writePool().preparedQuery(sql).executeBatch(parameters, (AsyncResult<RowSet<Row>> event) -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
                 if (event.failed()) {
                     future.completeExceptionally(event.cause());
                     return;
@@ -440,6 +461,12 @@ public class VertxSqlDataSource extends DataSqlSource {
             });
         } else {
             writePool().query(sql).execute((AsyncResult<RowSet<Row>> event) -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
                 if (event.failed()) {
                     future.completeExceptionally(event.cause());
                     return;
@@ -452,20 +479,28 @@ public class VertxSqlDataSource extends DataSqlSource {
 
     //info不可以为null
     protected <T> CompletableFuture<VertxResultSet> queryPrepareResultSet(final EntityInfo<T> info, final String sql, Tuple tuple) {
+        final long s = System.currentTimeMillis();
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
-        readPool().preparedQuery(sql).execute(tuple, newQueryHandler(info, future));
+        readPool().preparedQuery(sql).execute(tuple, newQueryHandler(s, sql, info, future));
         return future;
     }
 
     //info可以为null,供directQuery
     protected <T> CompletableFuture<VertxResultSet> queryResultSet(final EntityInfo<T> info, final String sql) {
+        final long s = System.currentTimeMillis();
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
-        readPool().query(sql).execute(newQueryHandler(info, future));
+        readPool().query(sql).execute(newQueryHandler(s, sql, info, future));
         return future;
     }
 
-    protected <T> io.vertx.core.Handler<AsyncResult<RowSet<Row>>> newQueryHandler(final EntityInfo<T> info, final CompletableFuture<VertxResultSet> future) {
+    protected <T> io.vertx.core.Handler<AsyncResult<RowSet<Row>>> newQueryHandler(long s, String sql, final EntityInfo<T> info, final CompletableFuture<VertxResultSet> future) {
         return (AsyncResult<RowSet<Row>> event) -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
             if (event.failed()) {
                 final Throwable ex = event.cause();
                 if (info == null || !isTableNotExist(info, ex)) {
@@ -518,6 +553,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     @Local
     @Override
     public int[] directExecute(final String... sqls) {
+        final long s = System.currentTimeMillis();
         final int[] rs = new int[sqls.length];
         writePool().withTransaction(conn -> {
             CompletableFuture[] futures = new CompletableFuture[rs.length];
@@ -531,13 +567,28 @@ public class VertxSqlDataSource extends DataSqlSource {
             }
             return io.vertx.core.Future.fromCompletionStage(CompletableFuture.allOf(futures));
         }).toCompletionStage().toCompletableFuture().join();
+        if (slowms > 0) {
+            long cost = System.currentTimeMillis() - s;
+            if (cost > slowms) {
+                logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + Arrays.toString(sqls));
+            }
+        }
         return rs;
     }
 
     @Local
     @Override
     public <V> V directQuery(String sql, Function<DataResultSet, V> handler) {
-        return queryResultSet(null, sql).thenApply((VertxResultSet set) -> handler.apply(set)).join();
+        final long s = System.currentTimeMillis();
+        return queryResultSet(null, sql).thenApply((VertxResultSet set) -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
+            return handler.apply(set);
+        }).join();
     }
 
 }

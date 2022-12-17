@@ -160,6 +160,7 @@ public class MysqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
+        final long s = System.currentTimeMillis();
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final Object[][] objs = new Object[values.length][];
         for (int i = 0; i < values.length; i++) {
@@ -182,7 +183,15 @@ public class MysqlDataSource extends DataSqlSource {
                 reqRef.set(req);
                 connRef.set(conn);
                 return pool.writeChannel(conn, req);
-            }), reqRef, connRef, values).thenApply(g -> g.getUpdateEffectCount());
+            }), reqRef, connRef, values).thenApply(g -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
+                return g.getUpdateEffectCount();
+            });
         } else {
             return executeUpdate(info, info.getInsertQuestionPrepareSQL(values[0]), values, 0, MyClientRequest.REQ_TYPE_EXTEND_INSERT, attrs, objs);
         }
@@ -214,6 +223,7 @@ public class MysqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Integer> updateEntityDB(EntityInfo<T> info, final T... values) {
+        final long s = System.currentTimeMillis();
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
         MyClient pool = writePool();
@@ -253,7 +263,15 @@ public class MysqlDataSource extends DataSqlSource {
                 MyReqExtended req = ((MyClientConnection) conn).pollReqExtended(workThread, info);
                 req.prepare(MyClientRequest.REQ_TYPE_EXTEND_UPDATE, sql, 0, casesql == null ? Utility.append(attrs, primary) : null, objs);
                 return pool.writeChannel(conn, req);
-            })).thenApply(g -> g.getUpdateEffectCount());
+            })).thenApply(g -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
+                return g.getUpdateEffectCount();
+            });
         } else {
             return executeUpdate(info, info.getUpdateQuestionPrepareSQL(values[0]), null, 0, MyClientRequest.REQ_TYPE_EXTEND_UPDATE, Utility.append(attrs, primary), objs);
         }
@@ -290,6 +308,7 @@ public class MysqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, final SelectColumn selects, Serializable pk) {
+        final long s = System.currentTimeMillis();
         MyClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindQuestionPrepareSQL(pk);
@@ -303,6 +322,12 @@ public class MysqlDataSource extends DataSqlSource {
             })).thenApply((MyResultSet dataset) -> {
                 T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
                 return rs;
             });
         }
@@ -314,6 +339,7 @@ public class MysqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<T[]> findsComposeAsync(final EntityInfo<T> info, final SelectColumn selects, Serializable... pks) {
+        final long s = System.currentTimeMillis();
         MyClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindQuestionPrepareSQL(pks[0]);
@@ -336,6 +362,12 @@ public class MysqlDataSource extends DataSqlSource {
                     rs[++i] = getEntityValue(info, selects, dataset);
                 }
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
                 return rs;
             });
         } else {
@@ -345,6 +377,7 @@ public class MysqlDataSource extends DataSqlSource {
 
     @Override
     public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final java.util.stream.Stream<D> pks) {
+        final long s = System.currentTimeMillis();
         final EntityInfo<T> info = loadEntityInfo(clazz);
         Serializable[] ids = pks.toArray(v -> new Serializable[v]);
         MyClient pool = readPool();
@@ -368,6 +401,12 @@ public class MysqlDataSource extends DataSqlSource {
                     rs.add(getEntityValue(info, null, dataset));
                 }
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
                 return rs;
             });
         } else {
@@ -392,6 +431,7 @@ public class MysqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Sheet<T>> querySheetDB(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
+        final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
         final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
         final CharSequence join = node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
@@ -421,6 +461,12 @@ public class MysqlDataSource extends DataSqlSource {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + listsql);
+                    }
+                }
                 return Sheet.asSheet(list);
             });
         }
@@ -434,6 +480,12 @@ public class MysqlDataSource extends DataSqlSource {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, sheet-content: " + listsql);
+                    }
+                }
                 return new Sheet(total.longValue(), list);
             });
         });
@@ -633,6 +685,7 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String sql, final T[] values, int fetchSize, final int extendType, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
+        final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();
         AtomicReference<MyClientRequest> reqRef = new AtomicReference();
@@ -651,15 +704,42 @@ public class MysqlDataSource extends DataSqlSource {
                 return pool.writeChannel(conn, req);
             }
         });
-        if (info == null || (info.getTableStrategy() == null && !autoddl())) return future.thenApply(g -> g.getUpdateEffectCount());
-        if (extendType == MyReqExtended.REQ_TYPE_EXTEND_INSERT) {
-            return thenApplyInsertStrategy(info, future, reqRef, connRef, values).thenApply(g -> g.getUpdateEffectCount());
+        if (info == null || (info.getTableStrategy() == null && !autoddl())) {
+            return future.thenApply(g -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
+                return g.getUpdateEffectCount();
+            });
         }
-        return thenApplyQueryUpdateStrategy(info, connRef, future).thenApply(g -> g.getUpdateEffectCount());
+        if (extendType == MyReqExtended.REQ_TYPE_EXTEND_INSERT) {
+            return thenApplyInsertStrategy(info, future, reqRef, connRef, values).thenApply(g -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
+                return g.getUpdateEffectCount();
+            });
+        }
+        return thenApplyQueryUpdateStrategy(info, connRef, future).thenApply(g -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
+            return g.getUpdateEffectCount();
+        });
     }
 
     //info可以为null,供directQuery
     protected <T> CompletableFuture<MyResultSet> executeQuery(final EntityInfo<T> info, final String sql) {
+        final long s = System.currentTimeMillis();
         final MyClient pool = readPool();
         WorkThread workThread = WorkThread.currWorkThread();
         AtomicReference<ClientConnection> connRef = new AtomicReference();
@@ -668,39 +748,72 @@ public class MysqlDataSource extends DataSqlSource {
             MyReqQuery req = ((MyClientConnection) conn).pollReqQuery(workThread, info);
             req.prepare(sql);
             return pool.writeChannel(conn, req);
-        }));
+        })).thenApply(rs -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
+            return rs;
+        });
     }
 
     @Local
     @Override
     public int directExecute(String sql) {
+        final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();
         CompletableFuture<MyResultSet> future = pool.connect(null).thenCompose(conn -> {
             MyReqUpdate req = ((MyClientConnection) conn).pollReqUpdate(workThread, null);
             return pool.writeChannel(conn, req.prepare(sql));
         });
-        return future.thenApply(g -> g.getUpdateEffectCount()).join();
+        return future.thenApply(g -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
+            return g.getUpdateEffectCount();
+        }).join();
     }
 
     @Local
     @Override
     public int[] directExecute(String... sqls) {
         if (sqls.length == 1) return new int[]{directExecute(sqls[0])};
+        final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
         CompletableFuture<MyResultSet> future = pool.connect(null).thenCompose(conn -> {
             MyReqBatch req = new MyReqBatch();
             return pool.writeChannel(conn, req.prepare(sqls));
         });
-        return future.thenApply(g -> g.getBatchEffectCounts()).join();
+        return future.thenApply(g -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + Arrays.toString(sqls));
+                }
+            }
+            return g.getBatchEffectCounts();
+        }).join();
     }
 
     @Local
     @Override
     public <V> V directQuery(String sql, Function<DataResultSet, V> handler) {
+        final long s = System.currentTimeMillis();
         return executeQuery(null, sql).thenApply((DataResultSet dataset) -> {
             V rs = handler.apply(dataset);
             dataset.close();
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
             return rs;
         }).join();
     }

@@ -164,6 +164,7 @@ public class PgsqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
+        final long s = System.currentTimeMillis();
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final Object[][] objs = new Object[values.length][];
         for (int i = 0; i < values.length; i++) {
@@ -186,7 +187,15 @@ public class PgsqlDataSource extends DataSqlSource {
                 reqRef.set(req);
                 connRef.set(conn);
                 return pool.writeChannel(conn, req);
-            }), reqRef, connRef, values).thenApply(g -> g.getUpdateEffectCount());
+            }), reqRef, connRef, values).thenApply(g -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
+                return g.getUpdateEffectCount();
+            });
         } else {
             return executeUpdate(info, info.getInsertDollarPrepareSQL(values[0]), values, 0, true, attrs, objs);
         }
@@ -219,6 +228,7 @@ public class PgsqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Integer> updateEntityDB(EntityInfo<T> info, final T... values) {
+        final long s = System.currentTimeMillis();
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
         PgClient pool = writePool();
@@ -255,7 +265,15 @@ public class PgsqlDataSource extends DataSqlSource {
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
                 req.prepare(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, PgReqExtendMode.OTHER, sql, 0, null, casesql == null ? Utility.append(attrs, primary) : null, objs);
                 return pool.writeChannel(conn, req);
-            })).thenApply(g -> g.getUpdateEffectCount());
+            })).thenApply(g -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
+                return g.getUpdateEffectCount();
+            });
         } else {
             return executeUpdate(info, info.getUpdateDollarPrepareSQL(values[0]), null, 0, false, Utility.append(attrs, primary), objs);
         }
@@ -293,6 +311,7 @@ public class PgsqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, final SelectColumn selects, Serializable pk) {
+        final long s = System.currentTimeMillis();
         PgClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(pk);
@@ -306,6 +325,12 @@ public class PgsqlDataSource extends DataSqlSource {
             })).thenApply((PgResultSet dataset) -> {
                 T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
                 return rs;
             });
         }
@@ -317,6 +342,7 @@ public class PgsqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<T[]> findsComposeAsync(final EntityInfo<T> info, final SelectColumn selects, Serializable... pks) {
+        final long s = System.currentTimeMillis();
         PgClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(pks[0]);
@@ -339,6 +365,12 @@ public class PgsqlDataSource extends DataSqlSource {
                     rs[++i] = getEntityValue(info, selects, dataset);
                 }
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
                 return rs;
             });
         } else {
@@ -348,6 +380,7 @@ public class PgsqlDataSource extends DataSqlSource {
 
     @Override
     public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final java.util.stream.Stream<D> pks) {
+        final long s = System.currentTimeMillis();
         final EntityInfo<T> info = loadEntityInfo(clazz);
         Serializable[] ids = pks.toArray(v -> new Serializable[v]);
         PgClient pool = readPool();
@@ -371,6 +404,12 @@ public class PgsqlDataSource extends DataSqlSource {
                     rs.add(getEntityValue(info, null, dataset));
                 }
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
                 return rs;
             });
         } else {
@@ -395,6 +434,7 @@ public class PgsqlDataSource extends DataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Sheet<T>> querySheetDB(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
+        final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
         final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
         final CharSequence join = node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
@@ -424,6 +464,12 @@ public class PgsqlDataSource extends DataSqlSource {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + listsql);
+                    }
+                }
                 return Sheet.asSheet(list);
             });
         }
@@ -437,6 +483,12 @@ public class PgsqlDataSource extends DataSqlSource {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, sheet-content: " + listsql);
+                    }
+                }
                 return new Sheet(total.longValue(), list);
             });
         });
@@ -636,6 +688,7 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String sql, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
+        final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();
         AtomicReference<PgClientRequest> reqRef = new AtomicReference();
@@ -647,9 +700,37 @@ public class PgsqlDataSource extends DataSqlSource {
             connRef.set(conn);
             return pool.writeChannel(conn, req);
         });
-        if (info == null || (info.getTableStrategy() == null && !autoddl())) return future.thenApply(g -> g.getUpdateEffectCount());
-        if (insert) return thenApplyInsertStrategy(info, future, reqRef, connRef, values).thenApply(g -> g.getUpdateEffectCount());
-        return thenApplyQueryUpdateStrategy(info, connRef, future).thenApply(g -> g.getUpdateEffectCount());
+        if (info == null || (info.getTableStrategy() == null && !autoddl())) {
+            return future.thenApply(g -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
+                return g.getUpdateEffectCount();
+            });
+        }
+        if (insert) {
+            return thenApplyInsertStrategy(info, future, reqRef, connRef, values).thenApply(g -> {
+                if (slowms > 0) {
+                    long cost = System.currentTimeMillis() - s;
+                    if (cost > slowms) {
+                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                    }
+                }
+                return g.getUpdateEffectCount();
+            });
+        }
+        return thenApplyQueryUpdateStrategy(info, connRef, future).thenApply(g -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
+            return g.getUpdateEffectCount();
+        });
     }
 
     //info可以为null,供directQuery
@@ -668,33 +749,58 @@ public class PgsqlDataSource extends DataSqlSource {
     @Local
     @Override
     public int directExecute(String sql) {
+        final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();
         CompletableFuture<PgResultSet> future = pool.connect(null).thenCompose(conn -> {
             PgReqUpdate req = ((PgClientConnection) conn).pollReqUpdate(workThread, null);
             return pool.writeChannel(conn, req.prepare(sql));
         });
-        return future.thenApply(g -> g.getUpdateEffectCount()).join();
+        return future.thenApply(g -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
+            return g.getUpdateEffectCount();
+        }).join();
     }
 
     @Local
     @Override
     public int[] directExecute(String... sqls) {
         if (sqls.length == 1) return new int[]{directExecute(sqls[0])};
+        final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         CompletableFuture<PgResultSet> future = pool.connect(null).thenCompose(conn -> {
             PgReqBatch req = new PgReqBatch();
             return pool.writeChannel(conn, req.prepare(sqls));
         });
-        return future.thenApply(g -> g.getBatchEffectCounts()).join();
+        return future.thenApply(g -> {
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + Arrays.toString(sqls));
+                }
+            }
+            return g.getBatchEffectCounts();
+        }).join();
     }
 
     @Local
     @Override
     public <V> V directQuery(String sql, Function<DataResultSet, V> handler) {
+        final long s = System.currentTimeMillis();
         return executeQuery(null, sql).thenApply((DataResultSet dataset) -> {
             V rs = handler.apply(dataset);
             dataset.close();
+            if (slowms > 0) {
+                long cost = System.currentTimeMillis() - s;
+                if (cost > slowms) {
+                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
+                }
+            }
             return rs;
         }).join();
     }
