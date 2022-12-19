@@ -18,10 +18,7 @@ import org.redkale.util.*;
 
 /**
  * <blockquote><pre>
- *  &lt;cluster value="org.redkalex.cluster.nacos.NacosClusterAgent"&gt;
- *      &lt;property name="apiurl" value="http://localhost:8500/nacos/v1"/&gt;  &lt;-- 必须要有nacos字样 --&gt;
- *      &lt;property name="ttls" value="5"/&gt;
- *      &lt;property name="namespaceid" value="dev"/&gt;
+ *  &lt;cluster type="nacos" apiurl="http://localhost:8500/nacos/v1" ttls="5" namespaceid="dev"&gt;
  *  &lt;/cluster&gt;
  * </pre></blockquote>
  *

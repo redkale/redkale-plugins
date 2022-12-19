@@ -21,9 +21,7 @@ import org.redkale.util.*;
 
 /**
  * <blockquote><pre>
- *  &lt;cluster value="org.redkalex.cluster.consul.ConsulClusterAgent"&gt;
- *      &lt;property name="apiurl" value="http://localhost:8500/v1"/&gt;
- *      &lt;property name="ttls" value="10"/&gt;
+ *  &lt;cluster type="consul" apiurl="http://localhost:8500/v1" ttls="10"&gt;
  *  &lt;/cluster&gt;
  * </pre></blockquote>
  *
