@@ -14,7 +14,9 @@ import java.util.logging.*;
 import javax.crypto.Cipher;
 import javax.crypto.spec.*;
 import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.Comment;
 import org.redkale.annotation.*;
+import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
 import static org.redkale.convert.json.JsonConvert.TYPE_MAP_STRING_STRING;
 import org.redkale.service.*;
@@ -34,6 +36,9 @@ public final class WeiXinMPService implements Service {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
+    //原始的配置
+    protected Properties elementProps = new Properties();
+
     //配置集合, key: appid
     protected Map<String, MpElement> appidElements = new HashMap<>();
 
@@ -43,51 +48,85 @@ public final class WeiXinMPService implements Service {
     @Resource
     protected JsonConvert convert;
 
+    @Resource
+    @Comment("必须存在全局配置项，@ResourceListener才会起作用")
+    protected Environment environment;
+
     @Resource(name = "weixin.mp.conf", required = false) //公众号配置文件路径
     protected String conf = "config.properties";
 
     @Resource(name = "APP_HOME")
     protected File home;
 
-    @Resource(name = "weixin.mp.clientid") //客户端ID
+    @Resource(name = "weixin.mp.clientid", required = false) //客户端ID
     protected String clientid = "";
 
-    @Resource(name = "weixin.mp.appid") //公众账号ID
+    @Resource(name = "weixin.mp.appid", required = false) //公众账号ID
     protected String appid = "";
 
-    @Resource(name = "weixin.mp.appsecret") // 
+    @Resource(name = "weixin.mp.appsecret", required = false) // 
     protected String appsecret = "";
 
-    @Resource(name = "weixin.mp.token")
+    @Resource(name = "weixin.mp.token", required = false)
     protected String mptoken = "";
 
-    @Resource(name = "weixin.mp.miniprogram")
+    @Resource(name = "weixin.mp.miniprogram", required = false)
     protected boolean miniprogram;
 
     @Override
     public void init(AnyValue conf) {
-        if (this.conf != null && !this.conf.isEmpty()) { //存在微信公众号配置
+        Properties properties = new Properties();
+        if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置
             try {
                 File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
                 InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
-                if (in == null) return;
-                Properties properties = new Properties();
-                properties.load(in);
-                in.close();
-                this.appidElements = MpElement.create(logger, properties, home);
-                MpElement defElement = this.appidElements.get("");
-                if (defElement != null && (this.appid == null || this.appid.isEmpty())) {
-                    this.clientid = defElement.clientid;
-                    this.appid = defElement.appid;
-                    this.appsecret = defElement.appsecret;
-                    this.mptoken = defElement.mptoken;
+                if (in != null) {
+                    properties.load(in);
+                    in.close();
                 }
-                this.appidElements.values().forEach(element -> clientidElements.put(element.clientid, element));
-
             } catch (Exception e) {
-                logger.log(Level.SEVERE, "init weixinmp conf error", e);
+                logger.log(Level.SEVERE, "init weixinpay conf error", e);
             }
         }
+        this.environment.forEach(k -> k.startsWith("weixin.mp."), (k, v) -> properties.put(k, v));
+
+        this.appidElements = MpElement.create(logger, properties, home);
+        MpElement defElement = this.appidElements.get("");
+        if (defElement != null && (this.appid == null || this.appid.isEmpty())) {
+            this.clientid = defElement.clientid;
+            this.appid = defElement.appid;
+            this.appsecret = defElement.appsecret;
+            this.mptoken = defElement.mptoken;
+        }
+        this.appidElements.values().forEach(element -> clientidElements.put(element.clientid, element));
+        this.elementProps = properties;
+    }
+
+    @ResourceListener
+    @Comment("通过配置中心更改配置后的回调")
+    void onResourceChanged(ResourceEvent[] events) {
+        Properties changeProps = new Properties();
+        changeProps.putAll(this.elementProps);
+        StringBuilder sb = new StringBuilder();
+        for (ResourceEvent event : events) {
+            if (event.name().startsWith("pay.oppo.")) {
+                changeProps.put(event.name(), event.newValue().toString());
+                sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+            }
+        }
+        if (sb.isEmpty()) return; //无相关配置变化
+        logger.log(Level.INFO, sb.toString());
+        
+        this.appidElements = MpElement.create(logger, changeProps, home);
+        MpElement defElement = this.appidElements.get("");
+        if (defElement != null && (this.appid == null || this.appid.isEmpty())) {
+            this.clientid = defElement.clientid;
+            this.appid = defElement.appid;
+            this.appsecret = defElement.appsecret;
+            this.mptoken = defElement.mptoken;
+        }
+        this.appidElements.values().forEach(element -> clientidElements.put(element.clientid, element));
+        this.elementProps = changeProps;
     }
 
     //-----------------------------------微信服务号接口----------------------------------------------------------
