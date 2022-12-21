@@ -246,46 +246,45 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return getSetLongAsync(key, value, defValue).join();
     }
 
-    //--------------------- getAndRefresh ------------------------------
+    //--------------------- getex ------------------------------
     @Override
-    public <T> CompletableFuture<T> getAndRefreshAsync(String key, int expireSeconds, final Type type) {
-        return refreshAsync(key, expireSeconds).thenCompose(v -> getAsync(key, type));
+    public <T> CompletableFuture<T> getexAsync(String key, int expireSeconds, final Type type) {
+        return sendAsync("GETEX", key, key.getBytes(StandardCharsets.UTF_8), "EX".getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getObjectValue(key, cryptor, type));
     }
 
     @Override
-    public <T> T getAndRefresh(String key, final int expireSeconds, final Type type) {
-        return (T) getAndRefreshAsync(key, expireSeconds, type).join();
+    public <T> T getex(String key, final int expireSeconds, final Type type) {
+        return (T) getexAsync(key, expireSeconds, type).join();
     }
 
     @Override
-    public CompletableFuture<String> getStringAndRefreshAsync(String key, int expireSeconds) {
-        return refreshAsync(key, expireSeconds).thenCompose(v -> getStringAsync(key));
+    public CompletableFuture<String> getexStringAsync(String key, int expireSeconds) {
+        return sendAsync("GETEX", key, key.getBytes(StandardCharsets.UTF_8), "EX".getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getStringValue(key, cryptor));
     }
 
     @Override
-    public String getStringAndRefresh(String key, final int expireSeconds) {
-        return getStringAndRefreshAsync(key, expireSeconds).join();
+    public String getexString(String key, final int expireSeconds) {
+        return getexStringAsync(key, expireSeconds).join();
     }
 
     @Override
-    public CompletableFuture<Long> getLongAndRefreshAsync(String key, int expireSeconds, long defValue) {
-        return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getLongAsync(key, defValue));
+    public CompletableFuture<Long> getexLongAsync(String key, int expireSeconds, long defValue) {
+        return sendAsync("GETEX", key, key.getBytes(StandardCharsets.UTF_8), "EX".getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getLongValue(defValue));
     }
 
     @Override
-    public long getLongAndRefresh(String key, final int expireSeconds, long defValue) {
-        return getLongAndRefreshAsync(key, expireSeconds, defValue).join();
-    }
-
-    //--------------------- refresh ------------------------------
-    @Override
-    public CompletableFuture<Void> refreshAsync(String key, int expireSeconds) {
-        return expireAsync(key, expireSeconds);
+    public long getexLong(String key, final int expireSeconds, long defValue) {
+        return getexLongAsync(key, expireSeconds, defValue).join();
     }
 
     @Override
-    public void refresh(String key, final int expireSeconds) {
-        expire(key, expireSeconds);
+    public CompletableFuture<byte[]> getexBytesAsync(final String key, final int expireSeconds) {
+        return sendAsync("GETEX", key, key.getBytes(StandardCharsets.UTF_8), "EX".getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBytesValue());
+    }
+
+    @Override
+    public byte[] getexBytes(final String key, final int expireSeconds) {
+        return getexBytesAsync(key, expireSeconds).join();
     }
 
     //--------------------- setex ------------------------------
@@ -411,53 +410,53 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     //--------------------- setex ------------------------------    
     @Override
-    public <T> CompletableFuture<Void> setexAsync(int expireSeconds, String key, Convert convert, T value) {
+    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, null, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> CompletableFuture<Void> setexAsync(int expireSeconds, String key, final Type type, T value) {
+    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, final Type type, T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> CompletableFuture<Void> setexAsync(int expireSeconds, String key, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> void setex(int expireSeconds, String key, Convert convert, T value) {
-        setexAsync(expireSeconds, key, convert, value).join();
+    public <T> void setex(String key, int expireSeconds, Convert convert, T value) {
+        setexAsync(key, expireSeconds, convert, value).join();
     }
 
     @Override
-    public <T> void setex(int expireSeconds, String key, final Type type, T value) {
-        setexAsync(expireSeconds, key, type, value).join();
+    public <T> void setex(String key, int expireSeconds, final Type type, T value) {
+        setexAsync(key, expireSeconds, type, value).join();
     }
 
     @Override
-    public <T> void setex(int expireSeconds, String key, Convert convert, final Type type, T value) {
-        setexAsync(expireSeconds, key, convert, type, value).join();
+    public <T> void setex(String key, int expireSeconds, Convert convert, final Type type, T value) {
+        setexAsync(key, expireSeconds, convert, type, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> setexStringAsync(int expireSeconds, String key, String value) {
+    public CompletableFuture<Void> setexStringAsync(String key, int expireSeconds, String value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public void setexString(int expireSeconds, String key, String value) {
-        setexStringAsync(expireSeconds, key, value).join();
+    public void setexString(String key, int expireSeconds, String value) {
+        setexStringAsync(key, expireSeconds, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> setexLongAsync(int expireSeconds, String key, long value) {
+    public CompletableFuture<Void> setexLongAsync(String key, int expireSeconds, long value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public void setexLong(int expireSeconds, String key, long value) {
-        setexLongAsync(expireSeconds, key, value).join();
+    public void setexLong(String key, int expireSeconds, long value) {
+        setexLongAsync(key, expireSeconds, value).join();
     }
 
     //--------------------- expire ------------------------------    
@@ -1071,35 +1070,35 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return getLongCollectionMapAsync(set, keys).join();
     }
 
-    //--------------------- getCollectionAndRefresh ------------------------------  
+    //--------------------- getexCollection ------------------------------  
     @Override
-    public <T> CompletableFuture<Collection<T>> getCollectionAndRefreshAsync(String key, int expireSeconds, final Type componentType) {
-        return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
+    public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
+        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
     }
 
     @Override
-    public <T> Collection<T> getCollectionAndRefresh(String key, final int expireSeconds, final Type componentType) {
-        return (Collection) getCollectionAndRefreshAsync(key, expireSeconds, componentType).join();
+    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
+        return (Collection) getexCollectionAsync(key, expireSeconds, componentType).join();
     }
 
     @Override
-    public CompletableFuture<Collection<String>> getStringCollectionAndRefreshAsync(String key, int expireSeconds) {
-        return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(key));
+    public CompletableFuture<Collection<String>> getexStringCollectionAsync(String key, int expireSeconds) {
+        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(key));
     }
 
     @Override
-    public Collection<String> getStringCollectionAndRefresh(String key, final int expireSeconds) {
-        return getStringCollectionAndRefreshAsync(key, expireSeconds).join();
+    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
+        return getexStringCollectionAsync(key, expireSeconds).join();
     }
 
     @Override
-    public CompletableFuture<Collection<Long>> getLongCollectionAndRefreshAsync(String key, int expireSeconds) {
-        return (CompletableFuture) refreshAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
+    public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
+        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
     }
 
     @Override
-    public Collection<Long> getLongCollectionAndRefresh(String key, final int expireSeconds) {
-        return getLongCollectionAndRefreshAsync(key, expireSeconds).join();
+    public Collection<Long> getexLongCollection(String key, final int expireSeconds) {
+        return getexLongCollectionAsync(key, expireSeconds).join();
     }
 
     //--------------------- existsItem ------------------------------  
@@ -1344,18 +1343,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public byte[] getBytesAndRefresh(final String key, final int expireSeconds) {
-        return getBytesAndRefreshAsync(key, expireSeconds).join();
-    }
-
-    @Override
     public void setBytes(final String key, final byte[] value) {
         setBytesAsync(key, value).join();
     }
 
     @Override
-    public void setBytes(final int expireSeconds, final String key, final byte[] value) {
-        setexBytesAsync(expireSeconds, key, value).join();
+    public void setexBytes(final String key, final int expireSeconds, final byte[] value) {
+        setexBytesAsync(key, expireSeconds, value).join();
     }
 
     @Override
@@ -1364,8 +1358,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void setexBytes(final int expireSeconds, final String key, final Convert convert, final Type type, final T value) {
-        setexBytesAsync(expireSeconds, key, convert, type, value).join();
+    public <T> void setexBytes(final String key, final int expireSeconds, final Convert convert, final Type type, final T value) {
+        setexBytesAsync(key, expireSeconds, convert, type, value).join();
     }
 
     @Override
@@ -1379,18 +1373,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<byte[]> getBytesAndRefreshAsync(final String key, final int expireSeconds) {
-        return refreshAsync(key, expireSeconds).thenCompose(v -> getBytesAsync(key));
-    }
-
-    @Override
     public CompletableFuture<Void> setBytesAsync(final String key, final byte[] value) {
         return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getVoidValue());
 
     }
 
     @Override
-    public CompletableFuture<Void> setexBytesAsync(final int expireSeconds, final String key, final byte[] value) {
+    public CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getVoidValue());
     }
 
@@ -1400,7 +1389,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setexBytesAsync(final int expireSeconds, final String key, final Convert convert0, final Type type, final T value) {
+    public <T> CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final Convert convert0, final Type type, final T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), (convert0 == null ? convert : convert).convertToBytes(type, value)).thenApply(v -> v.getVoidValue());
     }
 

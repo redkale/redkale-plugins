@@ -65,12 +65,12 @@ public abstract class RedisAbstractTest {
         source.del("key1");
         source.del("key2");
         source.del("300");
-        source.setex(1000, "key1", String.class, "value1");
+        source.setex("key1", 1000, String.class, "value1");
         source.set("key1", String.class, "value1");
         source.setString("keystr1", "strvalue1");
         source.setLong("keylong1", 333L);
         source.set("300", String.class, "4000");
-        Object obj = source.getAndRefresh("key1", 3500, String.class);
+        Object obj = source.getex("key1", 3500, String.class);
         System.out.println("[有值] key1 GET : " + obj);
         Assertions.assertEquals("value1", obj);
 
@@ -124,7 +124,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[一值] keys3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("vals2"));
 
-        col = source.getCollectionAndRefresh("keys3", 3000, String.class);
+        col = source.getexCollection("keys3", 3000, String.class);
         System.out.println("[一值] keys3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("vals2"));
 
