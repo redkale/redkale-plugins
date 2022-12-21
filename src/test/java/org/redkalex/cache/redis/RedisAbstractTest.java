@@ -65,7 +65,7 @@ public abstract class RedisAbstractTest {
         source.del("key1");
         source.del("key2");
         source.del("300");
-        source.set(1000, "key1", String.class, "value1");
+        source.setex(1000, "key1", String.class, "value1");
         source.set("key1", String.class, "value1");
         source.setString("keystr1", "strvalue1");
         source.setLong("keylong1", 333L);
@@ -386,7 +386,7 @@ public abstract class RedisAbstractTest {
 //        sb.append("结束");
 //        bigmap.put("val", sb.toString());
 //        System.out.println("文本长度: " + sb.length());
-//        source.set("bigmap", JsonConvert.TYPE_MAP_STRING_STRING, bigmap);
+//        source.setex("bigmap", JsonConvert.TYPE_MAP_STRING_STRING, bigmap);
 //        System.out.println("写入完成");
 //        for (int i = 0; i < 1; i++) {
 //            HashMap<String, String> fs = (HashMap) source.get("bigmap", JsonConvert.TYPE_MAP_STRING_STRING);

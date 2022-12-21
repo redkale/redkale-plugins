@@ -288,7 +288,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         expire(key, expireSeconds);
     }
 
-    //--------------------- set ------------------------------
+    //--------------------- setex ------------------------------
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, T value) {
         return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, value.getClass(), value)).thenApply(v -> v.getVoidValue());
@@ -409,55 +409,55 @@ public final class RedisCacheSource extends AbstractRedisSource {
         setnxLongAsync(key, value).join();
     }
 
-    //--------------------- set ------------------------------    
+    //--------------------- setex ------------------------------    
     @Override
-    public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert, T value) {
+    public <T> CompletableFuture<Void> setexAsync(int expireSeconds, String key, Convert convert, T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, null, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, final Type type, T value) {
+    public <T> CompletableFuture<Void> setexAsync(int expireSeconds, String key, final Type type, T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<Void> setexAsync(int expireSeconds, String key, Convert convert, final Type type, T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> void set(int expireSeconds, String key, Convert convert, T value) {
-        setAsync(expireSeconds, key, convert, value).join();
+    public <T> void setex(int expireSeconds, String key, Convert convert, T value) {
+        setexAsync(expireSeconds, key, convert, value).join();
     }
 
     @Override
-    public <T> void set(int expireSeconds, String key, final Type type, T value) {
-        setAsync(expireSeconds, key, type, value).join();
+    public <T> void setex(int expireSeconds, String key, final Type type, T value) {
+        setexAsync(expireSeconds, key, type, value).join();
     }
 
     @Override
-    public <T> void set(int expireSeconds, String key, Convert convert, final Type type, T value) {
-        setAsync(expireSeconds, key, convert, type, value).join();
+    public <T> void setex(int expireSeconds, String key, Convert convert, final Type type, T value) {
+        setexAsync(expireSeconds, key, convert, type, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> setStringAsync(int expireSeconds, String key, String value) {
+    public CompletableFuture<Void> setexStringAsync(int expireSeconds, String key, String value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public void setString(int expireSeconds, String key, String value) {
-        setStringAsync(expireSeconds, key, value).join();
+    public void setexString(int expireSeconds, String key, String value) {
+        setexStringAsync(expireSeconds, key, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> setLongAsync(int expireSeconds, String key, long value) {
+    public CompletableFuture<Void> setexLongAsync(int expireSeconds, String key, long value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public void setLong(int expireSeconds, String key, long value) {
-        setLongAsync(expireSeconds, key, value).join();
+    public void setexLong(int expireSeconds, String key, long value) {
+        setexLongAsync(expireSeconds, key, value).join();
     }
 
     //--------------------- expire ------------------------------    
@@ -1355,7 +1355,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public void setBytes(final int expireSeconds, final String key, final byte[] value) {
-        setBytesAsync(expireSeconds, key, value).join();
+        setexBytesAsync(expireSeconds, key, value).join();
     }
 
     @Override
@@ -1364,8 +1364,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void setBytes(final int expireSeconds, final String key, final Convert convert, final Type type, final T value) {
-        setBytesAsync(expireSeconds, key, convert, type, value).join();
+    public <T> void setexBytes(final int expireSeconds, final String key, final Convert convert, final Type type, final T value) {
+        setexBytesAsync(expireSeconds, key, convert, type, value).join();
     }
 
     @Override
@@ -1390,7 +1390,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final byte[] value) {
+    public CompletableFuture<Void> setexBytesAsync(final int expireSeconds, final String key, final byte[] value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getVoidValue());
     }
 
@@ -1400,7 +1400,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final Convert convert0, final Type type, final T value) {
+    public <T> CompletableFuture<Void> setexBytesAsync(final int expireSeconds, final String key, final Convert convert0, final Type type, final T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), (convert0 == null ? convert : convert).convertToBytes(type, value)).thenApply(v -> v.getVoidValue());
     }
 
