@@ -8,11 +8,16 @@ package org.redkalex.source.search;
 import java.io.Serializable;
 import java.lang.reflect.*;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.IntFunction;
 import java.util.logging.*;
-import javax.persistence.*;
+import org.redkale.annotation.ConstructorParameters;
+import org.redkale.annotation.LogExcludeLevel;
+import org.redkale.annotation.LogLevel;
 import org.redkale.convert.json.*;
+import org.redkale.persistence.SearchColumn;
+import org.redkale.persistence.*;
+import org.redkale.persistence.VirtualEntity;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
@@ -258,7 +263,7 @@ public final class SearchInfo<T> {
                         continue;
                     }
                 }
-                if (field.getAnnotation(javax.persistence.Id.class) != null && idAttr0 == null) {
+                if ((field.getAnnotation(org.redkale.persistence.Id.class) != null||field.getAnnotation(javax.persistence.Id.class) != null) && idAttr0 == null) {
                     idAttr0 = attr;
                     insertcols.add(sqlfield);
                     insertattrs.add(attr);
@@ -329,7 +334,7 @@ public final class SearchInfo<T> {
                 attributeMap.put(fieldname, attr);
             }
         } while ((cltmp = cltmp.getSuperclass()) != Object.class);
-        if (idAttr0 == null) throw new RuntimeException(type.getName() + " have no primary column by @javax.persistence.Id");
+        if (idAttr0 == null) throw new RuntimeException(type.getName() + " have no primary column by @org.redkale.persistence.Id");
         this.jsonConvert = factory.getConvert();
 
         this.primary = idAttr0;

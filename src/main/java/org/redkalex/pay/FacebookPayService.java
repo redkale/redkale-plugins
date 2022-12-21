@@ -9,14 +9,17 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
-import javax.annotation.Resource;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import org.redkale.convert.json.*;
+import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.Comment;
+import org.redkale.annotation.*;
+import org.redkale.annotation.ResourceListener;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
 import org.redkale.util.*;
 import static org.redkalex.pay.PayRetCodes.*;
-import static org.redkalex.pay.Pays.*;
+import static org.redkalex.pay.Pays.PAYTYPE_FACEBOOK;
 
 /**
  *

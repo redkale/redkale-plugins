@@ -10,6 +10,7 @@ import java.util.concurrent.*;
 import java.util.logging.Level;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.*;
+import org.redkale.annotation.ResourceListener;
 import org.redkale.mq.*;
 import org.redkale.util.*;
 

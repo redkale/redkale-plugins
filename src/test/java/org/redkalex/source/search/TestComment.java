@@ -5,9 +5,8 @@
  */
 package org.redkalex.source.search;
 
-import javax.persistence.*;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.source.SearchColumn;
+import org.redkale.persistence.*;
 
 /**
  *

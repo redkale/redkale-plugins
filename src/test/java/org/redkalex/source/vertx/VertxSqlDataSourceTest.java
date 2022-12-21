@@ -10,8 +10,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
-import javax.persistence.*;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.persistence.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 

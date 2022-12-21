@@ -6,7 +6,7 @@
 package org.redkalex.htel;
 
 import java.io.*;
-import javax.annotation.Resource;
+import org.redkale.annotation.Resource;
 import org.redkale.convert.Convert;
 import org.redkale.net.http.*;
 import org.redkale.util.AnyValue;

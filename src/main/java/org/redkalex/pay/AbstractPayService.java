@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
 import java.util.stream.*;
+import org.redkale.annotation.Comment;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.*;
 import org.redkale.util.*;

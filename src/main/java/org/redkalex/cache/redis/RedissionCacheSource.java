@@ -5,7 +5,7 @@
  */
 package org.redkalex.cache.redis;
 
-import java.io.*;
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -17,10 +17,14 @@ import java.util.stream.Collectors;
 import org.redisson.Redisson;
 import org.redisson.api.*;
 import org.redisson.config.*;
+import org.redkale.annotation.*;
+import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.ResourceListener;
+import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
-import org.redkale.service.*;
-import org.redkale.source.*;
+import org.redkale.service.Local;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
+import org.redkale.source.CacheSource;
 import org.redkale.util.*;
 
 /**

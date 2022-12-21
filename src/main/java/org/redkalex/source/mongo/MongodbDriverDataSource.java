@@ -20,13 +20,16 @@ import org.bson.codecs.configuration.*;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import org.bson.conversions.Bson;
 import org.reactivestreams.*;
-import org.redkale.service.*;
+import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.ResourceListener;
+import org.redkale.annotation.ResourceType;
+import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
 /**
  * Mongodb版的DataSource实现 <br>
- * 注意: javax.persistence.jdbc.url 需要指定为 mongodb:， 例如：mongodb://127.0.0.1:5005
+ * 注意: datasource.url 需要指定为 mongodb:， 例如：mongodb://127.0.0.1:5005
  *
  *
  * @author zhangjx

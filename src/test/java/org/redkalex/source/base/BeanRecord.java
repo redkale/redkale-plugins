@@ -3,8 +3,8 @@
 package org.redkalex.source.base;
 
 import java.io.Serializable;
-import javax.persistence.*;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.persistence.*;
 import org.redkale.source.*;
 
 /**

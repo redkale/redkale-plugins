@@ -15,13 +15,13 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
-import javax.persistence.*;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.net.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.Client;
+import org.redkale.persistence.*;
 import static org.redkale.source.AbstractDataSource.*;
 
 /**

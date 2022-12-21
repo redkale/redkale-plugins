@@ -5,24 +5,21 @@
  */
 package org.redkalex.weixin;
 
-import org.redkale.util.Utility;
-import org.redkale.convert.json.JsonConvert;
-import org.redkale.service.RetResult;
-import org.redkale.util.AutoLoad;
-import org.redkale.service.Service;
-import static org.redkale.convert.json.JsonConvert.TYPE_MAP_STRING_STRING;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
-import javax.annotation.*;
-import javax.crypto.*;
+import javax.crypto.Cipher;
 import javax.crypto.spec.*;
-import org.redkale.service.Local;
+import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.*;
+import org.redkale.convert.json.JsonConvert;
+import static org.redkale.convert.json.JsonConvert.TYPE_MAP_STRING_STRING;
+import org.redkale.service.*;
 import org.redkale.util.*;
-import static org.redkale.util.Utility.*;
+import static org.redkale.util.Utility.getHttpContentAsync;
 
 /**
  * 微信服务号Service

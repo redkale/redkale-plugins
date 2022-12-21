@@ -5,7 +5,7 @@
  */
 package org.redkalex.mq.kafka;
 
-import javax.annotation.Priority;
+import org.redkale.annotation.Priority;
 import org.redkale.mq.*;
 import org.redkale.util.*;
 

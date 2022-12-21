@@ -19,9 +19,13 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
+import org.redkale.annotation.*;
+import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.ResourceListener;
+import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
-import org.redkale.service.*;
-import org.redkale.source.*;
+import org.redkale.service.Local;
+import org.redkale.source.CacheSource;
 import org.redkale.util.*;
 
 /**

@@ -5,7 +5,7 @@
  */
 package org.redkalex.source.pgsql;
 
-import javax.annotation.Priority;
+import org.redkale.annotation.Priority;
 import org.redkale.source.*;
 import org.redkale.util.AnyValue;
 

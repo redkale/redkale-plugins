@@ -2,7 +2,7 @@
  */
 package org.redkalex.properties.apollo;
 
-import javax.annotation.Priority;
+import org.redkale.annotation.Priority;
 import org.redkale.boot.*;
 import org.redkale.util.*;
 

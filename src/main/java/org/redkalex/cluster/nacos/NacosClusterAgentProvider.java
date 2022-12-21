@@ -2,7 +2,7 @@
  */
 package org.redkalex.cluster.nacos;
 
-import javax.annotation.Priority;
+import org.redkale.annotation.Priority;
 import org.redkale.cluster.*;
 import org.redkale.util.*;
 

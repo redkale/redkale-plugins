@@ -5,22 +5,25 @@
  */
 package org.redkalex.cache.redis;
 
-import java.io.*;
-import java.lang.reflect.*;
+import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.*;
-import javax.annotation.Resource;
+import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.*;
+import org.redkale.annotation.ResourceListener;
+import org.redkale.annotation.ResourceType;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.*;
-import org.redkale.service.*;
-import org.redkale.source.*;
-import org.redkale.util.*;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.net.client.ClientAddress;
+import org.redkale.service.Local;
+import org.redkale.source.CacheSource;
+import org.redkale.util.*;
 
 /**
  * 详情见: https://redkale.org

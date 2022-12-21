@@ -1,10 +1,10 @@
 package org.redkalex.source.mysql;
 
 import java.io.Serializable;
-import javax.persistence.*;
+import org.redkale.annotation.*;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.persistence.*;
 import org.redkale.source.*;
-import org.redkale.util.*;
 
 /**
  *

@@ -6,7 +6,7 @@ package org.redkalex.cache.redis;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import javax.annotation.Resource;
+import org.redkale.annotation.Resource;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.AbstractCacheSource;

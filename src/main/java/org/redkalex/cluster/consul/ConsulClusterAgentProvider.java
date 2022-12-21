@@ -5,7 +5,7 @@
  */
 package org.redkalex.cluster.consul;
 
-import javax.annotation.Priority;
+import org.redkale.annotation.Priority;
 import org.redkale.cluster.*;
 import org.redkale.util.*;
 

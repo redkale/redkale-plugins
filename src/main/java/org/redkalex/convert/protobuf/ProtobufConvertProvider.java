@@ -5,7 +5,7 @@
  */
 package org.redkalex.convert.protobuf;
 
-import javax.annotation.Priority;
+import org.redkale.annotation.Priority;
 import org.redkale.convert.*;
 
 /**

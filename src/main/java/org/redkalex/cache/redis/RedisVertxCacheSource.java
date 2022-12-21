@@ -3,20 +3,24 @@
 package org.redkalex.cache.redis;
 
 import io.vertx.core.*;
-import io.vertx.redis.client.*;
 import io.vertx.redis.client.Command;
+import io.vertx.redis.client.*;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
+import org.redkale.annotation.*;
+import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.ResourceListener;
+import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.service.*;
-import org.redkale.source.*;
+import org.redkale.service.Local;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
+import org.redkale.source.CacheSource;
 import org.redkale.util.*;
 
 /**
