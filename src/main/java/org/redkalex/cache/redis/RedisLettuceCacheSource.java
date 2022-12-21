@@ -715,31 +715,31 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         releaseStringCommand(command);
     }
 
-//    //--------------------- setExpireSeconds ------------------------------    
+//    //--------------------- expire ------------------------------    
     @Override
-    public CompletableFuture<Void> setExpireSecondsAsync(String key, int expireSeconds) {
+    public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.expire(key, Duration.ofSeconds(expireSeconds)).thenApply(r -> null));
         });
     }
 
     @Override
-    public void setExpireSeconds(String key, int expireSeconds) {
+    public void expire(String key, int expireSeconds) {
         final RedisCommands<String, byte[]> command = connectBytes();
         command.expire(key, Duration.ofSeconds(expireSeconds));
         releaseBytesCommand(command);
     }
 
-//    //--------------------- remove ------------------------------    
+//    //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> removeAsync(String key) {
+    public CompletableFuture<Integer> delAsync(String key) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.del(key).thenApply(rs -> rs > 0 ? 1 : 0));
         });
     }
 
     @Override
-    public int remove(String key) {
+    public int del(String key) {
         final RedisCommands<String, byte[]> command = connectBytes();
         int rs = command.del(key) > 0 ? 1 : 0;
         releaseBytesCommand(command);
@@ -813,7 +813,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int hremove(final String key, String... fields) {
+    public int hdel(final String key, String... fields) {
         final RedisCommands<String, byte[]> command = connectBytes();
         int rs = command.hdel(key, fields).intValue();
         releaseBytesCommand(command);
@@ -1565,7 +1565,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> hremoveAsync(String key, String... fields) {
+    public CompletableFuture<Integer> hdelAsync(String key, String... fields) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.hdel(key, fields));
         });

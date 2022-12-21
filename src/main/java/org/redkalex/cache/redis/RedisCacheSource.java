@@ -280,12 +280,12 @@ public final class RedisCacheSource extends AbstractRedisSource {
     //--------------------- refresh ------------------------------
     @Override
     public CompletableFuture<Void> refreshAsync(String key, int expireSeconds) {
-        return setExpireSecondsAsync(key, expireSeconds);
+        return expireAsync(key, expireSeconds);
     }
 
     @Override
     public void refresh(String key, final int expireSeconds) {
-        setExpireSeconds(key, expireSeconds);
+        expire(key, expireSeconds);
     }
 
     //--------------------- set ------------------------------
@@ -460,26 +460,26 @@ public final class RedisCacheSource extends AbstractRedisSource {
         setLongAsync(expireSeconds, key, value).join();
     }
 
-    //--------------------- setExpireSeconds ------------------------------    
+    //--------------------- expire ------------------------------    
     @Override
-    public CompletableFuture<Void> setExpireSecondsAsync(String key, int expireSeconds) {
+    public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
         return sendAsync("EXPIRE", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public void setExpireSeconds(String key, int expireSeconds) {
-        setExpireSecondsAsync(key, expireSeconds).join();
+    public void expire(String key, int expireSeconds) {
+        expireAsync(key, expireSeconds).join();
     }
 
-    //--------------------- remove ------------------------------    
+    //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> removeAsync(String key) {
+    public CompletableFuture<Integer> delAsync(String key) {
         return sendAsync("DEL", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
     }
 
     @Override
-    public int remove(String key) {
-        return removeAsync(key).join();
+    public int del(String key) {
+        return delAsync(key).join();
     }
 
     //--------------------- incr ------------------------------    
@@ -525,8 +525,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int hremove(final String key, String... fields) {
-        return hremoveAsync(key, fields).join();
+    public int hdel(final String key, String... fields) {
+        return hdelAsync(key, fields).join();
     }
 
     @Override
@@ -650,7 +650,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> hremoveAsync(final String key, String... fields) {
+    public CompletableFuture<Integer> hdelAsync(final String key, String... fields) {
         byte[][] bs = new byte[fields.length + 1][];
         bs[0] = key.getBytes(StandardCharsets.UTF_8);
         for (int i = 0; i < fields.length; i++) {

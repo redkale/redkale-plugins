@@ -349,12 +349,12 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     //--------------------- refresh ------------------------------
     @Override
     public CompletableFuture<Void> refreshAsync(String key, int expireSeconds) {
-        return setExpireSecondsAsync(key, expireSeconds);
+        return expireAsync(key, expireSeconds);
     }
 
     @Override
     public void refresh(String key, final int expireSeconds) {
-        setExpireSeconds(key, expireSeconds);
+        expire(key, expireSeconds);
     }
 
     //--------------------- set ------------------------------
@@ -490,17 +490,17 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     //--------------------- set ------------------------------    
     @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert, T value) {
-        return (CompletableFuture) setAsync(key, convert, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return (CompletableFuture) setAsync(key, convert, value).thenCompose(v -> expireAsync(key, expireSeconds));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, final Type type, T value) {
-        return (CompletableFuture) setAsync(key, type, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return (CompletableFuture) setAsync(key, type, value).thenCompose(v -> expireAsync(key, expireSeconds));
     }
 
     @Override
     public <T> CompletableFuture<Void> setAsync(int expireSeconds, String key, Convert convert, final Type type, T value) {
-        return (CompletableFuture) setAsync(key, convert, type, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return (CompletableFuture) setAsync(key, convert, type, value).thenCompose(v -> expireAsync(key, expireSeconds));
     }
 
     @Override
@@ -520,7 +520,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Void> setStringAsync(int expireSeconds, String key, String value) {
-        return (CompletableFuture) setStringAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return (CompletableFuture) setStringAsync(key, value).thenCompose(v -> expireAsync(key, expireSeconds));
     }
 
     @Override
@@ -530,7 +530,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Void> setLongAsync(int expireSeconds, String key, long value) {
-        return (CompletableFuture) setLongAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return (CompletableFuture) setLongAsync(key, value).thenCompose(v -> expireAsync(key, expireSeconds));
     }
 
     @Override
@@ -538,26 +538,26 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         setLongAsync(expireSeconds, key, value).join();
     }
 
-    //--------------------- setExpireSeconds ------------------------------    
+    //--------------------- expire ------------------------------    
     @Override
-    public CompletableFuture<Void> setExpireSecondsAsync(String key, int expireSeconds) {
+    public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
         return sendAsync(Command.EXPIRE, key, String.valueOf(expireSeconds)).thenApply(v -> null);
     }
 
     @Override
-    public void setExpireSeconds(String key, int expireSeconds) {
-        setExpireSecondsAsync(key, expireSeconds).join();
+    public void expire(String key, int expireSeconds) {
+        expireAsync(key, expireSeconds).join();
     }
 
-    //--------------------- remove ------------------------------    
+    //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> removeAsync(String key) {
+    public CompletableFuture<Integer> delAsync(String key) {
         return sendAsync(Command.DEL, key).thenApply(v -> v.toInteger());
     }
 
     @Override
-    public int remove(String key) {
-        return removeAsync(key).join();
+    public int del(String key) {
+        return delAsync(key).join();
     }
 
     //--------------------- incr ------------------------------    
@@ -603,8 +603,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int hremove(final String key, String... fields) {
-        return hremoveAsync(key, fields).join();
+    public int hdel(final String key, String... fields) {
+        return hdelAsync(key, fields).join();
     }
 
     @Override
@@ -728,7 +728,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> hremoveAsync(final String key, String... fields) {
+    public CompletableFuture<Integer> hdelAsync(final String key, String... fields) {
         String[] args = new String[fields.length + 1];
         args[0] = key;
         System.arraycopy(fields, 0, args, 1, fields.length);
@@ -1449,7 +1449,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final byte[] value) {
-        return (CompletableFuture) setBytesAsync(key, value).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return (CompletableFuture) setBytesAsync(key, value).thenCompose(v -> expireAsync(key, expireSeconds));
     }
 
     @Override
@@ -1459,7 +1459,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Void> setBytesAsync(final int expireSeconds, final String key, final Convert convert, final Type type, final T value) {
-        return (CompletableFuture) setBytesAsync(key, convert.convertToBytes(type, value)).thenCompose(v -> setExpireSecondsAsync(key, expireSeconds));
+        return (CompletableFuture) setBytesAsync(key, convert.convertToBytes(type, value)).thenCompose(v -> expireAsync(key, expireSeconds));
     }
 
     @Override

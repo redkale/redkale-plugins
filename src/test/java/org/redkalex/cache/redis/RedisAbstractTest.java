@@ -23,8 +23,8 @@ public abstract class RedisAbstractTest {
 
     protected static void run(CacheSource source) throws Exception {
         System.out.println("------------------------------------");
-        source.remove("stritem1");
-        source.remove("stritem2");
+        source.del("stritem1");
+        source.del("stritem2");
         source.setString("stritem1", "value1");
         source.setString("stritem2", "value2");
 
@@ -40,8 +40,8 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] MGET : " + Arrays.toString(array));
         Assertions.assertTrue(Utility.equalsElement(array, new String[]{"value1", "value2"}));
 
-        source.remove("intitem1");
-        source.remove("intitem2");
+        source.del("intitem1");
+        source.del("intitem2");
         source.setLong("intitem1", 333);
         source.setLong("intitem2", 444);
 
@@ -53,8 +53,8 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] MGET : " + Arrays.toString(array));
         Assertions.assertTrue(Utility.equalsElement(array, new Object[]{"333", null, "444"}));
 
-        source.remove("objitem1");
-        source.remove("objitem2");
+        source.del("objitem1");
+        source.del("objitem2");
         source.set("objitem1", Flipper.class, new Flipper(10));
         source.set("objitem2", Flipper.class, new Flipper(20));
 
@@ -62,9 +62,9 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] MGET : " + flippermap);
         Assertions.assertTrue(Utility.equalsElement(flippermap, Utility.ofMap("objitem1", new Flipper(10), "objitem2", new Flipper(20))));
 
-        source.remove("key1");
-        source.remove("key2");
-        source.remove("300");
+        source.del("key1");
+        source.del("key2");
+        source.del("300");
         source.set(1000, "key1", String.class, "value1");
         source.set("key1", String.class, "value1");
         source.setString("keystr1", "strvalue1");
@@ -106,7 +106,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[无值] key2 EXISTS : " + bool);
         Assertions.assertFalse(bool);
 
-        source.remove("keys3");
+        source.del("keys3");
         source.appendListItem("keys3", String.class, "vals1");
         source.appendListItem("keys3", String.class, "vals2");
         System.out.println("-------- keys3 追加了两个值 --------");
@@ -128,15 +128,15 @@ public abstract class RedisAbstractTest {
         System.out.println("[一值] keys3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("vals2"));
 
-        source.remove("stringmap");
+        source.del("stringmap");
         source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
         source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));
         col = source.getCollection("stringmap", JsonConvert.TYPE_MAP_STRING_STRING);
         System.out.println("[两值] stringmap VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of(Utility.ofMap("c", "cc", "d", "dd"), Utility.ofMap("a", "aa", "b", "bb")));
 
-        source.remove("sets3");
-        source.remove("sets4");
+        source.del("sets3");
+        source.del("sets4");
         source.appendSetItem("sets3", String.class, "setvals1");
         source.appendSetItem("sets3", String.class, "setvals2");
         source.appendSetItem("sets3", String.class, "setvals1");
@@ -213,8 +213,8 @@ public abstract class RedisAbstractTest {
         System.out.println("myaddr:  " + obj);
         Assertions.assertEquals(addr88, obj);
 
-        source.remove("myaddrs");
-        source.remove("myaddrs2");
+        source.del("myaddrs");
+        source.del("myaddrs2");
         source.appendSetItem("myaddrs", InetSocketAddress.class, addr88);
         source.appendSetItem("myaddrs", InetSocketAddress.class, addr99);
 
@@ -247,7 +247,7 @@ public abstract class RedisAbstractTest {
         Assertions.assertEquals(mapcol.toString(), Utility.ofMap("myaddrs", List.of(addr99), "myaddrs2", List.of(addr88, addr99)).toString());
 
         System.out.println("------------------------------------");
-        source.remove("myaddrs");
+        source.del("myaddrs");
         Type mapType = new TypeToken<Map<String, Integer>>() {
         }.getType();
         Map<String, Integer> paramap = new HashMap<>();
@@ -259,13 +259,13 @@ public abstract class RedisAbstractTest {
         System.out.println("mapvals:  " + map);
         Assertions.assertEquals(map.toString(), Utility.ofMap("a", 1, "b", 2).toString());
 
-        source.remove("byteskey");
+        source.del("byteskey");
         source.setBytes("byteskey", new byte[]{1, 2, 3});
         byte[] bs = source.getBytes("byteskey");
         System.out.println("byteskey 值 : " + Arrays.toString(bs));
         Assertions.assertEquals(Arrays.toString(new byte[]{1, 2, 3}), Arrays.toString(bs));
         //h
-        source.remove("hmap");
+        source.del("hmap");
         source.hincr("hmap", "key1");
         num = source.hgetLong("hmap", "key1", -1);
         System.out.println("hmap.key1 值 : " + num);
@@ -286,7 +286,7 @@ public abstract class RedisAbstractTest {
         System.out.println("hmap.keys 四值 : " + col);
         Assertions.assertIterableEquals(col, List.of("key1", "key2", "key3", "sm"));
 
-        source.hremove("hmap", "key1", "key3");
+        source.hdel("hmap", "key1", "key3");
 
         col = source.hkeys("hmap");
         System.out.println("hmap.keys 两值 : " + col);
@@ -300,7 +300,7 @@ public abstract class RedisAbstractTest {
         System.out.println("hmap列表(2)大小 : " + size);
         Assertions.assertEquals(2, size);
 
-        source.remove("hmaplong");
+        source.del("hmaplong");
         source.hincr("hmaplong", "key1", 10);
         source.hsetLong("hmaplong", "key2", 30);
 
@@ -308,21 +308,21 @@ public abstract class RedisAbstractTest {
         System.out.println("hmaplong.所有两值 : " + longmap);
         Assertions.assertEquals(longmap.toString(), Utility.ofMap("key1", 10, "key2", 30).toString());
 
-        source.remove("hmapstr");
+        source.del("hmapstr");
         source.hsetString("hmapstr", "key1", "str10");
         source.hsetString("hmapstr", "key2", null);
         map = source.hmap("hmapstr", String.class, 0, 10);
         System.out.println("hmapstr.所有一值 : " + map);
         Assertions.assertEquals(map.toString(), Utility.ofMap("key1", "str10").toString());
 
-        source.remove("hmapstrmap");
+        source.del("hmapstrmap");
         source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
         source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
         map = source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*");
         System.out.println("hmapstrmap.无值 : " + map);
         Assertions.assertEquals(map.toString(), Utility.ofMap().toString());
 
-        source.remove("popset");
+        source.del("popset");
         source.appendStringSetItem("popset", "111");
         source.appendStringSetItem("popset", "222");
         source.appendStringSetItem("popset", "333");
@@ -348,33 +348,33 @@ public abstract class RedisAbstractTest {
         System.out.println("SPOP一个元素：" + source.spopLongSetItem("popset"));
 
         //清除
-        int rs = source.remove("stritem1");
+        int rs = source.del("stritem1");
         System.out.println("删除stritem1个数: " + rs);
-        source.remove("popset");
-        source.remove("stritem2");
-        source.remove("intitem1");
-        source.remove("intitem2");
-        source.remove("keylong1");
-        source.remove("keystr1");
-        source.remove("mapvals");
-        source.remove("myaddr");
-        source.remove("myaddrs2");
-        source.remove("newnum");
-        source.remove("objitem1");
-        source.remove("objitem2");
-        source.remove("key1");
-        source.remove("key2");
-        source.remove("keys3");
-        source.remove("sets3");
-        source.remove("sets4");
-        source.remove("myaddrs");
-        source.remove("300");
-        source.remove("stringmap");
-        source.remove("hmap");
-        source.remove("hmaplong");
-        source.remove("hmapstr");
-        source.remove("hmapstrmap");
-        source.remove("byteskey");
+        source.del("popset");
+        source.del("stritem2");
+        source.del("intitem1");
+        source.del("intitem2");
+        source.del("keylong1");
+        source.del("keystr1");
+        source.del("mapvals");
+        source.del("myaddr");
+        source.del("myaddrs2");
+        source.del("newnum");
+        source.del("objitem1");
+        source.del("objitem2");
+        source.del("key1");
+        source.del("key2");
+        source.del("keys3");
+        source.del("sets3");
+        source.del("sets4");
+        source.del("myaddrs");
+        source.del("300");
+        source.del("stringmap");
+        source.del("hmap");
+        source.del("hmaplong");
+        source.del("hmapstr");
+        source.del("hmapstrmap");
+        source.del("byteskey");
         System.out.println("------------------------------------");
 //        System.out.println("--------------测试大文本---------------");
 //        HashMap<String, String> bigmap = new HashMap<>();
@@ -392,11 +392,11 @@ public abstract class RedisAbstractTest {
 //            HashMap<String, String> fs = (HashMap) source.get("bigmap", JsonConvert.TYPE_MAP_STRING_STRING);
 //            System.out.println("内容长度: " + fs.get("val").length());
 //        }
-        source.remove("bigmap");
+        source.del("bigmap");
         {
             int count = Runtime.getRuntime().availableProcessors() * 10;
-            source.remove("hmap");
-            source.remove("testnumber");
+            source.del("hmap");
+            source.del("testnumber");
             source.hincr("hmap", "key1");
             source.hdecr("hmap", "key1");
             source.hmset("hmap", "key2", "haha", "key3", 333);

@@ -589,25 +589,25 @@ public class RedissionCacheSource extends AbstractRedisSource {
         bucket.expire(Duration.ofSeconds(expireSeconds));
     }
 
-    //--------------------- setExpireSeconds ------------------------------    
+    //--------------------- expire ------------------------------    
     @Override
-    public CompletableFuture<Void> setExpireSecondsAsync(String key, int expireSeconds) {
+    public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
         return completableFuture(client.getBucket(key).expireAsync(Duration.ofSeconds(expireSeconds)).thenApply(r -> null));
     }
 
     @Override
-    public void setExpireSeconds(String key, int expireSeconds) {
+    public void expire(String key, int expireSeconds) {
         client.getBucket(key).expire(Duration.ofSeconds(expireSeconds));
     }
 
-    //--------------------- remove ------------------------------    
+    //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> removeAsync(String key) {
+    public CompletableFuture<Integer> delAsync(String key) {
         return completableFuture(client.getBucket(key).deleteAsync().thenApply(rs -> rs ? 1 : 0));
     }
 
     @Override
-    public int remove(String key) {
+    public int del(String key) {
         return client.getBucket(key).delete() ? 1 : 0;
     }
 
@@ -654,7 +654,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int hremove(final String key, String... fields) {
+    public int hdel(final String key, String... fields) {
         RMap<String, ?> map = client.getMap(key, MapByteArrayCodec.instance);
         return (int) map.fastRemove(fields);
     }
@@ -845,7 +845,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> hremoveAsync(final String key, String... fields) {
+    public CompletableFuture<Integer> hdelAsync(final String key, String... fields) {
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.fastRemoveAsync(fields).thenApply(r -> r.intValue()));
     }
