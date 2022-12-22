@@ -1033,6 +1033,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> Set<T> smembers(String key, final Type componentType) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        Set<T> rs = formatCollection(key, cryptor, command.smembers(key), convert, componentType);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
     public <T> Collection<T> getCollection(String key, final Type componentType) {
         final RedisCommands<String, byte[]> command = connectBytes();
         Collection<T> rs = getCollection(command, key, componentType);
@@ -1061,6 +1069,17 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             for (String key : keys) {
                 map.put(key, formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType));
             }
+        }
+        releaseBytesCommand(command);
+        return map;
+    }
+
+    @Override
+    public <T> Map<String, Set<T>> smembers(final Type componentType, String... keys) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        final Map<String, Set<T>> map = new LinkedHashMap<>();
+        for (String key : keys) {
+            map.put(key, formatCollection(key, cryptor, command.smembers(key), convert, componentType));
         }
         releaseBytesCommand(command);
         return map;
@@ -1118,7 +1137,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> boolean existsSetItem(String key, final Type componentType, T value) {
+    public <T> boolean sismember(String key, final Type componentType, T value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         byte[] bs;
         if (cryptor != null && componentType == String.class) {
@@ -1133,7 +1152,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
-    public <T> void appendSetItem(String key, final Type componentType, T value) {
+    public <T> void sadd(String key, final Type componentType, T value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         byte[] bs;
         if (cryptor != null && componentType == String.class) {
@@ -1147,7 +1166,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
-    public <T> int removeSetItem(String key, final Type componentType, T value) {
+    public <T> int srem(String key, final Type componentType, T value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         byte[] bs;
         if (cryptor != null && componentType == String.class) {
@@ -1161,7 +1180,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> T spopSetItem(String key, final Type componentType) {
+    public <T> T spop(String key, final Type componentType) {
         final RedisCommands<String, byte[]> command = connectBytes();
         T rs = decryptValue(key, cryptor, componentType, command.spop(key));
         releaseBytesCommand(command);
@@ -1169,7 +1188,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Set<T> spopSetItem(String key, int count, final Type componentType) {
+    public <T> Set<T> spop(String key, int count, final Type componentType) {
         final RedisCommands<String, byte[]> command = connectBytes();
         Set<T> rs = formatCollection(key, cryptor, command.spop(key, count), convert, componentType);
         releaseBytesCommand(command);
@@ -1747,6 +1766,13 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
+        return connectBytesAsync().thenCompose(command -> {
+            return command.smembers(key).thenApply(set -> formatCollection(key, cryptor, set, convert, componentType));
+        });
+    }
+
+    @Override
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
             return getCollectionAsync(command, key, componentType);
@@ -1797,6 +1823,25 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Map<String, Set<T>>> smembersAsync(Type componentType, String... keys) {
+        return connectBytesAsync().thenCompose(command -> {
+            final Map<String, Set<T>> map = new LinkedHashMap<>();
+            final CompletableFuture[] futures = new CompletableFuture[keys.length];
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = command.smembers(key).thenAccept(rs -> {
+                    if (rs != null) {
+                        synchronized (map) {
+                            map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
+                        }
+                    }
+                }).toCompletableFuture();
+            }
+            return CompletableFuture.allOf(futures).thenApply(v -> map);
+        });
+    }
+
+    @Override
     public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.type(key).thenCompose(type -> {
@@ -1817,14 +1862,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<T> spopSetItemAsync(String key, Type componentType) {
+    public <T> CompletableFuture<T> spopAsync(String key, Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.spop(key).thenApply(bs -> bs == null ? null : decryptValue(key, cryptor, componentType, bs)));
         });
     }
 
     @Override
-    public <T> CompletableFuture<Set<T>> spopSetItemAsync(String key, int count, Type componentType) {
+    public <T> CompletableFuture<Set<T>> spopAsync(String key, int count, Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.spop(key, count).thenApply(v -> formatCollection(key, cryptor, v, convert, componentType)));
         });
@@ -1845,7 +1890,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> existsSetItemAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Boolean> sismemberAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.sismember(key, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))));
         });
@@ -1853,14 +1898,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
-    public <T> CompletableFuture<Void> appendSetItemAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Void> saddAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.sadd(key, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))));
         });
     }
 
     @Override
-    public <T> CompletableFuture<Integer> removeSetItemAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Integer> sremAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.srem(key, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))).thenApply(v -> v.intValue()));
         });

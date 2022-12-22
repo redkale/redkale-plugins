@@ -129,19 +129,19 @@ public abstract class RedisAbstractTest {
         Assertions.assertIterableEquals(col, List.of("vals2"));
 
         source.del("stringmap");
-        source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
-        source.appendSetItem("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));
+        source.sadd("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
+        source.sadd("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));
         col = source.getCollection("stringmap", JsonConvert.TYPE_MAP_STRING_STRING);
         System.out.println("[两值] stringmap VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of(Utility.ofMap("c", "cc", "d", "dd"), Utility.ofMap("a", "aa", "b", "bb")));
 
         source.del("sets3");
         source.del("sets4");
-        source.appendSetItem("sets3", String.class, "setvals1");
-        source.appendSetItem("sets3", String.class, "setvals2");
-        source.appendSetItem("sets3", String.class, "setvals1");
-        source.appendSetItem("sets4", String.class, "setvals2");
-        source.appendSetItem("sets4", String.class, "setvals1");
+        source.sadd("sets3", String.class, "setvals1");
+        source.sadd("sets3", String.class, "setvals2");
+        source.sadd("sets3", String.class, "setvals1");
+        source.sadd("sets4", String.class, "setvals2");
+        source.sadd("sets4", String.class, "setvals1");
         col = source.getCollection("sets3", String.class);
         System.out.println("[两值] sets3 VALUES : " + col);
         List col2 = new ArrayList(col);
@@ -152,15 +152,15 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] sets3 EXISTS : " + bool);
         Assertions.assertTrue(bool);
 
-        bool = source.existsSetItem("sets3", String.class, "setvals2");
+        bool = source.sismember("sets3", String.class, "setvals2");
         System.out.println("[有值] sets3-setvals2 EXISTSITEM : " + bool);
         Assertions.assertTrue(bool);
 
-        bool = source.existsSetItem("sets3", String.class, "setvals3");
+        bool = source.sismember("sets3", String.class, "setvals3");
         System.out.println("[无值] sets3-setvals3 EXISTSITEM : " + bool);
         Assertions.assertFalse(bool);
 
-        source.removeSetItem("sets3", String.class, "setvals1");
+        source.srem("sets3", String.class, "setvals1");
         col = source.getCollection("sets3", String.class);
         System.out.println("[一值] sets3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("setvals2"));
@@ -215,8 +215,8 @@ public abstract class RedisAbstractTest {
 
         source.del("myaddrs");
         source.del("myaddrs2");
-        source.appendSetItem("myaddrs", InetSocketAddress.class, addr88);
-        source.appendSetItem("myaddrs", InetSocketAddress.class, addr99);
+        source.sadd("myaddrs", InetSocketAddress.class, addr88);
+        source.sadd("myaddrs", InetSocketAddress.class, addr99);
 
         col = source.getCollection("myaddrs", InetSocketAddress.class);
         System.out.println("myaddrs:  " + col);
@@ -224,13 +224,13 @@ public abstract class RedisAbstractTest {
         Collections.sort(cola2, (o1, o2) -> o1.toString().compareTo(o2.toString()));
         Assertions.assertIterableEquals(cola2, List.of(addr88, addr99));
 
-        source.removeSetItem("myaddrs", InetSocketAddress.class, addr88);
+        source.srem("myaddrs", InetSocketAddress.class, addr88);
         col = source.getCollection("myaddrs", InetSocketAddress.class);
         System.out.println("myaddrs:  " + col);
         Assertions.assertIterableEquals(col, List.of(addr99));
 
-        source.appendSetItem("myaddrs2", InetSocketAddress.class, addr88);
-        source.appendSetItem("myaddrs2", InetSocketAddress.class, addr99);
+        source.sadd("myaddrs2", InetSocketAddress.class, addr88);
+        source.sadd("myaddrs2", InetSocketAddress.class, addr99);
         mapcol = (Map) source.getCollectionMap(true, InetSocketAddress.class, "myaddrs", "myaddrs2");
         System.out.println("myaddrs&myaddrs2:  " + mapcol);
         Map<String, Collection> news2 = new HashMap<>();

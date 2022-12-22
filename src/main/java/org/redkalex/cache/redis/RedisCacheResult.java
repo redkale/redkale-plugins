@@ -61,6 +61,24 @@ public class RedisCacheResult {
         return formatValue(key, cryptor, bytesValue, type);
     }
 
+    protected <T> Set<T> getSetValue(String key, RedisCryptor cryptor, Type type) {
+        if (bytesList == null || bytesList.isEmpty()) return new LinkedHashSet<>();
+        Set<T> set = new LinkedHashSet<>();
+        for (byte[] bs : bytesList) {
+            set.add(formatValue(key, cryptor, bs, type));
+        }
+        return set;
+    }
+
+    protected <T> List<T> getListValue(String key, RedisCryptor cryptor, Type type) {
+        if (bytesList == null || bytesList.isEmpty()) return new ArrayList<>();
+        List<T> list = new ArrayList<>();
+        for (byte[] bs : bytesList) {
+            list.add(formatValue(key, cryptor, bs, type));
+        }
+        return list;
+    }
+
     protected <T> Collection<T> getCollectionValue(String key, RedisCryptor cryptor, boolean set, Type type) {
         if (bytesList == null || bytesList.isEmpty()) return set ? new LinkedHashSet<>() : new ArrayList<>();
         Collection<T> list = set ? new LinkedHashSet<>() : new ArrayList<>();
