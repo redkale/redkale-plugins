@@ -605,6 +605,34 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         releaseStringCommand(command);
     }
 
+    @Override
+    public void setnxBytes(final String key, final byte[] value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.setnx(key, value);
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public CompletableFuture<Void> setnxBytesAsync(String key, byte[] value) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.setnx(key, value));
+        });
+    }
+
+    @Override
+    public <T> void setnxBytes(final String key, final Convert convert, final Type type, final T value) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.setnx(key, convert.convertToBytes(type, value));
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setnxBytesAsync(final String key, final Convert convert, final Type type, final T value) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.setnx(key, convert.convertToBytes(type, value)));
+        });
+    }
+
 //    //--------------------- setex ------------------------------    
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert0, T value) {

@@ -319,6 +319,26 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public void setnxBytes(final String key, final byte[] value) {
+        setnxBytesAsync(key, value).join();
+    }
+
+    @Override
+    public CompletableFuture<Void> setnxBytesAsync(final String key, byte[] value) {
+        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getVoidValue());
+    }
+
+    @Override
+    public <T> void setnxBytes(final String key, final Convert convert, final Type type, final T value) {
+        setnxBytesAsync(key, convert, type, value).join();
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setnxBytesAsync(final String key, final Convert convert, final Type type, final T value) {
+        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
+    }
+
+    @Override
     public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
         return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> v.getObjectValue(key, cryptor, type));
     }

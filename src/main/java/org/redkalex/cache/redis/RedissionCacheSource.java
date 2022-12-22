@@ -407,6 +407,30 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public void setnxBytes(final String key, final byte[] value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        bucket.setIfAbsent(value);
+    }
+
+    @Override
+    public CompletableFuture<Void> setnxBytesAsync(final String key, byte[] value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.setIfAbsentAsync(value).thenApply(v -> null));
+    }
+
+    @Override
+    public <T> void setnxBytes(final String key, final Convert convert, final Type type, final T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        bucket.setIfAbsent(encryptValue(key, cryptor, convert, value));
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setnxBytesAsync(final String key, final Convert convert, final Type type, final T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, convert, value)).thenApply(v -> null));
+    }
+
+    @Override
     public <T> void set(final String key, final Convert convert0, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         bucket.set(value instanceof String ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, convert0, value));

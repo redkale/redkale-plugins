@@ -1544,6 +1544,26 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public void setnxBytes(final String key, final byte[] value) {
+        setnxBytesAsync(key, value).join();
+    }
+
+    @Override
+    public CompletableFuture<Void> setnxBytesAsync(final String key, byte[] value) {
+        return sendAsync(Command.SETNX, key, new String(value, StandardCharsets.UTF_8)).thenApply(v -> null);
+    }
+
+    @Override
+    public <T> void setnxBytes(final String key, final Convert convert, final Type type, final T value) {
+        setnxBytesAsync(key, convert, type, value).join();
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> setnxBytesAsync(final String key, final Convert convert, final Type type, final T value) {
+        return sendAsync(Command.SETNX, key, formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
+    }
+
+    @Override
     public CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
         return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), new String(value, StandardCharsets.UTF_8)).thenApply(v -> null);
     }
