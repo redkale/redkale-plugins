@@ -296,7 +296,7 @@ public abstract class RedisAbstractTest {
         System.out.println("hmap.key2 值 : " + obj);
         Assertions.assertEquals("haha", obj);
 
-        size = source.hsize("hmap");
+        size = source.hlen("hmap");
         System.out.println("hmap列表(2)大小 : " + size);
         Assertions.assertEquals(2, size);
 

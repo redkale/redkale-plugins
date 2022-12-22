@@ -529,8 +529,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int hsize(final String key) {
-        return hsizeAsync(key).join();
+    public int hlen(final String key) {
+        return hlenAsync(key).join();
     }
 
     @Override
@@ -659,7 +659,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> hsizeAsync(final String key) {
+    public CompletableFuture<Integer> hlenAsync(final String key) {
         return sendAsync("HLEN", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
     }
 

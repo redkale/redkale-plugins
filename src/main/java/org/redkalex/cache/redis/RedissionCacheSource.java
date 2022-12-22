@@ -632,7 +632,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int hsize(final String key) {
+    public int hlen(final String key) {
         return client.getMap(key, MapByteArrayCodec.instance).size();
     }
 
@@ -823,7 +823,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> hsizeAsync(final String key) {
+    public CompletableFuture<Integer> hlenAsync(final String key) {
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.sizeAsync());
     }

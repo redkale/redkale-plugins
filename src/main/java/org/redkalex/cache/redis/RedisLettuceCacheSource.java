@@ -785,7 +785,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int hsize(final String key) {
+    public int hlen(final String key) {
         final RedisCommands<String, byte[]> command = connectBytes();
         int rs = command.hlen(key).intValue();
         releaseBytesCommand(command);
@@ -1542,7 +1542,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> hsizeAsync(String key) {
+    public CompletableFuture<Integer> hlenAsync(String key) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.hlen(key));
         });
