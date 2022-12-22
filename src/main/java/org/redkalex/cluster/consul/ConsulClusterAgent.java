@@ -5,7 +5,6 @@
  */
 package org.redkalex.cluster.consul;
 
-import org.redkale.cluster.ClusterAgent;
 import java.lang.reflect.Type;
 import java.net.*;
 import java.net.http.*;
@@ -13,9 +12,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.logging.*;
+import java.util.logging.Level;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.boot.*;
+import org.redkale.cluster.ClusterAgent;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Service;
 import org.redkale.util.*;
@@ -219,12 +219,6 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     private CompletableFuture<Collection<InetSocketAddress>> queryAddress(final String serviceName) {
-        //return (httpClient != null) ? queryAddress11(serviceName) : queryAddress8(serviceName);
-        return queryAddress11(serviceName);
-    }
-
-    //JDK11+版本以上的纯异步方法
-    private CompletableFuture<Collection<InetSocketAddress>> queryAddress11(final String serviceName) {
         final HttpClient client = (HttpClient) httpClient;
         String url = this.apiUrl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
         HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
@@ -249,32 +243,6 @@ public class ConsulClusterAgent extends ClusterAgent {
             }
             return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).thenApply(v -> set);
         });
-    }
-
-    @Deprecated
-    CompletableFuture<Collection<InetSocketAddress>> queryAddress8(final String serviceName) {
-        final HashSet<InetSocketAddress> set = new HashSet<>();
-        String rs = null;
-        try {
-            String url = this.apiUrl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
-            rs = Utility.remoteHttpContent(httpClient, "GET", url, StandardCharsets.UTF_8, httpHeaders);
-            Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, rs);
-            map.forEach((serviceid, en) -> {
-                try {
-                    String irs = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/agent/health/service/id/" + serviceid + "?format=text", StandardCharsets.UTF_8, httpHeaders);
-                    if ("passing".equalsIgnoreCase(irs)) {
-                        set.add(en.createSocketAddress());
-                    } else {
-                        logger.log(Level.INFO, serviceid + " (url=" + url + ") bad result: " + irs);
-                    }
-                } catch (Exception e) {
-                    logger.log(Level.SEVERE, serviceid + " health format=text error", e);
-                }
-            });
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, serviceName + " queryAddress error, result=" + rs, ex);
-        }
-        return CompletableFuture.completedFuture(set);
     }
 
     protected boolean isApplicationHealth() {

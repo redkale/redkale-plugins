@@ -186,12 +186,7 @@ public class MysqlDataSource extends DataSqlSource {
                 connRef.set(conn);
                 return pool.writeChannel(conn, req);
             }), reqRef, connRef, values).thenApply(g -> {
-                if (slowms > 0) {
-                    long cost = System.currentTimeMillis() - s;
-                    if (cost > slowms) {
-                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                    }
-                }
+                slowLog(s, sql);
                 return g.getUpdateEffectCount();
             });
         } else {
@@ -266,12 +261,7 @@ public class MysqlDataSource extends DataSqlSource {
                 req.prepare(MyClientRequest.REQ_TYPE_EXTEND_UPDATE, sql, 0, casesql == null ? Utility.append(attrs, primary) : null, objs);
                 return pool.writeChannel(conn, req);
             })).thenApply(g -> {
-                if (slowms > 0) {
-                    long cost = System.currentTimeMillis() - s;
-                    if (cost > slowms) {
-                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                    }
-                }
+                slowLog(s, sql);
                 return g.getUpdateEffectCount();
             });
         } else {
@@ -324,12 +314,7 @@ public class MysqlDataSource extends DataSqlSource {
             })).thenApply((MyResultSet dataset) -> {
                 T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
                 dataset.close();
-                if (slowms > 0) {
-                    long cost = System.currentTimeMillis() - s;
-                    if (cost > slowms) {
-                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                    }
-                }
+                slowLog(s, sql);
                 return rs;
             });
         }
@@ -364,12 +349,7 @@ public class MysqlDataSource extends DataSqlSource {
                     rs[++i] = getEntityValue(info, selects, dataset);
                 }
                 dataset.close();
-                if (slowms > 0) {
-                    long cost = System.currentTimeMillis() - s;
-                    if (cost > slowms) {
-                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                    }
-                }
+                slowLog(s, sql);
                 return rs;
             });
         } else {
@@ -403,12 +383,7 @@ public class MysqlDataSource extends DataSqlSource {
                     rs.add(getEntityValue(info, null, dataset));
                 }
                 dataset.close();
-                if (slowms > 0) {
-                    long cost = System.currentTimeMillis() - s;
-                    if (cost > slowms) {
-                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                    }
-                }
+                slowLog(s, sql);
                 return rs;
             });
         } else {
@@ -463,12 +438,7 @@ public class MysqlDataSource extends DataSqlSource {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
-                if (slowms > 0) {
-                    long cost = System.currentTimeMillis() - s;
-                    if (cost > slowms) {
-                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + listsql);
-                    }
-                }
+                slowLog(s, listsql);
                 return Sheet.asSheet(list);
             });
         }
@@ -482,12 +452,7 @@ public class MysqlDataSource extends DataSqlSource {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
-                if (slowms > 0) {
-                    long cost = System.currentTimeMillis() - s;
-                    if (cost > slowms) {
-                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, sheet-content: " + listsql);
-                    }
-                }
+                slowLog(s, listsql);
                 return new Sheet(total.longValue(), list);
             });
         });
@@ -708,33 +673,18 @@ public class MysqlDataSource extends DataSqlSource {
         });
         if (info == null || (info.getTableStrategy() == null && !autoddl())) {
             return future.thenApply(g -> {
-                if (slowms > 0) {
-                    long cost = System.currentTimeMillis() - s;
-                    if (cost > slowms) {
-                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                    }
-                }
+                slowLog(s, sql);
                 return g.getUpdateEffectCount();
             });
         }
         if (extendType == MyReqExtended.REQ_TYPE_EXTEND_INSERT) {
             return thenApplyInsertStrategy(info, future, reqRef, connRef, values).thenApply(g -> {
-                if (slowms > 0) {
-                    long cost = System.currentTimeMillis() - s;
-                    if (cost > slowms) {
-                        logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                    }
-                }
+                slowLog(s, sql);
                 return g.getUpdateEffectCount();
             });
         }
         return thenApplyQueryUpdateStrategy(info, connRef, future).thenApply(g -> {
-            if (slowms > 0) {
-                long cost = System.currentTimeMillis() - s;
-                if (cost > slowms) {
-                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                }
-            }
+            slowLog(s, sql);
             return g.getUpdateEffectCount();
         });
     }
@@ -751,12 +701,7 @@ public class MysqlDataSource extends DataSqlSource {
             req.prepare(sql);
             return pool.writeChannel(conn, req);
         })).thenApply(rs -> {
-            if (slowms > 0) {
-                long cost = System.currentTimeMillis() - s;
-                if (cost > slowms) {
-                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                }
-            }
+            slowLog(s, sql);
             return rs;
         });
     }
@@ -772,12 +717,7 @@ public class MysqlDataSource extends DataSqlSource {
             return pool.writeChannel(conn, req.prepare(sql));
         });
         return future.thenApply(g -> {
-            if (slowms > 0) {
-                long cost = System.currentTimeMillis() - s;
-                if (cost > slowms) {
-                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                }
-            }
+            slowLog(s, sql);
             return g.getUpdateEffectCount();
         }).join();
     }
@@ -793,12 +733,7 @@ public class MysqlDataSource extends DataSqlSource {
             return pool.writeChannel(conn, req.prepare(sqls));
         });
         return future.thenApply(g -> {
-            if (slowms > 0) {
-                long cost = System.currentTimeMillis() - s;
-                if (cost > slowms) {
-                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + Arrays.toString(sqls));
-                }
-            }
+            slowLog(s, sqls);
             return g.getBatchEffectCounts();
         }).join();
     }
@@ -810,12 +745,7 @@ public class MysqlDataSource extends DataSqlSource {
         return executeQuery(null, sql).thenApply((DataResultSet dataset) -> {
             V rs = handler.apply(dataset);
             dataset.close();
-            if (slowms > 0) {
-                long cost = System.currentTimeMillis() - s;
-                if (cost > slowms) {
-                    logger.log(Level.WARNING, DataSource.class.getSimpleName() + "(name='" + resourceName() + "') slow sql cost " + cost + " ms, content: " + sql);
-                }
-            }
+            slowLog(s, sql);
             return rs;
         }).join();
     }
