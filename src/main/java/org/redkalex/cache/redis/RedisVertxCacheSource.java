@@ -901,7 +901,12 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
-        return sendAsync(Command.SMEMBERS, key).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
+        return sendAsync(Command.SMEMBERS, keyArgs(true, key)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType) {
+        return sendAsync(Command.LRANGE, keyArgs(false, key)).thenApply(v -> (List) getCollectionValue(key, cryptor, v, false, componentType));
     }
 
     @Override
@@ -999,13 +1004,41 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Map<String, List<T>>> lrangeAsync(final Type componentType, final String... keys) {
+        final CompletableFuture<Map<String, List<T>>> rsFuture = new CompletableFuture<>();
+        final Map<String, List<T>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            final String key = keys[i];
+            futures[i] = sendAsync(Command.LRANGE, keyArgs(false, key)).thenAccept(v -> {
+                List c = (List) getCollectionValue(key, cryptor, v, false, componentType);
+                if (c != null) {
+                    synchronized (map) {
+                        map.put(key, c);
+                    }
+                }
+            });
+        }
+        CompletableFuture.allOf(futures)
+            .whenComplete((w, e) -> {
+                if (e != null) {
+                    rsFuture.completeExceptionally(e);
+                } else {
+                    rsFuture.complete(map);
+                }
+            }
+            );
+        return rsFuture;
+    }
+
+    @Override
     public <T> CompletableFuture<Map<String, Set<T>>> smembersAsync(final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Set<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, Set<T>> map = new LinkedHashMap<>();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(Command.SMEMBERS, key).thenAccept(v -> {
+            futures[i] = sendAsync(Command.SMEMBERS, keyArgs(true, key)).thenAccept(v -> {
                 Set c = (Set) getCollectionValue(key, cryptor, v, true, componentType);
                 if (c != null) {
                     synchronized (map) {
@@ -1034,6 +1067,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public <T> Set<T> smembers(String key, final Type componentType) {
         return (Set) smembersAsync(key, componentType).join();
+    }
+
+    @Override
+    public <T> List<T> lrange(String key, final Type componentType) {
+        return (List) lrangeAsync(key, componentType).join();
     }
 
     @Override
@@ -1069,6 +1107,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public <T> Map<String, Set<T>> smembers(final Type componentType, String... keys) {
         return (Map) smembersAsync(componentType, keys).join();
+    }
+
+    @Override
+    public <T> Map<String, List<T>> lrange(final Type componentType, String... keys) {
+        return (Map) lrangeAsync(componentType, keys).join();
     }
 
     @Override
@@ -1206,85 +1249,85 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public boolean existsStringSetItem(String key, String value) {
-        return existsStringSetItemAsync(key, value).join();
+    public boolean sismemberString(String key, String value) {
+        return sismemberStringAsync(key, value).join();
     }
 
     @Override
-    public CompletableFuture<Boolean> existsStringSetItemAsync(String key, String value) {
+    public CompletableFuture<Boolean> sismemberStringAsync(String key, String value) {
         return sendAsync(Command.SISMEMBER, key, formatValue(key, cryptor, value)).thenApply(v -> getIntValue(v, 0) > 0);
     }
 
     @Override
-    public boolean existsLongSetItem(String key, long value) {
-        return existsLongSetItemAsync(key, value).join();
+    public boolean sismemberLong(String key, long value) {
+        return sismemberLongAsync(key, value).join();
     }
 
     @Override
-    public CompletableFuture<Boolean> existsLongSetItemAsync(String key, long value) {
+    public CompletableFuture<Boolean> sismemberLongAsync(String key, long value) {
         return sendAsync(Command.SISMEMBER, key, formatValue(value)).thenApply(v -> getIntValue(v, 0) > 0);
     }
 
-    //--------------------- appendListItem ------------------------------  
+    //--------------------- rpush ------------------------------  
     @Override
-    public <T> CompletableFuture<Void> appendListItemAsync(String key, final Type componentType, T value) {
+    public <T> CompletableFuture<Void> rpushAsync(String key, final Type componentType, T value) {
         return sendAsync(Command.RPUSH, key, formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> null);
     }
 
     @Override
-    public <T> void appendListItem(String key, final Type componentType, T value) {
-        appendListItemAsync(key, componentType, value).join();
+    public <T> void rpush(String key, final Type componentType, T value) {
+        rpushAsync(key, componentType, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> appendStringListItemAsync(String key, String value) {
+    public CompletableFuture<Void> rpushStringAsync(String key, String value) {
         return sendAsync(Command.RPUSH, key, formatValue(key, cryptor, value)).thenApply(v -> null);
     }
 
     @Override
-    public void appendStringListItem(String key, String value) {
-        appendStringListItemAsync(key, value).join();
+    public void rpushString(String key, String value) {
+        rpushStringAsync(key, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> appendLongListItemAsync(String key, long value) {
+    public CompletableFuture<Void> rpushLongAsync(String key, long value) {
         return sendAsync(Command.RPUSH, key, formatValue(value)).thenApply(v -> null);
     }
 
     @Override
-    public void appendLongListItem(String key, long value) {
-        appendLongListItemAsync(key, value).join();
+    public void rpushLong(String key, long value) {
+        rpushLongAsync(key, value).join();
     }
 
-    //--------------------- removeListItem ------------------------------  
+    //--------------------- lrem ------------------------------  
     @Override
-    public <T> CompletableFuture<Integer> removeListItemAsync(String key, final Type componentType, T value) {
+    public <T> CompletableFuture<Integer> lremAsync(String key, final Type componentType, T value) {
         return sendAsync(Command.LREM, key, "0", formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> getIntValue(v, 0));
     }
 
     @Override
-    public <T> int removeListItem(String key, final Type componentType, T value) {
-        return removeListItemAsync(key, componentType, value).join();
+    public <T> int lrem(String key, final Type componentType, T value) {
+        return lremAsync(key, componentType, value).join();
     }
 
     @Override
-    public CompletableFuture<Integer> removeStringListItemAsync(String key, String value) {
+    public CompletableFuture<Integer> lremStringAsync(String key, String value) {
         return sendAsync(Command.LREM, key, "0", formatValue(key, cryptor, value)).thenApply(v -> getIntValue(v, 0));
     }
 
     @Override
-    public int removeStringListItem(String key, String value) {
-        return removeStringListItemAsync(key, value).join();
+    public int lremString(String key, String value) {
+        return lremStringAsync(key, value).join();
     }
 
     @Override
-    public CompletableFuture<Integer> removeLongListItemAsync(String key, long value) {
+    public CompletableFuture<Integer> lremLongAsync(String key, long value) {
         return sendAsync(Command.LREM, key, "0", formatValue(value)).thenApply(v -> getIntValue(v, 0));
     }
 
     @Override
-    public int removeLongListItem(String key, long value) {
-        return removeLongListItemAsync(key, value).join();
+    public int lremLong(String key, long value) {
+        return lremLongAsync(key, value).join();
     }
 
     //--------------------- sadd ------------------------------  
@@ -1304,22 +1347,22 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<String> spopStringSetItemAsync(String key) {
+    public CompletableFuture<String> spopStringAsync(String key) {
         return sendAsync(Command.SPOP, key).thenApply(v -> getStringValue(key, cryptor, v));
     }
 
     @Override
-    public CompletableFuture<Set<String>> spopStringSetItemAsync(String key, int count) {
+    public CompletableFuture<Set<String>> spopStringAsync(String key, int count) {
         return sendAsync(Command.SPOP, key, String.valueOf(count)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, String.class));
     }
 
     @Override
-    public CompletableFuture<Long> spopLongSetItemAsync(String key) {
+    public CompletableFuture<Long> spopLongAsync(String key) {
         return sendAsync(Command.SPOP, key).thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
-    public CompletableFuture<Set<Long>> spopLongSetItemAsync(String key, int count) {
+    public CompletableFuture<Set<Long>> spopLongAsync(String key, int count) {
         return sendAsync(Command.SPOP, key, String.valueOf(count)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, long.class));
     }
 
@@ -1339,43 +1382,43 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public String spopStringSetItem(String key) {
-        return spopStringSetItemAsync(key).join();
+    public String spopString(String key) {
+        return spopStringAsync(key).join();
     }
 
     @Override
-    public Set<String> spopStringSetItem(String key, int count) {
-        return spopStringSetItemAsync(key, count).join();
+    public Set<String> spopString(String key, int count) {
+        return spopStringAsync(key, count).join();
     }
 
     @Override
-    public Long spopLongSetItem(String key) {
-        return spopLongSetItemAsync(key).join();
+    public Long spopLong(String key) {
+        return spopLongAsync(key).join();
     }
 
     @Override
-    public Set<Long> spopLongSetItem(String key, int count) {
-        return spopLongSetItemAsync(key, count).join();
+    public Set<Long> spopLong(String key, int count) {
+        return spopLongAsync(key, count).join();
     }
 
     @Override
-    public CompletableFuture<Void> appendStringSetItemAsync(String key, String value) {
+    public CompletableFuture<Void> saddStringAsync(String key, String value) {
         return sendAsync(Command.SADD, key, formatValue(key, cryptor, value)).thenApply(v -> null);
     }
 
     @Override
-    public void appendStringSetItem(String key, String value) {
-        appendStringSetItemAsync(key, value).join();
+    public void saddString(String key, String value) {
+        saddStringAsync(key, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> appendLongSetItemAsync(String key, long value) {
+    public CompletableFuture<Void> saddLongAsync(String key, long value) {
         return sendAsync(Command.SADD, key, formatValue(value)).thenApply(v -> null);
     }
 
     @Override
-    public void appendLongSetItem(String key, long value) {
-        appendLongSetItemAsync(key, value).join();
+    public void saddLong(String key, long value) {
+        saddLongAsync(key, value).join();
     }
 
     //--------------------- srem ------------------------------  
@@ -1390,23 +1433,23 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> removeStringSetItemAsync(String key, String value) {
+    public CompletableFuture<Integer> sremStringAsync(String key, String value) {
         return sendAsync(Command.SREM, key, formatValue(key, cryptor, value)).thenApply(v -> getIntValue(v, 0));
     }
 
     @Override
-    public int removeStringSetItem(String key, String value) {
-        return removeStringSetItemAsync(key, value).join();
+    public int sremString(String key, String value) {
+        return sremStringAsync(key, value).join();
     }
 
     @Override
-    public CompletableFuture<Integer> removeLongSetItemAsync(String key, long value) {
+    public CompletableFuture<Integer> sremLongAsync(String key, long value) {
         return sendAsync(Command.SREM, key, formatValue(value)).thenApply(v -> getIntValue(v, 0));
     }
 
     @Override
-    public int removeLongSetItem(String key, long value) {
-        return removeLongSetItemAsync(key, value).join();
+    public int sremLong(String key, long value) {
+        return sremLongAsync(key, value).join();
     }
 
     //--------------------- queryKeys ------------------------------  

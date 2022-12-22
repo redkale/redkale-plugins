@@ -107,8 +107,8 @@ public abstract class RedisAbstractTest {
         Assertions.assertFalse(bool);
 
         source.del("keys3");
-        source.appendListItem("keys3", String.class, "vals1");
-        source.appendListItem("keys3", String.class, "vals2");
+        source.rpush("keys3", String.class, "vals1");
+        source.rpush("keys3", String.class, "vals2");
         System.out.println("-------- keys3 追加了两个值 --------");
 
         Collection col = source.getCollection("keys3", String.class);
@@ -119,7 +119,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] keys3 EXISTS : " + bool);
         Assertions.assertTrue(bool);
 
-        source.removeListItem("keys3", String.class, "vals1");
+        source.lrem("keys3", String.class, "vals1");
         col = source.getCollection("keys3", String.class);
         System.out.println("[一值] keys3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("vals2"));
@@ -323,29 +323,29 @@ public abstract class RedisAbstractTest {
         Assertions.assertEquals(map.toString(), Utility.ofMap().toString());
 
         source.del("popset");
-        source.appendStringSetItem("popset", "111");
-        source.appendStringSetItem("popset", "222");
-        source.appendStringSetItem("popset", "333");
-        source.appendStringSetItem("popset", "444");
-        source.appendStringSetItem("popset", "555");
+        source.saddString("popset", "111");
+        source.saddString("popset", "222");
+        source.saddString("popset", "333");
+        source.saddString("popset", "444");
+        source.saddString("popset", "555");
 
-        obj = source.spopStringSetItem("popset");
+        obj = source.spopString("popset");
         System.out.println("SPOP一个元素：" + obj);
         Assertions.assertTrue(List.of("111", "222", "333", "444", "555").contains(obj));
 
-        col = source.spopStringSetItem("popset", 2);
+        col = source.spopString("popset", 2);
         System.out.println("SPOP两个元素：" + col);
-        System.out.println("SPOP五个元素：" + source.spopStringSetItem("popset", 5));
+        System.out.println("SPOP五个元素：" + source.spopString("popset", 5));
 
-        source.appendLongSetItem("popset", 111);
-        source.appendLongSetItem("popset", 222);
-        source.appendLongSetItem("popset", 333);
-        source.appendLongSetItem("popset", 444);
-        source.appendLongSetItem("popset", 555);
-        System.out.println("SPOP一个元素：" + source.spopLongSetItem("popset"));
-        System.out.println("SPOP两个元素：" + source.spopLongSetItem("popset", 2));
-        System.out.println("SPOP五个元素：" + source.spopLongSetItem("popset", 5));
-        System.out.println("SPOP一个元素：" + source.spopLongSetItem("popset"));
+        source.saddLong("popset", 111);
+        source.saddLong("popset", 222);
+        source.saddLong("popset", 333);
+        source.saddLong("popset", 444);
+        source.saddLong("popset", 555);
+        System.out.println("SPOP一个元素：" + source.spopLong("popset"));
+        System.out.println("SPOP两个元素：" + source.spopLong("popset", 2));
+        System.out.println("SPOP五个元素：" + source.spopLong("popset", 5));
+        System.out.println("SPOP一个元素：" + source.spopLong("popset"));
 
         //清除
         int rs = source.del("stritem1");

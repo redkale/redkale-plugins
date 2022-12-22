@@ -1041,6 +1041,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> List<T> lrange(String key, final Type componentType) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        List<T> rs = formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
     public <T> Collection<T> getCollection(String key, final Type componentType) {
         final RedisCommands<String, byte[]> command = connectBytes();
         Collection<T> rs = getCollection(command, key, componentType);
@@ -1086,6 +1094,17 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> Map<String, List<T>> lrange(final Type componentType, String... keys) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        final Map<String, List<T>> map = new LinkedHashMap<>();
+        for (String key : keys) {
+            map.put(key, formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType));
+        }
+        releaseBytesCommand(command);
+        return map;
+    }
+
+    @Override
     public int getCollectionSize(String key) {
         final RedisCommands<String, byte[]> command = connectBytes();
         final String type = command.type(key);
@@ -1110,7 +1129,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
-    public <T> void appendListItem(String key, final Type componentType, T value) {
+    public <T> void rpush(String key, final Type componentType, T value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         byte[] bs;
         if (cryptor != null && componentType == String.class) {
@@ -1123,7 +1142,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> int removeListItem(String key, final Type componentType, T value) {
+    public <T> int lrem(String key, final Type componentType, T value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         byte[] bs;
         if (cryptor != null && componentType == String.class) {
@@ -1363,14 +1382,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void appendStringListItem(String key, String value) {
+    public void rpushString(String key, String value) {
         final RedisCommands<String, String> command = connectString();
         command.rpush(key, encryptValue(key, cryptor, value));
         releaseStringCommand(command);
     }
 
     @Override
-    public String spopStringSetItem(String key) {
+    public String spopString(String key) {
         final RedisCommands<String, String> command = connectString();
         String rs = command.spop(key);
         releaseStringCommand(command);
@@ -1378,7 +1397,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Set<String> spopStringSetItem(String key, int count) {
+    public Set<String> spopString(String key, int count) {
         final RedisCommands<String, String> command = connectString();
         Set<String> rs = command.spop(key, count);
         releaseStringCommand(command);
@@ -1386,7 +1405,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int removeStringListItem(String key, String value) {
+    public int lremString(String key, String value) {
         final RedisCommands<String, String> command = connectString();
         int rs = command.lrem(key, 1, encryptValue(key, cryptor, value)).intValue();
         releaseStringCommand(command);
@@ -1394,7 +1413,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public boolean existsStringSetItem(String key, String value) {
+    public boolean sismemberString(String key, String value) {
         final RedisCommands<String, String> command = connectString();
         boolean rs = command.sismember(key, encryptValue(key, cryptor, value));
         releaseStringCommand(command);
@@ -1402,14 +1421,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void appendStringSetItem(String key, String value) {
+    public void saddString(String key, String value) {
         final RedisCommands<String, String> command = connectString();
         command.sadd(key, encryptValue(key, cryptor, value));
         releaseStringCommand(command);
     }
 
     @Override
-    public int removeStringSetItem(String key, String value) {
+    public int sremString(String key, String value) {
         final RedisCommands<String, String> command = connectString();
         int rs = command.srem(key, encryptValue(key, cryptor, value)).intValue();
         releaseStringCommand(command);
@@ -1493,14 +1512,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void appendLongListItem(String key, long value) {
+    public void rpushLong(String key, long value) {
         final RedisCommands<String, String> command = connectString();
         command.rpush(key, String.valueOf(value));
         releaseStringCommand(command);
     }
 
     @Override
-    public Long spopLongSetItem(String key) {
+    public Long spopLong(String key) {
         final RedisCommands<String, String> command = connectString();
         String value = command.spop(key);
         releaseStringCommand(command);
@@ -1508,7 +1527,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Set<Long> spopLongSetItem(String key, int count) {
+    public Set<Long> spopLong(String key, int count) {
         final RedisCommands<String, String> command = connectString();
         Set<Long> rs = (Set) formatLongCollection(true, command.spop(key, count));
         releaseStringCommand(command);
@@ -1516,7 +1535,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int removeLongListItem(String key, long value) {
+    public int lremLong(String key, long value) {
         final RedisCommands<String, String> command = connectString();
         int rs = command.lrem(key, 1, String.valueOf(value)).intValue();
         releaseStringCommand(command);
@@ -1524,7 +1543,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public boolean existsLongSetItem(String key, long value) {
+    public boolean sismemberLong(String key, long value) {
         final RedisCommands<String, String> command = connectString();
         boolean rs = command.sismember(key, String.valueOf(value));
         releaseStringCommand(command);
@@ -1532,14 +1551,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void appendLongSetItem(String key, long value) {
+    public void saddLong(String key, long value) {
         final RedisCommands<String, String> command = connectString();
         command.sadd(key, String.valueOf(value));
         releaseStringCommand(command);
     }
 
     @Override
-    public int removeLongSetItem(String key, long value) {
+    public int sremLong(String key, long value) {
         final RedisCommands<String, String> command = connectString();
         int rs = command.srem(key, String.valueOf(value)).intValue();
         releaseStringCommand(command);
@@ -1773,6 +1792,13 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType) {
+        return connectBytesAsync().thenCompose(command -> {
+            return command.lrange(key, 0, -1).thenApply(list -> formatCollection(key, cryptor, list, convert, componentType));
+        });
+    }
+
+    @Override
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
             return getCollectionAsync(command, key, componentType);
@@ -1817,6 +1843,25 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                         }
                     }).toCompletableFuture();
                 }
+            }
+            return CompletableFuture.allOf(futures).thenApply(v -> map);
+        });
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, List<T>>> lrangeAsync(Type componentType, String... keys) {
+        return connectBytesAsync().thenCompose(command -> {
+            final Map<String, List<T>> map = new LinkedHashMap<>();
+            final CompletableFuture[] futures = new CompletableFuture[keys.length];
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
+                    if (rs != null) {
+                        synchronized (map) {
+                            map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
+                        }
+                    }
+                }).toCompletableFuture();
             }
             return CompletableFuture.allOf(futures).thenApply(v -> map);
         });
@@ -1876,14 +1921,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> appendListItemAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Void> rpushAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.rpush(key, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))));
         });
     }
 
     @Override
-    public <T> CompletableFuture<Integer> removeListItemAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Integer> lremAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.lrem(key, 1, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))).thenApply(v -> v.intValue()));
         });
@@ -2072,28 +2117,28 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> appendStringListItemAsync(String key, String value) {
+    public CompletableFuture<Void> rpushStringAsync(String key, String value) {
         return connectStringAsync().thenCompose(command -> {
             return completableStringFuture(key, null, command, command.rpush(key, encryptValue(key, cryptor, value)));
         });
     }
 
     @Override
-    public CompletableFuture<String> spopStringSetItemAsync(String key) {
+    public CompletableFuture<String> spopStringAsync(String key) {
         return connectStringAsync().thenCompose(command -> {
             return completableStringFuture(key, cryptor, command, command.spop(key));
         });
     }
 
     @Override
-    public CompletableFuture<Set<String>> spopStringSetItemAsync(String key, int count) {
+    public CompletableFuture<Set<String>> spopStringAsync(String key, int count) {
         return connectStringAsync().thenCompose(command -> {
             return completableStringFuture(key, null, command, command.spop(key, count).thenApply(list -> formatStringCollection(key, cryptor, true, list)));
         });
     }
 
     @Override
-    public CompletableFuture<Integer> removeStringListItemAsync(String key, String value) {
+    public CompletableFuture<Integer> lremStringAsync(String key, String value) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的int值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.lrem(key, 1, value).thenApply(v -> v.intValue()));
@@ -2101,7 +2146,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Boolean> existsStringSetItemAsync(String key, String value) {
+    public CompletableFuture<Boolean> sismemberStringAsync(String key, String value) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的boolean值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.sismember(key, value));
@@ -2109,7 +2154,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> appendStringSetItemAsync(String key, String value) {
+    public CompletableFuture<Void> saddStringAsync(String key, String value) {
         return connectStringAsync().thenCompose(command -> {
             //不处理返回值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.sadd(key, value));
@@ -2117,7 +2162,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> removeStringSetItemAsync(String key, String value) {
+    public CompletableFuture<Integer> sremStringAsync(String key, String value) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的int值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.srem(key, value).thenApply(v -> v.intValue()));
@@ -2220,7 +2265,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> appendLongListItemAsync(String key, long value) {
+    public CompletableFuture<Void> rpushLongAsync(String key, long value) {
         return connectStringAsync().thenCompose(command -> {
             //不处理返回值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.rpush(key, String.valueOf(value)));
@@ -2228,7 +2273,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long> spopLongSetItemAsync(String key) {
+    public CompletableFuture<Long> spopLongAsync(String key) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.spop(key).thenApply(v -> v == null ? null : Long.parseLong(v)));
@@ -2236,7 +2281,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Set<Long>> spopLongSetItemAsync(String key, int count) {
+    public CompletableFuture<Set<Long>> spopLongAsync(String key, int count) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.spop(key, count).thenApply(v -> v == null ? null : formatLongCollection(true, v)));
@@ -2244,7 +2289,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> removeLongListItemAsync(String key, long value) {
+    public CompletableFuture<Integer> lremLongAsync(String key, long value) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的int值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.lrem(key, 1, String.valueOf(value)).thenApply(v -> v.intValue()));
@@ -2252,7 +2297,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Boolean> existsLongSetItemAsync(String key, long value) {
+    public CompletableFuture<Boolean> sismemberLongAsync(String key, long value) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的boolean值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.sismember(key, String.valueOf(value)));
@@ -2260,7 +2305,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> appendLongSetItemAsync(String key, long value) {
+    public CompletableFuture<Void> saddLongAsync(String key, long value) {
         return connectStringAsync().thenCompose(command -> {
             //不处理返回值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.sadd(key, String.valueOf(value)));
@@ -2268,7 +2313,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> removeLongSetItemAsync(String key, long value) {
+    public CompletableFuture<Integer> sremLongAsync(String key, long value) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的int值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.srem(key, String.valueOf(value)).thenApply(v -> v.intValue()));
