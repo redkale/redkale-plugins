@@ -828,8 +828,28 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Integer> llenAsync(String key) {
+        return sendAsync("LLEN", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
+    }
+
+    @Override
+    public CompletableFuture<Integer> scardAsync(String key) {
+        return sendAsync("SCARD", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
+    }
+
+    @Override
     public int getCollectionSize(String key) {
         return getCollectionSizeAsync(key).join();
+    }
+
+    @Override
+    public int llen(String key) {
+        return llenAsync(key).join();
+    }
+
+    @Override
+    public int scard(String key) {
+        return scardAsync(key).join();
     }
 
     @Override

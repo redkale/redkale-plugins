@@ -1119,6 +1119,22 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public int llen(String key) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        int rs = command.llen(key).intValue();
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public int scard(String key) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        int rs = command.scard(key).intValue();
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
     public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
         final RedisCommands<String, byte[]> command = connectBytes();
         command.expire(key, Duration.ofSeconds(expireSeconds));
@@ -1895,6 +1911,24 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                 } else { //set 
                     return command.scard(key).thenApply(v -> v.intValue());
                 }
+            }));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> llenAsync(String key) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.type(key).thenCompose(type -> {
+                return command.llen(key).thenApply(v -> v.intValue());
+            }));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> scardAsync(String key) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.type(key).thenCompose(type -> {
+                return command.scard(key).thenApply(v -> v.intValue());
             }));
         });
     }

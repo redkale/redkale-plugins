@@ -885,8 +885,28 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Integer> llenAsync(String key) {
+        return sendAsync(Command.TYPE, key).thenCompose(t -> sendAsync(Command.LLEN, key).thenApply(v -> getIntValue(v, 0)));
+    }
+
+    @Override
+    public CompletableFuture<Integer> scardAsync(String key) {
+        return sendAsync(Command.TYPE, key).thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getIntValue(v, 0)));
+    }
+
+    @Override
     public int getCollectionSize(String key) {
         return getCollectionSizeAsync(key).join();
+    }
+
+    @Override
+    public int llen(String key) {
+        return llenAsync(key).join();
+    }
+
+    @Override
+    public int scard(String key) {
+        return scardAsync(key).join();
     }
 
     @Override

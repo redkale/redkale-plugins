@@ -1022,6 +1022,26 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Integer> llenAsync(String key) {
+        return completableFuture(client.getList(key).sizeAsync());
+    }
+
+    @Override
+    public CompletableFuture<Integer> scardAsync(String key) {
+        return completableFuture(client.getSet(key).sizeAsync());
+    }
+
+    @Override
+    public int llen(String key) {
+        return client.getList(key).size();
+    }
+
+    @Override
+    public int scard(String key) {
+        return client.getSet(key).size();
+    }
+
+    @Override
     public int getCollectionSize(String key) {
         String type = client.getScript().eval(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE);
         if (String.valueOf(type).contains("list")) {
