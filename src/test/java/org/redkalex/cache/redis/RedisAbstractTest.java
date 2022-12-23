@@ -52,8 +52,7 @@ public abstract class RedisAbstractTest {
         Assertions.assertTrue(Utility.equalsElement(array, new Object[]{"333", null, "444"}));
 
         source.del("objitem1", "objitem2");
-        source.set("objitem1", Flipper.class, new Flipper(10));
-        source.set("objitem2", Flipper.class, new Flipper(20));
+        source.mset("objitem1", new Flipper(10), "objitem2", new Flipper(20));
 
         Map<String, Flipper> flippermap = source.mget(Flipper.class, "objitem1", "objitem2");
         System.out.println("[有值] MGET : " + flippermap);

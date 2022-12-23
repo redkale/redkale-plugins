@@ -287,6 +287,20 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return getexBytesAsync(key, expireSeconds).join();
     }
 
+    @Override
+    public CompletableFuture<Void> msetAsync(final Object... keyVals) {
+        if (keyVals.length % 2 != 0) {
+            throw new RuntimeException("key value must be paired");
+        }
+        byte[][] bs = new byte[keyVals.length][];
+        for (int i = 0; i < keyVals.length; i += 2) {
+            String key = keyVals[i].toString();
+            bs[i] = key.getBytes(StandardCharsets.UTF_8);
+            bs[i + 1] = formatValue(key, cryptor, keyVals[i + 1]);
+        }
+        return sendAsync("MSET", keyVals[0].toString(), bs).thenApply(v -> v.getVoidValue());
+    }
+
     //--------------------- setex ------------------------------
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, T value) {
@@ -346,6 +360,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<T> getSetAsync(String key, Convert convert, final Type type, T value) {
         return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getObjectValue(key, cryptor, type));
+    }
+
+    @Override
+    public void mset(final Object... keyVals) {
+        msetAsync(keyVals).join();
     }
 
     @Override

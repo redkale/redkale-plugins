@@ -346,7 +346,27 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return getexLongAsync(key, expireSeconds, defValue).join();
     }
 
+    @Override
+    public void mset(final Object... keyVals) {
+        msetAsync(keyVals).join();
+    }
+
     //--------------------- set ------------------------------
+    @Override
+    public CompletableFuture<Void> msetAsync(final Object... keyVals) {
+        if (keyVals.length % 2 != 0) {
+            throw new RuntimeException("key value must be paired");
+        }
+        String[] args = new String[keyVals.length];
+        for (int i = 0; i < keyVals.length; i += 2) {
+            String key = keyVals[i].toString();
+            Object val = keyVals[i + 1];
+            args[i] = key;
+            args[i + 1] = formatValue(key, cryptor, convert, val.getClass(), val);
+        }
+        return sendAsync(Command.MSET, args).thenApply(v -> null);
+    }
+
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, T value) {
         return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, value.getClass(), value)).thenApply(v -> null);

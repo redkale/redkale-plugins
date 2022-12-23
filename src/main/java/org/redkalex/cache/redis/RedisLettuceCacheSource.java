@@ -445,6 +445,20 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
 //    //--------------------- setex ------------------------------
     @Override
+    public CompletableFuture<Void> msetAsync(final Object... keyVals) {
+        if (keyVals.length % 2 != 0) {
+            throw new RuntimeException("key value must be paired");
+        }
+        Map<String, byte[]> map = new LinkedHashMap<>();
+        for (int i = 0; i < keyVals.length; i += 2) {
+            String key = keyVals[i].toString();
+            Object val = keyVals[i + 1];
+            map.put(key, encryptValue(key, cryptor, convert, val));
+        }
+        return connectBytesAsync().thenCompose(command -> completableBytesFuture(command, command.mset(map)));
+    }
+
+    @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.set(key, value == null ? null : encryptValue(key, cryptor, value.getClass(), convert0, value)));
@@ -501,6 +515,22 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             return completableBytesFuture(command, command.setGet(key, encryptValue(key, cryptor, type, c, value))
                 .thenApply(old -> decryptValue(key, cryptor, c, type, old)));
         });
+    }
+
+    @Override
+    public void mset(final Object... keyVals) {
+        if (keyVals.length % 2 != 0) {
+            throw new RuntimeException("key value must be paired");
+        }
+        Map<String, byte[]> map = new LinkedHashMap<>();
+        for (int i = 0; i < keyVals.length; i += 2) {
+            String key = keyVals[i].toString();
+            Object val = keyVals[i + 1];
+            map.put(key, encryptValue(key, cryptor, convert, val));
+        }
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.mset(map);
+        releaseBytesCommand(command);
     }
 
     @Override
