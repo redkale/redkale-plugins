@@ -181,7 +181,9 @@ public abstract class RedisAbstractTest {
         System.out.println("newnum 值 : " + num);
         Assertions.assertEquals(0, num);
 
-        Map<String, Collection> mapcol = (Map) source.getStringCollectionMap(true, "sets3", "sets4");
+        Map<String, Collection> mapcol = new LinkedHashMap<>();
+        mapcol.put("sets3", source.smembersString("sets3"));
+        mapcol.put("sets4", source.smembersString("sets4"));
         System.out.println("sets3&sets4:  " + mapcol);
         Map<String, Collection> news = new HashMap<>();
         mapcol.forEach((x, y) -> {
@@ -227,7 +229,9 @@ public abstract class RedisAbstractTest {
 
         source.sadd("myaddrs2", InetSocketAddress.class, addr88);
         source.sadd("myaddrs2", InetSocketAddress.class, addr99);
-        mapcol = (Map) source.getCollectionMap(true, InetSocketAddress.class, "myaddrs", "myaddrs2");
+        mapcol.clear();
+        mapcol.put("myaddrs", source.smembers("myaddrs", InetSocketAddress.class));
+        mapcol.put("myaddrs2", source.smembers("myaddrs2", InetSocketAddress.class));
         System.out.println("myaddrs&myaddrs2:  " + mapcol);
         Map<String, Collection> news2 = new HashMap<>();
         mapcol.forEach((x, y) -> {
@@ -390,6 +394,7 @@ public abstract class RedisAbstractTest {
 //        }
         source.del("bigmap");
         {
+            System.out.println("------开始进行压力测试------");
             int count = Runtime.getRuntime().availableProcessors() * 10;
             source.del("hmap");
             source.del("testnumber");
@@ -431,7 +436,7 @@ public abstract class RedisAbstractTest {
             over.await();
             long e = System.currentTimeMillis() - s;
             System.out.println("hmap.key1 = " + source.hgetLong("hmap", "key1", -1));
-            System.out.println("结束了, 耗时: " + e + "ms");
+            System.out.println("结束了, 循环" + count + "次耗时: " + e + "ms");
         }
     }
 }
