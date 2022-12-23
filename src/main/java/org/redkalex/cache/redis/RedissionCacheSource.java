@@ -443,6 +443,16 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Void> msetAsync(Map map) {
+        Map<String, byte[]> bs = new LinkedHashMap<>();
+        map.forEach((key, val) -> {
+            bs.put(key.toString(), val instanceof String ? encryptValue(key.toString(), cryptor, val.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key.toString(), cryptor, this.convert, val));
+        });
+        final RBuckets bucket = client.getBuckets(org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.setAsync(bs).thenApply(v -> null));
+    }
+
+    @Override
     public void mset(Object... keyVals) {
         Map<String, byte[]> map = new LinkedHashMap<>();
         for (int i = 0; i < keyVals.length; i += 2) {
@@ -451,6 +461,15 @@ public class RedissionCacheSource extends AbstractRedisSource {
             map.put(key, val instanceof String ? encryptValue(key, cryptor, val.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, this.convert, val));
         }
         client.getBuckets(org.redisson.client.codec.ByteArrayCodec.INSTANCE).set(map);
+    }
+
+    @Override
+    public void mset(Map map) {
+        Map<String, byte[]> bs = new LinkedHashMap<>();
+        map.forEach((key, val) -> {
+            bs.put(key.toString(), val instanceof String ? encryptValue(key.toString(), cryptor, val.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key.toString(), cryptor, this.convert, val));
+        });
+        client.getBuckets(org.redisson.client.codec.ByteArrayCodec.INSTANCE).set(bs);
     }
 
     @Override
@@ -791,8 +810,18 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (int i = 0; i < values.length; i += 2) {
             vals.put(String.valueOf(values[i]), values[i + 1] instanceof String ? encryptValue(key, cryptor, values[i + 1].toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, this.convert, values[i + 1]));
         }
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        map.putAll(vals);
+        RMap<String, byte[]> rm = client.getMap(key, MapByteArrayCodec.instance);
+        rm.putAll(vals);
+    }
+
+    @Override
+    public void hmset(final String key, final Map map) {
+        Map<String, byte[]> vals = new LinkedHashMap<>();
+        map.forEach((k, v) -> {
+            vals.put(k.toString(), v instanceof String ? encryptValue(key, cryptor, v.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, this.convert, v));
+        });
+        RMap<String, byte[]> rm = client.getMap(key, MapByteArrayCodec.instance);
+        rm.putAll(vals);
     }
 
     @Override
@@ -979,8 +1008,18 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (int i = 0; i < values.length; i += 2) {
             vals.put(String.valueOf(values[i]), encryptValue(key, cryptor, convert, values[i + 1]));
         }
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        return completableFuture(map.putAllAsync(vals));
+        RMap<String, byte[]> rm = client.getMap(key, MapByteArrayCodec.instance);
+        return completableFuture(rm.putAllAsync(vals));
+    }
+
+    @Override
+    public CompletableFuture<Void> hmsetAsync(final String key, final Map map) {
+        Map<String, byte[]> vals = new LinkedHashMap<>();
+        map.forEach((k, v) -> {
+            vals.put(k.toString(), encryptValue(key, cryptor, convert, v));
+        });
+        RMap<String, byte[]> rm = client.getMap(key, MapByteArrayCodec.instance);
+        return completableFuture(rm.putAllAsync(vals));
     }
 
     @Override

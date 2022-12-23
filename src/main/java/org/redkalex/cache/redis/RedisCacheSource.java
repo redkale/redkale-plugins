@@ -301,6 +301,21 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return sendAsync("MSET", keyVals[0].toString(), bs).thenApply(v -> v.getVoidValue());
     }
 
+    @Override
+    public CompletableFuture<Void> msetAsync(final Map map) {
+        if (map == null || map.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        List<byte[]> bs = new ArrayList<>();
+        StringWrapper onekey = new StringWrapper();
+        map.forEach((key, val) -> {
+            onekey.setValue(key.toString());
+            bs.add(key.toString().getBytes(StandardCharsets.UTF_8));
+            bs.add(formatValue(key.toString(), cryptor, val));
+        });
+        return sendAsync("MSET", onekey.getValue(), bs.toArray(new byte[bs.size()][])).thenApply(v -> v.getVoidValue());
+    }
+
     //--------------------- setex ------------------------------
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, T value) {
@@ -365,6 +380,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public void mset(final Object... keyVals) {
         msetAsync(keyVals).join();
+    }
+
+    @Override
+    public void mset(final Map map) {
+        msetAsync(map).join();
     }
 
     @Override
@@ -667,6 +687,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public void hmset(final String key, final Map map) {
+        hmsetAsync(key, map).join();
+    }
+
+    @Override
     public List<Serializable> hmget(final String key, final Type type, final String... fields) {
         return hmgetAsync(key, type, fields).join();
     }
@@ -808,6 +833,20 @@ public final class RedisCacheSource extends AbstractRedisSource {
             bs[i + 2] = formatValue(key, cryptor, values[i + 1]);
         }
         return sendAsync("HMSET", key, bs).thenApply(v -> v.getVoidValue());
+    }
+
+    @Override
+    public CompletableFuture<Void> hmsetAsync(final String key, final Map map) {
+        if (map == null || map.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        List<byte[]> bs = new ArrayList<>();
+        bs.add(key.getBytes(StandardCharsets.UTF_8));
+        map.forEach((k, v) -> {
+            bs.add(k.toString().getBytes(StandardCharsets.UTF_8));
+            bs.add(formatValue(k.toString(), cryptor, v));
+        });
+        return sendAsync("HMSET", key, bs.toArray(new byte[bs.size()][])).thenApply(v -> v.getVoidValue());
     }
 
     @Override

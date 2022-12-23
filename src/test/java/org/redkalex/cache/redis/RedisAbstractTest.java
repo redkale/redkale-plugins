@@ -52,7 +52,7 @@ public abstract class RedisAbstractTest {
         Assertions.assertTrue(Utility.equalsElement(array, new Object[]{"333", null, "444"}));
 
         source.del("objitem1", "objitem2");
-        source.mset("objitem1", new Flipper(10), "objitem2", new Flipper(20));
+        source.mset(Utility.ofMap("objitem1", new Flipper(10), "objitem2", new Flipper(20)));
 
         Map<String, Flipper> flippermap = source.mget(Flipper.class, "objitem1", "objitem2");
         System.out.println("[有值] MGET : " + flippermap);
@@ -265,7 +265,7 @@ public abstract class RedisAbstractTest {
         System.out.println("hmap.key1 值 : " + num);
         Assertions.assertEquals(1L, num);
 
-        source.hmset("hmap", "key2", "haha", "key3", 333);
+        source.hmset("hmap", Utility.ofMap("key2", "haha", "key3", 333));
         source.hmset("hmap", "sm", (HashMap) Utility.ofMap("a", "aa", "b", "bb"));
 
         map = source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING);

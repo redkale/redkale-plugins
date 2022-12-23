@@ -459,6 +459,18 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Void> msetAsync(final Map map) {
+        if (map == null || map.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        Map<String, byte[]> rs = new LinkedHashMap<>();
+        map.forEach((key, val) -> {
+            rs.put(key.toString(), encryptValue(key.toString(), cryptor, convert, val));
+        });
+        return connectBytesAsync().thenCompose(command -> completableBytesFuture(command, command.mset(rs)));
+    }
+
+    @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.set(key, value == null ? null : encryptValue(key, cryptor, value.getClass(), convert0, value)));
@@ -530,6 +542,20 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         }
         final RedisCommands<String, byte[]> command = connectBytes();
         command.mset(map);
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public void mset(final Map map) {
+        if (map == null || map.isEmpty()) {
+            return;
+        }
+        Map<String, byte[]> rs = new LinkedHashMap<>();
+        map.forEach((key, val) -> {
+            rs.put(key.toString(), encryptValue(key.toString(), cryptor, convert, val));
+        });
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.mset(rs);
         releaseBytesCommand(command);
     }
 
@@ -1004,6 +1030,23 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             }
             vals.put(String.valueOf(values[i]), bs);
         }
+        final RedisCommands<String, byte[]> command = connectBytes();
+        command.hmset(key, vals);
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public void hmset(final String key, final Map map) {
+        Map<String, byte[]> vals = new LinkedHashMap<>();
+        map.forEach((k, v) -> {
+            byte[] bs;
+            if (cryptor != null && v != null) {
+                bs = v instanceof String ? cryptor.encrypt(key, v.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, v.getClass(), this.convert, v);
+            } else {
+                bs = v instanceof String ? v.toString().getBytes(StandardCharsets.UTF_8) : this.convert.convertToBytes(v);
+            }
+            vals.put(k.toString(), bs);
+        });
         final RedisCommands<String, byte[]> command = connectBytes();
         command.hmset(key, vals);
         releaseBytesCommand(command);
@@ -1770,8 +1813,31 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public CompletableFuture<Void> hmsetAsync(String key, Serializable... values) {
         Map<String, byte[]> vals = new LinkedHashMap<>();
         for (int i = 0; i < values.length; i += 2) {
-            vals.put(String.valueOf(values[i]), this.convert.convertToBytes(values[i + 1]));
+            byte[] bs;
+            if (cryptor != null && values[i + 1] != null) {
+                bs = values[i + 1] instanceof String ? cryptor.encrypt(key, values[i + 1].toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, values[i + 1].getClass(), this.convert, values[i + 1]);
+            } else {
+                bs = values[i + 1] instanceof String ? values[i + 1].toString().getBytes(StandardCharsets.UTF_8) : this.convert.convertToBytes(values[i + 1]);
+            }
+            vals.put(String.valueOf(values[i]), bs);
         }
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.hmset(key, vals));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> hmsetAsync(String key, Map map) {
+        Map<String, byte[]> vals = new LinkedHashMap<>();
+        map.forEach((k, v) -> {
+            byte[] bs;
+            if (cryptor != null && v != null) {
+                bs = v instanceof String ? cryptor.encrypt(key, v.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, v.getClass(), this.convert, v);
+            } else {
+                bs = v instanceof String ? v.toString().getBytes(StandardCharsets.UTF_8) : this.convert.convertToBytes(v);
+            }
+            vals.put(k.toString(), bs);
+        });
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.hmset(key, vals));
         });

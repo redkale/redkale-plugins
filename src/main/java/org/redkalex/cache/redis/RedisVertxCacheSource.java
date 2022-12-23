@@ -351,6 +351,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         msetAsync(keyVals).join();
     }
 
+    @Override
+    public void mset(final Map map) {
+        msetAsync(map).join();
+    }
+
     //--------------------- set ------------------------------
     @Override
     public CompletableFuture<Void> msetAsync(final Object... keyVals) {
@@ -365,6 +370,19 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             args[i + 1] = formatValue(key, cryptor, convert, val.getClass(), val);
         }
         return sendAsync(Command.MSET, args).thenApply(v -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> msetAsync(final Map map) {
+        if (map == null || map.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        List<String> bs = new ArrayList<>();
+        map.forEach((key, val) -> {
+            bs.add(key.toString());
+            bs.add(formatValue(key.toString(), cryptor, convert, val.getClass(), val));
+        });
+        return sendAsync(Command.MSET, bs.toArray(new String[bs.size()])).thenApply(v -> null);
     }
 
     @Override
@@ -708,6 +726,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public void hmset(final String key, final Map map) {
+        hmsetAsync(key, map).join();
+    }
+
+    @Override
     public List<Serializable> hmget(final String key, final Type type, final String... fields) {
         return hmgetAsync(key, type, fields).join();
     }
@@ -847,6 +870,20 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             args[i + 2] = formatValue(key, cryptor, values[i + 1]);
         }
         return sendAsync(Command.HMSET, args).thenApply(v -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> hmsetAsync(final String key, final Map map) {
+        if (map == null || map.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        List<String> bs = new ArrayList<>();
+        bs.add(key);
+        map.forEach((k, v) -> {
+            bs.add(k.toString());
+            bs.add(formatValue(k.toString(), cryptor, convert, v.getClass(), v));
+        });
+        return sendAsync(Command.HMSET, bs.toArray(new String[bs.size()])).thenApply(v -> null);
     }
 
     @Override
