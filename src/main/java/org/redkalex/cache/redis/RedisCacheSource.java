@@ -50,7 +50,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    @Resource(name = RESNAME_APP_CLIENT_ASYNCGROUP)
+    @Resource(name = RESNAME_APP_CLIENT_ASYNCGROUP, required = false)
     protected AsyncGroup asyncGroup;
 
     protected RedisCacheClient client;
@@ -883,23 +883,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, Long>> getLongMapAsync(String... keys) {
-        byte[][] bs = new byte[keys.length][];
-        for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
-        }
-        return sendAsync("MGET", keys[0], bs).thenApply(v -> {
-            List list = (List) v.getCollectionValue(keys[0], cryptor, false, long.class);
-            Map map = new LinkedHashMap<>();
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
-            }
-            return map;
-        });
-    }
-
-    @Override
     public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
         byte[][] bs = new byte[keys.length][];
         for (int i = 0; i < bs.length; i++) {
@@ -934,7 +917,24 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, String>> getStringMapAsync(String... keys) {
+    public CompletableFuture<Map<String, Long>> mgetLongAsync(String... keys) {
+        byte[][] bs = new byte[keys.length][];
+        for (int i = 0; i < bs.length; i++) {
+            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
+        }
+        return sendAsync("MGET", keys[0], bs).thenApply(v -> {
+            List list = (List) v.getCollectionValue(keys[0], cryptor, false, long.class);
+            Map map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                Object obj = list.get(i);
+                if (obj != null) map.put(keys[i], list.get(i));
+            }
+            return map;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Map<String, String>> mgetStringAsync(final String... keys) {
         byte[][] bs = new byte[keys.length][];
         for (int i = 0; i < bs.length; i++) {
             bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
@@ -951,13 +951,30 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> getMapAsync(final Type componentType, String... keys) {
+    public <T> CompletableFuture<Map<String, T>> mgetAsync(final Type componentType, final String... keys) {
         byte[][] bs = new byte[keys.length][];
         for (int i = 0; i < bs.length; i++) {
             bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
         }
         return sendAsync("MGET", keys[0], bs).thenApply(v -> {
             List list = (List) v.getCollectionValue(keys[0], cryptor, false, componentType);
+            Map map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                Object obj = list.get(i);
+                if (obj != null) map.put(keys[i], list.get(i));
+            }
+            return map;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Map<String, byte[]>> mgetBytesAsync(final String... keys) {
+        byte[][] bs = new byte[keys.length][];
+        for (int i = 0; i < bs.length; i++) {
+            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
+        }
+        return sendAsync("MGET", keys[0], bs).thenApply(v -> {
+            List list = (List) v.getCollectionValue(keys[0], cryptor, false, byte[].class);
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
@@ -1061,18 +1078,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Map<String, Long> getLongMap(final String... keys) {
-        return getLongMapAsync(keys).join();
-    }
-
-    @Override
     public Long[] getLongArray(final String... keys) {
         return getLongArrayAsync(keys).join();
-    }
-
-    @Override
-    public Map<String, String> getStringMap(final String... keys) {
-        return getStringMapAsync(keys).join();
     }
 
     @Override
@@ -1081,8 +1088,23 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> getMap(final Type componentType, final String... keys) {
-        return (Map) getMapAsync(componentType, keys).join();
+    public Map<String, byte[]> mgetBytes(final String... keys) {
+        return mgetBytesAsync(keys).join();
+    }
+
+    @Override
+    public Map<String, Long> mgetLong(final String... keys) {
+        return mgetLongAsync(keys).join();
+    }
+
+    @Override
+    public Map<String, String> mgetString(final String... keys) {
+        return mgetStringAsync(keys).join();
+    }
+
+    @Override
+    public <T> Map<String, T> mget(final Type componentType, final String... keys) {
+        return (Map) mgetAsync(componentType, keys).join();
     }
 
     @Override

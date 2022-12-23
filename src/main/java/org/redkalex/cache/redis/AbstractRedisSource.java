@@ -24,10 +24,10 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
 
     protected String name;
 
-    @Resource
+    @Resource(required = false)
     protected ResourceFactory resourceFactory;
 
-    @Resource
+    @Resource(required = false)
     protected JsonConvert defaultConvert;
 
     @Resource(name = "$_convert", required = false)
@@ -93,6 +93,7 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
 
     protected <T> T decryptValue(String key, RedisCryptor cryptor, Convert c, Type type, byte[] bs) {
         if (bs == null) return null;
+        if (type == byte[].class) return (T) bs;
         if (cryptor == null || (type instanceof Class && (((Class) type).isPrimitive() || Number.class.isAssignableFrom((Class) type)))) {
             return (T) (c == null ? this.convert : c).convertFrom(type, bs);
         }

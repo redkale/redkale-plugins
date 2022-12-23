@@ -1049,13 +1049,25 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> getMap(final Type componentType, final String... keys) {
+    public <T> Map<String, T> mget(final Type componentType, final String... keys) {
         final RedisCommands<String, byte[]> command = connectBytes();
         List<KeyValue<String, byte[]>> rs = command.mget(keys);
         releaseBytesCommand(command);
         Map<String, T> map = new LinkedHashMap(rs.size());
         rs.forEach(kv -> {
             if (kv.hasValue()) map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
+        });
+        return map;
+    }
+
+    @Override
+    public Map<String, byte[]> mgetBytes(final String... keys) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        List<KeyValue<String, byte[]>> rs = command.mget(keys);
+        releaseBytesCommand(command);
+        Map<String, byte[]> map = new LinkedHashMap(rs.size());
+        rs.forEach(kv -> {
+            if (kv.hasValue()) map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, byte[].class, kv.getValue()));
         });
         return map;
     }
@@ -1319,7 +1331,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Map<String, String> getStringMap(final String... keys) {
+    public Map<String, String> mgetString(final String... keys) {
         final RedisCommands<String, String> command = connectString();
         List<KeyValue<String, String>> rs = command.mget(keys);
         releaseStringCommand(command);
@@ -1464,7 +1476,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Map<String, Long> getLongMap(String... keys) {
+    public Map<String, Long> mgetLong(String... keys) {
         final RedisCommands<String, String> command = connectString();
         List<KeyValue<String, String>> rs = command.mget(keys);
         releaseStringCommand(command);
@@ -1800,12 +1812,25 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> getMapAsync(Type componentType, String... keys) {
+    public <T> CompletableFuture<Map<String, T>> mgetAsync(Type componentType, String... keys) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.mget(keys).thenApply((List<KeyValue<String, byte[]>> rs) -> {
                 Map<String, T> map = new LinkedHashMap(rs.size());
                 rs.forEach(kv -> {
                     if (kv.hasValue()) map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
+                });
+                return map;
+            }));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Map<String, byte[]>> mgetBytesAsync(String... keys) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.mget(keys).thenApply((List<KeyValue<String, byte[]>> rs) -> {
+                Map<String, byte[]> map = new LinkedHashMap(rs.size());
+                rs.forEach(kv -> {
+                    if (kv.hasValue()) map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, byte[].class, kv.getValue()));
                 });
                 return map;
             }));
@@ -2056,7 +2081,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, String>> getStringMapAsync(String... keys) {
+    public CompletableFuture<Map<String, String>> mgetStringAsync(String... keys) {
         return connectStringAsync().thenCompose(command -> {
             return completableStringFuture(null, null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
                 Map<String, String> map = new LinkedHashMap<>();
@@ -2200,7 +2225,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, Long>> getLongMapAsync(String... keys) {
+    public CompletableFuture<Map<String, Long>> mgetLongAsync(String... keys) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
             return completableStringFuture(keys[0], null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {

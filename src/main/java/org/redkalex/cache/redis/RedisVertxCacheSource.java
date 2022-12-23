@@ -930,7 +930,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, Long>> getLongMapAsync(String... keys) {
+    public CompletableFuture<Map<String, Long>> mgetLongAsync(String... keys) {
         return sendAsync(Command.MGET, keys).thenApply(v -> {
             List list = (List) getCollectionValue(null, null, v, false, long.class);
             Map map = new LinkedHashMap<>();
@@ -969,7 +969,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, String>> getStringMapAsync(String... keys) {
+    public CompletableFuture<Map<String, String>> mgetStringAsync(String... keys) {
         return sendAsync(Command.MGET, keys).thenApply(v -> {
             List list = (List) getCollectionValue(keys[0], cryptor, v, false, String.class);
             Map map = new LinkedHashMap<>();
@@ -982,9 +982,22 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> getMapAsync(final Type componentType, String... keys) {
+    public <T> CompletableFuture<Map<String, T>> mgetAsync(final Type componentType, String... keys) {
         return sendAsync(Command.MGET, keys).thenApply(v -> {
             List list = (List) getCollectionValue(keys[0], cryptor, v, false, componentType);
+            Map map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                Object obj = list.get(i);
+                if (obj != null) map.put(keys[i], list.get(i));
+            }
+            return map;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Map<String, byte[]>> mgetBytesAsync(String... keys) {
+        return sendAsync(Command.MGET, keys).thenApply(v -> {
+            List list = (List) getCollectionValue(keys[0], cryptor, v, false, byte[].class);
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
@@ -1095,8 +1108,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Map<String, Long> getLongMap(final String... keys) {
-        return getLongMapAsync(keys).join();
+    public Map<String, Long> mgetLong(final String... keys) {
+        return mgetLongAsync(keys).join();
     }
 
     @Override
@@ -1105,8 +1118,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Map<String, String> getStringMap(final String... keys) {
-        return getStringMapAsync(keys).join();
+    public Map<String, String> mgetString(final String... keys) {
+        return mgetStringAsync(keys).join();
     }
 
     @Override
@@ -1115,8 +1128,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> getMap(final Type componentType, final String... keys) {
-        return (Map) getMapAsync(componentType, keys).join();
+    public <T> Map<String, T> mget(final Type componentType, final String... keys) {
+        return (Map) mgetAsync(componentType, keys).join();
+    }
+
+    @Override
+    public Map<String, byte[]> mgetBytes(final String... keys) {
+        return (Map) mgetBytesAsync(keys).join();
     }
 
     @Override

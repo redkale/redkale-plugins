@@ -1145,7 +1145,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, Long>> getLongMapAsync(String... keys) {
+    public CompletableFuture<Map<String, Long>> mgetLongAsync(String... keys) {
         return completableFuture(client.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).getAsync(keys));
     }
 
@@ -1172,7 +1172,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, String>> getStringMapAsync(String... keys) {
+    public CompletableFuture<Map<String, String>> mgetStringAsync(String... keys) {
         return completableFuture(client.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).getAsync(keys).thenApply(map -> {
             if (cryptor == null) return (Map) map;
             Map rs = new LinkedHashMap();
@@ -1182,7 +1182,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> getMapAsync(final Type componentType, String... keys) {
+    public <T> CompletableFuture<Map<String, T>> mgetAsync(final Type componentType, String... keys) {
         return completableFuture(client.getBuckets(org.redisson.client.codec.ByteArrayCodec.INSTANCE).getAsync(keys).thenApply(map -> {
             Map rs = new LinkedHashMap();
             map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, componentType, (byte[]) v)));
@@ -1190,6 +1190,15 @@ public class RedissionCacheSource extends AbstractRedisSource {
         }));
     }
 
+    @Override
+    public CompletableFuture<Map<String, byte[]>> mgetBytesAsync( String... keys) {
+        return completableFuture(client.getBuckets(org.redisson.client.codec.ByteArrayCodec.INSTANCE).getAsync(keys).thenApply(map -> {
+            Map rs = new LinkedHashMap();
+            map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, byte[].class, (byte[]) v)));
+            return rs;
+        }));
+    }
+    
     @Override
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
@@ -1330,7 +1339,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Map<String, Long> getLongMap(final String... keys) {
+    public Map<String, Long> mgetLong(final String... keys) {
         return client.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).get(keys);
     }
 
@@ -1345,7 +1354,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Map<String, String> getStringMap(final String... keys) {
+    public Map<String, String> mgetString(final String... keys) {
         Map<String, String> map = client.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).get(keys);
         if (cryptor != null && !map.isEmpty()) {
             Map<String, String> rs = new LinkedHashMap<>();
@@ -1366,13 +1375,21 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> getMap(final Type componentType, final String... keys) {
+    public <T> Map<String, T> mget(final Type componentType, final String... keys) {
         Map<String, byte[]> map = client.getBuckets(org.redisson.client.codec.ByteArrayCodec.INSTANCE).get(keys);
         Map<String, T> rs = new LinkedHashMap(map.size());
         map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, componentType, v)));
         return rs;
     }
 
+    @Override
+    public Map<String, byte[]> mgetBytes(final String... keys) {
+        Map<String, byte[]> map = client.getBuckets(org.redisson.client.codec.ByteArrayCodec.INSTANCE).get(keys);
+        Map<String, byte[]> rs = new LinkedHashMap(map.size());
+        map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, byte[].class, v)));
+        return rs;
+    }
+    
     @Override
     public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
         return (Map) getCollectionMapAsync(set, componentType, keys).join();

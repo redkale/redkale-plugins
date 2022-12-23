@@ -28,11 +28,11 @@ public abstract class RedisAbstractTest {
         source.setString("stritem1", "value1");
         source.setString("stritem2", "value2");
 
-        List<String> list = source.keys("stritem*");
+        List<String> list = source.keysStartsWith("stritem");
         System.out.println("stritem开头的key有两个: " + list);
         Assertions.assertTrue(Utility.equalsElement(list, List.of("stritem2", "stritem1")));
 
-        Map<String, String> map = source.getStringMap("stritem1", "stritem2");
+        Map<String, String> map = source.mgetString("stritem1", "stritem2");
         System.out.println("[有值] MGET : " + map);
         Assertions.assertTrue(Utility.equalsElement(map, Utility.ofMap("stritem1", "value1", "stritem2", "value2")));
 
@@ -45,7 +45,7 @@ public abstract class RedisAbstractTest {
         source.setLong("intitem1", 333);
         source.setLong("intitem2", 444);
 
-        map = source.getStringMap("intitem1", "intitem22", "intitem2");
+        map = source.mgetString("intitem1", "intitem22", "intitem2");
         System.out.println("[有值] MGET : " + map);
         Assertions.assertTrue(Utility.equalsElement(map, Utility.ofMap("intitem1", "333", "intitem2", "444")));
 
@@ -58,7 +58,7 @@ public abstract class RedisAbstractTest {
         source.set("objitem1", Flipper.class, new Flipper(10));
         source.set("objitem2", Flipper.class, new Flipper(20));
 
-        Map<String, Flipper> flippermap = source.getMap(Flipper.class, "objitem1", "objitem2");
+        Map<String, Flipper> flippermap = source.mget(Flipper.class, "objitem1", "objitem2");
         System.out.println("[有值] MGET : " + flippermap);
         Assertions.assertTrue(Utility.equalsElement(flippermap, Utility.ofMap("objitem1", new Flipper(10), "objitem2", new Flipper(20))));
 
@@ -111,7 +111,7 @@ public abstract class RedisAbstractTest {
         source.rpush("keys3", String.class, "vals2");
         System.out.println("-------- keys3 追加了两个值 --------");
 
-        Collection col = source.getCollection("keys3", String.class);
+        Collection col = source.lrangeString("keys3");
         System.out.println("[两值] keys3 VALUES : " + col);
         Assertions.assertTrue(Utility.equalsElement(col, List.of("vals1", "vals2")));
 
@@ -120,18 +120,14 @@ public abstract class RedisAbstractTest {
         Assertions.assertTrue(bool);
 
         source.lrem("keys3", String.class, "vals1");
-        col = source.getCollection("keys3", String.class);
-        System.out.println("[一值] keys3 VALUES : " + col);
-        Assertions.assertIterableEquals(col, List.of("vals2"));
-
-        col = source.getexCollection("keys3", 3000, String.class);
+        col = source.lrangeString("keys3");
         System.out.println("[一值] keys3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("vals2"));
 
         source.del("stringmap");
         source.sadd("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
         source.sadd("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));
-        col = source.getCollection("stringmap", JsonConvert.TYPE_MAP_STRING_STRING);
+        col = source.smembers("stringmap", JsonConvert.TYPE_MAP_STRING_STRING);
         System.out.println("[两值] stringmap VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of(Utility.ofMap("c", "cc", "d", "dd"), Utility.ofMap("a", "aa", "b", "bb")));
 
@@ -142,7 +138,7 @@ public abstract class RedisAbstractTest {
         source.sadd("sets3", String.class, "setvals1");
         source.sadd("sets4", String.class, "setvals2");
         source.sadd("sets4", String.class, "setvals1");
-        col = source.getCollection("sets3", String.class);
+        col = source.smembersString("sets3");
         System.out.println("[两值] sets3 VALUES : " + col);
         List col2 = new ArrayList(col);
         Collections.sort(col2);
@@ -161,11 +157,11 @@ public abstract class RedisAbstractTest {
         Assertions.assertFalse(bool);
 
         source.srem("sets3", String.class, "setvals1");
-        col = source.getCollection("sets3", String.class);
+        col = source.smembersString("sets3");
         System.out.println("[一值] sets3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("setvals2"));
 
-        int size = source.getCollectionSize("sets3");
+        int size = source.scard("sets3");
         System.out.println("sets3 大小 : " + size);
         Assertions.assertEquals(1, size);
 
@@ -218,14 +214,14 @@ public abstract class RedisAbstractTest {
         source.sadd("myaddrs", InetSocketAddress.class, addr88);
         source.sadd("myaddrs", InetSocketAddress.class, addr99);
 
-        col = source.getCollection("myaddrs", InetSocketAddress.class);
+        col = source.smembers("myaddrs", InetSocketAddress.class);
         System.out.println("myaddrs:  " + col);
         List cola2 = new ArrayList(col);
         Collections.sort(cola2, (o1, o2) -> o1.toString().compareTo(o2.toString()));
         Assertions.assertIterableEquals(cola2, List.of(addr88, addr99));
 
         source.srem("myaddrs", InetSocketAddress.class, addr88);
-        col = source.getCollection("myaddrs", InetSocketAddress.class);
+        col = source.smembers("myaddrs", InetSocketAddress.class);
         System.out.println("myaddrs:  " + col);
         Assertions.assertIterableEquals(col, List.of(addr99));
 
