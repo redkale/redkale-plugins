@@ -37,12 +37,6 @@
     </properties>
 
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/com.orbitz.consul/consul-client -->
-<dependency>
-    <groupId>com.orbitz.consul</groupId>
-    <artifactId>consul-client</artifactId>
-    <version>1.5.3</version>
-</dependency>
         <dependency>  
             <groupId>org.redkale</groupId>  
             <artifactId>redkale</artifactId>  
@@ -90,7 +84,7 @@
             <version>${slf4j.version}</version>
             <scope>provided</scope>
         </dependency>
-        
+        <!--
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-clients</artifactId>
@@ -109,7 +103,7 @@
             <version>${flink.version}</version>
             <scope>provided</scope>
         </dependency>
-                
+        -->        
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
