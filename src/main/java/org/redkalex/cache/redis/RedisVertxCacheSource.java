@@ -1472,20 +1472,10 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sremLongAsync(key, value).join();
     }
 
-    //--------------------- queryKeys ------------------------------  
+    //--------------------- keys ------------------------------  
     @Override
-    public List<String> queryKeys() {
-        return queryKeysAsync().join();
-    }
-
-    @Override
-    public List<String> queryKeysStartsWith(String startsWith) {
-        return queryKeysStartsWithAsync(startsWith).join();
-    }
-
-    @Override
-    public List<String> queryKeysEndsWith(String endsWith) {
-        return queryKeysEndsWithAsync(endsWith).join();
+    public List<String> keys(String pattern) {
+        return keysAsync(pattern).join();
     }
 
     @Override
@@ -1579,23 +1569,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<List<String>> queryKeysAsync() {
-        return sendAsync(Command.KEYS, "*").thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
-    }
-
-    @Override
-    public CompletableFuture<List<String>> queryKeysStartsWithAsync(String startsWith) {
-        if (startsWith == null) return queryKeysAsync();
-        String key = startsWith + "*";
-        return sendAsync(Command.KEYS, key).thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
-    }
-
-    @Override
-    public CompletableFuture<List<String>> queryKeysEndsWithAsync(String endsWith) {
-        if (endsWith == null) return queryKeysAsync();
-        String key = "*" + endsWith;
-        return sendAsync(Command.KEYS, key).thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class
-        ));
+    public CompletableFuture<List<String>> keysAsync(String pattern) {
+        return sendAsync(Command.KEYS, pattern == null || pattern.isEmpty() ? "*" : pattern).thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
     }
 
     //--------------------- getKeySize ------------------------------  

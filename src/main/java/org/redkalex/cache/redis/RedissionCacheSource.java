@@ -1847,20 +1847,14 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).remove(value) ? 1 : 0;
     }
 
-    //--------------------- queryKeys ------------------------------  
+    //--------------------- keys ------------------------------  
     @Override
-    public List<String> queryKeys() {
-        return client.getKeys().getKeysStream().collect(Collectors.toList());
-    }
-
-    @Override
-    public List<String> queryKeysStartsWith(String startsWith) {
-        return client.getKeys().getKeysStreamByPattern(startsWith + "*").collect(Collectors.toList());
-    }
-
-    @Override
-    public List<String> queryKeysEndsWith(String endsWith) {
-        return client.getKeys().getKeysStreamByPattern("*" + endsWith).collect(Collectors.toList());
+    public List<String> keys(String pattern) {
+        if (pattern == null || pattern.isEmpty()) {
+            return client.getKeys().getKeysStream().collect(Collectors.toList());
+        } else {
+            return client.getKeys().getKeysStreamByPattern(pattern).collect(Collectors.toList());
+        }
     }
 
     @Override
@@ -1948,20 +1942,8 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<List<String>> queryKeysAsync() {
-        return CompletableFuture.supplyAsync(() -> queryKeys());
-    }
-
-    @Override
-    public CompletableFuture<List<String>> queryKeysStartsWithAsync(String startsWith) {
-        if (startsWith == null) return CompletableFuture.supplyAsync(() -> queryKeys());
-        return CompletableFuture.supplyAsync(() -> queryKeysStartsWith(startsWith));
-    }
-
-    @Override
-    public CompletableFuture<List<String>> queryKeysEndsWithAsync(String endsWith) {
-        if (endsWith == null) return CompletableFuture.supplyAsync(() -> queryKeys());
-        return CompletableFuture.supplyAsync(() -> queryKeysEndsWith(endsWith));
+    public CompletableFuture<List<String>> keysAsync(String pattern) {
+        return CompletableFuture.supplyAsync(() -> keys(pattern));
     }
 
     //--------------------- getKeySize ------------------------------  

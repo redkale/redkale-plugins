@@ -28,7 +28,7 @@ public abstract class RedisAbstractTest {
         source.setString("stritem1", "value1");
         source.setString("stritem2", "value2");
 
-        List<String> list = source.queryKeysStartsWith("stritem");
+        List<String> list = source.keys("stritem*");
         System.out.println("stritem开头的key有两个: " + list);
         Assertions.assertTrue(Utility.equalsElement(list, List.of("stritem2", "stritem1")));
 
@@ -169,10 +169,10 @@ public abstract class RedisAbstractTest {
         System.out.println("sets3 大小 : " + size);
         Assertions.assertEquals(1, size);
 
-        col = source.queryKeys();
+        col = source.keys();
         System.out.println("all keys: " + col);
 
-        col = source.queryKeysStartsWith("key");
+        col = source.keys("key*");
         Collections.sort((List<String>) col);
         System.out.println("key startkeys: " + col);
         Assertions.assertIterableEquals(col, List.of("key1", "keylong1", "keys3", "keystr1"));

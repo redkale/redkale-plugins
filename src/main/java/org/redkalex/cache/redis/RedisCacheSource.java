@@ -1438,20 +1438,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return sremLongAsync(key, value).join();
     }
 
-    //--------------------- queryKeys ------------------------------  
+    //--------------------- keys ------------------------------  
     @Override
-    public List<String> queryKeys() {
-        return queryKeysAsync().join();
-    }
-
-    @Override
-    public List<String> queryKeysStartsWith(String startsWith) {
-        return queryKeysStartsWithAsync(startsWith).join();
-    }
-
-    @Override
-    public List<String> queryKeysEndsWith(String endsWith) {
-        return queryKeysEndsWithAsync(endsWith).join();
+    public List<String> keys(String pattern) {
+        return keysAsync(pattern).join();
     }
 
     @Override
@@ -1516,21 +1506,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<List<String>> queryKeysAsync() {
-        return sendAsync("KEYS", "*", new byte[]{(byte) '*'}).thenApply(v -> (List) v.getCollectionValue("*", cryptor, false, String.class));
-    }
-
-    @Override
-    public CompletableFuture<List<String>> queryKeysStartsWithAsync(String startsWith) {
-        if (startsWith == null) return queryKeysAsync();
-        String key = startsWith + "*";
-        return sendAsync("KEYS", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> (List) v.getCollectionValue(key, cryptor, false, String.class));
-    }
-
-    @Override
-    public CompletableFuture<List<String>> queryKeysEndsWithAsync(String endsWith) {
-        if (endsWith == null) return queryKeysAsync();
-        String key = "*" + endsWith;
+    public CompletableFuture<List<String>> keysAsync(String pattern) {
+        String key = pattern == null || pattern.isEmpty() ? "*" : pattern;
         return sendAsync("KEYS", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> (List) v.getCollectionValue(key, cryptor, false, String.class));
     }
 

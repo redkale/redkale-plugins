@@ -1311,26 +1311,10 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public List<String> queryKeys() {
+    public List<String> keys(String pattern) {
         final RedisCommands<String, byte[]> command = connectBytes();
-        List<String> rs = command.keys("*");
+        List<String> rs = command.keys(pattern == null || pattern.isEmpty() ? "*" : pattern);
         releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public List<String> queryKeysStartsWith(String startsWith) {
-        final RedisCommands<String, String> command = connectString();
-        List<String> rs = command.keys(startsWith + "*");
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public List<String> queryKeysEndsWith(String endsWith) {
-        final RedisCommands<String, String> command = connectString();
-        List<String> rs = command.keys("*" + endsWith);
-        releaseStringCommand(command);
         return rs;
     }
 
@@ -2064,26 +2048,10 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<List<String>> queryKeysAsync() {
+    public CompletableFuture<List<String>> keysAsync(String pattern) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取key值，无需传cryptor进行解密
-            return completableStringFuture(null, null, command, command.keys("*"));
-        });
-    }
-
-    @Override
-    public CompletableFuture<List<String>> queryKeysStartsWithAsync(String startsWith) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取key值，无需传cryptor进行解密
-            return completableStringFuture(null, null, command, command.keys(startsWith + "*"));
-        });
-    }
-
-    @Override
-    public CompletableFuture<List<String>> queryKeysEndsWithAsync(String endsWith) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取key值，无需传cryptor进行解密
-            return completableStringFuture(null, null, command, command.keys("*" + endsWith));
+            return completableStringFuture(null, null, command, command.keys(pattern == null || pattern.isEmpty() ? "*" : pattern));
         });
     }
 
