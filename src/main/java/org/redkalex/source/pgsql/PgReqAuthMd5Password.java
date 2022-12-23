@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.Arrays;
 import org.redkale.net.client.ClientConnection;
+import org.redkale.source.SourceException;
 import org.redkale.util.*;
 
 /**
@@ -51,7 +52,7 @@ public class PgReqAuthMd5Password extends PgClientRequest {
             try {
                 md5 = MessageDigest.getInstance("MD5");
             } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException(e);
+                throw new SourceException(e);
             }
             md5.update(password.getBytes(StandardCharsets.UTF_8));
             md5.update(username.getBytes(StandardCharsets.UTF_8));

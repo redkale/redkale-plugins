@@ -12,6 +12,7 @@ import java.util.*;
 import javax.crypto.*;
 import javax.crypto.spec.*;
 import org.redkale.net.client.ClientConnection;
+import org.redkale.source.SourceException;
 import org.redkale.util.ByteArray;
 
 /**
@@ -90,7 +91,7 @@ public class PgReqAuthScramSaslFinal extends PgClientRequest {
         try {
             return MessageDigest.getInstance("SHA-256").digest(message);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SourceException(e);
         }
     }
 
@@ -101,7 +102,7 @@ public class PgReqAuthScramSaslFinal extends PgClientRequest {
             mac.init(spec);
             return mac.doFinal(message);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SourceException(e);
         }
     }
 
@@ -113,7 +114,7 @@ public class PgReqAuthScramSaslFinal extends PgClientRequest {
             SecretKey key = factory.generateSecret(spec);
             return key.getEncoded();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SourceException(e);
         }
     }
 }

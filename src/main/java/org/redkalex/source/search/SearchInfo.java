@@ -246,8 +246,8 @@ public final class SearchInfo<T> {
                 SearchColumn sc = field.getAnnotation(SearchColumn.class);
                 if (sc != null) {
                     if (!sc.highlight().isEmpty()) {
-                        if (!sc.ignore()) throw new RuntimeException("@SearchColumn.ignore must be true when highlight is not empty on field(" + field + ")");
-                        if (field.getType() != String.class) throw new RuntimeException("@SearchColumn.ignore must be on String field(" + field + ")");
+                        if (!sc.ignore()) throw new SourceException("@SearchColumn.ignore must be true when highlight is not empty on field(" + field + ")");
+                        if (field.getType() != String.class) throw new SourceException("@SearchColumn.ignore must be on String field(" + field + ")");
                         if (SearchColumn.HighLights.HIGHLIGHT_NAME_ID.equals(sc.highlight())) {
                             highlightAttrId = attr;
                         } else if (SearchColumn.HighLights.HIGHLIGHT_NAME_INDEX.equals(sc.highlight())) {
@@ -334,7 +334,7 @@ public final class SearchInfo<T> {
                 attributeMap.put(fieldname, attr);
             }
         } while ((cltmp = cltmp.getSuperclass()) != Object.class);
-        if (idAttr0 == null) throw new RuntimeException(type.getName() + " have no primary column by @org.redkale.persistence.Id");
+        if (idAttr0 == null) throw new SourceException(type.getName() + " have no primary column by @org.redkale.persistence.Id");
         this.jsonConvert = factory.getConvert();
 
         this.primary = idAttr0;

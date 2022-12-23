@@ -14,7 +14,7 @@ import java.util.*;
 import org.redkale.convert.ConvertDisabled;
 import org.redkale.net.WorkThread;
 import org.redkale.source.*;
-import org.redkale.util.*;
+import org.redkale.util.ObjectPool;
 
 /**
  *
@@ -394,7 +394,9 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
     @ConvertDisabled
     public Object getObject(String columnLabel) {
         Integer index = colmap().get(columnLabel.toLowerCase());
-        if (index == null) throw new RuntimeException("not found column " + columnLabel + " index in " + colmap);
+        if (index == null) {
+            throw new SourceException("not found column " + columnLabel + " index in " + colmap);
+        }
         return this.currRow.getObject(rowDesc, index);
     }
 

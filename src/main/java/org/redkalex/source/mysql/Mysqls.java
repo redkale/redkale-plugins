@@ -7,9 +7,10 @@ package org.redkalex.source.mysql;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.security.*;
+import java.security.MessageDigest;
 import java.util.Arrays;
-import org.redkale.util.*;
+import org.redkale.source.SourceException;
+import org.redkale.util.ByteArray;
 
 /**
  *
@@ -422,7 +423,7 @@ class Mysqls {
         try {
             md = MessageDigest.getInstance("SHA-1");
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SourceException(e);
         }
         byte[] passwordHashStage1 = md.digest(password.getBytes(StandardCharsets.UTF_8));
         md.reset();
@@ -470,7 +471,7 @@ class Mysqls {
             xorString(dig1, mysqlScrambleBuff, scramble1, CACHING_SHA2_DIGEST_LENGTH);
             return mysqlScrambleBuff;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new SourceException(e);
         }
     }
 

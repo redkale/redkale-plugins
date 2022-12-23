@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.*;
-import org.redkale.source.EntityInfo;
+import org.redkale.source.*;
 import org.redkale.util.*;
 
 /**
@@ -394,7 +394,7 @@ public class MysqlType {
             try {
                 return blob.getBytes(1, (int) blob.length());
             } catch (SQLException e) {
-                throw new RuntimeException(e);
+                throw new SourceException(e);
             }
         }
         if (!(param instanceof Number) && !(param instanceof CharSequence) && !(param instanceof java.util.Date)

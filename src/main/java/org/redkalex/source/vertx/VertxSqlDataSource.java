@@ -145,7 +145,7 @@ public class VertxSqlDataSource extends DataSqlSource {
                 RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
                 sqlOptions = (SqlConnectOptions) clazz.getConstructor().newInstance();
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new SourceException(e);
             }
         } else if ("postgresql".equalsIgnoreCase(dbtype())) {
             try {
@@ -153,7 +153,7 @@ public class VertxSqlDataSource extends DataSqlSource {
                 RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
                 sqlOptions = (SqlConnectOptions) clazz.getConstructor().newInstance();
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new SourceException(e);
             }
         } else {
             throw new UnsupportedOperationException("dbtype(" + dbtype() + ") not supported yet.");

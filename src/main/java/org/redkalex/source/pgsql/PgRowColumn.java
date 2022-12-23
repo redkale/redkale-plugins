@@ -10,9 +10,10 @@ import java.math.BigDecimal;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.sql.*;
 import java.time.*;
-import java.time.format.*;
 import static java.time.format.DateTimeFormatter.*;
-import org.redkale.util.*;
+import java.time.format.DateTimeParseException;
+import org.redkale.source.SourceException;
+import org.redkale.util.Utility;
 import static org.redkalex.source.pgsql.PgsqlOid.*;
 
 /**
@@ -63,7 +64,7 @@ public class PgRowColumn {
                 try {
                     return Date.valueOf(LocalDate.parse(date, ISO_LOCAL_DATE));
                 } catch (DateTimeParseException e) {
-                    throw new RuntimeException("Invalid date: " + date);
+                    throw new SourceException("Invalid date: " + date);
                 }
             case TIMETZ: return Time.valueOf(OffsetTime.parse(new String(value, UTF_8), PgsqlFormatter.TIMEZ_FORMAT).toLocalTime());
             case TIME: return Time.valueOf(LocalTime.parse(new String(value, UTF_8), ISO_LOCAL_TIME));

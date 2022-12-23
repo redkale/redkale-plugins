@@ -8,6 +8,7 @@ package org.redkalex.source.mysql;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.time.*;
+import org.redkale.source.SourceException;
 import org.redkale.util.ByteArray;
 import static org.redkalex.source.mysql.MysqlType.*;
 
@@ -111,7 +112,7 @@ public class MyRespRowDataRowDecoder extends MyRespDecoder<MyRowData> {
         } else if (length == 7) {
             return LocalDateTime.of(year, month, day, hour, minute, second, 0);
         }
-        throw new RuntimeException("Invalid Datetime");
+        throw new SourceException("Invalid Datetime");
     }
 
     private static Duration binaryDecodeTime(ByteBuffer buffer) {
@@ -141,7 +142,7 @@ public class MyRespRowDataRowDecoder extends MyRespDecoder<MyRowData> {
                 }
                 return Duration.ofDays(days).plusHours(hour).plusMinutes(minute).plusSeconds(second).plusNanos(microsecond * 1000);
             }
-            throw new RuntimeException("Invalid time format");
+            throw new SourceException("Invalid time format");
         }
     }
 }

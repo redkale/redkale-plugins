@@ -103,11 +103,11 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         //不支持读写分离模式的动态切换
         if (readConfProps == writeConfProps
             && (events[0].name().startsWith("read.") || events[0].name().startsWith("write."))) {
-            throw new RuntimeException("DataSource(name=" + resourceName() + ") not support to change to read/write separation mode");
+            throw new SourceException("DataSource(name=" + resourceName() + ") not support to change to read/write separation mode");
         }
         if (readConfProps != writeConfProps
             && (!events[0].name().startsWith("read.") && !events[0].name().startsWith("write."))) {
-            throw new RuntimeException("DataSource(name=" + resourceName() + ") not support to change to non read/write separation mode");
+            throw new SourceException("DataSource(name=" + resourceName() + ") not support to change to non read/write separation mode");
         }
 
         StringBuilder sb = new StringBuilder();

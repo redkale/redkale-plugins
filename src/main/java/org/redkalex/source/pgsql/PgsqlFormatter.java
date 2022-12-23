@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.time.*;
+import static java.time.format.DateTimeFormatter.*;
 import java.time.format.*;
 import static java.time.format.DateTimeFormatter.*;
 import java.time.temporal.ChronoUnit;
@@ -73,7 +74,7 @@ public abstract class PgsqlFormatter {
             if (bslen == 0) return null;
             tmp.clear().put(buffer, bslen);
             return JsonConvert.root().convertFrom(attr.genericType(), tmp.toString(StandardCharsets.UTF_8));
-            //throw new RuntimeException("Not supported column: " + attr.field() + ", type: " + attr.type());
+            //throw new SourceException("Not supported column: " + attr.field() + ", type: " + attr.type());
         }
     }
 

@@ -16,7 +16,6 @@ import java.util.concurrent.*;
 import java.util.logging.*;
 import java.util.stream.*;
 import org.redkale.annotation.AutoLoad;
-import org.redkale.service.Local;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.json.*;
@@ -166,7 +165,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         for (T val : entitys) {
             if (clazz == null) {
                 clazz = val.getClass();
-                if (clazz.getAnnotation(Entity.class) == null) throw new RuntimeException("Entity Class " + clazz + " must be on annotation @Entity");
+                if (clazz.getAnnotation(Entity.class) == null) throw new SourceException("Entity Class " + clazz + " must be on annotation @Entity");
                 continue;
             }
             if (clazz != val.getClass()) {
@@ -175,7 +174,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
                     future.completeExceptionally(new RuntimeException("SearchSource." + action + " must the same Class Entity, but diff is " + clazz + " and " + val.getClass()));
                     return future;
                 }
-                throw new RuntimeException("SearchSource." + action + " must the same Class Entity, but diff is " + clazz + " and " + val.getClass());
+                throw new SourceException("SearchSource." + action + " must the same Class Entity, but diff is " + clazz + " and " + val.getClass());
             }
         }
         return null;
@@ -293,7 +292,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final StringBuilder path = new StringBuilder().append('/').append(info.getTable(entity)).append("/_create/").append(info.getPrimary().get(entity));
         return postEntityAsync(path, info, entity).thenApply(resp -> {
             if (resp.getRetcode() != 200 && resp.getRetcode() != 201) {
-                throw new RuntimeException("insert response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("insert response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = info.getConvert().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? 0 : rs._shards.successful;
@@ -335,7 +334,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
             final StringBuilder path = new StringBuilder().append('/').append(table).append("/_bulk");
             futures.add(bulkAsync(path, sb).thenApply(resp -> {
                 if (resp.getRetcode() != 200) {
-                    throw new RuntimeException("insert response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                    throw new SourceException("insert response code = " + resp.getRetcode() + ", body = " + resp.getResult());
                 } else {
                     BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
                     return rs == null ? -1 : rs.successCount();
@@ -358,7 +357,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return deleteAsync(path).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -391,7 +390,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
             futures.add(bulkAsync(path, sb).thenApply(resp -> {
                 if (resp.getRetcode() == 404) return 0;
                 if (resp.getRetcode() != 200) {
-                    throw new RuntimeException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                    throw new SourceException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
                 } else {
                     BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
                     return rs == null ? -1 : rs.successCount();
@@ -431,7 +430,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
             futures.add(bulkAsync(path, sb).thenApply(resp -> {
                 if (resp.getRetcode() == 404) return 0;
                 if (resp.getRetcode() != 200) {
-                    throw new RuntimeException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                    throw new SourceException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
                 } else {
                     BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
                     return rs == null ? -1 : rs.successCount();
@@ -471,7 +470,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, createSearchRequest(info, null, flipper, node)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("delete response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -501,7 +500,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 //        //{"took":24,"timed_out":false,"total":3,"deleted":3,"batches":1,"version_conflicts":0,"noops":0,"retries":{"bulk":0,"search":0},"throttled_millis":0,"requests_per_second":-1,"throttled_until_millis":0,"failures":[]}
 //        return postAsync(path, HttpRequest.BodyPublishers.ofByteArray(BYTES_QUERY_MATCH_ALL)).thenApply(resp -> {
 //            if (resp.getRetcode() != 200) {
-//                throw new RuntimeException("clearTable response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+//                throw new SourceException("clearTable response code = " + resp.getRetcode() + ", body = " + resp.getResult());
 //            } else {
 //                ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
 //                return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -512,7 +511,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return deleteAsync(path).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("clearTable response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("clearTable response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {   //{"acknowledged" : true}
                 Map<String, String> rs = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, resp.getResult());
                 return rs == null || !"true".equals(rs.get("acknowledged")) ? -1 : 1;
@@ -542,7 +541,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return deleteAsync(path).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("dropTable response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("dropTable response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {   //{"acknowledged" : true}
                 checkedIndexClasses.remove(clazz);
                 Map<String, String> rs = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, resp.getResult());
@@ -556,7 +555,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postEntityAsync(path, info, entity).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -588,7 +587,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
             futures.add(bulkAsync(path, sb).thenApply(resp -> {
                 if (resp.getRetcode() == 404) return 0;
                 if (resp.getRetcode() != 200) {
-                    throw new RuntimeException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                    throw new SourceException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
                 } else {
                     BulkResult rs = JsonConvert.root().convertFrom(BulkResult.class, resp.getResult());
                     return rs == null ? -1 : rs.successCount();
@@ -618,7 +617,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, new UpdatePart(info, column, value)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -638,7 +637,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, new UpdatePart(info, column, value)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("update response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -660,7 +659,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, new UpdatePart(info, values)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("updateColumn response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("updateColumn response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -694,7 +693,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, bean).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("updateColumn response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("updateColumn response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -721,7 +720,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, new UpdatePart(info, map)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("updateColumn response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("updateColumn response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -755,7 +754,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, bean).thenApply(resp -> {
             if (resp.getRetcode() == 404) return 0;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("updateColumn response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("updateColumn response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 ActionResult rs = JsonConvert.root().convertFrom(ActionResult.class, resp.getResult());
                 return rs == null || rs._shards == null ? -1 : rs._shards.successful;
@@ -784,7 +783,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, bean).thenApply(resp -> {
             if (resp.getRetcode() == 404) return defVal;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("getNumberResult response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("getNumberResult response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 SearchResult rs = JsonConvert.root().convertFrom(info.getSearchResultType(), resp.getResult());
                 if (rs == null || rs.timed_out || rs.aggregations == null) return defVal;
@@ -844,7 +843,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, bean).thenApply(resp -> {
             if (resp.getRetcode() == 404) return new HashMap();
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("queryColumnMap response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("queryColumnMap response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 SearchResult<T> rs = JsonConvert.root().convertFrom(info.getSearchResultType(), resp.getResult());
                 if (rs == null || rs.timed_out || rs.aggregations == null) return new HashMap();
@@ -918,7 +917,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return getAsync(path).thenApply(resp -> {
             if (resp.getRetcode() == 404) return null;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 FindResult<T> rs = JsonConvert.root().convertFrom(info.getFindResultType(), resp.getResult());
                 return rs == null || !rs.found ? null : rs._source;
@@ -944,7 +943,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, bean).thenApply(resp -> {
             if (resp.getRetcode() == 404) return null;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 SearchResult<T> rs = JsonConvert.root().convertFrom(info.getSearchResultType(), resp.getResult());
                 if (rs == null || rs.timed_out || rs.hits == null) return null;
@@ -968,7 +967,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, createSearchRequest(info, selects, null, node)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return null;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 SearchResult<T> rs = JsonConvert.root().convertFrom(info.getSearchResultType(), resp.getResult());
                 if (rs == null || rs.timed_out || rs.hits == null) return null;
@@ -1068,7 +1067,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return getAsync(path).thenApply(resp -> {
             if (resp.getRetcode() == 404) return false;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("exists response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("exists response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 FindResult<T> rs = JsonConvert.root().convertFrom(info.getFindResultType(), resp.getResult());
                 return rs != null && rs.found;
@@ -1088,7 +1087,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, createSearchRequest(info, null, null, node)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return false;
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("exists response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("exists response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 SearchResult<T> rs = JsonConvert.root().convertFrom(info.getSearchResultType(), resp.getResult());
                 if (rs == null || rs.timed_out || rs.hits == null) return false;
@@ -1126,7 +1125,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, bean).thenApply(resp -> {
             if (resp.getRetcode() == 404) return new HashSet();
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 SearchResult<T> rs = JsonConvert.root().convertFrom(info.getSearchResultType(), resp.getResult());
                 if (rs == null || rs.timed_out || rs.aggregations == null) return new HashSet();
@@ -1275,7 +1274,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         return postAsync(path, info, createSearchRequest(info, selects, flipper, node)).thenApply(resp -> {
             if (resp.getRetcode() == 404) return new Sheet();
             if (resp.getRetcode() != 200) {
-                throw new RuntimeException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                throw new SourceException("find response code = " + resp.getRetcode() + ", body = " + resp.getResult());
             } else {
                 SearchResult<T> rs = JsonConvert.root().convertFrom(info.getSearchResultType(), resp.getResult());
                 if (rs == null || rs.timed_out || rs.hits == null) return new Sheet();
@@ -1336,7 +1335,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
                 if (resp.getRetcode() == 404) return postAsync("/" + table + "/_open", (byte[]) null).thenApply(cv -> -1);
                 if (resp.getRetcode() != 200) {
                     return postAsync("/" + table + "/_open", (byte[]) null).thenApply(cv -> {
-                        throw new RuntimeException("updateMapping response code = " + resp.getRetcode() + ", body = " + resp.getResult());
+                        throw new SourceException("updateMapping response code = " + resp.getRetcode() + ", body = " + resp.getResult());
                     });
                 } else {   //{"acknowledged":true}
                     Map<String, String> rs = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, resp.getResult());
