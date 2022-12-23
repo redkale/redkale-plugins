@@ -724,16 +724,16 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
 //    //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> delAsync(String key) {
+    public CompletableFuture<Integer> delAsync(String... keys) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.del(key).thenApply(rs -> rs > 0 ? 1 : 0));
+            return completableBytesFuture(command, command.del(keys).thenApply(rs -> rs > 0 ? 1 : 0));
         });
     }
 
     @Override
-    public int del(String key) {
+    public int del(String... keys) {
         final RedisCommands<String, byte[]> command = connectBytes();
-        int rs = command.del(key) > 0 ? 1 : 0;
+        int rs = command.del(keys).intValue();
         releaseBytesCommand(command);
         return rs;
     }

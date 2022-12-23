@@ -541,13 +541,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> delAsync(String key) {
-        return sendAsync(Command.DEL, key).thenApply(v -> v.toInteger());
+    public CompletableFuture<Integer> delAsync(String... keys) {
+        return sendAsync(Command.DEL, keys).thenApply(v -> v.toInteger());
     }
 
     @Override
-    public int del(String key) {
-        return delAsync(key).join();
+    public int del(String... keys) {
+        return delAsync(keys).join();
     }
 
     //--------------------- incr ------------------------------    

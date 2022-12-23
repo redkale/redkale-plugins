@@ -23,8 +23,7 @@ public abstract class RedisAbstractTest {
 
     protected static void run(CacheSource source) throws Exception {
         System.out.println("------------------------------------");
-        source.del("stritem1");
-        source.del("stritem2");
+        source.del("stritem1", "stritem2");
         source.setString("stritem1", "value1");
         source.setString("stritem2", "value2");
 
@@ -40,8 +39,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] MGET : " + Arrays.toString(array));
         Assertions.assertTrue(Utility.equalsElement(array, new String[]{"value1", "value2"}));
 
-        source.del("intitem1");
-        source.del("intitem2");
+        source.del("intitem1", "intitem2");
         source.setLong("intitem1", 333);
         source.setLong("intitem2", 444);
 
@@ -53,8 +51,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] MGET : " + Arrays.toString(array));
         Assertions.assertTrue(Utility.equalsElement(array, new Object[]{"333", null, "444"}));
 
-        source.del("objitem1");
-        source.del("objitem2");
+        source.del("objitem1", "objitem2");
         source.set("objitem1", Flipper.class, new Flipper(10));
         source.set("objitem2", Flipper.class, new Flipper(20));
 
@@ -62,9 +59,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] MGET : " + flippermap);
         Assertions.assertTrue(Utility.equalsElement(flippermap, Utility.ofMap("objitem1", new Flipper(10), "objitem2", new Flipper(20))));
 
-        source.del("key1");
-        source.del("key2");
-        source.del("300");
+        source.del("key1", "key2", "300");
         source.setex("key1", 1000, String.class, "value1");
         source.set("key1", String.class, "value1");
         source.setString("keystr1", "strvalue1");

@@ -598,13 +598,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> delAsync(String key) {
-        return completableFuture(client.getBucket(key).deleteAsync().thenApply(rs -> rs ? 1 : 0));
+    public CompletableFuture<Integer> delAsync(String... keys) {
+        return completableFuture(client.getKeys().deleteAsync(keys).thenApply(rs -> rs.intValue()));
     }
 
     @Override
-    public int del(String key) {
-        return client.getBucket(key).delete() ? 1 : 0;
+    public int del(String... keys) {
+        return (int) client.getKeys().delete(keys);
     }
 
     //--------------------- incr ------------------------------    
@@ -1191,14 +1191,14 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, byte[]>> mgetBytesAsync( String... keys) {
+    public CompletableFuture<Map<String, byte[]>> mgetBytesAsync(String... keys) {
         return completableFuture(client.getBuckets(org.redisson.client.codec.ByteArrayCodec.INSTANCE).getAsync(keys).thenApply(map -> {
             Map rs = new LinkedHashMap();
             map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, byte[].class, (byte[]) v)));
             return rs;
         }));
     }
-    
+
     @Override
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
@@ -1389,7 +1389,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, byte[].class, v)));
         return rs;
     }
-    
+
     @Override
     public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
         return (Map) getCollectionMapAsync(set, componentType, keys).join();

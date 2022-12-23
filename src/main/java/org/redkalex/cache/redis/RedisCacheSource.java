@@ -492,13 +492,22 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> delAsync(String key) {
-        return sendAsync("DEL", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
+    public CompletableFuture<Integer> delAsync(String... keys) {
+        if (keys.length == 0) return CompletableFuture.completedFuture(0);
+        if (keys.length == 1) {
+            return sendAsync("DEL", keys[0], keys[0].getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
+        } else {
+            byte[][] bs = new byte[keys.length][];
+            for (int i = 0; i < keys.length; i++) {
+                bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
+            }
+            return sendAsync("DEL", keys[0], bs).thenApply(v -> v.getIntValue(0));
+        }
     }
 
     @Override
-    public int del(String key) {
-        return delAsync(key).join();
+    public int del(String... keys) {
+        return delAsync(keys).join();
     }
 
     //--------------------- incr ------------------------------    
