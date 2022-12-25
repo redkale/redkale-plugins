@@ -190,32 +190,50 @@ public class MysqlDataSource extends DataSqlSource {
                 return g.getUpdateEffectCount();
             });
         } else {
-            return executeUpdate(info, info.getInsertQuestionPrepareSQL(values[0]), values, 0, MyClientRequest.REQ_TYPE_EXTEND_INSERT, attrs, objs);
+            return executeUpdate(info, new String[]{info.getInsertQuestionPrepareSQL(values[0])}, values, 0, MyClientRequest.REQ_TYPE_EXTEND_INSERT, attrs, objs);
         }
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String sql) {
+    protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " delete sql=" + sql);
+            if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
+                if (sqls.length == 1) {
+                    logger.finest(info.getType().getSimpleName() + " delete sql=" + sqls[0]);
+                } else {
+                    logger.finest(info.getType().getSimpleName() + " delete sqls=" + Arrays.toString(sqls));
+                }
+            }
         }
-        return executeUpdate(info, sql, null, fetchSize(flipper), 0, null);
+        return executeUpdate(info, sqls, null, fetchSize(flipper), 0, null);
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, final String table, String sql) {
+    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, final String[] tables, final String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sql);
+            if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
+                if (sqls.length == 1) {
+                    logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sqls[0]);
+                } else {
+                    logger.finest(info.getType().getSimpleName() + " clearTable sqls=" + Arrays.toString(sqls));
+                }
+            }
         }
-        return executeUpdate(info, sql, null, 0, 0, null);
+        return executeUpdate(info, sqls, null, 0, 0, null);
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, final String table, String sql) {
+    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, final String[] tables, final String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sql);
+            if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
+                if (sqls.length == 1) {
+                    logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sqls[0]);
+                } else {
+                    logger.finest(info.getType().getSimpleName() + " dropTable sqls=" + Arrays.toString(sqls));
+                }
+            }
         }
-        return executeUpdate(info, sql, null, 0, 0, null);
+        return executeUpdate(info, sqls, null, 0, 0, null);
     }
 
     @Override
@@ -265,17 +283,34 @@ public class MysqlDataSource extends DataSqlSource {
                 return g.getUpdateEffectCount();
             });
         } else {
-            return executeUpdate(info, info.getUpdateQuestionPrepareSQL(values[0]), null, 0, MyClientRequest.REQ_TYPE_EXTEND_UPDATE, Utility.append(attrs, primary), objs);
+            return executeUpdate(info, new String[]{info.getUpdateQuestionPrepareSQL(values[0])}, null, 0, MyClientRequest.REQ_TYPE_EXTEND_UPDATE, Utility.append(attrs, primary), objs);
         }
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateColumnDB(EntityInfo<T> info, Flipper flipper, String sql, boolean prepared, Object... params) {
+    protected <T> CompletableFuture<Integer> updateColumnDB(EntityInfo<T> info, Flipper flipper, SqlInfo sql) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " update sql=" + sql);
+            if (info.isLoggable(logger, Level.FINEST, sql.sql)) logger.finest(info.getType().getSimpleName() + " update sql=" + sql.sql);
         }
-        Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
-        return executeUpdate(info, sql, null, fetchSize(flipper), prepared ? MyClientRequest.REQ_TYPE_EXTEND_UPDATE : 0, null, objs);
+        List<Object[]> objs = null;
+        if (sql.blobs != null || sql.tables != null) {
+            objs = new ArrayList<>();
+            if (sql.tables == null) {
+                objs.add(sql.blobs.toArray());
+            } else {
+                for (String table : sql.tables) {
+                    if (sql.blobs != null) {
+                        List w = new ArrayList(sql.blobs);
+                        w.add(table);
+                        objs.add(w.toArray());
+                    } else {
+                        objs.add(new Object[]{table});
+                    }
+                }
+            }
+        }
+        Object[][] as = objs != null ? objs.toArray(new Object[objs.size()][]) : null;
+        return executeUpdate(info, new String[]{sql.sql}, null, fetchSize(flipper), objs != null ? MyClientRequest.REQ_TYPE_EXTEND_UPDATE : 0, null, as);
     }
 
     @Override
@@ -414,13 +449,27 @@ public class MysqlDataSource extends DataSqlSource {
         final CharSequence join = node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
         final CharSequence where = node == null ? null : createSQLExpress(node, info, joinTabalis);
         final MyClient pool = readPool();
-        final boolean queryallcacheflag = pool.cachePreparedStatements() && readcache && info.getTableStrategy() == null && sels == null && node == null && flipper == null && !distinct;
-        final String listsql = queryallcacheflag ? info.getAllQueryPrepareSQL() : ("SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM " + info.getTable(node) + " a" + (join == null ? "" : join)
-            + ((where == null || where.length() == 0) ? "" : (" WHERE " + where)) + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
+        final boolean cachePrepared = pool.cachePreparedStatements() && readcache && info.getTableStrategy() == null && sels == null && node == null && flipper == null && !distinct;
+        String[] tables = info.getTables(node);
+        String joinAndWhere = (join == null ? "" : join) + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
+        String listsubsql;
+        StringBuilder union = new StringBuilder();
+        if (tables.length == 1) {
+            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM " + tables[0] + " a" + joinAndWhere;
+        } else {
+            int b = 0;
+            for (String table : tables) {
+                if (!union.isEmpty()) union.append(" UNION ALL ");
+                String tabalis = "t" + (++b);
+                union.append("SELECT ").append(info.getQueryColumns(tabalis, selects)).append(" FROM ").append(table).append(" ").append(tabalis).append(joinAndWhere);
+            }
+            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
+        }
+        final String listsql = cachePrepared ? info.getAllQueryPrepareSQL() : (listsubsql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
         if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
         if (!needtotal) {
             CompletableFuture<MyResultSet> listfuture;
-            if (queryallcacheflag) {
+            if (cachePrepared) {
                 WorkThread workThread = WorkThread.currWorkThread();
                 AtomicReference<ClientConnection> connRef = new AtomicReference();
                 listfuture = thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
@@ -442,8 +491,13 @@ public class MysqlDataSource extends DataSqlSource {
                 return Sheet.asSheet(list);
             });
         }
-        final String countsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM " + info.getTable(node) + " a" + (join == null ? "" : join)
-            + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
+        String countsubsql;
+        if (tables.length == 1) {
+            countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM " + tables[0] + " a" + joinAndWhere;
+        } else {
+            countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM (" + (union) + ") a";
+        }
+        final String countsql = countsubsql;
         return getNumberResultDB(info, countsql, 0, countsql).thenCompose(total -> {
             if (total.longValue() <= 0) return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
             return executeQuery(info, listsql).thenApply((MyResultSet dataset) -> {
@@ -651,7 +705,7 @@ public class MysqlDataSource extends DataSqlSource {
         return rs;
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String sql, final T[] values, int fetchSize, final int extendType, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
+    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String[] sqls, final T[] values, int fetchSize, final int extendType, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
         final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();
@@ -659,32 +713,38 @@ public class MysqlDataSource extends DataSqlSource {
         AtomicReference<ClientConnection> connRef = new AtomicReference();
         CompletableFuture<MyResultSet> future = pool.connect(null).thenCompose(conn -> {
             connRef.set(conn);
-            if (extendType > 0) {
-                MyReqExtended req = ((MyClientConnection) conn).pollReqExtended(workThread, info);
-                req.prepare(extendType, sql, 0, attrs, parameters);
-                reqRef.set(req);
-                return pool.writeChannel(conn, req);
+            if (sqls.length == 1) {
+                if (extendType > 0) {
+                    MyReqExtended req = ((MyClientConnection) conn).pollReqExtended(workThread, info);
+                    req.prepare(extendType, sqls[0], 0, attrs, parameters);
+                    reqRef.set(req);
+                    return pool.writeChannel(conn, req);
+                } else {
+                    MyReqUpdate req = ((MyClientConnection) conn).pollReqUpdate(workThread, info);
+                    req.prepare(sqls[0], fetchSize, attrs, parameters);
+                    reqRef.set(req);
+                    return pool.writeChannel(conn, req);
+                }
             } else {
-                MyReqUpdate req = ((MyClientConnection) conn).pollReqUpdate(workThread, info);
-                req.prepare(sql, fetchSize, attrs, parameters);
-                reqRef.set(req);
+                MyReqBatch req = new MyReqBatch();
+                req.prepare(sqls);
                 return pool.writeChannel(conn, req);
             }
         });
         if (info == null || (info.getTableStrategy() == null && !autoddl())) {
             return future.thenApply(g -> {
-                slowLog(s, sql);
+                slowLog(s, sqls);
                 return g.getUpdateEffectCount();
             });
         }
         if (extendType == MyReqExtended.REQ_TYPE_EXTEND_INSERT) {
             return thenApplyInsertStrategy(info, future, reqRef, connRef, values).thenApply(g -> {
-                slowLog(s, sql);
+                slowLog(s, sqls);
                 return g.getUpdateEffectCount();
             });
         }
         return thenApplyQueryUpdateStrategy(info, connRef, future).thenApply(g -> {
-            slowLog(s, sql);
+            slowLog(s, sqls);
             return g.getUpdateEffectCount();
         });
     }

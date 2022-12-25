@@ -263,7 +263,7 @@ public final class SearchInfo<T> {
                         continue;
                     }
                 }
-                if ((field.getAnnotation(org.redkale.persistence.Id.class) != null||field.getAnnotation(javax.persistence.Id.class) != null) && idAttr0 == null) {
+                if ((field.getAnnotation(org.redkale.persistence.Id.class) != null || field.getAnnotation(javax.persistence.Id.class) != null) && idAttr0 == null) {
                     idAttr0 = attr;
                     insertcols.add(sqlfield);
                     insertattrs.add(attr);
@@ -396,7 +396,7 @@ public final class SearchInfo<T> {
     }
 
     /**
-     * 根据过滤条件获取Entity的表名
+     * 根据过滤条件获取Entity的表名，多表用逗号隔开
      *
      * @param node 过滤条件
      *
@@ -404,8 +404,10 @@ public final class SearchInfo<T> {
      */
     public String getTable(FilterNode node) {
         if (tableStrategy == null) return table;
-        String t = tableStrategy.getTable(table, node);
-        return t == null || t.isEmpty() ? table : t;
+        String[] t = tableStrategy.getTables(table, node);
+        if (t == null) return table;
+        if (t.length == 1) return t[0];
+        return Utility.joining(t, ',');
     }
 
     /**

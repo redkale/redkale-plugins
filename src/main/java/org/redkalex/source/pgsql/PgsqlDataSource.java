@@ -194,33 +194,51 @@ public class PgsqlDataSource extends DataSqlSource {
                 return g.getUpdateEffectCount();
             });
         } else {
-            return executeUpdate(info, info.getInsertDollarPrepareSQL(values[0]), values, 0, true, attrs, objs);
+            return executeUpdate(info, new String[]{info.getInsertDollarPrepareSQL(values[0])}, values, 0, true, attrs, objs);
         }
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String sql) {
+    protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
-            if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " delete sql=" + debugsql);
+            final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sqls[0] : (sqls[0] + " LIMIT " + flipper.getLimit());
+            if (info.isLoggable(logger, Level.FINEST, debugsql)) {
+                if (sqls.length == 1) {
+                    logger.finest(info.getType().getSimpleName() + " delete sql=" + debugsql);
+                } else {
+                    logger.finest(info.getType().getSimpleName() + " limit " + flipper.getLimit() + " delete sqls=" + Arrays.toString(sqls));
+                }
+            }
         }
-        return executeUpdate(info, sql, null, fetchSize(flipper), false, null);
+        return executeUpdate(info, sqls, null, fetchSize(flipper), false, null);
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, final String table, String sql) {
+    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, final String[] tables, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sql);
+            if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
+                if (sqls.length == 1) {
+                    logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sqls[0]);
+                } else {
+                    logger.finest(info.getType().getSimpleName() + " clearTable sqls=" + Arrays.toString(sqls));
+                }
+            }
         }
-        return executeUpdate(info, sql, null, 0, false, null);
+        return executeUpdate(info, sqls, null, 0, false, null);
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, final String table, String sql) {
+    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, final String[] tables, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sql);
+            if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
+                if (sqls.length == 1) {
+                    logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sqls[0]);
+                } else {
+                    logger.finest(info.getType().getSimpleName() + " dropTable sqls=" + Arrays.toString(sqls));
+                }
+            }
         }
-        return executeUpdate(info, sql, null, 0, false, null);
+        return executeUpdate(info, sqls, null, 0, false, null);
     }
 
     @Override
@@ -267,18 +285,35 @@ public class PgsqlDataSource extends DataSqlSource {
                 return g.getUpdateEffectCount();
             });
         } else {
-            return executeUpdate(info, info.getUpdateDollarPrepareSQL(values[0]), null, 0, false, Utility.append(attrs, primary), objs);
+            return executeUpdate(info, new String[]{info.getUpdateDollarPrepareSQL(values[0])}, null, 0, false, Utility.append(attrs, primary), objs);
         }
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateColumnDB(EntityInfo<T> info, Flipper flipper, String sql, boolean prepared, Object... params) {
+    protected <T> CompletableFuture<Integer> updateColumnDB(EntityInfo<T> info, Flipper flipper, SqlInfo sql) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            final String debugsql = sql; // flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
+            final String debugsql = sql.sql; // flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
             if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + debugsql);
         }
-        Object[][] objs = params == null || params.length == 0 ? null : new Object[][]{params};
-        return executeUpdate(info, sql, null, fetchSize(flipper), false, null, objs);
+        List<Object[]> objs = null;
+        if (sql.blobs != null || sql.tables != null) {
+            objs = new ArrayList<>();
+            if (sql.tables == null) {
+                objs.add(sql.blobs.toArray());
+            } else {
+                for (String table : sql.tables) {
+                    if (sql.blobs != null) {
+                        List w = new ArrayList(sql.blobs);
+                        w.add(table);
+                        objs.add(w.toArray());
+                    } else {
+                        objs.add(new Object[]{table});
+                    }
+                }
+            }
+        }
+        Object[][] as = objs != null ? objs.toArray(new Object[objs.size()][]) : null;
+        return executeUpdate(info, new String[]{sql.sql}, null, fetchSize(flipper), false, null, as);
     }
 
     @Override
@@ -418,8 +453,22 @@ public class PgsqlDataSource extends DataSqlSource {
         final CharSequence where = node == null ? null : createSQLExpress(node, info, joinTabalis);
         final PgClient pool = readPool();
         final boolean cachePrepared = pool.cachePreparedStatements() && readcache && info.getTableStrategy() == null && sels == null && node == null && flipper == null && !distinct;
-        final String listsql = cachePrepared ? info.getAllQueryPrepareSQL() : ("SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM " + info.getTable(node) + " a" + (join == null ? "" : join)
-            + ((where == null || where.length() == 0) ? "" : (" WHERE " + where)) + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
+        String[] tables = info.getTables(node);
+        String joinAndWhere = (join == null ? "" : join) + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
+        String listsubsql;
+        StringBuilder union = new StringBuilder();
+        if (tables.length == 1) {
+            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM " + tables[0] + " a" + joinAndWhere;
+        } else {
+            int b = 0;
+            for (String table : tables) {
+                if (!union.isEmpty()) union.append(" UNION ALL ");
+                String tabalis = "t" + (++b);
+                union.append("SELECT ").append(info.getQueryColumns(tabalis, selects)).append(" FROM ").append(table).append(" ").append(tabalis).append(joinAndWhere);
+            }
+            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
+        }
+        final String listsql = cachePrepared ? info.getAllQueryPrepareSQL() : (listsubsql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
         if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
         if (!needtotal) {
             CompletableFuture<PgResultSet> listfuture;
@@ -445,8 +494,13 @@ public class PgsqlDataSource extends DataSqlSource {
                 return Sheet.asSheet(list);
             });
         }
-        final String countsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM " + info.getTable(node) + " a" + (join == null ? "" : join)
-            + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
+        String countsubsql;
+        if (tables.length == 1) {
+            countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM " + tables[0] + " a" + joinAndWhere;
+        } else {
+            countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM (" + (union) + ") a";
+        }
+        final String countsql = countsubsql;
         return getNumberResultDB(info, countsql, 0, countsql).thenCompose(total -> {
             if (total.longValue() <= 0) return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
             return executeQuery(info, listsql).thenApply((PgResultSet dataset) -> {
@@ -654,33 +708,39 @@ public class PgsqlDataSource extends DataSqlSource {
         return rs;
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String sql, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
+    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String[] sqls, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();
         AtomicReference<PgClientRequest> reqRef = new AtomicReference();
         AtomicReference<ClientConnection> connRef = new AtomicReference();
         CompletableFuture<PgResultSet> future = pool.connect(null).thenCompose(conn -> {
-            PgReqUpdate req = insert ? ((PgClientConnection) conn).pollReqInsert(workThread, info) : ((PgClientConnection) conn).pollReqUpdate(workThread, info);
-            req.prepare(sql, fetchSize, attrs, parameters);
+            PgClientRequest req;
+            if (sqls.length == 1) {
+                PgReqUpdate upreq = insert ? ((PgClientConnection) conn).pollReqInsert(workThread, info) : ((PgClientConnection) conn).pollReqUpdate(workThread, info);
+                upreq.prepare(sqls[0], fetchSize, attrs, parameters);
+                req = upreq;
+            } else {
+                req = new PgReqBatch().prepare(sqls);
+            }
             reqRef.set(req);
             connRef.set(conn);
             return pool.writeChannel(conn, req);
         });
         if (info == null || (info.getTableStrategy() == null && !autoddl())) {
             return future.thenApply(g -> {
-                slowLog(s, sql);
+                slowLog(s, sqls);
                 return g.getUpdateEffectCount();
             });
         }
         if (insert) {
             return thenApplyInsertStrategy(info, future, reqRef, connRef, values).thenApply(g -> {
-                slowLog(s, sql);
+                slowLog(s, sqls);
                 return g.getUpdateEffectCount();
             });
         }
         return thenApplyQueryUpdateStrategy(info, connRef, future).thenApply(g -> {
-            slowLog(s, sql);
+            slowLog(s, sqls);
             return g.getUpdateEffectCount();
         });
     }
