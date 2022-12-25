@@ -168,12 +168,14 @@ public class SmsRecord {
         private static final String format = "%1$tY%1$tm";
 
         @Override
-        public String getTable(String table, FilterNode node) {
+        public String[] getTables(String table, FilterNode node) {
             Object time = node.findValue("createTime");
             if (time == null) time = node.findValue("#createTime");
-            if (time instanceof Long) return getSingleTable(table, (Long) time);
+            if (time instanceof Long) {
+                return new String[]{getSingleTable(table, (Long) time)};
+            }
             Range.LongRange createTime = (Range.LongRange) time;
-            return getSingleTable(table, createTime.getMin());
+            return new String[]{getSingleTable(table, createTime.getMin())};
         }
 
         @Override

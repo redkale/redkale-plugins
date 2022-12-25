@@ -16,13 +16,13 @@ import java.util.concurrent.atomic.*;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
-import org.redkale.net.*;
-import org.redkale.source.*;
-import org.redkale.util.*;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.net.AsyncIOGroup;
 import org.redkale.net.client.Client;
 import org.redkale.persistence.*;
-import static org.redkale.source.AbstractDataSource.*;
+import static org.redkale.source.AbstractDataSource.DATA_SOURCE_MAXCONNS;
+import org.redkale.source.*;
+import org.redkale.util.*;
 
 /**
  *
@@ -270,9 +270,9 @@ public class PgSQLTest {
             private static final String format = "%1$tY%1$tm";
 
             @Override
-            public String getTable(String table, FilterNode node) {
+            public String[] getTables(String table, FilterNode node) {
                 int pos = table.indexOf('.');
-                return table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis());
+                return new String[]{table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis())};
             }
 
             @Override

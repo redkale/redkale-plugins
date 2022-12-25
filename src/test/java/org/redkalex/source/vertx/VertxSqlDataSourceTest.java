@@ -38,7 +38,7 @@ public class VertxSqlDataSourceTest {
 
         final VertxSqlDataSource source = new VertxSqlDataSource();
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
-        System.out.println(source.find(Fortune.class, 5)); 
+        System.out.println(source.find(Fortune.class, 5));
         System.out.println(source.queryList(Fortune.class));
         Fortune one = source.queryList(Fortune.class).get(0);
         one.setMessage(one.getMessage() + " zz");
@@ -78,9 +78,9 @@ public class VertxSqlDataSourceTest {
             private static final String format = "%1$tY%1$tm";
 
             @Override
-            public String getTable(String table, FilterNode node) {
+            public String[] getTables(String table, FilterNode node) {
                 int pos = table.indexOf('.');
-                return table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis());
+                return new String[]{table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis())};
             }
 
             @Override
