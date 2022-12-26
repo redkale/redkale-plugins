@@ -1644,14 +1644,14 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.KEYS, pattern == null || pattern.isEmpty() ? "*" : pattern).thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
     }
 
-    //--------------------- getKeySize ------------------------------  
+    //--------------------- dbsize ------------------------------  
     @Override
-    public int getKeySize() {
-        return getKeySizeAsync().join();
+    public int dbsize() {
+        return dbsizeAsync().join();
     }
 
     @Override
-    public CompletableFuture<Integer> getKeySizeAsync() {
+    public CompletableFuture<Integer> dbsizeAsync() {
         return sendAsync(Command.DBSIZE).thenApply(v -> getIntValue(v, 0));
     }
 

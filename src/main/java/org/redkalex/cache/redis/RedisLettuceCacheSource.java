@@ -934,9 +934,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return rs;
     }
 
-//    //--------------------- getKeySize ------------------------------  
+//    //--------------------- dbsize ------------------------------  
     @Override
-    public int getKeySize() {
+    public int dbsize() {
         final RedisCommands<String, byte[]> command = connectBytes();
         List<String> keys = command.keys("*");
         releaseBytesCommand(command);
@@ -944,7 +944,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> getKeySizeAsync() {
+    public CompletableFuture<Integer> dbsizeAsync() {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.keys("*").thenApply(v -> v == null ? 0 : v.size()));
         });

@@ -1590,14 +1590,14 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return sendAsync("KEYS", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> (List) v.getCollectionValue(key, cryptor, false, String.class));
     }
 
-    //--------------------- getKeySize ------------------------------  
+    //--------------------- dbsize ------------------------------  
     @Override
-    public int getKeySize() {
-        return getKeySizeAsync().join();
+    public int dbsize() {
+        return dbsizeAsync().join();
     }
 
     @Override
-    public CompletableFuture<Integer> getKeySizeAsync() {
+    public CompletableFuture<Integer> dbsizeAsync() {
         return sendAsync("DBSIZE", null).thenApply(v -> v.getIntValue(0));
     }
 

@@ -32,7 +32,7 @@ public class MySQLTest {
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/redsns_platf?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
         prop.setProperty("redkale.datasource[].maxconns", "2");
         prop.setProperty("redkale.datasource[].table-autoddl", "true");
         prop.setProperty("redkale.datasource[].user", "root");
@@ -54,6 +54,21 @@ public class MySQLTest {
         //System.out.println(Arrays.toString(info.getQueryAttributes()));
         System.out.println("查询List结果: " + source.queryList(World.class));
         System.out.println("查询List结束========");
+
+        if (true) {
+            DayRecord record = new DayRecord();
+            record.setCreateTime(System.currentTimeMillis());
+            record.setContent("这是内容");
+            record.setRecordid("rid-" + record.getCreateTime());
+
+            DayRecord record2 = new DayRecord();
+            record2.setCreateTime(record.getCreateTime() - 24 * 60 * 60 * 1000L);
+            record2.setContent("这是内容2");
+            record2.setRecordid("rid2-" + record2.getCreateTime());
+            source.insert(record, record2);
+            return;
+        }
+
         World w1 = new World();
         w1.id = 1;
         w1.randomNumber = 10;

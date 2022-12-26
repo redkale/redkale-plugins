@@ -2011,14 +2011,14 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return CompletableFuture.supplyAsync(() -> keys(pattern));
     }
 
-    //--------------------- getKeySize ------------------------------  
+    //--------------------- dbsize ------------------------------  
     @Override
-    public int getKeySize() {
+    public int dbsize() {
         return (int) client.getKeys().count();
     }
 
     @Override
-    public CompletableFuture<Integer> getKeySizeAsync() {
+    public CompletableFuture<Integer> dbsizeAsync() {
         return completableFuture(client.getKeys().countAsync().thenApply(r -> r.intValue()));
     }
 
