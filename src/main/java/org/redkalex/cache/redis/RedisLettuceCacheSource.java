@@ -675,20 +675,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    public <T> void setnxBytes(final String key, final Convert convert, final Type type, final T value) {
-        final RedisCommands<String, byte[]> command = connectBytes();
-        command.setnx(key, convert.convertToBytes(type, value));
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setnxBytesAsync(final String key, final Convert convert, final Type type, final T value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setnx(key, convert.convertToBytes(type, value)));
-        });
-    }
-
 //    //--------------------- setex ------------------------------    
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert0, T value) {
@@ -1402,20 +1388,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public void setexBytes(final String key, final int expireSeconds, final byte[] value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         command.setex(key, expireSeconds, value);
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public <T> void setBytes(final String key, final Convert convert0, final Type type, final T value) {
-        final RedisCommands<String, byte[]> command = connectBytes();
-        command.set(key, (convert0 == null ? convert : convert0).convertToBytes(type, value));
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public <T> void setexBytes(final String key, final int expireSeconds, final Convert convert0, final Type type, final T value) {
-        final RedisCommands<String, byte[]> command = connectBytes();
-        command.setex(key, expireSeconds, (convert0 == null ? convert : convert0).convertToBytes(type, value));
         releaseBytesCommand(command);
     }
 
@@ -2188,16 +2160,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.setex(key, expireSeconds, value));
         });
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setBytesAsync(String key, Convert convert0, Type type, T value) {
-        return setBytesAsync(key, (convert0 == null ? convert : convert0).convertToBytes(type, value));
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setexBytesAsync(String key, int expireSeconds, Convert convert0, Type type, T value) {
-        return setexBytesAsync(key, expireSeconds, (convert0 == null ? convert : convert0).convertToBytes(type, value));
     }
 
     @Override

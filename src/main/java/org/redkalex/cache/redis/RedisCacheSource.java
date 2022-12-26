@@ -358,16 +358,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void setnxBytes(final String key, final Convert convert, final Type type, final T value) {
-        setnxBytesAsync(key, convert, type, value).join();
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setnxBytesAsync(final String key, final Convert convert, final Type type, final T value) {
-        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
-    }
-
-    @Override
     public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
         return sendAsync("GETSET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> v.getObjectValue(key, cryptor, type));
     }
@@ -1574,16 +1564,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void setBytes(final String key, final Convert convert, final Type type, final T value) {
-        setBytesAsync(key, convert, type, value).join();
-    }
-
-    @Override
-    public <T> void setexBytes(final String key, final int expireSeconds, final Convert convert, final Type type, final T value) {
-        setexBytesAsync(key, expireSeconds, convert, type, value).join();
-    }
-
-    @Override
     public CompletableFuture<byte[]> getBytesAsync(final String key) {
         return sendAsync("GET", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBytesValue());
     }
@@ -1602,16 +1582,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getVoidValue());
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setBytesAsync(final String key, final Convert convert0, final Type type, final T value) {
-        return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), (convert0 == null ? convert : convert).convertToBytes(type, value)).thenApply(v -> v.getVoidValue());
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final Convert convert0, final Type type, final T value) {
-        return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), (convert0 == null ? convert : convert).convertToBytes(type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override

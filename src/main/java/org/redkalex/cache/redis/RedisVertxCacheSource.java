@@ -1605,16 +1605,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void setBytes(final String key, final Convert convert, final Type type, final T value) {
-        setBytesAsync(key, convert, type, value).join();
-    }
-
-    @Override
-    public <T> void setexBytes(final String key, final int expireSeconds, final Convert convert, final Type type, final T value) {
-        setexBytesAsync(key, expireSeconds, convert, type, value).join();
-    }
-
-    @Override
     public CompletableFuture<byte[]> getBytesAsync(final String key) {
         return sendAsync(Command.GET, key).thenApply(v -> v.toBytes());
     }
@@ -1645,28 +1635,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void setnxBytes(final String key, final Convert convert, final Type type, final T value) {
-        setnxBytesAsync(key, convert, type, value).join();
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setnxBytesAsync(final String key, final Convert convert, final Type type, final T value) {
-        return sendAsync(Command.SETNX, key, formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
-    }
-
-    @Override
     public CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
         return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), new String(value, StandardCharsets.UTF_8)).thenApply(v -> null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setBytesAsync(final String key, final Convert convert, final Type type, final T value) {
-        return sendAsync(Command.SET, key, new String(convert.convertToBytes(type, value), StandardCharsets.UTF_8)).thenApply(v -> null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final Convert convert, final Type type, final T value) {
-        return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), new String(convert.convertToBytes(type, value), StandardCharsets.UTF_8)).thenApply(v -> null);
     }
 
     @Override
