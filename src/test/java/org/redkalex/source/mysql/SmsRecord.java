@@ -191,7 +191,7 @@ public class SmsRecord {
         @Override
         public String getTable(String table, Serializable primary) {
             String id = (String) primary;
-            return getSingleTable(table, Long.parseLong(id.substring(0, id.indexOf('-')), 36));
+            return getSingleTable(table, Long.parseLong(id.substring(0, id.indexOf('-'))));
         }
     }
 }

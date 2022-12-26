@@ -295,7 +295,7 @@ public abstract class RedisAbstractTest {
         Assertions.assertEquals(2, size);
 
         source.del("hmaplong");
-        source.hincr("hmaplong", "key1", 10);
+        source.hincrby("hmaplong", "key1", 10);
         source.hsetLong("hmaplong", "key2", 30);
 
         Map<String, Long> longmap = source.hmap("hmaplong", long.class, 0, 10);

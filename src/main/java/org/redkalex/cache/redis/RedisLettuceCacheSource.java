@@ -794,7 +794,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return rs;
     }
 
-//    //--------------------- incr ------------------------------    
+//    //--------------------- incrby ------------------------------    
     @Override
     public long incr(final String key) {
         final RedisCommands<String, byte[]> command = connectBytes();
@@ -812,7 +812,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long incr(final String key, long num) {
+    public long incrby(final String key, long num) {
         final RedisCommands<String, byte[]> command = connectBytes();
         long rs = command.incrby(key, num);
         releaseBytesCommand(command);
@@ -820,14 +820,30 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long> incrAsync(final String key, long num) {
+    public double incrbyFloat(final String key, double num) {
+        final RedisCommands<String, byte[]> command = connectBytes();
+        Double rs = command.incrbyfloat(key, num);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public CompletableFuture<Long> incrbyAsync(final String key, long num) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.incrby(key, num));
         });
     }
 
-//    //--------------------- decr ------------------------------    
+    @Override
+    public CompletableFuture<Double> incrbyFloatAsync(final String key, double num) {
+        return connectStringAsync().thenCompose(command -> {
+            //此处获取的long值，无需传cryptor进行解密
+            return completableStringFuture(key, null, command, command.incrbyfloat(key, num));
+        });
+    }
+//    //--------------------- decrby ------------------------------    
+
     @Override
     public long decr(final String key) {
         final RedisCommands<String, byte[]> command = connectBytes();
@@ -845,7 +861,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long decr(final String key, long num) {
+    public long decrby(final String key, long num) {
         final RedisCommands<String, byte[]> command = connectBytes();
         long rs = command.decrby(key, num);
         releaseBytesCommand(command);
@@ -853,7 +869,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long> decrAsync(final String key, long num) {
+    public CompletableFuture<Long> decrbyAsync(final String key, long num) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.decrby(key, num));
@@ -893,9 +909,17 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long hincr(final String key, String field, long num) {
+    public long hincrby(final String key, String field, long num) {
         final RedisCommands<String, String> command = connectString();
         long rs = command.hincrby(key, field, num);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public double hincrbyFloat(final String key, String field, double num) {
+        final RedisCommands<String, String> command = connectString();
+        double rs = command.hincrbyfloat(key, field, num);
         releaseStringCommand(command);
         return rs;
     }
@@ -909,7 +933,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long hdecr(final String key, String field, long num) {
+    public long hdecrby(final String key, String field, long num) {
         final RedisCommands<String, String> command = connectString();
         long rs = command.hincrby(key, field, -num);
         releaseStringCommand(command);
@@ -1701,11 +1725,11 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Long> hincrAsync(String key, String field) {
-        return hincrAsync(key, field, 1);
+        return hincrbyAsync(key, field, 1);
     }
 
     @Override
-    public CompletableFuture<Long> hincrAsync(String key, String field, long num) {
+    public CompletableFuture<Long> hincrbyAsync(String key, String field, long num) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.hincrby(key, field, num));
@@ -1713,13 +1737,21 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long> hdecrAsync(String key, String field) {
-        return hincrAsync(key, field, -1);
+    public CompletableFuture<Double> hincrbyFloatAsync(String key, String field, double num) {
+        return connectStringAsync().thenCompose(command -> {
+            //此处获取的long值，无需传cryptor进行解密
+            return completableStringFuture(key, null, command, command.hincrbyfloat(key, field, num));
+        });
     }
 
     @Override
-    public CompletableFuture<Long> hdecrAsync(String key, String field, long num) {
-        return hincrAsync(key, field, -num);
+    public CompletableFuture<Long> hdecrAsync(String key, String field) {
+        return hincrbyAsync(key, field, -1);
+    }
+
+    @Override
+    public CompletableFuture<Long> hdecrbyAsync(String key, String field, long num) {
+        return hincrbyAsync(key, field, -num);
     }
 
     @Override

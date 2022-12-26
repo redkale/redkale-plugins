@@ -549,7 +549,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return delAsync(keys).join();
     }
 
-    //--------------------- incr ------------------------------    
+    //--------------------- incrby ------------------------------    
     @Override
     public long incr(final String key) {
         return incrAsync(key).join();
@@ -561,16 +561,26 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long incr(final String key, long num) {
-        return incrAsync(key, num).join();
+    public long incrby(final String key, long num) {
+        return incrbyAsync(key, num).join();
     }
 
     @Override
-    public CompletableFuture<Long> incrAsync(final String key, long num) {
+    public double incrbyFloat(final String key, double num) {
+        return incrbyFloatAsync(key, num).join();
+    }
+
+    @Override
+    public CompletableFuture<Long> incrbyAsync(final String key, long num) {
         return sendAsync("INCRBY", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(num).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getLongValue(0L));
     }
 
-    //--------------------- decr ------------------------------    
+    @Override
+    public CompletableFuture<Double> incrbyFloatAsync(final String key, double num) {
+        return sendAsync("INCRBYFLOAT", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(num).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getDoubleValue(0.d));
+    }
+
+    //--------------------- decrby ------------------------------    
     @Override
     public long decr(final String key) {
         return decrAsync(key).join();
@@ -582,12 +592,12 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long decr(final String key, long num) {
-        return decrAsync(key, num).join();
+    public long decrby(final String key, long num) {
+        return decrbyAsync(key, num).join();
     }
 
     @Override
-    public CompletableFuture<Long> decrAsync(final String key, long num) {
+    public CompletableFuture<Long> decrbyAsync(final String key, long num) {
         return sendAsync("DECRBY", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(num).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getLongValue(0L));
     }
 
@@ -612,8 +622,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long hincr(final String key, String field, long num) {
-        return hincrAsync(key, field, num).join();
+    public long hincrby(final String key, String field, long num) {
+        return hincrbyAsync(key, field, num).join();
+    }
+
+    @Override
+    public double hincrbyFloat(final String key, String field, double num) {
+        return hincrbyFloatAsync(key, field, num).join();
     }
 
     @Override
@@ -622,8 +637,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long hdecr(final String key, String field, long num) {
-        return hdecrAsync(key, field, num).join();
+    public long hdecrby(final String key, String field, long num) {
+        return hdecrbyAsync(key, field, num).join();
     }
 
     @Override
@@ -743,22 +758,27 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Long> hincrAsync(final String key, String field) {
-        return hincrAsync(key, field, 1);
+        return hincrbyAsync(key, field, 1);
     }
 
     @Override
-    public CompletableFuture<Long> hincrAsync(final String key, String field, long num) {
+    public CompletableFuture<Long> hincrbyAsync(final String key, String field, long num) {
         return sendAsync("HINCRBY", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), String.valueOf(num).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getLongValue(0L));
     }
 
     @Override
-    public CompletableFuture<Long> hdecrAsync(final String key, String field) {
-        return hincrAsync(key, field, -1);
+    public CompletableFuture<Double> hincrbyFloatAsync(final String key, String field, double num) {
+        return sendAsync("HINCRBYFLOAT", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), String.valueOf(num).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getDoubleValue(0.d));
     }
 
     @Override
-    public CompletableFuture<Long> hdecrAsync(final String key, String field, long num) {
-        return hincrAsync(key, field, -num);
+    public CompletableFuture<Long> hdecrAsync(final String key, String field) {
+        return hincrbyAsync(key, field, -1);
+    }
+
+    @Override
+    public CompletableFuture<Long> hdecrbyAsync(final String key, String field, long num) {
+        return hincrbyAsync(key, field, -num);
     }
 
     @Override

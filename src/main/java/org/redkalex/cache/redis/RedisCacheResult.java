@@ -49,6 +49,10 @@ public class RedisCacheResult {
         return val;
     }
 
+    public Double getDoubleValue(Double defvalue) {
+        return bytesValue == null ? defvalue : Double.parseDouble(new String(bytesValue, StandardCharsets.UTF_8));
+    }
+
     public Long getLongValue(Long defvalue) {
         return bytesValue == null ? defvalue : Long.parseLong(new String(bytesValue, StandardCharsets.UTF_8));
     }

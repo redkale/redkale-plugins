@@ -649,7 +649,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return (int) client.getKeys().delete(keys);
     }
 
-    //--------------------- incr ------------------------------    
+    //--------------------- incrby ------------------------------    
     @Override
     public long incr(final String key) {
         return client.getAtomicLong(key).incrementAndGet();
@@ -661,16 +661,26 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long incr(final String key, long num) {
+    public long incrby(final String key, long num) {
         return client.getAtomicLong(key).addAndGet(num);
     }
 
     @Override
-    public CompletableFuture<Long> incrAsync(final String key, long num) {
+    public double incrbyFloat(final String key, double num) {
+        return client.getAtomicDouble(key).addAndGet(num);
+    }
+
+    @Override
+    public CompletableFuture<Long> incrbyAsync(final String key, long num) {
         return completableFuture(client.getAtomicLong(key).addAndGetAsync(num));
     }
 
-    //--------------------- decr ------------------------------    
+    @Override
+    public CompletableFuture<Double> incrbyFloatAsync(final String key, double num) {
+        return completableFuture(client.getAtomicDouble(key).addAndGetAsync(num));
+    }
+
+    //--------------------- decrby ------------------------------    
     @Override
     public long decr(final String key) {
         return client.getAtomicLong(key).decrementAndGet();
@@ -682,12 +692,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long decr(final String key, long num) {
+    public long decrby(final String key, long num) {
         return client.getAtomicLong(key).addAndGet(-num);
     }
 
     @Override
-    public CompletableFuture<Long> decrAsync(final String key, long num) {
+    public CompletableFuture<Long> decrbyAsync(final String key, long num) {
         return completableFuture(client.getAtomicLong(key).addAndGetAsync(-num));
     }
 
@@ -714,8 +724,14 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long hincr(final String key, String field, long num) {
+    public long hincrby(final String key, String field, long num) {
         RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
+        return map.addAndGet(field, num);
+    }
+
+    @Override
+    public double hincrbyFloat(final String key, String field, double num) {
+        RMap<String, Double> map = client.getMap(key, MapDoubleCodec.instance);
         return map.addAndGet(field, num);
     }
 
@@ -726,7 +742,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public long hdecr(final String key, String field, long num) {
+    public long hdecrby(final String key, String field, long num) {
         RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
         return map.addAndGet(field, -num);
     }
@@ -917,8 +933,14 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long> hincrAsync(final String key, String field, long num) {
+    public CompletableFuture<Long> hincrbyAsync(final String key, String field, long num) {
         RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
+        return completableFuture(map.addAndGetAsync(field, num));
+    }
+
+    @Override
+    public CompletableFuture<Double> hincrbyFloatAsync(final String key, String field, double num) {
+        RMap<String, Double> map = client.getMap(key, MapDoubleCodec.instance);
         return completableFuture(map.addAndGetAsync(field, num));
     }
 
@@ -929,7 +951,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long> hdecrAsync(final String key, String field, long num) {
+    public CompletableFuture<Long> hdecrbyAsync(final String key, String field, long num) {
         RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
         return completableFuture(map.addAndGetAsync(field, -num));
     }
@@ -2067,6 +2089,21 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     protected static class MapLongCodec extends org.redisson.client.codec.LongCodec {
+
+        public static final MapLongCodec instance = new MapLongCodec();
+
+        @Override
+        public org.redisson.client.protocol.Decoder<Object> getMapKeyDecoder() {
+            return org.redisson.client.codec.StringCodec.INSTANCE.getValueDecoder();
+        }
+
+        @Override
+        public org.redisson.client.protocol.Encoder getMapKeyEncoder() {
+            return org.redisson.client.codec.StringCodec.INSTANCE.getValueEncoder();
+        }
+    }
+
+    protected static class MapDoubleCodec extends org.redisson.client.codec.DoubleCodec {
 
         public static final MapLongCodec instance = new MapLongCodec();
 
