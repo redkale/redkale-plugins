@@ -341,6 +341,8 @@ public abstract class RedisAbstractTest {
         System.out.println("SPOP五个元素：" + source.spopLong("popset", 5));
         System.out.println("SPOP一个元素：" + source.spopLong("popset"));
 
+        long dbsize = source.dbsize();
+        System.out.println("keys总数量 : " + dbsize);
         //清除
         int rs = source.del("stritem1");
         System.out.println("删除stritem1个数: " + rs);

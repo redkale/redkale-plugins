@@ -894,17 +894,17 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
 //    //--------------------- dbsize ------------------------------  
     @Override
-    public int dbsize() {
+    public long dbsize() {
         final RedisCommands<String, byte[]> command = connectBytes();
-        List<String> keys = command.keys("*");
+        Long rs = command.dbsize();
         releaseBytesCommand(command);
-        return keys == null ? 0 : keys.size();
+        return rs;
     }
 
     @Override
-    public CompletableFuture<Integer> dbsizeAsync() {
+    public CompletableFuture<Long> dbsizeAsync() {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.keys("*").thenApply(v -> v == null ? 0 : v.size()));
+            return completableBytesFuture(command, command.dbsize());
         });
     }
 

@@ -1951,13 +1951,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     //--------------------- dbsize ------------------------------  
     @Override
-    public int dbsize() {
-        return (int) client.getKeys().count();
+    public long dbsize() {
+        return client.getKeys().count();
     }
 
     @Override
-    public CompletableFuture<Integer> dbsizeAsync() {
-        return completableFuture(client.getKeys().countAsync().thenApply(r -> r.intValue()));
+    public CompletableFuture<Long> dbsizeAsync() {
+        return completableFuture(client.getKeys().countAsync());
     }
 
     protected static class MapByteArrayCodec extends org.redisson.client.codec.ByteArrayCodec {

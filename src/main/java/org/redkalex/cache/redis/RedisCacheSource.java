@@ -438,7 +438,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     //--------------------- setex ------------------------------    
-
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, final Type type, T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> v.getVoidValue());
@@ -1541,13 +1540,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     //--------------------- dbsize ------------------------------  
     @Override
-    public int dbsize() {
+    public long dbsize() {
         return dbsizeAsync().join();
     }
 
     @Override
-    public CompletableFuture<Integer> dbsizeAsync() {
-        return sendAsync("DBSIZE", null).thenApply(v -> v.getIntValue(0));
+    public CompletableFuture<Long> dbsizeAsync() {
+        return sendAsync("DBSIZE", null).thenApply(v -> v.getLongValue(0L));
     }
 
     //--------------------- send ------------------------------  

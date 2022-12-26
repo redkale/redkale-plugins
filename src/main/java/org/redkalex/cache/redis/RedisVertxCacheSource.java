@@ -1594,13 +1594,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     //--------------------- dbsize ------------------------------  
     @Override
-    public int dbsize() {
+    public long dbsize() {
         return dbsizeAsync().join();
     }
 
     @Override
-    public CompletableFuture<Integer> dbsizeAsync() {
-        return sendAsync(Command.DBSIZE).thenApply(v -> getIntValue(v, 0));
+    public CompletableFuture<Long> dbsizeAsync() {
+        return sendAsync(Command.DBSIZE).thenApply(v -> getLongValue(v, 0L));
     }
 
 }
