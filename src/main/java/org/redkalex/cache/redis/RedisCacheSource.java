@@ -318,11 +318,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     //--------------------- setex ------------------------------
     @Override
-    public <T> CompletableFuture<Void> setAsync(String key, Convert convert, T value) {
-        return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, value.getClass(), value)).thenApply(v -> v.getVoidValue());
-    }
-
-    @Override
     public <T> CompletableFuture<Void> setAsync(String key, final Type type, T value) {
         return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> v.getVoidValue());
     }
@@ -330,11 +325,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, final Type type, T value) {
         return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setnxAsync(String key, Convert convert, T value) {
-        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, value.getClass(), value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
@@ -378,11 +368,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void set(final String key, final Convert convert, T value) {
-        setAsync(key, convert, value).join();
-    }
-
-    @Override
     public <T> void set(final String key, final Type type, T value) {
         setAsync(key, type, value).join();
     }
@@ -390,11 +375,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public <T> void set(String key, final Convert convert, final Type type, T value) {
         setAsync(key, convert, type, value).join();
-    }
-
-    @Override
-    public <T> void setnx(final String key, final Convert convert, T value) {
-        setnxAsync(key, convert, value).join();
     }
 
     @Override
@@ -458,10 +438,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     //--------------------- setex ------------------------------    
-    @Override
-    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, T value) {
-        return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, null, value)).thenApply(v -> v.getVoidValue());
-    }
 
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, final Type type, T value) {
@@ -471,11 +447,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
         return sendAsync("SETEX", key, key.getBytes(StandardCharsets.UTF_8), String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
-    }
-
-    @Override
-    public <T> void setex(String key, int expireSeconds, Convert convert, T value) {
-        setexAsync(key, expireSeconds, convert, value).join();
     }
 
     @Override
@@ -637,11 +608,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void hset(final String key, final String field, final Convert convert, final T value) {
-        hsetAsync(key, field, convert, value).join();
-    }
-
-    @Override
     public <T> void hset(final String key, final String field, final Type type, final T value) {
         hsetAsync(key, field, type, value).join();
     }
@@ -659,11 +625,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public void hsetLong(final String key, final String field, final long value) {
         hsetLongAsync(key, field, value).join();
-    }
-
-    @Override
-    public <T> void hsetnx(final String key, final String field, final Convert convert, final T value) {
-        hsetnxAsync(key, field, convert, value).join();
     }
 
     @Override
@@ -777,12 +738,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
-        return sendAsync("HSET", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, null, value)).thenApply(v -> v.getVoidValue());
-    }
-
-    @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Type type, final T value) {
         if (value == null) return CompletableFuture.completedFuture(null);
         return sendAsync("HSET", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, null, type, value)).thenApply(v -> v.getVoidValue());
@@ -803,12 +758,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> hsetLongAsync(final String key, final String field, final long value) {
         return sendAsync("HSET", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> hsetnxAsync(final String key, final String field, final Convert convert, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
-        return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, null, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override

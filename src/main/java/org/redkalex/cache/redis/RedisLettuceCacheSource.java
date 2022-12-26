@@ -471,13 +471,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, T value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.set(key, value == null ? null : encryptValue(key, cryptor, value.getClass(), convert0, value)));
-        });
-    }
-
-    @Override
     public <T> CompletableFuture<Void> setAsync(String key, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.set(key, encryptValue(key, cryptor, type, this.convert, value)));
@@ -488,13 +481,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.set(key, encryptValue(key, cryptor, type, convert0, value)));
-        });
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setnxAsync(String key, Convert convert0, T value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setnx(key, value == null ? null : encryptValue(key, cryptor, value.getClass(), convert0, value)));
         });
     }
 
@@ -560,13 +546,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void set(final String key, final Convert convert0, T value) {
-        final RedisCommands<String, byte[]> command = connectBytes();
-        command.set(key, value == null ? null : encryptValue(key, cryptor, value.getClass(), convert0, value));
-        releaseBytesCommand(command);
-    }
-
-    @Override
     public <T> void set(final String key, final Type type, T value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         command.set(key, encryptValue(key, cryptor, type, this.convert, value));
@@ -577,13 +556,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public <T> void set(String key, final Convert convert0, final Type type, T value) {
         final RedisCommands<String, byte[]> command = connectBytes();
         command.set(key, encryptValue(key, cryptor, type, convert0, value));
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public <T> void setnx(final String key, final Convert convert0, T value) {
-        final RedisCommands<String, byte[]> command = connectBytes();
-        command.setnx(key, value == null ? null : encryptValue(key, cryptor, value.getClass(), convert0, value));
         releaseBytesCommand(command);
     }
 
@@ -677,13 +649,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
 //    //--------------------- setex ------------------------------    
     @Override
-    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert0, T value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setex(key, expireSeconds, value == null ? null : encryptValue(key, cryptor, value.getClass(), convert0, value)).thenApply(r -> null));
-        });
-    }
-
-    @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.setex(key, expireSeconds, encryptValue(key, cryptor, type, convert, value)).thenApply(r -> null));
@@ -696,13 +661,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.setex(key, expireSeconds, encryptValue(key, cryptor, type, convert0, value)).thenApply(r -> null));
         });
-    }
-
-    @Override
-    public <T> void setex(String key, int expireSeconds, Convert convert0, T value) {
-        final RedisCommands<String, byte[]> command = connectBytes();
-        command.setex(key, expireSeconds, value == null ? null : encryptValue(key, cryptor, value.getClass(), convert0, value));
-        releaseBytesCommand(command);
     }
 
     @Override
@@ -951,14 +909,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void hset(final String key, final String field, final Convert convert0, final T value) {
-        if (value == null) return;
-        final RedisCommands<String, byte[]> command = connectBytes();
-        command.hset(key, field, encryptValue(key, cryptor, value.getClass(), convert0, value));
-        releaseBytesCommand(command);
-    }
-
-    @Override
     public <T> void hset(final String key, final String field, final Type type, final T value) {
         if (value == null) return;
         final RedisCommands<String, byte[]> command = connectBytes();
@@ -987,14 +937,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         final RedisCommands<String, String> command = connectString();
         command.hset(key, field, String.valueOf(value));
         releaseStringCommand(command);
-    }
-
-    @Override
-    public <T> void hsetnx(final String key, final String field, final Convert convert0, final T value) {
-        if (value == null) return;
-        final RedisCommands<String, byte[]> command = connectBytes();
-        command.hsetnx(key, field, encryptValue(key, cryptor, value.getClass(), convert0, value));
-        releaseBytesCommand(command);
     }
 
     @Override
@@ -1734,14 +1676,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetAsync(String key, String field, Convert convert0, T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.hset(key, field, encryptValue(key, cryptor, value.getClass(), (convert0 == null ? convert : convert0).convertToBytes(objValueType, value))));
-        });
-    }
-
-    @Override
     public <T> CompletableFuture<Void> hsetAsync(String key, String field, Type type, T value) {
         if (value == null) return CompletableFuture.completedFuture(null);
         return connectBytesAsync().thenCompose(command -> {
@@ -1770,14 +1704,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return connectStringAsync().thenCompose(command -> {
             //不处理返回值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.hset(key, field, String.valueOf(value)));
-        });
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> hsetnxAsync(String key, String field, Convert convert0, T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.hsetnx(key, field, encryptValue(key, cryptor, value.getClass(), (convert0 == null ? convert : convert0).convertToBytes(objValueType, value))));
         });
     }
 

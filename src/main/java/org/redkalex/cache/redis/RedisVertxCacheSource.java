@@ -392,11 +392,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setAsync(String key, Convert convert, T value) {
-        return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, value.getClass(), value)).thenApply(v -> null);
-    }
-
-    @Override
     public <T> CompletableFuture<Void> setAsync(String key, final Type type, T value) {
         return sendAsync(Command.SET, key, formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> null);
     }
@@ -404,11 +399,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, final Type type, T value) {
         return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> setnxAsync(String key, Convert convert, T value) {
-        return sendAsync(Command.SETNX, key, formatValue(key, cryptor, convert, value.getClass(), value)).thenApply(v -> null);
     }
 
     @Override
@@ -432,11 +422,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void set(final String key, final Convert convert, T value) {
-        setAsync(key, convert, value).join();
-    }
-
-    @Override
     public <T> void set(final String key, final Type type, T value) {
         setAsync(key, type, value).join();
     }
@@ -444,11 +429,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public <T> void set(final String key, final Convert convert, final Type type, T value) {
         setAsync(key, convert, type, value).join();
-    }
-
-    @Override
-    public <T> void setnx(final String key, final Convert convert, T value) {
-        setnxAsync(key, convert, value).join();
     }
 
     @Override
@@ -523,11 +503,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     //--------------------- setex ------------------------------    
     @Override
-    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, T value) {
-        return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), formatValue(key, cryptor, convert, value.getClass(), value)).thenApply(v -> null);
-    }
-
-    @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, final Type type, T value) {
         return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> null);
     }
@@ -535,11 +510,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
         return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
-    }
-
-    @Override
-    public <T> void setex(String key, int expireSeconds, Convert convert, T value) {
-        setexAsync(key, expireSeconds, convert, value).join();
     }
 
     @Override
@@ -692,11 +662,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void hset(final String key, final String field, final Convert convert, final T value) {
-        hsetAsync(key, field, convert, value).join();
-    }
-
-    @Override
     public <T> void hset(final String key, final String field, final Type type, final T value) {
         hsetAsync(key, field, type, value).join();
     }
@@ -714,11 +679,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public void hsetLong(final String key, final String field, final long value) {
         hsetLongAsync(key, field, value).join();
-    }
-
-    @Override
-    public <T> void hsetnx(final String key, final String field, final Convert convert, final T value) {
-        hsetnxAsync(key, field, convert, value).join();
     }
 
     @Override
@@ -830,12 +790,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
-        return sendAsync(Command.HSET, key, field, formatValue(key, cryptor, convert, null, value)).thenApply(v -> null);
-    }
-
-    @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Type type, final T value) {
         if (value == null) return CompletableFuture.completedFuture(null);
         return sendAsync(Command.HSET, key, field, formatValue(key, cryptor, null, type, value)).thenApply(v -> null);
@@ -856,12 +810,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> hsetLongAsync(final String key, final String field, final long value) {
         return sendAsync(Command.HSET, key, field, formatValue(value)).thenApply(v -> null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Void> hsetnxAsync(final String key, final String field, final Convert convert, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
-        return sendAsync(Command.HSETNX, key, field, formatValue(key, cryptor, convert, null, value)).thenApply(v -> null);
     }
 
     @Override
