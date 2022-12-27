@@ -72,16 +72,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         }
         int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
         //Redis链接
-        RedisOptions config = new RedisOptions();
-        if (maxconns > 0) config.setMaxPoolSize(maxconns);
-        if (password != null) config.setPassword(password.trim());
-        if (maxconns > 0) config.setMaxPoolWaiting(maxconns != Utility.cpus() ? maxconns : maxconns * 10);
-        config.setEndpoints(addrs);
+        RedisOptions redisConfig = new RedisOptions();
+        if (maxconns > 0) redisConfig.setMaxPoolSize(maxconns);
+        if (password != null) redisConfig.setPassword(password.trim());
+        if (maxconns > 0) redisConfig.setMaxPoolWaiting(maxconns != Utility.cpus() ? maxconns : maxconns * 10);
+        redisConfig.setEndpoints(addrs);
         if (this.vertx == null) {
             this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         }
         RedisAPI old = this.client;
-        this.client = RedisAPI.api(Redis.createClient(this.vertx, config));
+        this.client = RedisAPI.api(Redis.createClient(this.vertx, redisConfig));
         if (old != null) old.close();
     }
 
