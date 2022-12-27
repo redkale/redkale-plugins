@@ -7,13 +7,17 @@ package org.redkalex.cache.redis;
 
 import java.nio.charset.StandardCharsets;
 import org.redkale.net.client.*;
-import org.redkale.util.*;
+import org.redkale.util.ByteArray;
 
 /**
  *
  * @author zhangjx
  */
 public class RedisCacheRequest extends ClientRequest {
+
+    static final byte[] TRUE = new byte[]{'t'};
+
+    static final byte[] FALSE = new byte[]{'f'};
 
     protected String key;
 

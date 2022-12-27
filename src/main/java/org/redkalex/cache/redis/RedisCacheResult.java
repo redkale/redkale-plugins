@@ -108,6 +108,9 @@ public class RedisCacheResult {
             if (cryptor != null) val = cryptor.decrypt(key, val);
             return (T) val;
         }
+        if (type == boolean.class || type == Boolean.class) {
+            return (T) (Boolean) "t".equalsIgnoreCase(new String(frames, StandardCharsets.UTF_8));
+        }
         if (type == long.class || type == Long.class) {
             return (T) (Long) Long.parseLong(new String(frames, StandardCharsets.UTF_8));
         }

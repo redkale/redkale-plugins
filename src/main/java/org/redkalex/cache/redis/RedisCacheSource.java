@@ -1594,7 +1594,12 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     private byte[] formatValue(String key, RedisCryptor cryptor, Convert convert0, Type type, Object value) {
-        if (value == null) throw new NullPointerException();
+        if (value == null) {
+            throw new NullPointerException();
+        }
+        if (value instanceof Boolean) {
+            return (Boolean) value ? RedisCacheRequest.TRUE : RedisCacheRequest.FALSE;
+        }
         if (value instanceof byte[]) {
             if (cryptor != null) {
                 String val = cryptor.encrypt(key, new String((byte[]) value, StandardCharsets.UTF_8));
@@ -1602,24 +1607,25 @@ public final class RedisCacheSource extends AbstractRedisSource {
             }
             return (byte[]) value;
         }
-        if (convert0 == null) {
-            if (convert == null) convert = JsonConvert.root(); //compile模式下convert可能为null
-            convert0 = convert;
-        }
-        if (type == null) type = value.getClass();
-        Class clz = value.getClass();
-        if (clz == String.class || clz == Long.class || Number.class.isAssignableFrom(clz)) {
-            return String.valueOf(value).getBytes(StandardCharsets.UTF_8);
-        }
-        if (CharSequence.class.isAssignableFrom(clz)) {
+        if (value instanceof CharSequence) {
             if (cryptor != null) value = cryptor.encrypt(key, String.valueOf(value));
             return String.valueOf(value).getBytes(StandardCharsets.UTF_8);
         }
-        byte[] bs = convert0.convertToBytes(type, value);
+        if (value.getClass().isPrimitive() || Number.class.isAssignableFrom(value.getClass())) {
+            return String.valueOf(value).getBytes(StandardCharsets.US_ASCII);
+        }
+        if (convert0 == null) {
+            if (convert == null) { //compile模式下convert可能为null
+                convert = JsonConvert.root();
+            }
+            convert0 = convert;
+        }
+        byte[] bs = convert0.convertToBytes(type == null ? value.getClass() : type, value);
         if (cryptor != null) {
             String val = cryptor.encrypt(key, new String(bs, StandardCharsets.UTF_8));
             return val.getBytes(StandardCharsets.UTF_8);
         }
         return bs;
     }
+
 }
