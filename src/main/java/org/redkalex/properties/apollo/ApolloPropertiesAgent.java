@@ -119,16 +119,16 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                 HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url)).timeout(pullTimeoutMs);
                 HttpResponse<String> resp = httpClient.send(authLogin(builder, url).GET().build(), HttpResponse.BodyHandlers.ofString());
                 if (resp.statusCode() == 304) { //无配置变化
-                    logger.log(Level.FINER, "apollo pulling no change, cost " + (System.currentTimeMillis() - s) + " ms");
+                    logger.log(Level.FINER, "Apollo pulling no change, cost " + (System.currentTimeMillis() - s) + " ms");
                     return;
                 }
                 String content = resp.body();
                 if (resp.statusCode() != 200) {
-                    logger.log(Level.WARNING, "apollo pulling error, statusCode: " + resp.statusCode() + ", content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms");
+                    logger.log(Level.WARNING, "Apollo pulling error, statusCode: " + resp.statusCode() + ", content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms");
                     Thread.sleep(5_000);
                     return;
                 }
-                logger.log(Level.FINER, "apollo pulling content: " + (content == null ? "null" : content.trim()) + ", cost " + (System.currentTimeMillis() - s) + " ms");
+                logger.log(Level.FINER, "Apollo pulling content: " + (content == null ? "null" : content.trim()) + ", cost " + (System.currentTimeMillis() - s) + " ms");
 
                 List<ApolloInfo> list = JsonConvert.root().convertFrom(ApolloInfo.LIST_TYPE, content);
                 for (ApolloInfo item : list) {
@@ -141,7 +141,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                     }
                 }
             } catch (Throwable t) {
-                logger.log(Level.WARNING, "apollo pulling config error", t);
+                logger.log(Level.WARNING, "Apollo pulling config error", t);
             }
         }, 1, 1, TimeUnit.SECONDS);
         return result;
@@ -177,12 +177,12 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             HttpResponse<String> resp = httpClient.send(authLogin(builder, url).GET().build(), HttpResponse.BodyHandlers.ofString());
             content = resp.body();
             if (resp.statusCode() != 200) {
-                logger.log(Level.SEVERE, "load apollo content " + info + " error, statusCode: " + resp.statusCode() + ", content: " + content);
+                logger.log(Level.SEVERE, "Load apollo content " + info + " error, statusCode: " + resp.statusCode() + ", content: " + content);
                 return;
             }
             ApolloConfigResult rs = JsonConvert.root().convertFrom(ApolloConfigResult.class, content);
             if (rs.configurations == null) {
-                logger.log(Level.WARNING, "load apollo content " + info + " configurations is empty, content: " + content);
+                logger.log(Level.WARNING, "Load apollo content " + info + " configurations is empty, content: " + content);
                 return;
             }
             Properties props = new Properties();
@@ -196,9 +196,9 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                 info.properties = props;
                 result.putAll(props);
             }
-            logger.log(Level.FINER, "apollo config(namespace=" + info.namespaceName + ") size: " + props.size());
+            logger.log(Level.FINER, "Apollo config(namespace=" + info.namespaceName + ") size: " + props.size());
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "load apollo content " + info + " error, content: " + content, e);
+            logger.log(Level.SEVERE, "Load apollo content " + info + " error, content: " + content, e);
             if (result != null) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
         }
     }

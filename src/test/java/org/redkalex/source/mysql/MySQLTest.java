@@ -32,7 +32,7 @@ public class MySQLTest {
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
         prop.setProperty("redkale.datasource[].maxconns", "2");
         prop.setProperty("redkale.datasource[].table-autoddl", "true");
         prop.setProperty("redkale.datasource[].user", "root");
@@ -40,7 +40,8 @@ public class MySQLTest {
 
         if (VertxSqlDataSource.class.isAssignableFrom(DataSqlSource.class)) return;
 
-        MysqlDataSource source = new MysqlDataSource();
+        //MysqlDataSource source = new MysqlDataSource();
+        DataJdbcSource source = new DataJdbcSource();
         factory.inject(source);
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println("---------");
@@ -58,12 +59,12 @@ public class MySQLTest {
         if (true) {
             DayRecord record = new DayRecord();
             record.setCreateTime(System.currentTimeMillis());
-            record.setContent("这是内容");
+            record.setContent("这是内容 " + Utility.formatTime(record.getCreateTime()));
             record.setRecordid("rid-" + record.getCreateTime());
 
             DayRecord record2 = new DayRecord();
-            record2.setCreateTime(record.getCreateTime() - 24 * 60 * 60 * 1000L);
-            record2.setContent("这是内容2");
+            record2.setCreateTime(record.getCreateTime() - 24 * 60 * 60 * 1000L - 1);
+            record2.setContent("这是内容2 " + Utility.formatTime(record2.getCreateTime()));
             record2.setRecordid("rid2-" + record2.getCreateTime());
             source.insert(record, record2);
             return;

@@ -2,7 +2,7 @@
  */
 package org.redkalex.properties.nacos;
 
-import java.io.*;
+import java.io.StringReader;
 import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
@@ -158,7 +158,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             content = resp.body(); //{"accessToken":"xxxx","tokenTtl":18000,"globalAdmin":true}
             if (resp.statusCode() != 200) {
                 this.accessExpireTime = 0;
-                logger.log(Level.WARNING, "nacos login error, statusCode: " + resp.statusCode() + ", content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms");
+                logger.log(Level.WARNING, "Nacos login error, statusCode: " + resp.statusCode() + ", content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms");
                 return false;
             }
             Map<String, String> map = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, content);
@@ -166,7 +166,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             this.accessExpireTime = s + Long.parseLong(map.get("tokenTtl")) * 1000 - 1000; //少一秒
             return true;
         } catch (Exception e) {
-            logger.log(Level.WARNING, "nacos login error, content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms", e);
+            logger.log(Level.WARNING, "Nacos login error, content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms", e);
             return false;
         }
     }
@@ -184,7 +184,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             content = resp.body();
             if (resp.statusCode() != 200) {
-                logger.log(Level.SEVERE, "load nacos content " + info + " error, statusCode: " + resp.statusCode() + ", content: " + content);
+                logger.log(Level.SEVERE, "Load nacos content " + info + " error, statusCode: " + resp.statusCode() + ", content: " + content);
                 return;
             }
             Properties props = new Properties();
@@ -205,9 +205,9 @@ public class NacosPropertiesAgent extends PropertiesAgent {
                 info.properties = props;
                 result.putAll(props);
             }
-            logger.log(Level.FINER, "nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
+            logger.log(Level.FINER, "Nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "load nacos content " + info + " error, content: " + content, e);
+            logger.log(Level.SEVERE, "Load nacos content " + info + " error, content: " + content, e);
             if (result != null) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
         }
     }

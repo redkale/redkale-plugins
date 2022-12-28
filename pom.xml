@@ -34,6 +34,7 @@
         <apollo-client.version>2.0.1</apollo-client.version>
         <nacos-client.version>2.1.2</nacos-client.version>
         <flink.version>1.16.0</flink.version>
+        <mysql.version>8.0.31</mysql.version>
     </properties>
 
     <dependencies>
@@ -171,6 +172,19 @@
                 <exclusion>
                     <groupId>io.netty</groupId>
                     <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-java</artifactId>
                 </exclusion>
             </exclusions>
             <scope>provided</scope>

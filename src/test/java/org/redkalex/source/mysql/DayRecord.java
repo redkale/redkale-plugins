@@ -71,7 +71,9 @@ public class DayRecord {
 
         private String getSingleTable(String table, long createTime) {
             int pos = table.indexOf('.');
-            return "" + table.substring(pos + 1) + "_" + String.format(format, createTime);
+            String nt = table.substring(pos + 1) + "_" + String.format(format, createTime);
+            //return "aa_test_" + createTime % 3 + "." + nt;
+            return nt;
         }
 
         @Override

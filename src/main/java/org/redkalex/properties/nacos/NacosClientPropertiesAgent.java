@@ -2,7 +2,7 @@
  */
 package org.redkalex.properties.nacos;
 
-import com.alibaba.nacos.api.*;
+import com.alibaba.nacos.api.NacosFactory;
 import com.alibaba.nacos.api.config.ConfigService;
 import com.alibaba.nacos.api.config.listener.Listener;
 import com.alibaba.nacos.api.exception.NacosException;
@@ -112,7 +112,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             try {
                 this.configService.shutDown();
             } catch (NacosException e) {
-                logger.log(Level.WARNING, "shutdown nacos client error", e);
+                logger.log(Level.WARNING, "Shutdown nacos client error", e);
             }
         }
         if (this.listenExecutor != null) {
@@ -127,7 +127,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             info.contentMD5 = Utility.md5Hex(content);
             props.load(new StringReader(content));
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "load nacos content (dataId=" + info.dataId + ") error", e);
+            logger.log(Level.SEVERE, "Load nacos content (dataId=" + info.dataId + ") error", e);
             return;
         }
         if (result == null) { //配置项动态变更时需要一次性提交所有配置项
@@ -137,7 +137,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             info.properties = props;
             result.putAll(props);
         }
-        logger.log(Level.FINER, "nacos config(dataId=" + info.dataId + ") size: " + props.size());
+        logger.log(Level.FINER, "Nacos config(dataId=" + info.dataId + ") size: " + props.size());
     }
 
 }
