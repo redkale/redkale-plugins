@@ -234,6 +234,8 @@ public class VertxSqlDataSource extends DataSqlSource {
             if (info.isLoggable(logger, Level.FINEST, debugsql)) {
                 if (sqls.length == 1) {
                     logger.finest(info.getType().getSimpleName() + " delete sql=" + debugsql);
+                } else if (flipper == null || flipper.getLimit() <= 0) {
+                    logger.finest(info.getType().getSimpleName() + " delete sqls=" + Arrays.toString(sqls));
                 } else {
                     logger.finest(info.getType().getSimpleName() + " limit " + flipper.getLimit() + " delete sqls=" + Arrays.toString(sqls));
                 }
