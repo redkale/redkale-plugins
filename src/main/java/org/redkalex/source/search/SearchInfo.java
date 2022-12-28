@@ -392,7 +392,10 @@ public final class SearchInfo<T> {
     public String getTable(Serializable primary) {
         if (tableStrategy == null) return table;
         String t = tableStrategy.getTable(table, primary);
-        return t == null || t.isEmpty() ? table : t;
+        if (t == null || t.isEmpty()) {
+            throw new SourceException(table + " tableStrategy.getTable is empty, primary=" + primary);
+        }
+        return t;
     }
 
     /**
@@ -405,7 +408,9 @@ public final class SearchInfo<T> {
     public String getTable(FilterNode node) {
         if (tableStrategy == null) return table;
         String[] t = tableStrategy.getTables(table, node);
-        if (t == null) return table;
+        if (t == null || t.length < 1) {
+            throw new SourceException(table + " tableStrategy.getTable is empty, filter=" + node);
+        }
         if (t.length == 1) return t[0];
         return Utility.joining(t, ',');
     }
@@ -420,7 +425,10 @@ public final class SearchInfo<T> {
     public String getTable(T bean) {
         if (tableStrategy == null) return table;
         String t = tableStrategy.getTable(table, bean);
-        return t == null || t.isEmpty() ? table : t;
+        if (t == null || t.isEmpty()) {
+            throw new SourceException(table + " tableStrategy.getTable is empty, entity=" + bean);
+        }
+        return t;
     }
 
     /**
