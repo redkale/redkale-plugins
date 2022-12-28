@@ -48,6 +48,47 @@ public class MySQLTest {
         Function<DataResultSet, String> func = set -> set.next() ? ("" + set.getObject(1)) : null;
         //System.out.println("查询结果: " + source.directQuery("SHOW TABLES", func));
         //System.out.println("执行结果: " + source.directExecute("SET NAMES UTF8MB4"));
+        if (true) {
+            DayRecord record1 = new DayRecord();
+            record1.setCreateTime(System.currentTimeMillis());
+            record1.setContent("这是内容1 " + Utility.formatTime(record1.getCreateTime()));
+            record1.setRecordid("rid-" + record1.getCreateTime());
+
+            DayRecord record2 = new DayRecord();
+            record2.setCreateTime(record1.getCreateTime() - 24 * 60 * 60 * 1000L - 1);
+            record2.setContent("这是内容2 " + Utility.formatTime(record2.getCreateTime()));
+            record2.setRecordid("rid2-" + record2.getCreateTime());
+
+            DayRecord record3 = new DayRecord();
+            record3.setCreateTime(record1.getCreateTime() - 48 * 60 * 60 * 1000L - 2);
+            record3.setContent("这是内容3 " + Utility.formatTime(record3.getCreateTime()));
+            record3.setRecordid("rid3-" + record3.getCreateTime());
+
+            DayRecord record4 = new DayRecord();
+            record4.setCreateTime(record1.getCreateTime() - 72 * 60 * 60 * 1000L - 3);
+            record4.setContent("这是内容4 " + Utility.formatTime(record4.getCreateTime()));
+            record4.setRecordid("rid4-" + record4.getCreateTime());
+
+            source.insert(record1, record2);
+            System.out.println("-------新增成功---------");
+
+            record1.setContent("这是内容1 xx " + Utility.formatTime(record1.getCreateTime()));
+            record2.setContent("这是内容2 xx " + Utility.formatTime(record2.getCreateTime()));
+            record3.setContent("这是内容3 xx " + Utility.formatTime(record3.getCreateTime()));
+            record4.setContent("这是内容4 xx " + Utility.formatTime(record4.getCreateTime()));
+            for (int i = 0; i < 10; i++) {
+                //    record2.setContent(record2.getContent() + " ******** ");
+            }
+
+            //source.updateAsync(record1, record2, record3, record4).join();
+            int rs = source.update(record1, record2, record3, record4);
+            System.out.println("-------修改成功数: " + rs + "---------");
+
+            FilterNode node = FilterNode.create("createTime", new Range.LongRange(record4.getCreateTime(), record1.getCreateTime()));
+            System.out.println("查询结果: " + source.querySheet(DayRecord.class, new Flipper(), node));
+            return;
+        }
+
         System.out.println("清空表: " + source.clearTable(World.class));
         //System.out.println("----------新增记录----------");
 
@@ -55,20 +96,6 @@ public class MySQLTest {
         //System.out.println(Arrays.toString(info.getQueryAttributes()));
         System.out.println("查询List结果: " + source.queryList(World.class));
         System.out.println("查询List结束========");
-
-        if (true) {
-            DayRecord record = new DayRecord();
-            record.setCreateTime(System.currentTimeMillis());
-            record.setContent("这是内容 " + Utility.formatTime(record.getCreateTime()));
-            record.setRecordid("rid-" + record.getCreateTime());
-
-            DayRecord record2 = new DayRecord();
-            record2.setCreateTime(record.getCreateTime() - 24 * 60 * 60 * 1000L - 1);
-            record2.setContent("这是内容2 " + Utility.formatTime(record2.getCreateTime()));
-            record2.setRecordid("rid2-" + record2.getCreateTime());
-            source.insert(record, record2);
-            return;
-        }
 
         World w1 = new World();
         w1.id = 1;

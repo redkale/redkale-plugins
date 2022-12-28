@@ -4,6 +4,8 @@
 package org.redkalex.source.mysql;
 
 import java.io.Serializable;
+import java.util.*;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 import org.redkale.source.*;
 
@@ -19,7 +21,7 @@ public class DayRecord {
     @Column(length = 64, comment = "主键")
     private String recordid = "";
 
-    @Column(length = 1024, comment = "内容")
+    @Column(length = 60, comment = "内容")
     private String content = "";
 
     @Column(updatable = false, comment = "生成时间，单位毫秒")
@@ -49,6 +51,11 @@ public class DayRecord {
         this.createTime = createTime;
     }
 
+    @Override
+    public String toString() {
+        return JsonConvert.root().convertTo(this);
+    }
+
     public static class TableStrategy implements DistributeTableStrategy<DayRecord> {
 
         private static final String format = "%1$tY%1$tm%1$td";
@@ -61,6 +68,16 @@ public class DayRecord {
                 return new String[]{getSingleTable(table, (Long) time)};
             }
             Range.LongRange createTime = (Range.LongRange) time;
+            if (createTime.getMax() != null && createTime.getMax() != Long.MAX_VALUE
+                && createTime.getMax() > createTime.getMin()) {
+                List<String> tables = new ArrayList<>();
+                long start = createTime.getMin();
+                while (start < createTime.getMax()) {
+                    tables.add(getSingleTable(table, start));
+                    start += 24 * 60 * 60 * 1000L;
+                }
+                return tables.toArray(new String[tables.size()]);
+            }
             return new String[]{getSingleTable(table, createTime.getMin())};
         }
 
@@ -72,7 +89,7 @@ public class DayRecord {
         private String getSingleTable(String table, long createTime) {
             int pos = table.indexOf('.');
             String nt = table.substring(pos + 1) + "_" + String.format(format, createTime);
-            //return "aa_test_" + createTime % 3 + "." + nt;
+            //return "aa_test_" + createTime % 4 + "." + nt;
             return nt;
         }
 
