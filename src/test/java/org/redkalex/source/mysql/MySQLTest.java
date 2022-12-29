@@ -6,6 +6,7 @@
 package org.redkalex.source.mysql;
 
 //import org.redkalex.source.mysql_old.MysqlDataSource;
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
@@ -38,7 +39,9 @@ public class MySQLTest {
         prop.setProperty("redkale.datasource[].user", "root");
         prop.setProperty("redkale.datasource[].password", "");
 
-        if (VertxSqlDataSource.class.isAssignableFrom(DataSqlSource.class)) return;
+        if (VertxSqlDataSource.class.isAssignableFrom(DataSqlSource.class)) {
+            return;
+        }
 
         //MysqlDataSource source = new MysqlDataSource();
         DataJdbcSource source = new DataJdbcSource();
@@ -86,6 +89,16 @@ public class MySQLTest {
 
             FilterNode node = FilterNode.create("createTime", new Range.LongRange(record4.getCreateTime(), record1.getCreateTime()));
             System.out.println("查询结果: " + source.querySheet(DayRecord.class, new Flipper(), node));
+
+            //rs = source.delete(record1, record2, record3, record4);
+            rs = source.delete(DayRecord.class, FilterNode.create("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid())));
+            System.out.println("-------删除成功数: " + rs + "---------");
+
+            rs = source.clearTable(DayRecord.class, FilterNode.create("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid())));
+            System.out.println("-------清空成功数: " + rs + "---------");
+
+            rs = source.dropTable(DayRecord.class, FilterNode.create("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid())));
+            System.out.println("-------删表成功数: " + rs + "---------");
             return;
         }
 
@@ -136,7 +149,9 @@ public class MySQLTest {
         SmsRecord record4 = new SmsRecord((short) 2, "12345678901", "这是内容");
         record4.setSmsid("sms4-" + record.getCreateTime());
         System.out.println("新增结果: " + source.insert(record4));
-        if (source.find(SmsRecord.class, record.getSmsid()) == null) source.insert(record);
+        if (source.find(SmsRecord.class, record.getSmsid()) == null) {
+            source.insert(record);
+        }
 
         //if (true) return;
         System.out.println(source.find(SmsRecord.class, "sms1-1632282662741"));

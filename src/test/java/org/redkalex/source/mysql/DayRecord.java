@@ -62,8 +62,30 @@ public class DayRecord {
 
         @Override
         public String[] getTables(String table, FilterNode node) {
+            Object id = node.findValue("recordid");
+            if (id != null) {
+                if (id instanceof String) {
+                    return new String[]{getTable(table, (Serializable) id)};
+                } else if (id instanceof Collection) {
+                    Set<String> tables = new LinkedHashSet<>();
+                    for (String i : (Collection<String>) id) {
+                        tables.add(getTable(table, (Serializable) i));
+                    }
+                    return tables.toArray(new String[tables.size()]);
+                } else if (id instanceof String[]) {
+                    Set<String> tables = new LinkedHashSet<>();
+                    for (String i : (String[]) id) {
+                        tables.add(getTable(table, (Serializable) i));
+                    }
+                    return tables.toArray(new String[tables.size()]);
+                } else {
+                    throw new SourceException(DayRecord.class.getSimpleName() + ".TableStrategy not supported filter node: " + node);
+                }
+            }
             Object time = node.findValue("createTime");
-            if (time == null) time = node.findValue("#createTime");
+            if (time == null) {
+                time = node.findValue("#createTime");
+            }
             if (time instanceof Long) {
                 return new String[]{getSingleTable(table, (Long) time)};
             }
@@ -96,7 +118,7 @@ public class DayRecord {
         @Override
         public String getTable(String table, Serializable primary) {
             String id = (String) primary;
-            return getSingleTable(table, Long.parseLong(id.substring(0, id.indexOf('-'))));
+            return getSingleTable(table, Long.parseLong(id.substring(id.indexOf('-') + 1)));
         }
     }
 }
