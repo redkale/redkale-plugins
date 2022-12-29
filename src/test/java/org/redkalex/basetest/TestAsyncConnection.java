@@ -10,7 +10,7 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.Set;
-import java.util.concurrent.atomic.*;
+import java.util.concurrent.atomic.LongAdder;
 import org.redkale.net.*;
 
 /**
@@ -20,7 +20,7 @@ import org.redkale.net.*;
 public class TestAsyncConnection extends AsyncConnection {
 
     public TestAsyncConnection() {
-        super(true, null, Thread.currentThread() instanceof AsyncThread ? (AsyncThread) Thread.currentThread() : null, 1, () -> ByteBuffer.allocate(1024), t -> {
+        super(true, null, Thread.currentThread() instanceof AsyncIOThread ? (AsyncIOThread) Thread.currentThread() : null, 1, () -> ByteBuffer.allocate(1024), t -> {
         }, null, null, new LongAdder(), null);
     }
 

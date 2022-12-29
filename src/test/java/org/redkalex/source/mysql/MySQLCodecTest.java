@@ -5,16 +5,16 @@
  */
 package org.redkalex.source.mysql;
 
-import org.redkalex.basetest.TestAsyncConnection;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.*;
-import org.redkale.net.AsyncThread;
+import org.redkale.net.WorkThread;
 import org.redkale.net.client.ClientAddress;
 import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 import org.redkale.util.*;
+import org.redkalex.basetest.TestAsyncConnection;
 
 /**
  *
@@ -25,7 +25,7 @@ public class MySQLCodecTest {
     @Test
     public void run() throws Exception {
         CountDownLatch cdl = new CountDownLatch(1);
-        new AsyncThread("", 0, 1, null, null) {
+        new WorkThread("", 0, 1, null, null) {
             public void run() {
                 SourceUrlInfo info = new SourceUrlInfo();
                 info.username = "root";
