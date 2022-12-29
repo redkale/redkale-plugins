@@ -86,7 +86,9 @@ public class VertxSqlDataSource extends DataSqlSource {
         this.writeOptions = readOptions;
         this.writePoolOptions = readPoolOptions;
         this.writeThreadPool = this.readThreadPool;
-        if (oldPool != null) oldPool.close();
+        if (oldPool != null) {
+            oldPool.close();
+        }
     }
 
     @Override
@@ -98,7 +100,9 @@ public class VertxSqlDataSource extends DataSqlSource {
         this.readThreadPool = Pool.pool(vertx, readOpt, readPoolOpt);
         this.readOptions = readOpt;
         this.readPoolOptions = readPoolOpt;
-        if (oldPool != null) oldPool.close();
+        if (oldPool != null) {
+            oldPool.close();
+        }
     }
 
     @Override
@@ -110,7 +114,9 @@ public class VertxSqlDataSource extends DataSqlSource {
         this.writeThreadPool = Pool.pool(vertx, writeOpt, writePoolOpt);
         this.writeOptions = writeOpt;
         this.writePoolOptions = writePoolOpt;
-        if (oldPool != null) oldPool.close();
+        if (oldPool != null) {
+            oldPool.close();
+        }
     }
 
     protected Pool readPool() {
@@ -130,8 +136,12 @@ public class VertxSqlDataSource extends DataSqlSource {
     @Override
     public void destroy(AnyValue config) {
         super.destroy(config);
-        if (this.vertx != null) this.vertx.close();
-        if (this.readThreadPool != null) this.readThreadPool.close();
+        if (this.vertx != null) {
+            this.vertx.close();
+        }
+        if (this.readThreadPool != null) {
+            this.readThreadPool.close();
+        }
         if (this.writeThreadPool != null && this.writeThreadPool != this.readThreadPool) {
             this.writeThreadPool.close();
         }
@@ -159,10 +169,14 @@ public class VertxSqlDataSource extends DataSqlSource {
             throw new UnsupportedOperationException("dbtype(" + dbtype() + ") not supported yet.");
         }
         String url = prop.getProperty(DATA_SOURCE_URL);
-        if (url.startsWith("jdbc:")) url = url.substring("jdbc:".length());
+        if (url.startsWith("jdbc:")) {
+            url = url.substring("jdbc:".length());
+        }
         final URI uri = URI.create(url);
         sqlOptions.setHost(uri.getHost());
-        if (uri.getPort() > 0) sqlOptions.setPort(uri.getPort());
+        if (uri.getPort() > 0) {
+            sqlOptions.setPort(uri.getPort());
+        }
         String user = prop.getProperty(DATA_SOURCE_USER);
         if (user != null && !user.trim().isEmpty()) {
             sqlOptions.setUser(user.trim());
@@ -173,7 +187,9 @@ public class VertxSqlDataSource extends DataSqlSource {
         }
         String path = uri.getPath();
         if (path != null && path.length() > 1) {
-            if (path.startsWith("/")) path = path.substring(1);
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
             sqlOptions.setDatabase(path);
         }
         sqlOptions.setCachePreparedStatements("true".equalsIgnoreCase(prop.getProperty("preparecache", "true")));
@@ -181,9 +197,13 @@ public class VertxSqlDataSource extends DataSqlSource {
         if (query != null && !query.isEmpty()) {
             query = query.replace("&amp;", "&");
             for (String str : query.split("&")) {
-                if (str.isEmpty()) continue;
+                if (str.isEmpty()) {
+                    continue;
+                }
                 int pos = str.indexOf('=');
-                if (pos < 1) continue;
+                if (pos < 1) {
+                    continue;
+                }
                 String key = str.substring(0, pos);
                 String val = str.substring(pos + 1);
                 sqlOptions.addProperty(key, val);
@@ -203,7 +223,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
+    protected <T> CompletableFuture<Integer> insertDBAsync(EntityInfo<T> info, T... values) {
         final long s = System.currentTimeMillis();
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final List<Tuple> objs = new ArrayList<>(values.length);
@@ -228,7 +248,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String... sqls) {
+    protected <T> CompletableFuture<Integer> deleteDBAsync(EntityInfo<T> info, String[] tables, Flipper flipper, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sqls[0] : (sqls[0] + " LIMIT " + flipper.getLimit());
             if (info.isLoggable(logger, Level.FINEST, debugsql)) {
@@ -245,7 +265,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, final String[] tables, String... sqls) {
+    protected <T> CompletableFuture<Integer> clearTableDBAsync(EntityInfo<T> info, final String[] tables, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
                 if (sqls.length == 1) {
@@ -259,7 +279,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, final String[] tables, String... sqls) {
+    protected <T> CompletableFuture<Integer> dropTableDBAsync(EntityInfo<T> info, final String[] tables, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
                 if (sqls.length == 1) {
@@ -273,7 +293,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateEntityDB(EntityInfo<T> info, final T... values) {
+    protected <T> CompletableFuture<Integer> updateEntityDBAsync(EntityInfo<T> info, final T... values) {
         final long s = System.currentTimeMillis();
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
@@ -300,10 +320,12 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateColumnDB(EntityInfo<T> info, Flipper flipper, SqlInfo sql) {
+    protected <T> CompletableFuture<Integer> updateColumnDBAsync(EntityInfo<T> info, Flipper flipper, SqlInfo sql) {
         if (info.isLoggable(logger, Level.FINEST)) {
             final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sql.sql : (sql.sql + " LIMIT " + flipper.getLimit());
-            if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + debugsql);
+            if (info.isLoggable(logger, Level.FINEST, debugsql)) {
+                logger.finest(info.getType().getSimpleName() + " update sql=" + debugsql);
+            }
         }
         List<Tuple> objs = null;
         if (sql.blobs != null || sql.tables != null) {
@@ -327,7 +349,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDB(EntityInfo<T> info, String sql, FilterFuncColumn... columns) {
+    protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDBAsync(EntityInfo<T> info, String[] tables, String sql, FilterFuncColumn... columns) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             final Map map = new HashMap<>();
             if (set.next()) {
@@ -336,7 +358,9 @@ public class VertxSqlDataSource extends DataSqlSource {
                     for (String col : ffc.cols()) {
                         Object o = set.getObject(++index);
                         Number rs = ffc.getDefvalue();
-                        if (o != null) rs = (Number) o;
+                        if (o != null) {
+                            rs = (Number) o;
+                        }
                         map.put(ffc.col(col), rs);
                     }
                 }
@@ -346,19 +370,21 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Number> getNumberResultDB(EntityInfo<T> info, String sql, Number defVal, String column) {
+    protected <T> CompletableFuture<Number> getNumberResultDBAsync(EntityInfo<T> info, String[] tables, String sql, Number defVal, String column) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             Number rs = defVal;
             if (set.next()) {
                 Object o = set.getObject(1);
-                if (o != null) rs = (Number) o;
+                if (o != null) {
+                    rs = (Number) o;
+                }
             }
             return rs;
         });
     }
 
     @Override
-    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDB(EntityInfo<T> info, String sql, String keyColumn) {
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, String keyColumn) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             Map<K, N> rs = new LinkedHashMap<>();
             while (set.next()) {
@@ -369,7 +395,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDB(EntityInfo<T> info, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns) {
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             Map rs = new LinkedHashMap<>();
             while (set.next()) {
@@ -388,7 +414,6 @@ public class VertxSqlDataSource extends DataSqlSource {
         });
     }
 
-    @Override
     protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, final SelectColumn selects, Serializable pk) {
         if (selects == null) {
             final String sql = dollar ? info.getFindDollarPrepareSQL(pk) : info.getFindQuestionPrepareSQL(pk);
@@ -400,12 +425,14 @@ public class VertxSqlDataSource extends DataSqlSource {
         }
         String column = info.getPrimarySQLColumn();
         final String sql = "SELECT " + info.getFullQueryColumns(null, selects) + " FROM " + info.getTable(pk) + " WHERE " + column + "=" + info.formatSQLValue(column, pk, sqlFormatter);
-        if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
-        return findDB(info, sql, true, selects);
+        if (info.isLoggable(logger, Level.FINEST, sql)) {
+            logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
+        }
+        return findDBAsync(info, null, sql, true, selects);
     }
 
     @Override
-    protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, String sql, boolean onlypk, SelectColumn selects) {
+    protected <T> CompletableFuture<T> findDBAsync(EntityInfo<T> info, String[] tables, String sql, boolean onlypk, SelectColumn selects) {
         return queryResultSet(info, sql).thenApply(rsset -> {
             boolean rs = rsset.next();
             T val = rs ? (onlypk && selects == null ? getEntityValue(info, null, rsset) : getEntityValue(info, selects, rsset)) : null;
@@ -414,7 +441,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Serializable> findColumnDB(EntityInfo<T> info, String sql, boolean onlypk, String column, Serializable defValue) {
+    protected <T> CompletableFuture<Serializable> findColumnDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk, String column, Serializable defValue) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             Serializable val = defValue;
             if (set.next()) {
@@ -426,14 +453,14 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Boolean> existsDB(EntityInfo<T> info, String sql, boolean onlypk) {
+    protected <T> CompletableFuture<Boolean> existsDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             return set.next() ? (((Number) set.getObject(1)).intValue() > 0) : false;
         });
     }
 
     @Override
-    protected <T> CompletableFuture<Sheet<T>> querySheetDB(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
+    protected <T> CompletableFuture<Sheet<T>> querySheetDBAsync(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
         final SelectColumn sels = selects;
         final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
         final CharSequence join = node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
@@ -447,14 +474,18 @@ public class VertxSqlDataSource extends DataSqlSource {
         } else {
             int b = 0;
             for (String table : tables) {
-                if (!union.isEmpty()) union.append(" UNION ALL ");
+                if (!union.isEmpty()) {
+                    union.append(" UNION ALL ");
+                }
                 String tabalis = "t" + (++b);
                 union.append("SELECT ").append(info.getQueryColumns(tabalis, selects)).append(" FROM ").append(table).append(" ").append(tabalis).append(joinAndWhere);
             }
             listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
         }
         final String listsql = listsubsql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
-        if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) {
+            logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        }
         if (!needtotal) {
             CompletableFuture<VertxResultSet> listfuture = queryResultSet(info, listsql);
             return listfuture.thenApply((VertxResultSet set) -> {
@@ -473,8 +504,10 @@ public class VertxSqlDataSource extends DataSqlSource {
             countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM (" + (union) + ") a";
         }
         final String countsql = countsubsql;
-        return getNumberResultDB(info, countsql, 0, countsql).thenCompose(total -> {
-            if (total.longValue() <= 0) return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
+        return getNumberResultDBAsync(info, null, countsql, 0, countsql).thenCompose(total -> {
+            if (total.longValue() <= 0) {
+                return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
+            }
             return queryResultSet(info, listsql).thenApply((VertxResultSet set) -> {
                 final List<T> list = new ArrayList();
                 while (set.next()) {
@@ -598,7 +631,9 @@ public class VertxSqlDataSource extends DataSqlSource {
                 code = ((io.vertx.mysqlclient.MySQLException) t).getSqlState();
             }
         }
-        if (code == null) return false;
+        if (code == null) {
+            return false;
+        }
         return super.isTableNotExist(info, code);
     }
 

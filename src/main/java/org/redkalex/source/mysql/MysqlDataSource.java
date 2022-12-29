@@ -60,7 +60,9 @@ public class MysqlDataSource extends DataSqlSource {
         info.username = prop.getProperty(DATA_SOURCE_USER, "");
         info.password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
         String encoding = prop.getProperty("characterEncoding");
-        if (encoding == null || encoding.isEmpty()) encoding = "UTF8MB4";
+        if (encoding == null || encoding.isEmpty()) {
+            encoding = "UTF8MB4";
+        }
         info.encoding = encoding;
         int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
         int maxPipelines = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
@@ -78,8 +80,12 @@ public class MysqlDataSource extends DataSqlSource {
         this.readPool = createMyPool("rw", newProps);
         this.writePool = readPool;
         this.writeGroup = this.readGroup;
-        if (oldPool != null) oldPool.close();
-        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
+        if (oldPool != null) {
+            oldPool.close();
+        }
+        if (oldGroup != null && oldGroup != clientAsyncGroup) {
+            oldGroup.close();
+        }
     }
 
     @Override
@@ -87,8 +93,12 @@ public class MysqlDataSource extends DataSqlSource {
         MyClient oldPool = this.readPool;
         AsyncGroup oldGroup = this.readGroup;
         this.readPool = createMyPool("read", newReadProps);
-        if (oldPool != null) oldPool.close();
-        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
+        if (oldPool != null) {
+            oldPool.close();
+        }
+        if (oldGroup != null && oldGroup != clientAsyncGroup) {
+            oldGroup.close();
+        }
     }
 
     @Override
@@ -96,8 +106,12 @@ public class MysqlDataSource extends DataSqlSource {
         MyClient oldPool = this.writePool;
         AsyncGroup oldGroup = this.writeGroup;
         this.writePool = createMyPool("write", newWriteProps);
-        if (oldPool != null) oldPool.close();
-        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
+        if (oldPool != null) {
+            oldPool.close();
+        }
+        if (oldGroup != null && oldGroup != clientAsyncGroup) {
+            oldGroup.close();
+        }
     }
 
     @Override
@@ -161,7 +175,7 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
+    protected <T> CompletableFuture<Integer> insertDBAsync(EntityInfo<T> info, T... values) {
         final long s = System.currentTimeMillis();
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final Object[][] objs = new Object[values.length][];
@@ -195,7 +209,7 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String... sqls) {
+    protected <T> CompletableFuture<Integer> deleteDBAsync(EntityInfo<T> info, String[] tables, Flipper flipper, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
                 if (sqls.length == 1) {
@@ -209,7 +223,7 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, final String[] tables, final String... sqls) {
+    protected <T> CompletableFuture<Integer> clearTableDBAsync(EntityInfo<T> info, final String[] tables, final String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
                 if (sqls.length == 1) {
@@ -223,7 +237,7 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, final String[] tables, final String... sqls) {
+    protected <T> CompletableFuture<Integer> dropTableDBAsync(EntityInfo<T> info, final String[] tables, final String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
                 if (sqls.length == 1) {
@@ -237,7 +251,7 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateEntityDB(EntityInfo<T> info, final T... values) {
+    protected <T> CompletableFuture<Integer> updateEntityDBAsync(EntityInfo<T> info, final T... values) {
         final long s = System.currentTimeMillis();
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
@@ -288,9 +302,11 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateColumnDB(EntityInfo<T> info, Flipper flipper, SqlInfo sql) {
+    protected <T> CompletableFuture<Integer> updateColumnDBAsync(EntityInfo<T> info, Flipper flipper, SqlInfo sql) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            if (info.isLoggable(logger, Level.FINEST, sql.sql)) logger.finest(info.getType().getSimpleName() + " update sql=" + sql.sql);
+            if (info.isLoggable(logger, Level.FINEST, sql.sql)) {
+                logger.finest(info.getType().getSimpleName() + " update sql=" + sql.sql);
+            }
         }
         List<Object[]> objs = null;
         if (sql.blobs != null || sql.tables != null) {
@@ -314,26 +330,25 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDB(EntityInfo<T> info, String sql, FilterFuncColumn... columns) {
+    protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDBAsync(EntityInfo<T> info, String[] tables, String sql, FilterFuncColumn... columns) {
         return getNumberMapDBApply(info, executeQuery(info, sql), columns);
     }
 
     @Override
-    protected <T> CompletableFuture<Number> getNumberResultDB(EntityInfo<T> info, String sql, Number defVal, String column) {
+    protected <T> CompletableFuture<Number> getNumberResultDBAsync(EntityInfo<T> info, String[] tables, String sql, Number defVal, String column) {
         return getNumberResultDBApply(info, executeQuery(info, sql), defVal, column);
     }
 
     @Override
-    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDB(EntityInfo<T> info, String sql, String keyColumn) {
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, String keyColumn) {
         return queryColumnMapDBApply(info, executeQuery(info, sql), keyColumn);
     }
 
     @Override
-    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDB(EntityInfo<T> info, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns) {
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns) {
         return queryColumnMapDBApply(info, executeQuery(info, sql), funcNodes, groupByColumns);
     }
 
-    @Override
     protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, final SelectColumn selects, Serializable pk) {
         final long s = System.currentTimeMillis();
         MyClient pool = readPool();
@@ -355,8 +370,10 @@ public class MysqlDataSource extends DataSqlSource {
         }
         String column = info.getPrimarySQLColumn();
         final String sql = "SELECT " + info.getFullQueryColumns(null, selects) + " FROM " + info.getTable(pk) + " WHERE " + column + "=" + info.formatSQLValue(column, pk, sqlFormatter);
-        if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
-        return findDB(info, sql, true, selects);
+        if (info.isLoggable(logger, Level.FINEST, sql)) {
+            logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
+        }
+        return findDBAsync(info, null, sql, true, selects);
     }
 
     @Override
@@ -427,22 +444,22 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, String sql, boolean onlypk, SelectColumn selects) {
+    protected <T> CompletableFuture<T> findDBAsync(EntityInfo<T> info, String[] tables, String sql, boolean onlypk, SelectColumn selects) {
         return findDBApply(info, executeQuery(info, sql), onlypk, selects);
     }
 
     @Override
-    protected <T> CompletableFuture<Serializable> findColumnDB(EntityInfo<T> info, String sql, boolean onlypk, String column, Serializable defValue) {
+    protected <T> CompletableFuture<Serializable> findColumnDBAsync(EntityInfo<T> info, String[] tables, String sql, boolean onlypk, String column, Serializable defValue) {
         return findColumnDBApply(info, executeQuery(info, sql), onlypk, column, defValue);
     }
 
     @Override
-    protected <T> CompletableFuture<Boolean> existsDB(EntityInfo<T> info, String sql, boolean onlypk) {
+    protected <T> CompletableFuture<Boolean> existsDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk) {
         return existsDBApply(info, executeQuery(info, sql), onlypk);
     }
 
     @Override
-    protected <T> CompletableFuture<Sheet<T>> querySheetDB(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
+    protected <T> CompletableFuture<Sheet<T>> querySheetDBAsync(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
         final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
         final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
@@ -459,14 +476,18 @@ public class MysqlDataSource extends DataSqlSource {
         } else {
             int b = 0;
             for (String table : tables) {
-                if (!union.isEmpty()) union.append(" UNION ALL ");
+                if (!union.isEmpty()) {
+                    union.append(" UNION ALL ");
+                }
                 String tabalis = "t" + (++b);
                 union.append("SELECT ").append(info.getQueryColumns(tabalis, selects)).append(" FROM ").append(table).append(" ").append(tabalis).append(joinAndWhere);
             }
             listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
         }
         final String listsql = cachePrepared ? info.getAllQueryPrepareSQL() : (listsubsql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
-        if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) {
+            logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        }
         if (!needtotal) {
             CompletableFuture<MyResultSet> listfuture;
             if (cachePrepared) {
@@ -498,8 +519,10 @@ public class MysqlDataSource extends DataSqlSource {
             countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM (" + (union) + ") a";
         }
         final String countsql = countsubsql;
-        return getNumberResultDB(info, countsql, 0, countsql).thenCompose(total -> {
-            if (total.longValue() <= 0) return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
+        return getNumberResultDBAsync(info, null, countsql, 0, countsql).thenCompose(total -> {
+            if (total.longValue() <= 0) {
+                return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
+            }
             return executeQuery(info, listsql).thenApply((MyResultSet dataset) -> {
                 final List<T> list = new ArrayList();
                 while (dataset.next()) {
@@ -517,10 +540,14 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     protected <T> CompletableFuture<MyResultSet> thenApplyQueryUpdateStrategy(final EntityInfo<T> info, AtomicReference<ClientConnection> connRef, final CompletableFuture<MyResultSet> future) {
-        if (info == null || (info.getTableStrategy() == null && !autoddl())) return future;
+        if (info == null || (info.getTableStrategy() == null && !autoddl())) {
+            return future;
+        }
         final CompletableFuture<MyResultSet> rs = new CompletableFuture<>();
         future.whenComplete((g, t) -> {
-            if (t != null) while (t instanceof CompletionException) t = t.getCause();
+            if (t != null) {
+                while (t instanceof CompletionException) t = t.getCause();
+            }
             if (t == null) {
                 rs.complete(g);
             } else if (isTableNotExist(info, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {
@@ -553,10 +580,14 @@ public class MysqlDataSource extends DataSqlSource {
 
     protected <T> CompletableFuture<MyResultSet> thenApplyInsertStrategy(final EntityInfo<T> info, final CompletableFuture<MyResultSet> future,
         final AtomicReference<MyClientRequest> reqRef, final AtomicReference<ClientConnection> connRef, final T[] values) {
-        if (info == null || (info.getTableStrategy() == null && !autoddl())) return future;
+        if (info == null || (info.getTableStrategy() == null && !autoddl())) {
+            return future;
+        }
         final CompletableFuture<MyResultSet> rs = new CompletableFuture<>();
         future.whenComplete((g, t) -> {
-            if (t != null) while (t instanceof CompletionException) t = t.getCause();
+            if (t != null) {
+                while (t instanceof CompletionException) t = t.getCause();
+            }
             if (t == null) {
                 rs.complete(g);
             } else if (isTableNotExist(info, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {  //表不存在
@@ -569,7 +600,9 @@ public class MysqlDataSource extends DataSqlSource {
                         final MyReqUpdate createTableReq = new MyReqUpdate();
                         createTableReq.prepare(tablesqls[0]); //mysql只会有一条sql
                         writePool().writeChannel(connRef.get(), createTableReq).whenComplete((g2, t2) -> {
-                            if (t2 != null) while (t2 instanceof CompletionException) t2 = t2.getCause();
+                            if (t2 != null) {
+                                while (t2 instanceof CompletionException) t2 = t2.getCause();
+                            }
                             if (t2 == null) { //建表成功
                                 //执行一遍新增操作
                                 writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g3, t3) -> {
@@ -590,7 +623,9 @@ public class MysqlDataSource extends DataSqlSource {
                     final MyReqUpdate copyTableReq = new MyReqUpdate();
                     copyTableReq.prepare(getTableCopySQL(info, newTable));
                     writePool().writeChannel(connRef.get(), copyTableReq).whenComplete((g2, t2) -> {
-                        if (t2 != null) while (t2 instanceof CompletionException) t2 = t2.getCause();
+                        if (t2 != null) {
+                            while (t2 instanceof CompletionException) t2 = t2.getCause();
+                        }
                         if (t2 == null) {
                             //执行一遍新增操作
                             writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g3, t3) -> {
@@ -642,7 +677,9 @@ public class MysqlDataSource extends DataSqlSource {
                                         final MyReqUpdate copyTableReq2 = new MyReqUpdate();
                                         copyTableReq2.prepare(getTableCopySQL(info, newTable));
                                         writePool().writeChannel(connRef.get(), copyTableReq2).whenComplete((g5, t5) -> {
-                                            if (t5 != null) while (t5 instanceof CompletionException) t5 = t5.getCause();
+                                            if (t5 != null) {
+                                                while (t5 instanceof CompletionException) t5 = t5.getCause();
+                                            }
                                             if (t5 == null) {
                                                 //再执行一遍新增操作
                                                 writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g6, t6) -> {
@@ -785,7 +822,9 @@ public class MysqlDataSource extends DataSqlSource {
     @Local
     @Override
     public int[] directExecute(String... sqls) {
-        if (sqls.length == 1) return new int[]{directExecute(sqls[0])};
+        if (sqls.length == 1) {
+            return new int[]{directExecute(sqls[0])};
+        }
         final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
         CompletableFuture<MyResultSet> future = pool.connect(null).thenCompose(conn -> {

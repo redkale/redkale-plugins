@@ -80,7 +80,7 @@ public class MySQLTest {
                 //    record2.setContent(record2.getContent() + " ******** ");
             }
 
-            //source.updateAsync(record1, record2, record3, record4).join();
+            //int rs = source.updateAsync(record1, record2, record3, record4).join();
             int rs = source.update(record1, record2, record3, record4);
             System.out.println("-------修改成功数: " + rs + "---------");
 

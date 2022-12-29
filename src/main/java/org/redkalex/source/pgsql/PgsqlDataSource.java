@@ -82,8 +82,12 @@ public class PgsqlDataSource extends DataSqlSource {
         this.readPool = createPgPool("rw", newProps);
         this.writePool = readPool;
         this.writeGroup = this.readGroup;
-        if (oldPool != null) oldPool.close();
-        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
+        if (oldPool != null) {
+            oldPool.close();
+        }
+        if (oldGroup != null && oldGroup != clientAsyncGroup) {
+            oldGroup.close();
+        }
     }
 
     @Override
@@ -91,8 +95,12 @@ public class PgsqlDataSource extends DataSqlSource {
         PgClient oldPool = this.readPool;
         AsyncGroup oldGroup = this.readGroup;
         this.readPool = createPgPool("read", newReadProps);
-        if (oldPool != null) oldPool.close();
-        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
+        if (oldPool != null) {
+            oldPool.close();
+        }
+        if (oldGroup != null && oldGroup != clientAsyncGroup) {
+            oldGroup.close();
+        }
     }
 
     @Override
@@ -100,8 +108,12 @@ public class PgsqlDataSource extends DataSqlSource {
         PgClient oldPool = this.writePool;
         AsyncGroup oldGroup = this.writeGroup;
         this.writePool = createPgPool("write", newWriteProps);
-        if (oldPool != null) oldPool.close();
-        if (oldGroup != null && oldGroup != clientAsyncGroup) oldGroup.close();
+        if (oldPool != null) {
+            oldPool.close();
+        }
+        if (oldGroup != null && oldGroup != clientAsyncGroup) {
+            oldGroup.close();
+        }
     }
 
     @Override
@@ -165,7 +177,7 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> insertDB(EntityInfo<T> info, T... values) {
+    protected <T> CompletableFuture<Integer> insertDBAsync(EntityInfo<T> info, T... values) {
         final long s = System.currentTimeMillis();
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final Object[][] objs = new Object[values.length][];
@@ -199,7 +211,7 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> deleteDB(EntityInfo<T> info, Flipper flipper, String... sqls) {
+    protected <T> CompletableFuture<Integer> deleteDBAsync(EntityInfo<T> info, String[] tables, Flipper flipper, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sqls[0] : (sqls[0] + " LIMIT " + flipper.getLimit());
             if (info.isLoggable(logger, Level.FINEST, debugsql)) {
@@ -214,7 +226,7 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> clearTableDB(EntityInfo<T> info, final String[] tables, String... sqls) {
+    protected <T> CompletableFuture<Integer> clearTableDBAsync(EntityInfo<T> info, final String[] tables, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
                 if (sqls.length == 1) {
@@ -228,7 +240,7 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> dropTableDB(EntityInfo<T> info, final String[] tables, String... sqls) {
+    protected <T> CompletableFuture<Integer> dropTableDBAsync(EntityInfo<T> info, final String[] tables, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
                 if (sqls.length == 1) {
@@ -242,7 +254,7 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateEntityDB(EntityInfo<T> info, final T... values) {
+    protected <T> CompletableFuture<Integer> updateEntityDBAsync(EntityInfo<T> info, final T... values) {
         final long s = System.currentTimeMillis();
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
@@ -290,10 +302,12 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateColumnDB(EntityInfo<T> info, Flipper flipper, SqlInfo sql) {
+    protected <T> CompletableFuture<Integer> updateColumnDBAsync(EntityInfo<T> info, Flipper flipper, SqlInfo sql) {
         if (info.isLoggable(logger, Level.FINEST)) {
             final String debugsql = sql.sql; // flipper == null || flipper.getLimit() <= 0 ? sql : (sql + " LIMIT " + flipper.getLimit());
-            if (info.isLoggable(logger, Level.FINEST, debugsql)) logger.finest(info.getType().getSimpleName() + " update sql=" + debugsql);
+            if (info.isLoggable(logger, Level.FINEST, debugsql)) {
+                logger.finest(info.getType().getSimpleName() + " update sql=" + debugsql);
+            }
         }
         List<Object[]> objs = null;
         if (sql.blobs != null || sql.tables != null) {
@@ -317,27 +331,26 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDB(EntityInfo<T> info, String sql, FilterFuncColumn... columns) {
+    protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDBAsync(EntityInfo<T> info, String[] tables, String sql, FilterFuncColumn... columns) {
         return getNumberMapDBApply(info, executeQuery(info, sql), columns);
     }
 
     @Override
-    protected <T> CompletableFuture<Number> getNumberResultDB(EntityInfo<T> info, String sql, Number defVal, String column) {
+    protected <T> CompletableFuture<Number> getNumberResultDBAsync(EntityInfo<T> info, String[] tables, String sql, Number defVal, String column) {
         return getNumberResultDBApply(info, executeQuery(info, sql), defVal, column);
     }
 
     @Override
-    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDB(EntityInfo<T> info, String sql, String keyColumn) {
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, String keyColumn) {
         return queryColumnMapDBApply(info, executeQuery(info, sql), keyColumn);
     }
 
     @Override
-    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDB(EntityInfo<T> info, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns) {
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns) {
         return queryColumnMapDBApply(info, executeQuery(info, sql), funcNodes, groupByColumns);
     }
 
-    @Override
-    protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, final SelectColumn selects, Serializable pk) {
+    protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, String[] tables, final SelectColumn selects, Serializable pk) {
         final long s = System.currentTimeMillis();
         PgClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
@@ -358,8 +371,10 @@ public class PgsqlDataSource extends DataSqlSource {
         }
         String column = info.getPrimarySQLColumn();
         final String sql = "SELECT " + info.getFullQueryColumns(null, selects) + " FROM " + info.getTable(pk) + " WHERE " + column + "=" + info.formatSQLValue(column, pk, sqlFormatter);
-        if (info.isLoggable(logger, Level.FINEST, sql)) logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
-        return findDB(info, sql, true, selects);
+        if (info.isLoggable(logger, Level.FINEST, sql)) {
+            logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
+        }
+        return findDBAsync(info, tables, sql, true, selects);
     }
 
     @Override
@@ -430,22 +445,22 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<T> findDB(EntityInfo<T> info, String sql, boolean onlypk, SelectColumn selects) {
+    protected <T> CompletableFuture<T> findDBAsync(EntityInfo<T> info, String[] tables, String sql, boolean onlypk, SelectColumn selects) {
         return findDBApply(info, executeQuery(info, sql), onlypk, selects);
     }
 
     @Override
-    protected <T> CompletableFuture<Serializable> findColumnDB(EntityInfo<T> info, String sql, boolean onlypk, String column, Serializable defValue) {
+    protected <T> CompletableFuture<Serializable> findColumnDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk, String column, Serializable defValue) {
         return findColumnDBApply(info, executeQuery(info, sql), onlypk, column, defValue);
     }
 
     @Override
-    protected <T> CompletableFuture<Boolean> existsDB(EntityInfo<T> info, String sql, boolean onlypk) {
+    protected <T> CompletableFuture<Boolean> existsDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk) {
         return existsDBApply(info, executeQuery(info, sql), onlypk);
     }
 
     @Override
-    protected <T> CompletableFuture<Sheet<T>> querySheetDB(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
+    protected <T> CompletableFuture<Sheet<T>> querySheetDBAsync(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
         final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
         final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
@@ -462,14 +477,18 @@ public class PgsqlDataSource extends DataSqlSource {
         } else {
             int b = 0;
             for (String table : tables) {
-                if (!union.isEmpty()) union.append(" UNION ALL ");
+                if (!union.isEmpty()) {
+                    union.append(" UNION ALL ");
+                }
                 String tabalis = "t" + (++b);
                 union.append("SELECT ").append(info.getQueryColumns(tabalis, selects)).append(" FROM ").append(table).append(" ").append(tabalis).append(joinAndWhere);
             }
             listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
         }
         final String listsql = cachePrepared ? info.getAllQueryPrepareSQL() : (listsubsql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
-        if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) {
+            logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        }
         if (!needtotal) {
             CompletableFuture<PgResultSet> listfuture;
             if (cachePrepared) {
@@ -501,8 +520,10 @@ public class PgsqlDataSource extends DataSqlSource {
             countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM (" + (union) + ") a";
         }
         final String countsql = countsubsql;
-        return getNumberResultDB(info, countsql, 0, countsql).thenCompose(total -> {
-            if (total.longValue() <= 0) return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
+        return getNumberResultDBAsync(info, null, countsql, 0, countsql).thenCompose(total -> {
+            if (total.longValue() <= 0) {
+                return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
+            }
             return executeQuery(info, listsql).thenApply((PgResultSet dataset) -> {
                 final List<T> list = new ArrayList();
                 while (dataset.next()) {
@@ -520,10 +541,14 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     protected <T> CompletableFuture<PgResultSet> thenApplyQueryUpdateStrategy(final EntityInfo<T> info, final AtomicReference<ClientConnection> connRef, final CompletableFuture<PgResultSet> future) {
-        if (info == null || (info.getTableStrategy() == null && !autoddl())) return future;
+        if (info == null || (info.getTableStrategy() == null && !autoddl())) {
+            return future;
+        }
         final CompletableFuture<PgResultSet> rs = new CompletableFuture<>();
         future.whenComplete((g, t) -> {
-            if (t != null) while (t instanceof CompletionException) t = t.getCause();
+            if (t != null) {
+                while (t instanceof CompletionException) t = t.getCause();
+            }
             if (t == null) {
                 rs.complete(g);
             } else if (isTableNotExist(info, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {
@@ -556,10 +581,14 @@ public class PgsqlDataSource extends DataSqlSource {
 
     protected <T> CompletableFuture<PgResultSet> thenApplyInsertStrategy(final EntityInfo<T> info, final CompletableFuture<PgResultSet> future,
         final AtomicReference<PgClientRequest> reqRef, final AtomicReference<ClientConnection> connRef, final T[] values) {
-        if (info == null || (info.getTableStrategy() == null && !autoddl())) return future;
+        if (info == null || (info.getTableStrategy() == null && !autoddl())) {
+            return future;
+        }
         final CompletableFuture<PgResultSet> rs = new CompletableFuture<>();
         future.whenComplete((g, t) -> {
-            if (t != null) while (t instanceof CompletionException) t = t.getCause();
+            if (t != null) {
+                while (t instanceof CompletionException) t = t.getCause();
+            }
             if (t == null) {
                 rs.complete(g);
             } else if (isTableNotExist(info, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {  //表不存在
@@ -572,7 +601,9 @@ public class PgsqlDataSource extends DataSqlSource {
                         final PgReqUpdate createTableReq = new PgReqUpdate();
                         createTableReq.prepare(tablesqls[0]);
                         writePool().writeChannel(connRef.get(), createTableReq).whenComplete((g2, t2) -> {
-                            if (t2 != null) while (t2 instanceof CompletionException) t2 = t2.getCause();
+                            if (t2 != null) {
+                                while (t2 instanceof CompletionException) t2 = t2.getCause();
+                            }
                             if (t2 == null) { //建表成功
                                 //执行一遍新增操作
                                 writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g3, t3) -> {
@@ -593,7 +624,9 @@ public class PgsqlDataSource extends DataSqlSource {
                     final PgReqUpdate copyTableReq = new PgReqUpdate();
                     copyTableReq.prepare(getTableCopySQL(info, newTable));
                     writePool().writeChannel(connRef.get(), copyTableReq).whenComplete((g2, t2) -> {
-                        if (t2 != null) while (t2 instanceof CompletionException) t2 = t2.getCause();
+                        if (t2 != null) {
+                            while (t2 instanceof CompletionException) t2 = t2.getCause();
+                        }
                         if (t2 == null) {
                             //执行一遍新增操作
                             writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g3, t3) -> {
@@ -645,7 +678,9 @@ public class PgsqlDataSource extends DataSqlSource {
                                         final PgReqUpdate copyTableReq2 = new PgReqUpdate();
                                         copyTableReq2.prepare(getTableCopySQL(info, newTable));
                                         writePool().writeChannel(connRef.get(), copyTableReq2).whenComplete((g5, t5) -> {
-                                            if (t5 != null) while (t5 instanceof CompletionException) t5 = t5.getCause();
+                                            if (t5 != null) {
+                                                while (t5 instanceof CompletionException) t5 = t5.getCause();
+                                            }
                                             if (t5 == null) {
                                                 //再执行一遍新增操作
                                                 writePool().writeChannel(connRef.get(), reqRef.get().reuse()).whenComplete((g6, t6) -> {
@@ -777,7 +812,9 @@ public class PgsqlDataSource extends DataSqlSource {
     @Local
     @Override
     public int[] directExecute(String... sqls) {
-        if (sqls.length == 1) return new int[]{directExecute(sqls[0])};
+        if (sqls.length == 1) {
+            return new int[]{directExecute(sqls[0])};
+        }
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         CompletableFuture<PgResultSet> future = pool.connect(null).thenCompose(conn -> {
