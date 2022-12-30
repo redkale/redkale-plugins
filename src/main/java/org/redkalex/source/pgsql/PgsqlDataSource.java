@@ -350,7 +350,17 @@ public class PgsqlDataSource extends DataSqlSource {
         return queryColumnMapDBApply(info, executeQuery(info, sql), funcNodes, groupByColumns);
     }
 
-    protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, String[] tables, final SelectColumn selects, Serializable pk) {
+    @Override
+    public <T> CompletableFuture<T> findAsync(final Class<T> clazz, final SelectColumn selects, final Serializable pk) {
+        final EntityInfo<T> info = loadEntityInfo(clazz);
+        final EntityCache<T> cache = info.getCache();
+        if (cache != null) {
+            T rs = selects == null ? cache.find(pk) : cache.find(selects, pk);
+            if (cache.isFullLoaded() || rs != null) {
+                return CompletableFuture.completedFuture(rs);
+            }
+        }
+
         final long s = System.currentTimeMillis();
         PgClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
@@ -369,12 +379,16 @@ public class PgsqlDataSource extends DataSqlSource {
                 return rs;
             });
         }
-        String column = info.getPrimarySQLColumn();
-        final String sql = "SELECT " + info.getFullQueryColumns(null, selects) + " FROM " + info.getTable(pk) + " WHERE " + column + "=" + info.formatSQLValue(column, pk, sqlFormatter);
+        String sql = findSql(info, selects, pk);
         if (info.isLoggable(logger, Level.FINEST, sql)) {
             logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
         }
-        return findDBAsync(info, tables, sql, true, selects);
+        return findDBApply(info, executeQuery(info, sql), true, selects);
+    }
+
+    @Override
+    protected <T> CompletableFuture<T> findDBAsync(EntityInfo<T> info, String[] tables, String sql, boolean onlypk, SelectColumn selects) {
+        return findDBApply(info, executeQuery(info, sql), onlypk, selects);
     }
 
     @Override
@@ -442,11 +456,6 @@ public class PgsqlDataSource extends DataSqlSource {
         } else {
             return queryListAsync(info.getType(), (SelectColumn) null, (Flipper) null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
         }
-    }
-
-    @Override
-    protected <T> CompletableFuture<T> findDBAsync(EntityInfo<T> info, String[] tables, String sql, boolean onlypk, SelectColumn selects) {
-        return findDBApply(info, executeQuery(info, sql), onlypk, selects);
     }
 
     @Override

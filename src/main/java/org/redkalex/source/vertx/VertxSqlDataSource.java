@@ -414,7 +414,17 @@ public class VertxSqlDataSource extends DataSqlSource {
         });
     }
 
-    protected <T> CompletableFuture<T> findCompose(final EntityInfo<T> info, final SelectColumn selects, Serializable pk) {
+    @Override
+    public <T> CompletableFuture<T> findAsync(final Class<T> clazz, final SelectColumn selects, final Serializable pk) {
+        final EntityInfo<T> info = loadEntityInfo(clazz);
+        final EntityCache<T> cache = info.getCache();
+        if (cache != null) {
+            T rs = selects == null ? cache.find(pk) : cache.find(selects, pk);
+            if (cache.isFullLoaded() || rs != null) {
+                return CompletableFuture.completedFuture(rs);
+            }
+        }
+
         if (selects == null) {
             final String sql = dollar ? info.getFindDollarPrepareSQL(pk) : info.getFindQuestionPrepareSQL(pk);
             return queryPrepareResultSet(info, sql, Tuple.of(pk)).thenApply(rsset -> {
@@ -423,12 +433,15 @@ public class VertxSqlDataSource extends DataSqlSource {
                 return val;
             });
         }
-        String column = info.getPrimarySQLColumn();
-        final String sql = "SELECT " + info.getFullQueryColumns(null, selects) + " FROM " + info.getTable(pk) + " WHERE " + column + "=" + info.formatSQLValue(column, pk, sqlFormatter);
+        String sql = findSql(info, selects, pk);
         if (info.isLoggable(logger, Level.FINEST, sql)) {
             logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
         }
-        return findDBAsync(info, null, sql, true, selects);
+        return queryResultSet(info, sql).thenApply(rsset -> {
+            boolean rs = rsset.next();
+            T val = rs ? (selects == null ? getEntityValue(info, null, rsset) : getEntityValue(info, selects, rsset)) : null;
+            return val;
+        });
     }
 
     @Override
