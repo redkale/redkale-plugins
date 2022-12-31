@@ -19,8 +19,8 @@ import org.redkale.net.*;
  */
 public class TestAsyncConnection extends AsyncConnection {
 
-    public TestAsyncConnection() {
-        super(true, null, Thread.currentThread() instanceof AsyncIOThread ? (AsyncIOThread) Thread.currentThread() : null, 1, () -> ByteBuffer.allocate(1024), t -> {
+    public TestAsyncConnection(AsyncIOGroup ioGroup) {
+        super(true, ioGroup, ioGroup.nextIOThread(), 1, () -> ByteBuffer.allocate(1024), t -> {
         }, null, null, new LongAdder(), null);
     }
 
