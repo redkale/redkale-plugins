@@ -74,7 +74,6 @@ public class PgReqExtended extends PgClientRequest {
 //        AtomicBoolean prepared = ((PgClientConnection) conn).getPrepareFlag(sql);
 //        return prepared.get();
 //    }
-
 //    @Override //合并成功了返回true
 //    protected boolean merge(ClientConnection conn, ClientRequest other) {
 //        PgClientRequest req = (PgClientRequest) other;
@@ -94,7 +93,6 @@ public class PgReqExtended extends PgClientRequest {
 //            extreq.paramValues == null || extreq.paramValues.length == 0 ? ONE_EMPTY_PARAMS : extreq.paramValues);
 //        return true;
 //    }
-
     private void writeParse(ByteArray array, Long statementIndex) { // PARSE
         array.putByte('P');
         int start = array.length();
@@ -164,7 +162,7 @@ public class PgReqExtended extends PgClientRequest {
                     array.putInt(start, array.length() - start);
                 }
                 writeExecute(array, fetchSize); // EXECUTE
-            writeSync(array); //SYNC
+                writeSync(array); //SYNC
             }
         } else {
             { // BIND
@@ -202,7 +200,9 @@ public class PgReqExtended extends PgClientRequest {
         if (prepared.get()) {
             this.sendPrepare = false;
             writeBind(array, pgconn.getStatementIndex(sql));
-            if (PgsqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+            if (PgsqlDataSource.debug) {
+                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+            }
         } else {
             Long statementIndex = pgconn.createStatementIndex(sql);
             prepared.set(true);
@@ -211,7 +211,9 @@ public class PgReqExtended extends PgClientRequest {
             writeDescribe(array, statementIndex);
             //绑定参数
             writeBind(array, statementIndex);
-            if (PgsqlDataSource.debug) logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+            if (PgsqlDataSource.debug) {
+                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", LONGID: " + statementIndex + ", DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+            }
         }
     }
 

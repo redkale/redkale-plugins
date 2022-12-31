@@ -16,8 +16,9 @@ import java.util.concurrent.atomic.*;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import org.redkale.boot.LoggingBaseHandler;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.net.AsyncIOGroup;
+import org.redkale.net.*;
 import org.redkale.net.client.Client;
 import org.redkale.persistence.*;
 import static org.redkale.source.AbstractDataSource.DATA_SOURCE_MAXCONNS;
@@ -38,11 +39,12 @@ public class PgSQLTest {
 
     private static final String password = "1234";
 
-    private static final int count = Runtime.getRuntime().availableProcessors() * 10;  //4.18秒
+    private static final int count = Utility.cpus();// Runtime.getRuntime().availableProcessors() * 10;  //4.18秒
 
     public static void main(String[] args) throws Throwable {
-        run(false, true);
-        run(false, false);
+        LoggingBaseHandler.initDebugLogConfig();
+        //run(false, true);
+        run(true, false);
         // run(true, true);
         // run(true, false);
     }
@@ -74,6 +76,7 @@ public class PgSQLTest {
         factory.inject(source);
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println("-------------------- " + (forFortune ? "Fortune" : "World") + " " + (rwSeparate ? "读写分离" : "读写合并") + " --------------------");
+        System.out.println("-------------------- " + "当前内核数: " + Utility.cpus() + " --------------------");
         if (false) {
             System.out.println("当前机器CPU核数: " + Runtime.getRuntime().availableProcessors());
             final CompletableFuture[] futures = new CompletableFuture[Runtime.getRuntime().availableProcessors()];
@@ -122,10 +125,12 @@ public class PgSQLTest {
         getPollRespCounter(source.writePool()).reset();
         long s1 = System.currentTimeMillis();
         final AtomicInteger timeouts = new AtomicInteger();
-        Field futureCompleteConsumer = DataSqlSource.class.getDeclaredField("futureCompleteConsumer");
-        futureCompleteConsumer.setAccessible(true);
+        Field errorCompleteConsumer = DataSqlSource.class.getDeclaredField("errorCompleteConsumer");
+        errorCompleteConsumer.setAccessible(true);
         BiConsumer<Object, Throwable> bc = (Object r, Throwable t) -> {
-            if (t == null) return;
+            if (t == null) {
+                return;
+            }
             if (t.getCause() instanceof TimeoutException) {
                 timeouts.incrementAndGet();
             } else {
@@ -133,55 +138,65 @@ public class PgSQLTest {
             }
         };
 
+        final AtomicReference<ExecutorService> workref = new AtomicReference<>();
+        final AtomicInteger wclientCounter = new AtomicInteger();
+        ExecutorService executor = Executors.newFixedThreadPool(count, (Runnable r) -> {
+            int i = wclientCounter.get();
+            int c = wclientCounter.incrementAndGet();
+            String threadname = "Test-WorkThread-" + (c > 9 ? c : ("0" + c));
+            Thread t = new WorkThread(threadname, i, count, workref.get(), r);
+            return t;
+        });
         final CountDownLatch cdl = new CountDownLatch(count);
         final CountDownLatch startcdl = new CountDownLatch(count);
-        futureCompleteConsumer.set(source, bc);
+        errorCompleteConsumer.set(source, bc);
         for (int j = 0; j < count; j++) {
-            new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        startcdl.countDown();
-                        startcdl.await();
+            executor.execute(() -> {
+                try {
+                    startcdl.countDown();
+                    startcdl.await();
 
-                        final World[] rs = new World[20];
-                        final CompletableFuture[] futures = new CompletableFuture[rs.length];
-                        for (int i = 0; i < rs.length; i++) {
-                            final int index = i;
-                            int id = randomId();
-                            IntStream ids = ThreadLocalRandom.current().ints(20, 1, 10001);
-                            futures[index] = forFortune ? source.queryListAsync(Fortune.class) : source.findsListAsync(World.class, ids.boxed()).thenApply(v -> {
-                                if (v.size() != 20) System.out.println("数量居然是" + v.size());
-                                return v;
-                            });
-                        }
-                        CompletableFuture.allOf(futures).thenCompose(v -> {
-                            if (forFortune) {
-                                List s = (List) futures[0].join();
-                                if (s.size() != fortuneSize) System.out.println("数量居然是" + s.size());
-                                return CompletableFuture.completedFuture(null);
+                    final World[] rs = new World[10];
+                    final CompletableFuture[] futures = new CompletableFuture[rs.length];
+                    for (int i = 0; i < rs.length; i++) {
+                        final int index = i;
+                        int id = randomId();
+                        IntStream ids = ThreadLocalRandom.current().ints(20, 1, 10001);
+                        futures[index] = forFortune ? source.queryListAsync(Fortune.class) : source.findsListAsync(World.class, ids.boxed()).thenApply(v -> {
+                            if (v.size() != 20) {
+                                System.out.println("数量居然是" + v.size());
+                            }
+                            return v;
+                        });
+                    }
+                    CompletableFuture.allOf(futures).thenCompose(v -> {
+                        if (forFortune) {
+                            List s = (List) futures[0].join();
+                            if (s.size() != fortuneSize) {
+                                System.out.println("数量居然是" + s.size());
                             }
                             return CompletableFuture.completedFuture(null);
-                            //return source.updateAsync(sort(rs));
-                        }).whenComplete((r, t) -> {
-                            cdl.countDown();
-                            if (t != null) {
-                                if (t.getCause() instanceof TimeoutException) {
-                                    timeouts.incrementAndGet();
-                                } else {
-                                    t.printStackTrace();
-                                }
-                            }
-                        });
-                    } catch (Throwable t) {
-                        if (t.getCause() instanceof TimeoutException) {
-                            timeouts.incrementAndGet();
-                        } else {
-                            t.printStackTrace();
                         }
+                        return CompletableFuture.completedFuture(null);
+                        //return source.updateAsync(sort(rs));
+                    }).whenComplete((r, t) -> {
+                        cdl.countDown();
+                        if (t != null) {
+                            if (t.getCause() instanceof TimeoutException) {
+                                timeouts.incrementAndGet();
+                            } else {
+                                t.printStackTrace();
+                            }
+                        }
+                    });
+                } catch (Throwable t) {
+                    if (t.getCause() instanceof TimeoutException) {
+                        timeouts.incrementAndGet();
+                    } else {
+                        t.printStackTrace();
                     }
                 }
-            }.start();
+            });
         }
         cdl.await();
         long e1 = System.currentTimeMillis() - s1;

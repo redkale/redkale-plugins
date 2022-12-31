@@ -469,48 +469,52 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Sheet<T>> querySheetDBAsync(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
+    protected <T> CompletableFuture<Sheet<T>> querySheetDBAsync(EntityInfo<T> info, final boolean readCache, boolean needTotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
         final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
         final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
         final CharSequence join = node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
         final CharSequence where = node == null ? null : createSQLExpress(node, info, joinTabalis);
         final PgClient pool = readPool();
-        final boolean cachePrepared = pool.cachePreparedStatements() && readcache && info.getTableStrategy() == null && sels == null && node == null && flipper == null && !distinct;
-        String[] tables = info.getTables(node);
-        String joinAndWhere = (join == null ? "" : join) + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
-        String listsubsql;
+        final boolean cachePrepared = pool.cachePreparedStatements() && readCache && info.getTableStrategy() == null && sels == null && node == null && flipper == null && !distinct;
         StringBuilder union = new StringBuilder();
-        if (tables.length == 1) {
-            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM " + tables[0] + " a" + joinAndWhere;
-        } else {
-            int b = 0;
-            for (String table : tables) {
-                if (!union.isEmpty()) {
-                    union.append(" UNION ALL ");
+        String listSubSql = null;
+        String joinAndWhere = null;
+        String[] tables = info.getTables(node);
+        if (!cachePrepared || needTotal) {
+            joinAndWhere = (join == null ? "" : join) + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
+            if (tables.length == 1) {
+                listSubSql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM " + tables[0] + " a" + joinAndWhere;
+            } else {
+                int b = 0;
+                for (String table : tables) {
+                    if (!union.isEmpty()) {
+                        union.append(" UNION ALL ");
+                    }
+                    String tabalis = "t" + (++b);
+                    union.append("SELECT ").append(info.getQueryColumns(tabalis, selects)).append(" FROM ").append(table).append(" ").append(tabalis).append(joinAndWhere);
                 }
-                String tabalis = "t" + (++b);
-                union.append("SELECT ").append(info.getQueryColumns(tabalis, selects)).append(" FROM ").append(table).append(" ").append(tabalis).append(joinAndWhere);
+                listSubSql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
             }
-            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
         }
-        final String listsql = cachePrepared ? info.getAllQueryPrepareSQL() : (listsubsql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
-        if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) {
-            logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
-        }
-        if (!needtotal) {
+        
+        final String listSql = cachePrepared ? info.getAllQueryPrepareSQL() : (listSubSql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
+        if (!needTotal) {
             CompletableFuture<PgResultSet> listfuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currWorkThread();
                 AtomicReference<ClientConnection> connRef = new AtomicReference();
                 listfuture = thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                     PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
-                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.LIST_ALL, listsql, 0, info.getQueryAttributes(), (Attribute[]) null);
+                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.LIST_ALL, listSql, 0, info.getQueryAttributes(), (Attribute[]) null);
                     connRef.set(conn);
                     return pool.writeChannel(conn, req);
                 }));
             } else {
-                listfuture = executeQuery(info, listsql);
+                if (readCache && info.isLoggable(logger, Level.FINEST, listSql)) {
+                    logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
+                }
+                listfuture = executeQuery(info, listSql);
             }
             return listfuture.thenApply((PgResultSet dataset) -> {
                 final List<T> list = new ArrayList();
@@ -518,28 +522,28 @@ public class PgsqlDataSource extends DataSqlSource {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
-                slowLog(s, listsql);
+                slowLog(s, listSql);
                 return Sheet.asSheet(list);
             });
         }
-        String countsubsql;
+        String countSubSql;
         if (tables.length == 1) {
-            countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM " + tables[0] + " a" + joinAndWhere;
+            countSubSql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM " + tables[0] + " a" + joinAndWhere;
         } else {
-            countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM (" + (union) + ") a";
+            countSubSql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM (" + (union) + ") a";
         }
-        final String countsql = countsubsql;
-        return getNumberResultDBAsync(info, null, countsql, 0, countsql).thenCompose(total -> {
+        final String countSql = countSubSql;
+        return getNumberResultDBAsync(info, null, countSql, 0, countSql).thenCompose(total -> {
             if (total.longValue() <= 0) {
                 return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
             }
-            return executeQuery(info, listsql).thenApply((PgResultSet dataset) -> {
+            return executeQuery(info, listSql).thenApply((PgResultSet dataset) -> {
                 final List<T> list = new ArrayList();
                 while (dataset.next()) {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
-                slowLog(s, listsql);
+                slowLog(s, listSql);
                 return new Sheet(total.longValue(), list);
             });
         });

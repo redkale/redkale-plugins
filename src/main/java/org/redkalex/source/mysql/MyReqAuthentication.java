@@ -111,7 +111,7 @@ public class MyReqAuthentication extends MyClientRequest {
             Mysqls.writeWithLength(array, attrsArray.getBytes());
         }
         Mysqls.writeUB3(array, startPos, array.length() - startPos - 4);
-        if (MysqlDataSource.debug) MyClientCodec.logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 发送 MyReqAuthentication length=" + array.length());
+        if (MysqlDataSource.debug) MyClientCodec.logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 发送 MyReqAuthentication length=" + array.length());
     }
 
     private int getClientCapabilities() {

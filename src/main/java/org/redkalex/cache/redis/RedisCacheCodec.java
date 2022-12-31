@@ -8,9 +8,9 @@ package org.redkalex.cache.redis;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.logging.*;
+import java.util.logging.Logger;
 import org.redkale.net.client.*;
-import org.redkale.util.*;
+import org.redkale.util.ByteArray;
 
 /**
  *
@@ -71,7 +71,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
 //            dbs[i] = buffer.get(buffer.position() + i);
 //        }
 //        ArrayDeque<ClientFuture> deque = (ArrayDeque) responseQueue(conn);
-//        logger.log(Level.FINEST, Utility.nowMillis() + ": " + Thread.currentThread().getName() + ": " + conn + ", 原始数据: " + new String(dbs).replace("\r\n", "  ") + ", req=" + deque.getFirst().getRequest());
+//        logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 原始数据: " + new String(dbs).replace("\r\n", "  ") + ", req=" + deque.getFirst().getRequest());
 
         array.clear();
         byte type = halfFrameCmd == 0 ? buffer.get() : halfFrameCmd;
