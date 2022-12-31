@@ -85,7 +85,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
             return false;
         }
         //buffer必然包含一个完整的frame数据
-        boolean hadresult = false;
+        boolean hadResult = false;
         PgClientRequest request = null;
         Iterator<ClientFuture> respIt = responseQueue().iterator();
         boolean update_1_to_2 = false;
@@ -103,7 +103,10 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                     halfFrameBytes.putByte(cmd);
                     halfFrameBytes.put(buffer);
-                    return hadresult;
+                    if (PgsqlDataSource.debug) {
+                        logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", half data continue read.");
+                    }
+                    return hadResult;
                 }
                 final int bufpos = buffer.position();
                 final int length = buffer.getInt();
@@ -121,7 +124,10 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     halfFrameBytes.putByte(cmd);
                     halfFrameBytes.putInt(length);
                     halfFrameBytes.put(buffer);
-                    return hadresult;
+                    if (PgsqlDataSource.debug) {
+                        logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", half data continue read.");
+                    }
+                    return hadResult;
                 }
                 if (cmd == 'R') {  //登录鉴权
                     int type = buffer.getInt();
@@ -175,11 +181,11 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastResult = null;
                         lastExc = null;
                         lastCount = 0;
-                        hadresult = true;
+                        hadResult = true;
                         request = null;
                         break;
                     }
-                } else if (cmd == 'C') {
+                } else if (cmd == 'C') { //Count
                     if (lastResult == null) {
                         lastResult = conn.pollResultSet(request == null ? null : request.info);
                     }
@@ -219,7 +225,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     } else {
                         buffer.position(bufpos + length);
                     }
-                } else if (cmd == 'D') {
+                } else if (cmd == 'D') { //RowData 一行数据
                     if (request != null) {
                         if (lastResult == null) {
                             lastResult = conn.pollResultSet(request.info);
@@ -233,7 +239,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     } else {
                         buffer.position(bufpos + length);
                     }
-                } else if (cmd == 'E') {
+                } else if (cmd == 'E') { //Error
                     if (request != null) {
                         Exception exc = PgRespErrorDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         if (lastExc == null) {
@@ -255,7 +261,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastResult = null;
                         lastExc = null;
                         lastCount = 0;
-                        hadresult = true;
+                        hadResult = true;
                         request = null;
                         break;
                     }
@@ -302,6 +308,9 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     buffer.position(bufpos + length);
 
                     if (request != null && lastCount < request.getSyncedCount()) {
+                        if (PgsqlDataSource.debug) {
+                            logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", continue parse, lastCount=" + lastCount + ", syncedCount=" + request.getSyncedCount());
+                        }
                         continue;
                     }
 
@@ -309,7 +318,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     halfFrameCmd = 0;
                     halfFrameLength = 0;
                     if (update_1_to_2) {
-                        return hadresult;
+                        return hadResult;
                     }
                     if (lastExc != null) {
                         addResult(lastExc);
@@ -319,7 +328,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                     lastExc = null;
                     lastCount = 0;
-                    hadresult = true;
+                    hadResult = true;
                     request = null;
                     update_1_to_2 = false;
                     break;
@@ -339,7 +348,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
             buffer = realbuf;
         }
         //解析了完整的frame，但还是没解析到Z消息
-        return hadresult;
+        return hadResult;
     }
 
     protected static String readUTF8String(ByteBuffer buffer, ByteArray array) {

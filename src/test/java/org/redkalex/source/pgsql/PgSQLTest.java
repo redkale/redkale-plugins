@@ -79,7 +79,7 @@ public class PgSQLTest {
         System.out.println("-------------------- " + "当前内核数: " + Utility.cpus() + " --------------------");
         if (false) {
             System.out.println("当前机器CPU核数: " + Runtime.getRuntime().availableProcessors());
-            final CompletableFuture[] futures = new CompletableFuture[Runtime.getRuntime().availableProcessors()];
+            final CompletableFuture[] futures = new CompletableFuture[Utility.cpus()];
             for (int i = 0; i < futures.length; i++) {
                 futures[i] = source.findAsync(World.class, randomId()).thenCompose(v -> source.updateAsync(v));
             }
@@ -95,6 +95,7 @@ public class PgSQLTest {
                 System.out.println("可写池resp等待数: " + getRespWaitingCount(source.writePool()));
             }
         }
+        System.out.println(source.findsList(Fortune.class, List.of(1, 222, 2, 3).stream()));
         final int fortuneSize = source.queryList(Fortune.class).size();
         System.out.println("Fortune数量: " + fortuneSize);
 
@@ -156,7 +157,7 @@ public class PgSQLTest {
                     startcdl.countDown();
                     startcdl.await();
 
-                    final World[] rs = new World[10];
+                    final World[] rs = new World[3];
                     final CompletableFuture[] futures = new CompletableFuture[rs.length];
                     for (int i = 0; i < rs.length; i++) {
                         final int index = i;
