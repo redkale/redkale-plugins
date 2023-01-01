@@ -320,7 +320,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Integer> updateColumnDBAsync(EntityInfo<T> info, Flipper flipper, SqlInfo sql) {
+    protected <T> CompletableFuture<Integer> updateColumnDBAsync(EntityInfo<T> info, Flipper flipper, UpdateSqlInfo sql) {
         if (info.isLoggable(logger, Level.FINEST)) {
             final String debugsql = flipper == null || flipper.getLimit() <= 0 ? sql.sql : (sql.sql + " LIMIT " + flipper.getLimit());
             if (info.isLoggable(logger, Level.FINEST, debugsql)) {
@@ -349,7 +349,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDBAsync(EntityInfo<T> info, String[] tables, String sql, FilterFuncColumn... columns) {
+    protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDBAsync(EntityInfo<T> info, String[] tables, String sql, FilterNode node, FilterFuncColumn... columns) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             final Map map = new HashMap<>();
             if (set.next()) {
@@ -370,7 +370,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Number> getNumberResultDBAsync(EntityInfo<T> info, String[] tables, String sql, Number defVal, String column) {
+    protected <T> CompletableFuture<Number> getNumberResultDBAsync(EntityInfo<T> info, String[] tables, String sql, FilterFunc func, Number defVal, String column, final FilterNode node) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             Number rs = defVal;
             if (set.next()) {
@@ -384,7 +384,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, String keyColumn) {
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             Map<K, N> rs = new LinkedHashMap<>();
             while (set.next()) {
@@ -395,7 +395,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns) {
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns, FilterNode node) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             Map rs = new LinkedHashMap<>();
             while (set.next()) {
@@ -445,7 +445,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<T> findDBAsync(EntityInfo<T> info, String[] tables, String sql, boolean onlypk, SelectColumn selects) {
+    protected <T> CompletableFuture<T> findDBAsync(EntityInfo<T> info, String[] tables, String sql, boolean onlypk, SelectColumn selects, Serializable pk, FilterNode node) {
         return queryResultSet(info, sql).thenApply(rsset -> {
             boolean rs = rsset.next();
             T val = rs ? (onlypk && selects == null ? getEntityValue(info, null, rsset) : getEntityValue(info, selects, rsset)) : null;
@@ -454,7 +454,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Serializable> findColumnDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk, String column, Serializable defValue) {
+    protected <T> CompletableFuture<Serializable> findColumnDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk, String column, Serializable defValue, Serializable pk, FilterNode node) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             Serializable val = defValue;
             if (set.next()) {
@@ -466,7 +466,7 @@ public class VertxSqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<Boolean> existsDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk) {
+    protected <T> CompletableFuture<Boolean> existsDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk, Serializable pk, FilterNode node) {
         return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
             return set.next() ? (((Number) set.getObject(1)).intValue() > 0) : false;
         });
@@ -517,7 +517,7 @@ public class VertxSqlDataSource extends DataSqlSource {
             countsubsql = "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)") + " FROM (" + (union) + ") a";
         }
         final String countsql = countsubsql;
-        return getNumberResultDBAsync(info, null, countsql, 0, countsql).thenCompose(total -> {
+        return getNumberResultDBAsync(info, null, countsql, distinct ? FilterFunc.DISTINCTCOUNT : FilterFunc.COUNT, 0, countsql, node).thenCompose(total -> {
             if (total.longValue() <= 0) {
                 return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
             }

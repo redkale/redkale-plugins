@@ -90,14 +90,19 @@ public class MySQLTest {
             FilterNode node = FilterNode.create("createTime", new Range.LongRange(record4.getCreateTime(), record1.getCreateTime()));
             System.out.println("查询结果: " + source.querySheet(DayRecord.class, new Flipper(), node));
 
+            FilterNode pkFilter = FilterNode.create("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid()));
+
+            rs = source.updateColumn(record1, pkFilter, SelectColumn.includes("content"));
+            System.out.println("-------修改成功数: " + rs + "---------");
+
             //rs = source.delete(record1, record2, record3, record4);
-            rs = source.delete(DayRecord.class, FilterNode.create("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid())));
+            rs = source.delete(DayRecord.class, pkFilter);
             System.out.println("-------删除成功数: " + rs + "---------");
 
-            rs = source.clearTable(DayRecord.class, FilterNode.create("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid())));
+            rs = source.clearTable(DayRecord.class, pkFilter);
             System.out.println("-------清空成功数: " + rs + "---------");
 
-            rs = source.dropTable(DayRecord.class, FilterNode.create("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid())));
+            rs = source.dropTable(DayRecord.class, pkFilter);
             System.out.println("-------删表成功数: " + rs + "---------");
             return;
         }
