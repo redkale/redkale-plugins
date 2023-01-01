@@ -45,22 +45,22 @@ public class MySQLCodecTest {
                 boolean bool;
                 {
                     realbuf = ByteBuffer.wrap(data);
-                    bool = codec.codecResult(realbuf, array);
+                    bool = codec.decodeMessages(realbuf, array);
                     System.out.println("had result 0: " + bool);
                     Assertions.assertTrue(bool);
                 }
                 realbuf = ByteBuffer.wrap(data, 0, 1);
-                bool = codec.codecResult(realbuf, array);
+                bool = codec.decodeMessages(realbuf, array);
                 System.out.println("had result 1: " + bool + ", half = " + codec.halfFrameBytes.length());
                 Assertions.assertFalse(bool);
 
                 realbuf = ByteBuffer.wrap(data, 1, 1);
-                bool = codec.codecResult(realbuf, array);
+                bool = codec.decodeMessages(realbuf, array);
                 System.out.println("had result 2: " + bool + ", half = " + codec.halfFrameBytes.length());
                 Assertions.assertFalse(bool);
 
                 realbuf = ByteBuffer.wrap(data, 2, data.length - 2);
-                bool = codec.codecResult(realbuf, array);
+                bool = codec.decodeMessages(realbuf, array);
                 System.out.println("had result 3: " + bool);
                 Assertions.assertTrue(bool);
                 cdl.countDown();

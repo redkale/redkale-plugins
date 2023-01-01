@@ -187,7 +187,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean codecResult(ByteBuffer realbuf, ByteArray array) {
+    public boolean decodeMessages(ByteBuffer realbuf, ByteArray array) {
         RedisCacheConnection conn = (RedisCacheConnection) connection;
         if (!realbuf.hasRemaining()) return false;
         ByteBuffer buffer = realbuf;
@@ -201,9 +201,9 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
             if (request == null) request = respIt.hasNext() ? respIt.next().getRequest() : null;
             if (!first && !checkBytesFrame(conn, buffer, array)) break;
             if (frameType == TYPE_ERROR) {
-                addResult(new RuntimeException(new String(frameValue, StandardCharsets.UTF_8)));
+                addMessage(new RuntimeException(new String(frameValue, StandardCharsets.UTF_8)));
             } else {
-                addResult(conn.pollResultSet(request).prepare(frameType, frameValue, frameList));
+                addMessage(conn.pollResultSet(request).prepare(frameType, frameValue, frameList));
             }
             frameType = 0;
             frameValue = null;

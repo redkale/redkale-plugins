@@ -48,40 +48,40 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean codecResult(final ByteBuffer realbuf, ByteArray array) {
+    public boolean decodeMessages(final ByteBuffer realBuf, ByteArray array) {
         PgClientConnection conn = (PgClientConnection) connection;
-        if (!realbuf.hasRemaining()) {
+        if (!realBuf.hasRemaining()) {
             return false;
         }
-        ByteBuffer buffer = realbuf;
-        //logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", realbuf读到的长度: " + realbuf.remaining() + ", halfFrameBytes=" + (halfFrameBytes == null ? -1 : halfFrameBytes.length()));
+        ByteBuffer buffer = realBuf;
+        //logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", realbuf读到的长度: " + realBuf.remaining() + ", halfFrameBytes=" + (halfFrameBytes == null ? -1 : halfFrameBytes.length()));
         if (halfFrameBytes != null) {  //存在半包
-            int remain = realbuf.remaining();
+            int remain = realBuf.remaining();
             if (halfFrameCmd == 0) {
                 int cha = 5 - halfFrameBytes.length();
                 if (remain < cha) { //还是不够5字节
-                    halfFrameBytes.put(realbuf);
+                    halfFrameBytes.put(realBuf);
                     return false;
                 }
-                halfFrameBytes.put(realbuf, cha);
+                halfFrameBytes.put(realBuf, cha);
                 halfFrameCmd = (char) halfFrameBytes.get(0);
                 halfFrameLength = halfFrameBytes.getInt(1);
             }
             //此时必然有halfFrameCmd、halfFrameLength
             int bulen = halfFrameLength + 1 - halfFrameBytes.length(); //还差多少字节
             if (bulen > remain) { //不够，继续读取
-                halfFrameBytes.put(realbuf);
+                halfFrameBytes.put(realBuf);
                 return false;
             }
-            halfFrameBytes.put(realbuf, bulen);
+            halfFrameBytes.put(realBuf, bulen);
             //此时halfFrameBytes是完整的frame数据            
             buffer = ByteBuffer.wrap(halfFrameBytes.content(), 0, halfFrameBytes.length());
             halfFrameBytes = null;
             halfFrameCmd = 0;
             halfFrameLength = 0;
-        } else if (realbuf.remaining() < 5) { //第一次就只有几个字节buffer
+        } else if (realBuf.remaining() < 5) { //第一次就只有几个字节buffer
             halfFrameBytes = pollArray();
-            halfFrameBytes.put(realbuf);
+            halfFrameBytes.put(realBuf);
             return false;
         }
         //buffer必然包含一个完整的frame数据
@@ -177,7 +177,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         halfFrameBytes = null;
                         halfFrameCmd = 0;
                         halfFrameLength = 0;
-                        addResult(lastResult);
+                        addMessage(lastResult);
                         lastResult = null;
                         lastExc = null;
                         lastCount = 0;
@@ -257,7 +257,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         halfFrameBytes = null;
                         halfFrameCmd = 0;
                         halfFrameLength = 0;
-                        addResult(lastExc);
+                        addMessage(lastExc);
                         lastResult = null;
                         lastExc = null;
                         lastCount = 0;
@@ -321,9 +321,9 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         return hadResult;
                     }
                     if (lastExc != null) {
-                        addResult(lastExc);
+                        addMessage(lastExc);
                     } else if (lastResult != null) {
-                        addResult(lastResult);
+                        addMessage(lastResult);
                         lastResult = null;
                     }
                     lastExc = null;
@@ -345,7 +345,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     buffer.position(bufpos + length);
                 }
             }
-            buffer = realbuf;
+            buffer = realBuf;
         }
         //解析了完整的frame，但还是没解析到Z消息
         return hadResult;
