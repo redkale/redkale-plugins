@@ -87,7 +87,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         //buffer必然包含一个完整的frame数据
         boolean hadResult = false;
         PgClientRequest request = null;
-        Iterator<ClientFuture> respIt = responseQueue().iterator();
+        Iterator<ClientFuture> respIt = responseIterator();
         boolean update_1_to_2 = false;
         while (buffer.hasRemaining()) {
             while (buffer.hasRemaining()) {

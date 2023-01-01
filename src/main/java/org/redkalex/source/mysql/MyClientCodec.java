@@ -82,7 +82,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
         //buffer必然包含一个完整的frame数据
         boolean hadresult = false;
         MyClientRequest request = null;
-        Iterator<ClientFuture> respIt = responseQueue().iterator();
+        Iterator<ClientFuture> respIt = responseIterator();
         while (buffer.hasRemaining()) {
             while (buffer.hasRemaining()) {
                 if (request == null) request = respIt.hasNext() ? (MyClientRequest) respIt.next().getRequest() : null;

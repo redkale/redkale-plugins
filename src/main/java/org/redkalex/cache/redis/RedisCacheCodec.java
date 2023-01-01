@@ -61,7 +61,9 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
             recyclableArray.clear();
         }
         recyclableArray.clear();
-        if (array != null) recyclableArray.put(array, 0, array.length());
+        if (array != null) {
+            recyclableArray.put(array, 0, array.length());
+        }
         return recyclableArray;
     }
 
@@ -141,25 +143,35 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                     array.clear();
                     if (sign == TYPE_ARRAY) { //数组中嵌套数组，目前有 HSCAN
                         frameValue = null;
-                        if (frameList != null) frameList.clear();
+                        if (frameList != null) {
+                            frameList.clear();
+                        }
                         clearHalfFrame();
-                        if (itemLength == 0) return true;
+                        if (itemLength == 0) {
+                            return true;
+                        }
                         halfFrameCmd = sign;
                         halfFrameArraySize = itemLength;
-                        if (!buffer.hasRemaining()) return false;
+                        if (!buffer.hasRemaining()) {
+                            return false;
+                        }
                         return checkBytesFrame(conn, buffer, array);
                     }
                 }
                 int cha = itemLength - array.length();
                 if (itemLength == -1) {
-                    if (frameList == null) frameList = new ArrayList<>();
+                    if (frameList == null) {
+                        frameList = new ArrayList<>();
+                    }
                     frameList.add(null);
                     array.clear();
                 } else if (buffer.remaining() >= cha + 2) {
                     for (int j = 0; j < cha; j++) array.put(buffer.get());
                     buffer.get(); //\r
                     buffer.get(); //\n
-                    if (frameList == null) frameList = new ArrayList<>();
+                    if (frameList == null) {
+                        frameList = new ArrayList<>();
+                    }
                     frameList.add(array.getBytes());
                     array.clear();
                 } else {
@@ -189,17 +201,25 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
     public boolean decodeMessages(ByteBuffer realbuf, ByteArray array) {
         RedisCacheConnection conn = (RedisCacheConnection) connection;
-        if (!realbuf.hasRemaining()) return false;
+        if (!realbuf.hasRemaining()) {
+            return false;
+        }
         ByteBuffer buffer = realbuf;
-        if (!checkBytesFrame(conn, buffer, array)) return false;
+        if (!checkBytesFrame(conn, buffer, array)) {
+            return false;
+        }
         //buffer必然包含一个完整的frame数据
         boolean first = true;
         boolean hadresult = false;
         RedisCacheRequest request = null;
-        Iterator<ClientFuture<RedisCacheRequest>> respIt = (Iterator) responseQueue().iterator();
+        Iterator<ClientFuture<RedisCacheRequest>> respIt = (Iterator) responseIterator();
         while (first || buffer.hasRemaining()) {
-            if (request == null) request = respIt.hasNext() ? respIt.next().getRequest() : null;
-            if (!first && !checkBytesFrame(conn, buffer, array)) break;
+            if (request == null) {
+                request = respIt.hasNext() ? respIt.next().getRequest() : null;
+            }
+            if (!first && !checkBytesFrame(conn, buffer, array)) {
+                break;
+            }
             if (frameType == TYPE_ERROR) {
                 addMessage(new RuntimeException(new String(frameValue, StandardCharsets.UTF_8)));
             } else {
