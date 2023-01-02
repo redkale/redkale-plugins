@@ -43,8 +43,8 @@ public class MySQLTest {
             return;
         }
 
-        //MysqlDataSource source = new MysqlDataSource();
-        DataJdbcSource source = new DataJdbcSource();
+        MysqlDataSource source = new MysqlDataSource();
+        //DataJdbcSource source = new DataJdbcSource();
         factory.inject(source);
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println("---------");
