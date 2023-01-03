@@ -1558,12 +1558,12 @@ public final class RedisCacheSource extends AbstractRedisSource {
         for (int i = start; i < bs.length; i++) {
             bs[i] = JsonConvert.root().convertToBytes(args[i - 1]);
         }
-        return client.pollConnection().thenCompose(conn -> conn.writeChannel(conn.pollRequest(WorkThread.currWorkThread()).prepare(command, key, bs))).orTimeout(6, TimeUnit.SECONDS);
+        return client.pollConnection().thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currWorkThread()).prepare(command, key, bs))).orTimeout(6, TimeUnit.SECONDS);
     }
 
     @Local
     public CompletableFuture<RedisCacheResult> sendAsync(final String command, final String key, final byte[]... args) {
-        return client.pollConnection().thenCompose(conn -> conn.writeChannel(conn.pollRequest(WorkThread.currWorkThread()).prepare(command, key, args))).orTimeout(6, TimeUnit.SECONDS);
+        return client.pollConnection().thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currWorkThread()).prepare(command, key, args))).orTimeout(6, TimeUnit.SECONDS);
     }
 
     private byte[][] keySetArgs(String key) {

@@ -24,8 +24,7 @@ class RedisCacheConnection<R extends RedisCacheRequest> extends ClientConnection
         return new RedisCacheCodec(this);
     }
 
-    @Override
-    protected CompletableFuture<RedisCacheResult> writeChannel(R request) {
+    protected CompletableFuture<RedisCacheResult> writeRequest(R request) {
         return super.writeChannel(request);
     }
 
