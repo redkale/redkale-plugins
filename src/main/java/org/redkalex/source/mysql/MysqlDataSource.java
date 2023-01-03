@@ -238,6 +238,15 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
+    protected <T> CompletableFuture<Integer> createTableDBAsync(EntityInfo<T> info, String copyTableSql, final Serializable pk, String... sqls) {
+        if (copyTableSql == null) {
+            return executeUpdate(info, sqls, null, 0, 0, null);
+        } else {
+            return executeUpdate(info, new String[]{copyTableSql}, null, 0, 0, null);
+        }
+    }
+
+    @Override
     protected <T> CompletableFuture<Integer> dropTableDBAsync(EntityInfo<T> info, final String[] tables, FilterNode node, final String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {

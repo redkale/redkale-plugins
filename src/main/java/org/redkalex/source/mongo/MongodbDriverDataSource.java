@@ -99,7 +99,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        if (events == null || events.length < 1) return;
+        if (events == null || events.length < 1) {
+            return;
+        }
         //不支持读写分离模式的动态切换
         if (readConfProps == writeConfProps
             && (events[0].name().startsWith("read.") || events[0].name().startsWith("write."))) {
@@ -126,7 +128,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 this.readMongoClient = createMongoClient(true, newProps);
                 this.writeMongoClient = this.readMongoClient;
                 this.writedb = this.readdb;
-                if (oldClient != null) oldClient.close();
+                if (oldClient != null) {
+                    oldClient.close();
+                }
             }
             for (ResourceEvent event : allEvents) {
                 this.readConfProps.put(event.name(), event.newValue());
@@ -137,7 +141,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             Properties newReadProps = new Properties();
             newReadProps.putAll(this.readConfProps);
             Properties newWriteProps = new Properties();
-            newWriteProps.putAll(this.writeConfProps); 
+            newWriteProps.putAll(this.writeConfProps);
             for (ResourceEvent event : events) {
                 if (event.name().startsWith("read.")) {
                     String newName = event.name().substring("read.".length());
@@ -155,12 +159,16 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             if (!readEvents.isEmpty()) { //更新Read MongoClient
                 MongoClient oldClient = this.readMongoClient;
                 this.readMongoClient = createMongoClient(true, newReadProps);
-                if (oldClient != null) oldClient.close();
+                if (oldClient != null) {
+                    oldClient.close();
+                }
             }
             if (!writeEvents.isEmpty()) {//更新Write MongoClient
                 MongoClient oldClient = this.writeMongoClient;
                 this.writeMongoClient = createMongoClient(false, newReadProps);
-                if (oldClient != null) oldClient.close();
+                if (oldClient != null) {
+                    oldClient.close();
+                }
             }
             //更新Properties
             if (!readEvents.isEmpty()) {
@@ -190,8 +198,12 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             url += "&maxpoolsize=" + maxconns;
         }
         ConnectionString cc = new ConnectionString(url);
-        if (read && readdb == null) this.readdb = cc.getDatabase();
-        if (!read && writedb == null) this.writedb = cc.getDatabase();
+        if (read && readdb == null) {
+            this.readdb = cc.getDatabase();
+        }
+        if (!read && writedb == null) {
+            this.writedb = cc.getDatabase();
+        }
         settingBuilder.applyConnectionString(cc);
         CodecRegistry registry = CodecRegistries.fromRegistries(MongoClientSettings.getDefaultCodecRegistry(),
             CodecRegistries.fromProviders(PojoCodecProvider.builder().automatic(true).build()));
@@ -221,7 +233,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public String toString() {
-        if (readConfProps == null) return getClass().getSimpleName() + "{}"; //compileMode模式下会为null
+        if (readConfProps == null) {
+            return getClass().getSimpleName() + "{}"; //compileMode模式下会为null
+        }
         return getClass().getSimpleName() + "{url=" + readConfProps.getProperty(DATA_SOURCE_URL) + "}";
     }
 
@@ -248,7 +262,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Local
     public MongoDatabase getReadMongoDatabase() {
-        if (this.readMongoDatabase != null) return this.readMongoDatabase;
+        if (this.readMongoDatabase != null) {
+            return this.readMongoDatabase;
+        }
         this.readMongoDatabase = this.readMongoClient.getDatabase(readdb);
         return this.readMongoDatabase;
     }
@@ -270,7 +286,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Local
     public MongoDatabase getWriteMongoDatabase() {
-        if (this.writeMongoDatabase != null) return this.writeMongoDatabase;
+        if (this.writeMongoDatabase != null) {
+            return this.writeMongoDatabase;
+        }
         this.writeMongoDatabase = this.readMongoClient.getDatabase(writedb);
         return this.writeMongoDatabase;
     }
@@ -292,11 +310,17 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Local
     public Bson createSortBson(Flipper flipper) {
-        if (flipper == null) return null;
-        if (flipper.getSort() == null || flipper.getSort().isEmpty()) return null;
+        if (flipper == null) {
+            return null;
+        }
+        if (flipper.getSort() == null || flipper.getSort().isEmpty()) {
+            return null;
+        }
         List<Bson> sorts = new ArrayList<>();
         for (String item : flipper.getSort().split(",")) {
-            if (item.isEmpty()) continue;
+            if (item.isEmpty()) {
+                continue;
+            }
             String[] sub = item.split("\\s+");
             if (sub.length < 2 || sub[1].equalsIgnoreCase("ASC")) {
                 sorts.add(Sorts.ascending(sub[0]));
@@ -304,8 +328,12 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 sorts.add(Sorts.descending(sub[0]));
             }
         }
-        if (sorts.isEmpty()) return null;
-        if (sorts.size() == 1) return sorts.get(0);
+        if (sorts.isEmpty()) {
+            return null;
+        }
+        if (sorts.size() == 1) {
+            return sorts.get(0);
+        }
         return Sorts.orderBy(sorts);
     }
 
@@ -314,7 +342,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         List<Bson> items = new ArrayList<>(values.length);
         for (ColumnValue colval : values) {
             Bson bson = createUpdateBson(info, colval);
-            if (bson != null) items.add(bson);
+            if (bson != null) {
+                items.add(bson);
+            }
         }
         return items;
     }
@@ -347,8 +377,12 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     @Local
     public BsonField createBsonField(FilterFunc func, String fieldName, Serializable column) {
         BsonField bf = null;
-        if (column == null || FilterFuncColumn.COLUMN_NULL.equals(column)) column = "_id";
-        if (fieldName == null) fieldName = column.toString();
+        if (column == null || FilterFuncColumn.COLUMN_NULL.equals(column)) {
+            column = "_id";
+        }
+        if (fieldName == null) {
+            fieldName = column.toString();
+        }
         if (func == FilterFunc.COUNT) {
             bf = Accumulators.sum(fieldName, 1);
         } else if (func == FilterFunc.AVG) {
@@ -375,21 +409,29 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     protected BsonValue formatToBsonValue(Serializable val, boolean dec) {
-        if (val == null) return null;
+        if (val == null) {
+            return null;
+        }
         if (val instanceof Number) {
             BsonNumber bn = null;
             if (val instanceof Number) {
                 if (val instanceof Float || val instanceof Double) {
                     double d = ((Number) val).doubleValue();
-                    if (dec) d = -d;
+                    if (dec) {
+                        d = -d;
+                    }
                     bn = new BsonDouble(d);
                 } else if (val instanceof Long) {
                     long d = ((Number) val).longValue();
-                    if (dec) d = -d;
+                    if (dec) {
+                        d = -d;
+                    }
                     bn = new BsonInt64(d);
                 } else {
                     int d = ((Number) val).intValue();
-                    if (dec) d = -d;
+                    if (dec) {
+                        d = -d;
+                    }
                     bn = new BsonInt32(d);
                 }
                 return bn;
@@ -401,26 +443,42 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     private <T> Bson createFilter(EntityInfo<T> info, FilterNode node, boolean sub) {
-        if (node == null) return null;
+        if (node == null) {
+            return null;
+        }
         Bson bson = createFilterElement(info, node);
-        if (bson == null && node.getNodes() == null) return null;
+        if (bson == null && node.getNodes() == null) {
+            return null;
+        }
         List<Bson> items = new ArrayList<>();
-        if (bson != null) items.add(bson);
+        if (bson != null) {
+            items.add(bson);
+        }
         if (node.getNodes() != null) {
             for (FilterNode item : node.getNodes()) {
                 Bson s = createFilter(info, item, true);
-                if (s == null) continue;
+                if (s == null) {
+                    continue;
+                }
                 items.add(s);
             }
         }
-        if (items.isEmpty()) return null;
-        if (items.size() == 1) return items.get(0);
+        if (items.isEmpty()) {
+            return null;
+        }
+        if (items.size() == 1) {
+            return items.get(0);
+        }
         return node.isOr() ? Filters.or(items.toArray(new Bson[items.size()])) : Filters.and(items.toArray(new Bson[items.size()]));
     }
 
     private <T> Bson createFilterElement(EntityInfo<T> info, FilterNode node) {
-        if (node == null || node.getColumn() == null || node.getColumn().charAt(0) == '#') return null;
-        if (node instanceof FilterJoinNode) throw new IllegalArgumentException("Not supported " + FilterJoinNode.class.getSimpleName());
+        if (node == null || node.getColumn() == null || node.getColumn().charAt(0) == '#') {
+            return null;
+        }
+        if (node instanceof FilterJoinNode) {
+            throw new IllegalArgumentException("Not supported " + FilterJoinNode.class.getSimpleName());
+        }
         switch (node.getExpress()) {
             case EQUAL: {
                 return Filters.eq(node.getColumn(), formatFilterValue(info, node.getValue()));
@@ -486,14 +544,18 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <T> int insert(T... entitys) {
-        if (entitys.length == 0) return 0;
+        if (entitys.length == 0) {
+            return 0;
+        }
         checkEntity("insert", false, entitys);
         return insertAsync(entitys).join();
     }
 
     @Override
     public <T> CompletableFuture<Integer> insertAsync(T... entitys) {
-        if (entitys.length == 0) return CompletableFuture.completedFuture(0);
+        if (entitys.length == 0) {
+            return CompletableFuture.completedFuture(0);
+        }
         checkEntity("insert", false, entitys);
         EntityInfo<T> info = loadEntityInfo((Class<T>) entitys[0].getClass());
         MongoCollection<T> collection = getWriteMongoCollection(info);
@@ -505,14 +567,18 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <T> int delete(T... entitys) {
-        if (entitys.length == 0) return 0;
+        if (entitys.length == 0) {
+            return 0;
+        }
         checkEntity("delete", false, entitys);
         return deleteAsync(entitys).join();
     }
 
     @Override
     public <T> CompletableFuture<Integer> deleteAsync(T... entitys) {
-        if (entitys.length == 0) return CompletableFuture.completedFuture(0);
+        if (entitys.length == 0) {
+            return CompletableFuture.completedFuture(0);
+        }
         checkEntity("delete", false, entitys);
         EntityInfo<T> info = loadEntityInfo((Class<T>) entitys[0].getClass());
         MongoCollection<T> collection = getWriteMongoCollection(info);
@@ -528,13 +594,17 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <T> int delete(Class<T> clazz, Serializable... pks) {
-        if (pks.length == 0) return 0;
+        if (pks.length == 0) {
+            return 0;
+        }
         return deleteAsync(clazz, pks).join();
     }
 
     @Override
     public <T> CompletableFuture<Integer> deleteAsync(Class<T> clazz, Serializable... pks) {
-        if (pks.length == 0) return CompletableFuture.completedFuture(0);
+        if (pks.length == 0) {
+            return CompletableFuture.completedFuture(0);
+        }
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
@@ -550,7 +620,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <T> CompletableFuture<Integer> deleteAsync(Class<T> clazz, Flipper flipper, FilterNode node) {
-        if (flipper != null) return CompletableFuture.failedFuture(new RuntimeException("delete on Flipper not supported yet."));
+        if (flipper != null) {
+            return CompletableFuture.failedFuture(new RuntimeException("delete on Flipper not supported yet."));
+        }
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
@@ -576,6 +648,16 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
+    public <T> int createTable(Class<T> clazz, Serializable pk) {
+        return createTableAsync(clazz, pk).join();
+    }
+
+    @Override
+    public <T> CompletableFuture<Integer> createTableAsync(Class<T> clazz, Serializable pk) {
+        return CompletableFuture.completedFuture(0);
+    }
+
+    @Override
     public <T> int dropTable(Class<T> clazz, FilterNode node) {
         return dropTableAsync(clazz, node).join();
     }
@@ -597,7 +679,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <T> CompletableFuture<Integer> updateAsync(T... entitys) {
-        if (entitys.length == 0) return CompletableFuture.completedFuture(0);
+        if (entitys.length == 0) {
+            return CompletableFuture.completedFuture(0);
+        }
         checkEntity("update", false, entitys);
         EntityInfo<T> info = loadEntityInfo((Class<T>) entitys[0].getClass());
         MongoCollection<T> collection = getWriteMongoCollection(info);
@@ -655,7 +739,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, Serializable pk, ColumnValue... values) {
-        if (values.length == 0) return CompletableFuture.completedFuture(0);
+        if (values.length == 0) {
+            return CompletableFuture.completedFuture(0);
+        }
         EntityInfo<T> info = loadEntityInfo(clazz);
         List<Bson> items = createUpdateBson(info, values);
         MongoCollection<T> collection = getWriteMongoCollection(info);
@@ -672,11 +758,17 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, FilterNode node, Flipper flipper, ColumnValue... values) {
-        if (values.length == 0) return CompletableFuture.completedFuture(0);
-        if (flipper != null) return CompletableFuture.failedFuture(new RuntimeException("updateColumn on Flipper not supported yet."));
+        if (values.length == 0) {
+            return CompletableFuture.completedFuture(0);
+        }
+        if (flipper != null) {
+            return CompletableFuture.failedFuture(new RuntimeException("updateColumn on Flipper not supported yet."));
+        }
         EntityInfo<T> info = loadEntityInfo(clazz);
         List<Bson> items = createUpdateBson(info, values);
-        if (items == null || items.isEmpty()) return CompletableFuture.completedFuture(0);
+        if (items == null || items.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
@@ -698,7 +790,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 items.add(Updates.set(attr.field(), attr.get(entity)));
             }
         }
-        if (items.isEmpty()) return CompletableFuture.completedFuture(0);
+        if (items.isEmpty()) {
+            return CompletableFuture.completedFuture(0);
+        }
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
@@ -725,7 +819,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             String key = column == null ? info.getPrimaryColumn() : column;
             ReatorFuture<Document> future = new ReatorFuture<>();
             List<Bson> items = new ArrayList<>();
-            if (filter != null) items.add(Aggregates.match(filter));
+            if (filter != null) {
+                items.add(Aggregates.match(filter));
+            }
             //[{$group:{_id:"$fieldName"}}, {$group:{_id:1, count:{$sum:1}}}]
             items.add(Aggregates.group("$" + key));
             items.add(Aggregates.group(1, Accumulators.sum("count", 1)));
@@ -734,7 +830,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         } else {
             ReatorFuture<Document> future = new ReatorFuture<>();
             List<Bson> items = new ArrayList<>();
-            if (filter != null) items.add(Aggregates.match(filter));
+            if (filter != null) {
+                items.add(Aggregates.match(filter));
+            }
             BsonField bf = createBsonField(func, column, column);
             items.add(Aggregates.group(null, bf));
             //System.println(items.get(0).toBsonDocument().toJson(JsonWriterSettings.builder().indent(true).build()));
@@ -767,7 +865,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         Bson filter = createFilterBson(info, node);
         ReatorFuture<Document> future = new ReatorFuture<>();
         List<Bson> items = new ArrayList<>();
-        if (filter != null) items.add(Aggregates.match(filter));
+        if (filter != null) {
+            items.add(Aggregates.match(filter));
+        }
         final List<BsonField> fields = new ArrayList<>();
         final List<String> funcols = new ArrayList<>();
         int i = 0;
@@ -788,7 +888,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 for (String col : ffc.cols()) {
                     Object o = v.get(funcols.get(index));
                     Number n = ffc.getDefvalue();
-                    if (o != null) n = (Number) o;
+                    if (o != null) {
+                        n = (Number) o;
+                    }
                     rs.put(ffc.col(col), n);
                     ++index;
                 }
@@ -839,7 +941,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         Bson filter = createFilterBson(info, node);
         ReatorListFuture<Document> future = new ReatorListFuture<>();
         List<Bson> items = new ArrayList<>();
-        if (filter != null) items.add(Aggregates.match(filter));
+        if (filter != null) {
+            items.add(Aggregates.match(filter));
+        }
         BsonDocument group = new BsonDocument();
         for (String col : groupByColumns) {
             group.put(col, new BsonString("$" + col));
@@ -852,7 +956,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             funcols[i] = colname;
             if (colnode instanceof ColumnFuncNode) {
                 ColumnFuncNode cfn = (ColumnFuncNode) colnode;
-                if (cfn.getValue() instanceof ColumnNodeValue) throw new UnsupportedOperationException(ColumnNodeValue.class.getSimpleName() + " " + colnode + " not supported yet.");
+                if (cfn.getValue() instanceof ColumnNodeValue) {
+                    throw new UnsupportedOperationException(ColumnNodeValue.class.getSimpleName() + " " + colnode + " not supported yet.");
+                }
                 fields[i] = createBsonField(cfn.getFunc(), colname, cfn.getValue());
             } else {
                 throw new UnsupportedOperationException(ColumnNode.class.getSimpleName() + " " + colnode + " not supported yet.");
@@ -931,7 +1037,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         ReatorFuture<T> future = new ReatorFuture<>();
         FindPublisher<T> publisher = collection.find();
         Bson filter = createFilterBson(info, node);
-        if (filter != null) publisher.filter(filter);
+        if (filter != null) {
+            publisher.filter(filter);
+        }
         if (selects != null) {
             publisher.projection(selects.isExcludable() ? Projections.exclude(selects.getColumns()) : Projections.include(selects.getColumns()));
         }
@@ -947,7 +1055,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     @Override
     public <T> CompletableFuture<T[]> findsAsync(Class<T> clazz, final SelectColumn selects, Serializable... pks) {
         final EntityInfo<T> info = loadEntityInfo(clazz);
-        if (pks == null || pks.length == 0) return CompletableFuture.completedFuture(info.getArrayer().apply(0));
+        if (pks == null || pks.length == 0) {
+            return CompletableFuture.completedFuture(info.getArrayer().apply(0));
+        }
         final Attribute<T, Serializable> primary = info.getPrimary();
         return queryListAsync(info.getType(), selects, null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, pks)).thenApply(list -> {
             T[] rs = info.getArrayer().apply(pks.length);
@@ -1047,7 +1157,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         return querySetAsync(clazz, SelectColumn.includes(selectedColumn), flipper, node).thenApply((Set<T> list) -> {
             final Set<V> rs = new LinkedHashSet<>();
-            if (list.isEmpty()) return rs;
+            if (list.isEmpty()) {
+                return rs;
+            }
             final EntityInfo<T> info = loadEntityInfo(clazz);
             final Attribute<T, V> selected = (Attribute<T, V>) info.getAttribute(selectedColumn);
             for (T t : list) {
@@ -1066,7 +1178,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         return queryListAsync(clazz, SelectColumn.includes(selectedColumn), flipper, node).thenApply((List<T> list) -> {
             final List<V> rs = new ArrayList<>();
-            if (list.isEmpty()) return rs;
+            if (list.isEmpty()) {
+                return rs;
+            }
             final EntityInfo<T> info = loadEntityInfo(clazz);
             final Attribute<T, V> selected = (Attribute<T, V>) info.getAttribute(selectedColumn);
             for (T t : list) {
@@ -1085,7 +1199,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     public <T, V extends Serializable> CompletableFuture<Sheet<V>> queryColumnSheetAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         return querySheetAsync(clazz, SelectColumn.includes(selectedColumn), flipper, node).thenApply((Sheet<T> sheet) -> {
             final Sheet<V> rs = new Sheet<>();
-            if (sheet.isEmpty()) return rs;
+            if (sheet.isEmpty()) {
+                return rs;
+            }
             rs.setTotal(sheet.getTotal());
             final EntityInfo<T> info = loadEntityInfo(clazz);
             final Attribute<T, V> selected = (Attribute<T, V>) info.getAttribute(selectedColumn);
@@ -1105,14 +1221,18 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, SelectColumn selects, Stream<K> keyStream) {
-        if (keyStream == null) return CompletableFuture.completedFuture(new LinkedHashMap<>());
+        if (keyStream == null) {
+            return CompletableFuture.completedFuture(new LinkedHashMap<>());
+        }
         final EntityInfo<T> info = loadEntityInfo(clazz);
         final ArrayList<K> pks = new ArrayList<>();
         keyStream.forEach(k -> pks.add(k));
         final Attribute<T, Serializable> primary = info.getPrimary();
         return queryListAsync(clazz, FilterNode.create(primary.field(), pks)).thenApply((List<T> rs) -> {
             Map<K, T> map = new LinkedHashMap<>();
-            if (rs.isEmpty()) return new LinkedHashMap<>();
+            if (rs.isEmpty()) {
+                return new LinkedHashMap<>();
+            }
             for (T item : rs) {
                 map.put((K) primary.get(item), item);
             }
@@ -1131,7 +1251,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             final EntityInfo<T> info = loadEntityInfo(clazz);
             final Attribute<T, Serializable> primary = info.getPrimary();
             Map<K, T> map = new LinkedHashMap<>();
-            if (rs.isEmpty()) return new LinkedHashMap<>();
+            if (rs.isEmpty()) {
+                return new LinkedHashMap<>();
+            }
             for (T item : rs) {
                 map.put((K) primary.get(item), item);
             }
@@ -1174,7 +1296,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         final EntityCache<T> cache = info.getCache();
         if (readcache && cache != null && cache.isFullLoaded()) {
             if (node == null || isCacheUseable(node, this)) {
-                if (info.isLoggable(logger, Level.FINEST, " cache query predicate = ")) logger.finest(clazz.getSimpleName() + " cache query predicate = " + (node == null ? null : createPredicate(node, cache)));
+                if (info.isLoggable(logger, Level.FINEST, " cache query predicate = ")) {
+                    logger.finest(clazz.getSimpleName() + " cache query predicate = " + (node == null ? null : createPredicate(node, cache)));
+                }
                 return CompletableFuture.completedFuture(cache.querySheet(needtotal, distinct, selects, flipper, node));
             }
         }
@@ -1195,15 +1319,23 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         }
         return totalFuture.thenCompose(total -> {
             FindPublisher<T> publisher = collection.find();
-            if (filter != null) publisher.filter(filter);
+            if (filter != null) {
+                publisher.filter(filter);
+            }
             if (selects != null) {
                 publisher.projection(selects.isExcludable() ? Projections.exclude(selects.getColumns()) : Projections.include(selects.getColumns()));
             }
             if (flipper != null) {
-                if (flipper.getOffset() > 0) publisher.skip(flipper.getOffset());
-                if (flipper.getLimit() > 0) publisher.limit(flipper.getLimit());
+                if (flipper.getOffset() > 0) {
+                    publisher.skip(flipper.getOffset());
+                }
+                if (flipper.getLimit() > 0) {
+                    publisher.limit(flipper.getLimit());
+                }
                 Bson sortBson = createSortBson(flipper);
-                if (sortBson != null) publisher.sort(sortBson);
+                if (sortBson != null) {
+                    publisher.sort(sortBson);
+                }
             }
             ReatorListFuture<T> future = new ReatorListFuture<>();
             publisher.subscribe(future);
@@ -1262,7 +1394,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
         @Override
         public void onNext(T item) {
-            if (rs == null) rs = new ArrayList<>();
+            if (rs == null) {
+                rs = new ArrayList<>();
+            }
             rs.add(item);
         }
 
