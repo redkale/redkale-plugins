@@ -216,13 +216,19 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         if (lastResult == null) {
                             lastResult = conn.pollResultSet(request.info);
                         }
-                        PgRowDesc rowDesc = PgRespRowDescDecoder.instance.read(conn, buffer, length, array, request, lastResult);
-                        lastResult.setRowDesc(rowDesc);
-                        if (request.isExtendType()) {
-                            conn.putPrepareDesc(((PgReqExtended) request).sql, rowDesc);
-                        }
-                        if (buffer.position() != bufpos + length) {
-                            logger.log(Level.SEVERE, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", T buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                        PgRowDesc oldrowDesc = request.isExtendType() ? conn.getPrepareDesc(((PgReqExtended) request).sql) : null;
+                        if (oldrowDesc == null) {
+                            PgRowDesc rowDesc = PgRespRowDescDecoder.instance.read(conn, buffer, length, array, request, lastResult);
+                            lastResult.setRowDesc(rowDesc);
+                            if (request.isExtendType()) {
+                                conn.putPrepareDesc(((PgReqExtended) request).sql, rowDesc);
+                            }
+                            if (buffer.position() != bufpos + length) {
+                                logger.log(Level.SEVERE, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", T buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                                buffer.position(bufpos + length);
+                            }
+                        } else {
+                            lastResult.setRowDesc(oldrowDesc);
                             buffer.position(bufpos + length);
                         }
                     } else {
