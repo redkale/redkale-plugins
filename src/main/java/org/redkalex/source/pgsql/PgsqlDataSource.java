@@ -9,7 +9,6 @@ import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.logging.Level;
 import org.redkale.annotation.AutoLoad;
@@ -195,8 +194,8 @@ public class PgsqlDataSource extends DataSqlSource {
         if ((prepareInfos == null || prepareInfos.size() < 2) && pool.cachePreparedStatements()) {
             String sql = info.getInsertDollarPrepareSQL(entitys[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            AtomicReference<PgClientRequest> reqRef = new AtomicReference();
-            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            ObjectReference<PgClientRequest> reqRef = new ObjectReference();
+            ObjectReference<ClientConnection> connRef = new ObjectReference();
             return thenApplyInsertStrategy(info, pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
                 req.prepare(PgClientRequest.REQ_TYPE_EXTEND_INSERT, PgReqExtendMode.OTHER, sql, 0, null, attrs, objs);
@@ -297,7 +296,7 @@ public class PgsqlDataSource extends DataSqlSource {
         if (pool.cachePreparedStatements()) {
             String sql = casesql == null ? info.getUpdateDollarPrepareSQL(values[0]) : casesql;
             WorkThread workThread = WorkThread.currWorkThread();
-            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            ObjectReference<ClientConnection> connRef = new ObjectReference();
             return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                 connRef.set(conn);
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
@@ -377,7 +376,7 @@ public class PgsqlDataSource extends DataSqlSource {
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(pk);
             WorkThread workThread = WorkThread.currWorkThread();
-            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            ObjectReference<ClientConnection> connRef = new ObjectReference();
             return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                 connRef.set(conn);
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
@@ -409,7 +408,7 @@ public class PgsqlDataSource extends DataSqlSource {
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(pks[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            ObjectReference<ClientConnection> connRef = new ObjectReference();
             return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                 connRef.set(conn);
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
@@ -444,7 +443,7 @@ public class PgsqlDataSource extends DataSqlSource {
         if (info.getTableStrategy() == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(ids[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            AtomicReference<ClientConnection> connRef = new AtomicReference();
+            ObjectReference<ClientConnection> connRef = new ObjectReference();
             return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                 connRef.set(conn);
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
@@ -514,7 +513,7 @@ public class PgsqlDataSource extends DataSqlSource {
             CompletableFuture<PgResultSet> listfuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currWorkThread();
-                AtomicReference<ClientConnection> connRef = new AtomicReference();
+                ObjectReference<ClientConnection> connRef = new ObjectReference();
                 listfuture = thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                     PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
                     req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.LIST_ALL, listSql, 0, info.getQueryAttributes(), (Attribute[]) null);
@@ -564,7 +563,7 @@ public class PgsqlDataSource extends DataSqlSource {
         return flipper == null || flipper.getLimit() <= 0 ? 0 : flipper.getLimit();
     }
 
-    protected <T> CompletableFuture<PgResultSet> thenApplyQueryUpdateStrategy(final EntityInfo<T> info, final AtomicReference<ClientConnection> connRef, final CompletableFuture<PgResultSet> future) {
+    protected <T> CompletableFuture<PgResultSet> thenApplyQueryUpdateStrategy(final EntityInfo<T> info, final ObjectReference<ClientConnection> connRef, final CompletableFuture<PgResultSet> future) {
         if (info == null || (info.getTableStrategy() == null && !autoddl())) {
             return future;
         }
@@ -604,7 +603,7 @@ public class PgsqlDataSource extends DataSqlSource {
     }
 
     protected <T> CompletableFuture<PgResultSet> thenApplyInsertStrategy(final EntityInfo<T> info, final CompletableFuture<PgResultSet> future,
-        final AtomicReference<PgClientRequest> reqRef, final AtomicReference<ClientConnection> connRef, final T[] values) {
+        final ObjectReference<PgClientRequest> reqRef, final ObjectReference<ClientConnection> connRef, final T[] values) {
         if (info == null || (info.getTableStrategy() == null && !autoddl())) {
             return future;
         }
@@ -771,8 +770,8 @@ public class PgsqlDataSource extends DataSqlSource {
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();
-        AtomicReference<PgClientRequest> reqRef = new AtomicReference();
-        AtomicReference<ClientConnection> connRef = new AtomicReference();
+        ObjectReference<PgClientRequest> reqRef = new ObjectReference();
+        ObjectReference<ClientConnection> connRef = new ObjectReference();
         CompletableFuture<PgResultSet> future = pool.connect(null).thenCompose(conn -> {
             PgClientRequest req;
             if (sqls.length == 1) {
@@ -808,7 +807,7 @@ public class PgsqlDataSource extends DataSqlSource {
     protected <T> CompletableFuture<PgResultSet> executeQuery(final EntityInfo<T> info, final String sql) {
         final PgClient pool = readPool();
         WorkThread workThread = WorkThread.currWorkThread();
-        AtomicReference<ClientConnection> connRef = new AtomicReference();
+        ObjectReference<ClientConnection> connRef = new ObjectReference();
         return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
             connRef.set(conn);
             PgReqQuery req = ((PgClientConnection) conn).pollReqQuery(workThread, info);

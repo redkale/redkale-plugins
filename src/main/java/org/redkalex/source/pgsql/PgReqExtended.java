@@ -122,61 +122,35 @@ public class PgReqExtended extends PgClientRequest {
     private void writeBind(ByteArray array, Long statementIndex) { // BIND
         if (paramValues != null && paramValues.length > 0) {
             for (Object[] params : paramValues) {
-                { // BIND
-                    array.putByte('B');
-                    int start = array.length();
-                    array.putInt(0);
-                    array.putByte(0); // portal
-                    if (statementIndex == null) {
-                        array.putByte(0); // prepared statement
-                    } else {
-                        array.putLong(statementIndex);
-                    }
-
-                    int size = params == null ? 0 : params.length;
-                    // number of format codes  // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
-                    if (size == 0 || paramAttrs == null) {
-                        array.putShort(0);  //参数全部为文本格式
-                    } else {
-                        array.putShort(0);
-                    }
-
-                    // number of parameters //number of format codes 参数格式代码。目前每个都必须是0(文本)或者1(二进制)。
-                    if (size == 0) {
-                        array.putShort(0); //结果全部为文本格式
-                    } else {
-                        array.putShort(size);
-                        int i = -1;
-                        for (Object param : params) {
-                            PgsqlFormatter.encodePrepareParamValue(array, info, false, paramAttrs == null ? null : paramAttrs[++i], param);
-                        }
-                    }
-
-                    if (type == REQ_TYPE_EXTEND_QUERY && resultAttrs != null) {   //Text format
-                        // Result columns are all in Binary format
-                        array.putShort(1);
-                        array.putShort(1);
-                    } else {
-                        array.putShort(0);
-                    }
-                    array.putInt(start, array.length() - start);
-                }
-                writeExecute(array, fetchSize); // EXECUTE
-                writeSync(array); //SYNC
-            }
-        } else {
-            { // BIND
+                // BIND
                 array.putByte('B');
                 int start = array.length();
                 array.putInt(0);
-                array.putByte(0); // portal  
+                array.putByte(0); // portal
                 if (statementIndex == null) {
                     array.putByte(0); // prepared statement
                 } else {
                     array.putLong(statementIndex);
                 }
-                array.putShort(0); // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
-                array.putShort(0);  //number of format codes 参数格式代码。目前每个都必须是0(文本)或者1(二进制)。
+
+                int size = params == null ? 0 : params.length;
+                // number of format codes  // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
+                if (size == 0 || paramAttrs == null) {
+                    array.putShort(0);  //参数全部为文本格式
+                } else {
+                    array.putShort(0);
+                }
+
+                // number of parameters //number of format codes 参数格式代码。目前每个都必须是0(文本)或者1(二进制)。
+                if (size == 0) {
+                    array.putShort(0); //结果全部为文本格式
+                } else {
+                    array.putShort(size);
+                    int i = -1;
+                    for (Object param : params) {
+                        PgsqlFormatter.encodePrepareParamValue(array, info, false, paramAttrs == null ? null : paramAttrs[++i], param);
+                    }
+                }
 
                 if (type == REQ_TYPE_EXTEND_QUERY && resultAttrs != null) {   //Text format
                     // Result columns are all in Binary format
@@ -186,9 +160,37 @@ public class PgReqExtended extends PgClientRequest {
                     array.putShort(0);
                 }
                 array.putInt(start, array.length() - start);
+                // EXECUTE
+                writeExecute(array, fetchSize);
+                // SYNC
+                writeSync(array);
             }
-            writeExecute(array, fetchSize); // EXECUTE
-            writeSync(array); //SYNC            
+        } else {
+            // BIND
+            array.putByte('B');
+            int start = array.length();
+            array.putInt(0);
+            array.putByte(0); // portal  
+            if (statementIndex == null) {
+                array.putByte(0); // prepared statement
+            } else {
+                array.putLong(statementIndex);
+            }
+            array.putShort(0); // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
+            array.putShort(0);  //number of format codes 参数格式代码。目前每个都必须是0(文本)或者1(二进制)。
+
+            if (type == REQ_TYPE_EXTEND_QUERY && resultAttrs != null) {   //Text format
+                // Result columns are all in Binary format
+                array.putShort(1);
+                array.putShort(1);
+            } else {
+                array.putShort(0);
+            }
+            array.putInt(start, array.length() - start);
+            // EXECUTE
+            writeExecute(array, fetchSize);
+            // SYNC      
+            writeSync(array);
         }
     }
 
@@ -201,7 +203,7 @@ public class PgReqExtended extends PgClientRequest {
             this.sendPrepare = false;
             writeBind(array, pgconn.getStatementIndex(sql));
             if (PgsqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
         } else {
             Long statementIndex = pgconn.createStatementIndex(sql);
