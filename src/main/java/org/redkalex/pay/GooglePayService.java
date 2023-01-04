@@ -129,7 +129,9 @@ public final class GooglePayService extends AbstractPayService {
 //    }
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = JsonConvert.root();
+        if (this.convert == null) {
+            this.convert = JsonConvert.root();
+        }
         this.reloadConfig(Pays.PAYTYPE_GOOGLE);
     }
 
@@ -172,7 +174,9 @@ public final class GooglePayService extends AbstractPayService {
                 sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
-        if (sb.isEmpty()) return; //无相关配置变化
+        if (sb.length() < 1) {
+            return; //无相关配置变化
+        }
         logger.log(Level.INFO, sb.toString());
         this.elements = GoogleElement.create(logger, changeProps);
         this.elementProps = changeProps;
@@ -204,7 +208,9 @@ public final class GooglePayService extends AbstractPayService {
         request.checkVaild();
         final PayPreResponse result = new PayPreResponse();
         final GoogleElement element = elements.get(request.getAppid());
-        if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        if (element == null) {
+            return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        }
         result.setAppid(element.appid);
 //        final Map<String, String> rmap = new TreeMap<>();
 //        rmap.put("content", request.getPayno());
@@ -227,7 +233,9 @@ public final class GooglePayService extends AbstractPayService {
             resp.setResponseText(strbean);
             resp.setPayno(bean.payno());
             resp.setPayType(request.getPayType());
-            if (!checkSign(element, bean.purchaseData, bean.signature)) return resp.retcode(RETPAY_FALSIFY_ERROR).notifytext(strbean).toFuture();
+            if (!checkSign(element, bean.purchaseData, bean.signature)) {
+                return resp.retcode(RETPAY_FALSIFY_ERROR).notifytext(strbean).toFuture();
+            }
             return CompletableFuture.completedFuture(resp);
         }
         return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
@@ -375,7 +383,9 @@ public final class GooglePayService extends AbstractPayService {
                 element.notifyurl = notifyurl;
                 if (element.initElement(logger, null)) {
                     map.put(appid, element);
-                    if (def_appid.equals(appid)) map.put("", element);
+                    if (def_appid.equals(appid)) {
+                        map.put("", element);
+                    }
                 }
             });
             return map;

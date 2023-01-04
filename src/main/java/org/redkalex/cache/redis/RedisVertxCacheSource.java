@@ -44,7 +44,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public void init(AnyValue conf) {
         super.init(conf);
-        if (conf == null) conf = AnyValue.create();
+        if (conf == null) {
+            conf = AnyValue.create();
+        }
         initClient(conf);
     }
 
@@ -58,7 +60,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             password = node.getValue(CACHE_SOURCE_PASSWORD, null);
             if (db < 0) {
                 String db0 = node.getValue(CACHE_SOURCE_DB, "").trim();
-                if (!db0.isEmpty()) db = Integer.valueOf(db0);
+                if (!db0.isEmpty()) {
+                    db = Integer.valueOf(db0);
+                }
             }
             URI uri = URI.create(addrstr);
             if (uri.getQuery() != null && !uri.getQuery().isEmpty()) {
@@ -73,40 +77,58 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
         //Redis链接
         RedisOptions redisConfig = new RedisOptions();
-        if (maxconns > 0) redisConfig.setMaxPoolSize(maxconns);
-        if (password != null) redisConfig.setPassword(password.trim());
-        if (maxconns > 0) redisConfig.setMaxPoolWaiting(maxconns != Utility.cpus() ? maxconns : maxconns * 10);
+        if (maxconns > 0) {
+            redisConfig.setMaxPoolSize(maxconns);
+        }
+        if (password != null) {
+            redisConfig.setPassword(password.trim());
+        }
+        if (maxconns > 0) {
+            redisConfig.setMaxPoolWaiting(maxconns != Utility.cpus() ? maxconns : maxconns * 10);
+        }
         redisConfig.setEndpoints(addrs);
         if (this.vertx == null) {
             this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         }
         RedisAPI old = this.client;
         this.client = RedisAPI.api(Redis.createClient(this.vertx, redisConfig));
-        if (old != null) old.close();
+        if (old != null) {
+            old.close();
+        }
     }
 
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        if (events == null || events.length < 1) return;
+        if (events == null || events.length < 1) {
+            return;
+        }
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
         initClient(this.config);
-        if (!sb.isEmpty()) {
+        if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
     }
 
     public boolean acceptsConf(AnyValue config) {
-        if (config == null) return false;
+        if (config == null) {
+            return false;
+        }
         AnyValue[] nodes = getNodes(config);
-        if (nodes == null || nodes.length == 0) return false;
+        if (nodes == null || nodes.length == 0) {
+            return false;
+        }
         for (AnyValue node : nodes) {
             String val = node.getValue(CACHE_SOURCE_URL);
-            if (val != null && val.startsWith("redis://")) return true;
-            if (val != null && val.startsWith("rediss://")) return true;
+            if (val != null && val.startsWith("redis://")) {
+                return true;
+            }
+            if (val != null && val.startsWith("rediss://")) {
+                return true;
+            }
         }
         return false;
     }
@@ -117,7 +139,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
             if (one == null) {
                 String val = config.getValue(CACHE_SOURCE_URL);
-                if (val == null) return nodes;
+                if (val == null) {
+                    return nodes;
+                }
                 nodes = new AnyValue[]{config};
             } else {
                 nodes = new AnyValue[]{one};
@@ -139,8 +163,12 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public void destroy(AnyValue conf) {
         super.destroy(conf);
-        if (client != null) client.close();
-        if (this.vertx != null) this.vertx.close();
+        if (client != null) {
+            client.close();
+        }
+        if (this.vertx != null) {
+            this.vertx.close();
+        }
     }
 
     protected <T> CompletableFuture<T> completableFuture(io.vertx.core.Future<T> rf) {
@@ -164,41 +192,61 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     protected Boolean getBooleanValue(Response resp) {
-        if (resp == null) return false;
+        if (resp == null) {
+            return false;
+        }
         Boolean v = resp.toBoolean();
         return v == null ? false : v;
     }
 
     protected String getStringValue(String key, RedisCryptor cryptor, Response resp) {
-        if (resp == null) return null;
+        if (resp == null) {
+            return null;
+        }
         String val = resp.toString(StandardCharsets.UTF_8);
-        if (cryptor == null) return val;
+        if (cryptor == null) {
+            return val;
+        }
         return cryptor.decrypt(key, val);
     }
 
     protected Long getLongValue(Response resp, long defvalue) {
-        if (resp == null) return defvalue;
+        if (resp == null) {
+            return defvalue;
+        }
         Long v = resp.toLong();
         return v == null ? defvalue : v;
     }
 
     protected Double getDoubleValue(Response resp, double defvalue) {
-        if (resp == null) return defvalue;
+        if (resp == null) {
+            return defvalue;
+        }
         Double v = resp.toDouble();
         return v == null ? defvalue : v;
     }
 
     protected Integer getIntValue(Response resp, int defvalue) {
-        if (resp == null) return defvalue;
+        if (resp == null) {
+            return defvalue;
+        }
         Integer v = resp.toInteger();
         return v == null ? defvalue : v;
     }
 
     protected <T> T getObjectValue(String key, RedisCryptor cryptor, String bs, Type type) {
-        if (bs == null) return null;
-        if (type == byte[].class) return (T) bs.getBytes(StandardCharsets.UTF_8);
-        if (type == String.class) return (T) decryptValue(key, cryptor, bs);
-        if (type == long.class) return (T) (Long) Long.parseLong(bs);
+        if (bs == null) {
+            return null;
+        }
+        if (type == byte[].class) {
+            return (T) bs.getBytes(StandardCharsets.UTF_8);
+        }
+        if (type == String.class) {
+            return (T) decryptValue(key, cryptor, bs);
+        }
+        if (type == long.class) {
+            return (T) (Long) Long.parseLong(bs);
+        }
         return (T) JsonConvert.root().convertFrom(type, decryptValue(key, cryptor, bs));
     }
 
@@ -208,7 +256,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     protected <T> Collection<T> getCollectionValue(String key, RedisCryptor cryptor, Response resp, boolean set, Type type) {
         int size = resp == null ? 0 : resp.size();
-        if (size == 0) return set ? new LinkedHashSet<>() : new ArrayList<>();
+        if (size == 0) {
+            return set ? new LinkedHashSet<>() : new ArrayList<>();
+        }
         Collection<T> list = set ? new LinkedHashSet<>() : new ArrayList<>();
         for (int i = 0; i < size; i++) {
             list.add(getObjectValue(key, cryptor, resp.get(i), type));
@@ -218,25 +268,33 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Response gresp, Type type) {
         int gsize = gresp.size();
-        if (gsize == 0) return new LinkedHashMap<>();
+        if (gsize == 0) {
+            return new LinkedHashMap<>();
+        }
         Map<String, T> map = new LinkedHashMap<>();
         //resp.tostring = [0, [key1, 10, key2, 30]]
         for (int j = 0; j < gsize; j++) {
             Response resp = gresp.get(j);
-            if (resp.type() != ResponseType.MULTI) continue;
+            if (resp.type() != ResponseType.MULTI) {
+                continue;
+            }
             int size = resp.size();
             for (int i = 0; i < size; i += 2) {
                 String bs1 = resp.get(i).toString(StandardCharsets.UTF_8);
                 String bs2 = resp.get(i + 1).toString(StandardCharsets.UTF_8);
                 T val = getObjectValue(key, cryptor, bs2, type);
-                if (val != null) map.put(getObjectValue(key, cryptor, bs1, String.class).toString(), val);
+                if (val != null) {
+                    map.put(getObjectValue(key, cryptor, bs1, String.class).toString(), val);
+                }
             }
         }
         return map;
     }
 
     protected String[] keyArgs(boolean set, String key) {
-        if (set) return new String[]{key};
+        if (set) {
+            return new String[]{key};
+        }
         return new String[]{key, "0", "-1"};
     }
 
@@ -253,13 +311,21 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     protected String formatValue(String key, RedisCryptor cryptor, Convert convert0, Type type, Object value) {
-        if (value == null) throw new NullPointerException();
-        if (value instanceof byte[]) return new String((byte[]) value, StandardCharsets.UTF_8);
+        if (value == null) {
+            throw new NullPointerException();
+        }
+        if (value instanceof byte[]) {
+            return new String((byte[]) value, StandardCharsets.UTF_8);
+        }
         if (convert0 == null) {
-            if (convert == null) convert = JsonConvert.root(); //compile模式下convert可能为null
+            if (convert == null) {
+                convert = JsonConvert.root(); //compile模式下convert可能为null
+            }
             convert0 = convert;
         }
-        if (type == null) type = value.getClass();
+        if (type == null) {
+            type = value.getClass();
+        }
         Class clz = value.getClass();
         if (clz == String.class || clz == Long.class
             || Number.class.isAssignableFrom(clz) || CharSequence.class.isAssignableFrom(clz)) {
@@ -791,19 +857,25 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Type type, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync(Command.HSET, key, field, formatValue(key, cryptor, null, type, value)).thenApply(v -> null);
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync(Command.HSET, key, field, formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
     }
 
     @Override
     public CompletableFuture<Void> hsetStringAsync(final String key, final String field, final String value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync(Command.HSET, key, field, formatValue(key, cryptor, value)).thenApply(v -> null);
     }
 
@@ -814,19 +886,25 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Void> hsetnxAsync(final String key, final String field, final Type type, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync(Command.HSETNX, key, field, formatValue(key, cryptor, null, type, value)).thenApply(v -> null);
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetnxAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync(Command.HSETNX, key, field, formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
     }
 
     @Override
     public CompletableFuture<Void> hsetnxStringAsync(final String key, final String field, final String value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync(Command.HSETNX, key, field, formatValue(key, cryptor, value)).thenApply(v -> null);
     }
 
@@ -910,7 +988,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
         return sendAsync(Command.TYPE, key).thenCompose(t -> {
             String type = t.toString();
-            if (type == null) return CompletableFuture.completedFuture(0);
+            if (type == null) {
+                return CompletableFuture.completedFuture(0);
+            }
             return sendAsync(type.contains("list") ? Command.LLEN : Command.SCARD, key).thenApply(v -> getIntValue(v, 0));
         });
     }
@@ -944,7 +1024,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return sendAsync(Command.TYPE, key).thenCompose(t -> {
             String type = t.toString();
-            if (type == null) return CompletableFuture.completedFuture(null);
+            if (type == null) {
+                return CompletableFuture.completedFuture(null);
+            }
             boolean set = !type.contains("list");
             return sendAsync(set ? Command.SMEMBERS : Command.LRANGE, keyArgs(set, key)).thenApply(v -> getCollectionValue(key, cryptor, v, set, componentType));
         });
@@ -967,7 +1049,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
+                if (obj != null) {
+                    map.put(keys[i], list.get(i));
+                }
             }
             return map;
         });
@@ -1006,7 +1090,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
+                if (obj != null) {
+                    map.put(keys[i], list.get(i));
+                }
             }
             return map;
         });
@@ -1019,7 +1105,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
+                if (obj != null) {
+                    map.put(keys[i], list.get(i));
+                }
             }
             return map;
         });
@@ -1032,7 +1120,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
+                if (obj != null) {
+                    map.put(keys[i], list.get(i));
+                }
             }
             return map;
         });
@@ -1187,7 +1277,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
         return sendAsync(Command.TYPE, key).thenCompose(t -> {
             String type = t.toString();
-            if (type == null) return CompletableFuture.completedFuture(null);
+            if (type == null) {
+                return CompletableFuture.completedFuture(null);
+            }
             boolean set = !type.contains("list");
             return sendAsync(set ? Command.SMEMBERS : Command.LRANGE, keyArgs(set, key)).thenApply(v -> getCollectionValue(key, cryptor, v, set, String.class));
         });
@@ -1233,7 +1325,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
         return sendAsync(Command.TYPE, key).thenCompose(t -> {
             String type = t.toString();
-            if (type == null) return CompletableFuture.completedFuture(null);
+            if (type == null) {
+                return CompletableFuture.completedFuture(null);
+            }
             boolean set = !type.contains("list");
             return sendAsync(set ? Command.SMEMBERS : Command.LRANGE, keyArgs(set, key)).thenApply(v -> getCollectionValue(key, cryptor, v, set, long.class));
         });

@@ -499,7 +499,7 @@ public class PgsqlDataSource extends DataSqlSource {
             } else {
                 int b = 0;
                 for (String table : tables) {
-                    if (!union.isEmpty()) {
+                    if (union.length() > 0) {
                         union.append(" UNION ALL ");
                     }
                     String tabalis = "t" + (++b);

@@ -61,7 +61,9 @@ public final class AliPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = JsonConvert.root();
+        if (this.convert == null) {
+            this.convert = JsonConvert.root();
+        }
         this.reloadConfig(Pays.PAYTYPE_ALIPAY);
     }
 
@@ -108,7 +110,9 @@ public final class AliPayService extends AbstractPayService {
                 sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
-        if (sb.isEmpty()) return; //无相关配置变化
+        if (sb.length() < 1) {
+            return; //无相关配置变化
+        }
         logger.log(Level.INFO, sb.toString());
         this.elements = AliPayElement.create(logger, changeProps);
         this.elementProps = changeProps;
@@ -141,7 +145,9 @@ public final class AliPayService extends AbstractPayService {
     }
 
     protected String joinEncodeMap(Map<String, ?> map, Charset charset) {
-        if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
+        if (!(map instanceof SortedMap)) {
+            map = new TreeMap<>(map);
+        }
         return map.entrySet().stream().map((e -> e.getKey() + "=" + urlEncode(e.getValue(), charset))).collect(Collectors.joining("&"));
     }
 
@@ -152,7 +158,9 @@ public final class AliPayService extends AbstractPayService {
         final PayPreResponse result = new PayPreResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             result.setAppid(element.appid);
             long now = System.currentTimeMillis();
 
@@ -185,7 +193,9 @@ public final class AliPayService extends AbstractPayService {
             //paramap.put("return_url", "");
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
-            if (request.getAttach() != null) biz_content.putAll(request.getAttach());
+            if (request.getAttach() != null) {
+                biz_content.putAll(request.getAttach());
+            }
             biz_content.put("out_trade_no", request.getPayno());
             biz_content.put("total_amount", "" + (request.getPayMoney() / 100.0));
             biz_content.put("subject", "" + request.getPayTitle());
@@ -225,13 +235,21 @@ public final class AliPayService extends AbstractPayService {
         final String rstext = "success";
         Map<String, String> map = request.getAttach();
         final AliPayElement element = elements.get(request.getAppid());
-        if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        if (element == null) {
+            return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        }
         result.setPayno(map.getOrDefault("out_trade_no", ""));
         result.setThirdPayno(map.getOrDefault("trade_no", ""));
-        if (!checkSign(element, map, request.getBody(), request.getHeaders())) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
+        if (!checkSign(element, map, request.getBody(), request.getHeaders())) {
+            return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
+        }
         String state = map.getOrDefault("trade_status", "");
-        if ("WAIT_BUYER_PAY".equals(state)) return result.retcode(RETPAY_PAY_WAITING).toFuture();
-        if (!"TRADE_SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).toFuture();
+        if ("WAIT_BUYER_PAY".equals(state)) {
+            return result.retcode(RETPAY_PAY_WAITING).toFuture();
+        }
+        if (!"TRADE_SUCCESS".equals(state)) {
+            return result.retcode(RETPAY_PAY_FAILED).toFuture();
+        }
         result.setPayedMoney((long) (Float.parseFloat(map.get("total_amount")) * 100));
         return result.notifytext(rstext).toFuture();
     }
@@ -247,7 +265,9 @@ public final class AliPayService extends AbstractPayService {
         final PayCreatResponse result = new PayCreatResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("method", "alipay.trade.create");
@@ -256,10 +276,14 @@ public final class AliPayService extends AbstractPayService {
             map.put("sign_type", "RSA2");
             map.put("timestamp", String.format(format, System.currentTimeMillis()));
             map.put("version", "1.0");
-            if (element.notifyurl != null && !element.notifyurl.isEmpty()) map.put("notify_url", element.notifyurl);
+            if (element.notifyurl != null && !element.notifyurl.isEmpty()) {
+                map.put("notify_url", element.notifyurl);
+            }
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
-            if (request.getAttach() != null) biz_content.putAll(request.getAttach());
+            if (request.getAttach() != null) {
+                biz_content.putAll(request.getAttach());
+            }
             biz_content.put("out_trade_no", request.getPayno());
             //biz_content.putIfAbsent("scene", "bar_code");
             biz_content.put("total_amount", "" + (request.getPayMoney() / 100.0));
@@ -274,7 +298,9 @@ public final class AliPayService extends AbstractPayService {
                 result.setResponseText(responseText);
                 final InnerCreateResponse resp = convert.convertFrom(InnerCreateResponse.class, responseText);
                 resp.responseText = responseText; //原始的返回内容            
-                if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resp)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
                 final Map<String, String> resultmap = resp.alipay_trade_create_response;
                 result.setResult(resultmap);
                 if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
@@ -301,7 +327,9 @@ public final class AliPayService extends AbstractPayService {
         final PayQueryResponse result = new PayQueryResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("sign_type", "RSA2");
@@ -326,7 +354,9 @@ public final class AliPayService extends AbstractPayService {
                     String responseText2 = new String(bytes, CHARSET_GBK);
                     InnerQueryResponse resp2 = convert.convertFrom(InnerQueryResponse.class, responseText2);
                     resp2.responseText = responseText2; //原始的返回内容     
-                    if (!checkSign(element, resp2)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                    if (!checkSign(element, resp2)) {
+                        return result.retcode(RETPAY_FALSIFY_ERROR);
+                    }
                     resp = resp2;
                     result.setResponseText(responseText2);
                 }
@@ -370,7 +400,9 @@ public final class AliPayService extends AbstractPayService {
         final PayResponse result = new PayResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("sign_type", "RSA2");
@@ -379,7 +411,9 @@ public final class AliPayService extends AbstractPayService {
             map.put("version", "1.0");
             map.put("timestamp", String.format(format, System.currentTimeMillis()));
             map.put("method", "alipay.trade.close");
-            if (element.notifyurl != null && !element.notifyurl.isEmpty()) map.put("notify_url", element.notifyurl);
+            if (element.notifyurl != null && !element.notifyurl.isEmpty()) {
+                map.put("notify_url", element.notifyurl);
+            }
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
             biz_content.put("out_trade_no", request.getPayno());
@@ -392,7 +426,9 @@ public final class AliPayService extends AbstractPayService {
                 result.setResponseText(responseText);
                 final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
                 resp.responseText = responseText; //原始的返回内容            
-                if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resp)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
                 final Map<String, String> resultmap = resp.alipay_trade_close_response;
                 result.setResult(resultmap);
                 if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
@@ -419,7 +455,9 @@ public final class AliPayService extends AbstractPayService {
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final AliPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             final TreeMap<String, String> map = new TreeMap<>();
             map.put("app_id", element.appid);
             map.put("sign_type", "RSA2");
@@ -441,7 +479,9 @@ public final class AliPayService extends AbstractPayService {
                 result.setResponseText(responseText);
                 final InnerCloseResponse resp = convert.convertFrom(InnerCloseResponse.class, responseText);
                 resp.responseText = responseText; //原始的返回内容            
-                if (!checkSign(element, resp)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resp)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
                 final Map<String, String> resultmap = resp.alipay_trade_close_response;
                 result.setResult(resultmap);
                 if (!"SUCCESS".equalsIgnoreCase(resultmap.get("msg"))) {
@@ -477,7 +517,9 @@ public final class AliPayService extends AbstractPayService {
     }
 
     protected boolean checkSign(final PayElement element, InnerResponse response) {
-        if (((AliPayElement) element).aliKey == null) return true;
+        if (((AliPayElement) element).aliKey == null) {
+            return true;
+        }
         try {
             String text = response.responseText;
             text = text.substring(text.indexOf(':') + 1, text.indexOf(",\"sign\""));
@@ -494,14 +536,20 @@ public final class AliPayService extends AbstractPayService {
 
     @Override
     protected boolean checkSign(final PayElement element, Map<String, ?> map0, String text0, Map<String, String> respHeaders) { //支付宝玩另类
-        if (((AliPayElement) element).aliKey == null) return true;
+        if (((AliPayElement) element).aliKey == null) {
+            return true;
+        }
         Map<String, String> map = (Map<String, String>) map0;
         String sign = (String) map.remove("sign");
-        if (sign == null) return false;
+        if (sign == null) {
+            return false;
+        }
         String sign_type = (String) map.remove("sign_type");
         String text = joinMap(map);
         map.put("sign", sign);
-        if (sign_type != null) map.put("sign_type", sign_type);
+        if (sign_type != null) {
+            map.put("sign_type", sign_type);
+        }
         try {
             Signature signature = Signature.getInstance("SHA256WithRSA");
             signature.initVerify(((AliPayElement) element).aliKey);
@@ -627,7 +675,9 @@ public final class AliPayService extends AbstractPayService {
                 element.charset = Charset.forName(charsetname);
                 if (element.initElement(logger, null)) {
                     map.put(appid, element);
-                    if (def_appid.equals(appid)) map.put("", element);
+                    if (def_appid.equals(appid)) {
+                        map.put("", element);
+                    }
                 }
             });
             return map;

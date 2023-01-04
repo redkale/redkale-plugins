@@ -182,7 +182,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 }
             }
         }
-        if (!sb.isEmpty()) {
+        if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
     }

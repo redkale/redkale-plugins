@@ -54,7 +54,9 @@ public final class FacebookPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = JsonConvert.root();
+        if (this.convert == null) {
+            this.convert = JsonConvert.root();
+        }
         this.reloadConfig(Pays.PAYTYPE_FACEBOOK);
     }
 
@@ -97,7 +99,9 @@ public final class FacebookPayService extends AbstractPayService {
                 sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
-        if (sb.isEmpty()) return; //无相关配置变化
+        if (sb.length() < 1) {
+            return; //无相关配置变化
+        }
         logger.log(Level.INFO, sb.toString());
         this.elements = FacebookElement.create(logger, changeProps);
         this.elementProps = changeProps;
@@ -129,7 +133,9 @@ public final class FacebookPayService extends AbstractPayService {
         request.checkVaild();
         final PayPreResponse result = new PayPreResponse();
         final FacebookElement element = elements.get(request.getAppid());
-        if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        if (element == null) {
+            return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        }
         result.setAppid(element.appid);
         final Map<String, String> rmap = new TreeMap<>();
         rmap.put("content", request.getPayno());
@@ -151,7 +157,9 @@ public final class FacebookPayService extends AbstractPayService {
             String[] signatures = bean.signature().split("\\.");
             byte[] sig = Base64.getDecoder().decode(signatures[0].replace('-', '+').replace('_', '/'));
             Map<String, String> map = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, Base64.getDecoder().decode(signatures[1]));
-            if (!"HMAC-SHA256".equals(map.get("algorithm"))) return CompletableFuture.completedFuture(resp.retcode(RETPAY_FALSIFY_ERROR));
+            if (!"HMAC-SHA256".equals(map.get("algorithm"))) {
+                return CompletableFuture.completedFuture(resp.retcode(RETPAY_FALSIFY_ERROR));
+            }
             byte[] keyBytes = element.secret.getBytes();
             SecretKeySpec signingKey = new SecretKeySpec(keyBytes, "HmacSHA256");
             Mac mac;
@@ -162,7 +170,9 @@ public final class FacebookPayService extends AbstractPayService {
                 return CompletableFuture.completedFuture(resp.retcode(RETPAY_FALSIFY_ERROR));
             }
             byte[] rawHmac = mac.doFinal(signatures[1].getBytes());
-            if (!Arrays.equals(sig, rawHmac)) return CompletableFuture.completedFuture(resp.retcode(RETPAY_FALSIFY_ERROR));
+            if (!Arrays.equals(sig, rawHmac)) {
+                return CompletableFuture.completedFuture(resp.retcode(RETPAY_FALSIFY_ERROR));
+            }
             if (map.containsKey("amount")) {
                 resp.setPayedMoney((long) (Float.parseFloat(map.get("amount")) * 100));
             }
@@ -241,7 +251,9 @@ public final class FacebookPayService extends AbstractPayService {
         String[] signatures = text.split("\\.");
         byte[] sig = Base64.getDecoder().decode(signatures[0].replace('-', '+').replace('_', '/'));
         Map<String, String> smp = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, Base64.getDecoder().decode(signatures[1]));
-        if (!"HMAC-SHA256".equals(smp.get("algorithm"))) return false;
+        if (!"HMAC-SHA256".equals(smp.get("algorithm"))) {
+            return false;
+        }
         byte[] keyBytes = ((FacebookElement) element).secret.getBytes();
         SecretKeySpec signingKey = new SecretKeySpec(keyBytes, "HmacSHA256");
         try {
@@ -329,7 +341,9 @@ public final class FacebookPayService extends AbstractPayService {
                 element.notifyurl = notifyurl;
                 if (element.initElement(logger, null)) {
                     map.put(appid, element);
-                    if (def_appid.equals(appid)) map.put("", element);
+                    if (def_appid.equals(appid)) {
+                        map.put("", element);
+                    }
                 }
             });
             return map;

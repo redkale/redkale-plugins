@@ -64,7 +64,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     @Override
     public void init(AnyValue conf) {
         super.init(conf);
-        if (conf == null) conf = AnyValue.create();
+        if (conf == null) {
+            conf = AnyValue.create();
+        }
         initClient(conf);
     }
 
@@ -142,34 +144,50 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             this.clusterBytesConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> sClient.connectAsync(stringByteArrayCodec), bpc);
             this.clusterStringConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> sClient.connectAsync(stringStringCodec), bpc);
         }
-        if (old != null) old.close();
+        if (old != null) {
+            old.close();
+        }
         //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisLettuceCacheSource.class.getSimpleName() + ": addrs=" + addresses);
     }
 
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        if (events == null || events.length < 1) return;
+        if (events == null || events.length < 1) {
+            return;
+        }
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
         initClient(this.config);
-        if (!sb.isEmpty()) {
+        if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
     }
 
     public boolean acceptsConf(AnyValue config) {
-        if (config == null) return false;
+        if (config == null) {
+            return false;
+        }
         AnyValue[] nodes = getNodes(config);
-        if (nodes == null || nodes.length == 0) return false;
+        if (nodes == null || nodes.length == 0) {
+            return false;
+        }
         for (AnyValue node : nodes) {
             String val = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
-            if (val != null && val.startsWith("redis://")) return true;
-            if (val != null && val.startsWith("rediss://")) return true;
-            if (val != null && val.startsWith("redis-socket://")) return true;
-            if (val != null && val.startsWith("redis-sentinel://")) return true;
+            if (val != null && val.startsWith("redis://")) {
+                return true;
+            }
+            if (val != null && val.startsWith("rediss://")) {
+                return true;
+            }
+            if (val != null && val.startsWith("redis-socket://")) {
+                return true;
+            }
+            if (val != null && val.startsWith("redis-sentinel://")) {
+                return true;
+            }
         }
         return false;
     }
@@ -180,7 +198,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
             if (one == null) {
                 String val = config.getValue(CACHE_SOURCE_URL);
-                if (val == null) return nodes;
+                if (val == null) {
+                    return nodes;
+                }
                 nodes = new AnyValue[]{config};
             } else {
                 nodes = new AnyValue[]{one};
@@ -206,9 +226,13 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     protected <T> List<T> formatCollection(String key, RedisCryptor cryptor, List<byte[]> collection, Convert convert0, final Type componentType) {
         List<T> rs = new ArrayList<>();
-        if (collection == null) return rs;
+        if (collection == null) {
+            return rs;
+        }
         for (byte[] bs : collection) {
-            if (bs == null) continue;
+            if (bs == null) {
+                continue;
+            }
             rs.add((T) decryptValue(key, cryptor, convert0, componentType, bs));
         }
         return rs;
@@ -216,9 +240,13 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     protected <T> Set<T> formatCollection(String key, RedisCryptor cryptor, Set<byte[]> collection, Convert convert0, final Type componentType) {
         Set<T> rs = new LinkedHashSet<>();
-        if (collection == null) return rs;
+        if (collection == null) {
+            return rs;
+        }
         for (byte[] bs : collection) {
-            if (bs == null) continue;
+            if (bs == null) {
+                continue;
+            }
             rs.add((T) decryptValue(key, cryptor, convert0, componentType, bs));
         }
         return rs;
@@ -241,7 +269,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     protected Collection<String> formatStringCollection(String key, RedisCryptor cryptor, boolean set, Collection<String> list) {
-        if (cryptor == null) return list;
+        if (cryptor == null) {
+            return list;
+        }
         if (set) {
             Set<String> rs = new LinkedHashSet<>();
             for (String str : list) {
@@ -260,7 +290,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     @Override
     public void destroy(AnyValue conf) {
         super.destroy(conf);
-        if (client != null) client.shutdown();
+        if (client != null) {
+            client.shutdown();
+        }
     }
 
     protected <T, U> CompletableFuture<U> completableBytesFuture(RedisClusterAsyncCommands<String, byte[]> command, CompletionStage<T> rf) {
@@ -469,7 +501,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         byte[] bs = command.getex(key, GetExArgs.Builder.ex(expireSeconds));
         releaseBytesCommand(command);
-        if (bs == null) return null;
+        if (bs == null) {
+            return null;
+        }
         return decryptValue(key, cryptor, type, bs);
     }
 
@@ -485,7 +519,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         final RedisClusterCommands<String, String> command = connectString();
         String v = command.getex(key, GetExArgs.Builder.ex(expireSeconds));
         releaseStringCommand(command);
-        if (v == null) return null;
+        if (v == null) {
+            return null;
+        }
         return cryptor != null ? cryptor.decrypt(key, v) : v;
     }
 
@@ -502,7 +538,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         final RedisClusterCommands<String, String> command = connectString();
         String v = command.getex(key, GetExArgs.Builder.ex(expireSeconds));
         releaseStringCommand(command);
-        if (v == null) return defValue;
+        if (v == null) {
+            return defValue;
+        }
         return Long.parseLong(v);
     }
 
@@ -973,7 +1011,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> void hset(final String key, final String field, final Type type, final T value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         command.hset(key, field, encryptValue(key, cryptor, type, this.convert, value));
         releaseBytesCommand(command);
@@ -981,7 +1021,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> void hset(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         command.hset(key, field, encryptValue(key, cryptor, type, convert0, value));
         releaseBytesCommand(command);
@@ -989,7 +1031,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public void hsetString(final String key, final String field, final String value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         final RedisClusterCommands<String, String> command = connectString();
         command.hset(key, field, encryptValue(key, cryptor, value));
         releaseStringCommand(command);
@@ -1004,7 +1048,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> void hsetnx(final String key, final String field, final Type type, final T value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         command.hsetnx(key, field, encryptValue(key, cryptor, type, this.convert, value));
         releaseBytesCommand(command);
@@ -1012,7 +1058,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> void hsetnx(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         command.hsetnx(key, field, encryptValue(key, cryptor, type, convert0, value));
         releaseBytesCommand(command);
@@ -1020,7 +1068,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public void hsetnxString(final String key, final String field, final String value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         final RedisClusterCommands<String, String> command = connectString();
         command.hsetnx(key, field, encryptValue(key, cryptor, value));
         releaseStringCommand(command);
@@ -1094,7 +1144,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit, String pattern) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         ScanArgs args = ScanArgs.Builder.limit(limit);
-        if (pattern != null) args = args.match(pattern);
+        if (pattern != null) {
+            args = args.match(pattern);
+        }
         MapScanCursor<String, byte[]> rs = command.hscan(key, new ScanCursor(String.valueOf(offset), false), args);
         releaseBytesCommand(command);
         final Map<String, T> map = new LinkedHashMap<>();
@@ -1128,7 +1180,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         final RedisClusterCommands<String, String> command = connectString();
         String rs = command.hget(key, field);
         releaseStringCommand(command);
-        if (rs == null) return defValue;
+        if (rs == null) {
+            return defValue;
+        }
         try {
             return Long.parseLong(rs);
         } catch (NumberFormatException e) {
@@ -1143,7 +1197,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         releaseBytesCommand(command);
         Map<String, T> map = new LinkedHashMap(rs.size());
         rs.forEach(kv -> {
-            if (kv.hasValue()) map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
+            if (kv.hasValue()) {
+                map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
+            }
         });
         return map;
     }
@@ -1155,7 +1211,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         releaseBytesCommand(command);
         Map<String, byte[]> map = new LinkedHashMap(rs.size());
         rs.forEach(kv -> {
-            if (kv.hasValue()) map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, byte[].class, kv.getValue()));
+            if (kv.hasValue()) {
+                map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, byte[].class, kv.getValue()));
+            }
         });
         return map;
     }
@@ -1411,7 +1469,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         releaseStringCommand(command);
         Map<String, String> map = new LinkedHashMap<>();
         rs.forEach(kv -> {
-            if (kv.hasValue()) map.put(kv.getKey(), cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue());
+            if (kv.hasValue()) {
+                map.put(kv.getKey(), cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue());
+            }
         });
         return map;
     }
@@ -1444,7 +1504,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     protected Collection<String> decryptStringCollection(String key, final boolean set, Collection<String> collection) {
-        if (collection == null || collection.isEmpty() || cryptor == null) return collection;
+        if (collection == null || collection.isEmpty() || cryptor == null) {
+            return collection;
+        }
         if (set) {
             Set<String> newset = new LinkedHashSet<>();
             for (String value : collection) {
@@ -1556,7 +1618,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         releaseStringCommand(command);
         Map<String, Long> map = new LinkedHashMap<>();
         rs.forEach(kv -> {
-            if (kv.hasValue()) map.put(kv.getKey(), Long.parseLong(kv.getValue()));
+            if (kv.hasValue()) {
+                map.put(kv.getKey(), Long.parseLong(kv.getValue()));
+            }
         });
         return map;
     }
@@ -1740,7 +1804,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(String key, String field, Type type, T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.hset(key, field, convert.convertToBytes(type, value)));
         });
@@ -1748,7 +1814,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(String key, String field, Convert convert0, Type type, T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.hset(key, field, (convert0 == null ? convert : convert0).convertToBytes(type, value)));
         });
@@ -1772,7 +1840,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Void> hsetnxAsync(String key, String field, Type type, T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.hsetnx(key, field, convert.convertToBytes(type, value)));
         });
@@ -1780,7 +1850,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Void> hsetnxAsync(String key, String field, Convert convert0, Type type, T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.hsetnx(key, field, (convert0 == null ? convert : convert0).convertToBytes(type, value)));
         });
@@ -1869,7 +1941,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, T>> hmapAsync(String key, Type type, int offset, int limit, String pattern) {
         return connectBytesAsync().thenCompose(command -> {
             ScanArgs args = ScanArgs.Builder.limit(limit);
-            if (pattern != null) args = args.match(pattern);
+            if (pattern != null) {
+                args = args.match(pattern);
+            }
             return completableBytesFuture(command, command.hscan(key, new ScanCursor(String.valueOf(offset), false), args).thenApply((MapScanCursor<String, byte[]> rs) -> {
                 final Map<String, T> map = new LinkedHashMap<>();
                 rs.getMap().forEach((k, v) -> map.put(k, v == null ? null : decryptValue(key, cryptor, type, v)));
@@ -1906,7 +1980,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             return completableBytesFuture(command, command.mget(keys).thenApply((List<KeyValue<String, byte[]>> rs) -> {
                 Map<String, T> map = new LinkedHashMap(rs.size());
                 rs.forEach(kv -> {
-                    if (kv.hasValue()) map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
+                    if (kv.hasValue()) {
+                        map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
+                    }
                 });
                 return map;
             }));
@@ -1919,7 +1995,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             return completableBytesFuture(command, command.mget(keys).thenApply((List<KeyValue<String, byte[]>> rs) -> {
                 Map<String, byte[]> map = new LinkedHashMap(rs.size());
                 rs.forEach(kv -> {
-                    if (kv.hasValue()) map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, byte[].class, kv.getValue()));
+                    if (kv.hasValue()) {
+                        map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, byte[].class, kv.getValue()));
+                    }
                 });
                 return map;
             }));
@@ -2165,7 +2243,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             return completableStringFuture(null, null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
                 Map<String, String> map = new LinkedHashMap<>();
                 rs.forEach(kv -> {
-                    if (kv.hasValue()) map.put(kv.getKey(), cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue());
+                    if (kv.hasValue()) {
+                        map.put(kv.getKey(), cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue());
+                    }
                 });
                 return map;
             }));
@@ -2310,7 +2390,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             return completableStringFuture(keys[0], null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
                 Map<String, Long> map = new LinkedHashMap<>();
                 rs.forEach(kv -> {
-                    if (kv.hasValue()) map.put(kv.getKey(), Long.parseLong(kv.getValue()));
+                    if (kv.hasValue()) {
+                        map.put(kv.getKey(), Long.parseLong(kv.getValue()));
+                    }
                 });
                 return map;
             }));

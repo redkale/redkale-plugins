@@ -114,9 +114,11 @@ public final class WeiXinMPService implements Service {
                 sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
-        if (sb.isEmpty()) return; //无相关配置变化
+        if (sb.length() < 1) {
+            return; //无相关配置变化
+        }
         logger.log(Level.INFO, sb.toString());
-        
+
         this.appidElements = MpElement.create(logger, changeProps, home);
         MpElement defElement = this.appidElements.get("");
         if (defElement != null && (this.appid == null || this.appid.isEmpty())) {
@@ -133,10 +135,14 @@ public final class WeiXinMPService implements Service {
     //仅用于 https://open.weixin.qq.com/connect/oauth2/authorize  &scope=snsapi_base
     //需要在 “开发 - 接口权限 - 网页服务 - 网页帐号 - 网页授权获取用户基本信息”的配置选项中，修改授权回调域名
     public CompletableFuture<RetResult<String>> getMPOpenidByCode(String code) {
-        if (code != null) code = code.replace("\"", "").replace("'", "");
+        if (code != null) {
+            code = code.replace("\"", "").replace("'", "");
+        }
         String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret + "&code=" + code + "&grant_type=authorization_code";
         return getHttpContentAsync(url).thenApply(json -> {
-            if (logger.isLoggable(Level.FINEST)) logger.finest(url + "--->" + json);
+            if (logger.isLoggable(Level.FINEST)) {
+                logger.finest(url + "--->" + json);
+            }
             Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
             return new RetResult<>(jsonmap.get("openid"));
         });
@@ -145,7 +151,9 @@ public final class WeiXinMPService implements Service {
     public CompletableFuture<RetResult<String>> getMPWxunionidByCode(String code) {
         return getMPUserTokenByCode(code).thenApply(wxmap -> {
             final String unionid = wxmap.get("unionid");
-            if (unionid != null && !unionid.isEmpty()) return new RetResult<>(unionid);
+            if (unionid != null && !unionid.isEmpty()) {
+                return new RetResult<>(unionid);
+            }
             return new RetResult<>(1011002);
         });
     }
@@ -170,19 +178,26 @@ public final class WeiXinMPService implements Service {
     }
 
     private CompletableFuture<Map<String, String>> getMPUserTokenByCode(boolean miniprogram, String appid0, String appsecret0, String code, String encryptedData, String iv) {
-        if (code != null) code = code.replace("\"", "").replace("'", "");
+        if (code != null) {
+            code = code.replace("\"", "").replace("'", "");
+        }
         String url0 = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid0 + "&secret=" + appsecret0 + "&code=" + code + "&grant_type=authorization_code";
-        if (miniprogram) url0 = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid0 + "&secret=" + appsecret0 + "&js_code=" + code + "&grant_type=authorization_code";
+        if (miniprogram) {
+            url0 = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid0 + "&secret=" + appsecret0 + "&js_code=" + code + "&grant_type=authorization_code";
+        }
         final String url = url0;
         return getHttpContentAsync(url).thenCompose(json -> {
-            if (logger.isLoggable(Level.FINEST)) logger.finest("url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + "--->" + json);
+            if (logger.isLoggable(Level.FINEST)) {
+                logger.finest("url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + "--->" + json);
+            }
             Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json);
             if (miniprogram) {
                 if (encryptedData != null && !encryptedData.isEmpty() && iv != null && !iv.isEmpty()) {
                     try {
                         String sessionkey = jsonmap.get("session_key");
-                        if (sessionkey == null) return CompletableFuture.completedFuture(jsonmap);  //{"errcode":40163,"errmsg":"code been used, hints: [ req_id: GEbaO6yFe-g8Msfa ]"}
-                        // 被加密的数据
+                        if (sessionkey == null) {
+                            return CompletableFuture.completedFuture(jsonmap);  //{"errcode":40163,"errmsg":"code been used, hints: [ req_id: GEbaO6yFe-g8Msfa ]"}
+                        }                        // 被加密的数据
                         byte[] dataByte = Base64.getDecoder().decode(encryptedData);
                         // 加密秘钥
                         byte[] keyByte = Base64.getDecoder().decode(sessionkey);
@@ -204,14 +219,18 @@ public final class WeiXinMPService implements Service {
                         cipher.init(Cipher.DECRYPT_MODE, spec, parameters);// 初始化
                         byte[] resultByte = cipher.doFinal(dataByte);
                         String result = new String(resultByte, StandardCharsets.UTF_8);
-                        if (logger.isLoggable(Level.FINEST)) logger.finest("url=" + url + ", session_key=" + sessionkey + ", encryptedData=" + encryptedData + ", iv=" + iv + "， decryptedData=" + result);
+                        if (logger.isLoggable(Level.FINEST)) {
+                            logger.finest("url=" + url + ", session_key=" + sessionkey + ", encryptedData=" + encryptedData + ", iv=" + iv + "， decryptedData=" + result);
+                        }
                         int pos = result.indexOf("\"watermark\"");
                         if (pos > 0) {
                             final String oldresult = result;
                             int pos1 = result.indexOf('{', pos);
                             int pos2 = result.indexOf('}', pos);
                             result = result.substring(0, pos1) + "null" + result.substring(pos2 + 1);
-                            if (logger.isLoggable(Level.FINEST)) logger.finest("olddecrypt=" + oldresult + ", newdescrpty=" + result);
+                            if (logger.isLoggable(Level.FINEST)) {
+                                logger.finest("olddecrypt=" + oldresult + ", newdescrpty=" + result);
+                            }
                         }
                         Map<String, String> map = convert.convertFrom(TYPE_MAP_STRING_STRING, result);
                         if (!map.containsKey("unionid") && map.containsKey("unionId")) {
@@ -243,7 +262,9 @@ public final class WeiXinMPService implements Service {
     public CompletableFuture<Map<String, String>> getMPUserTokenByOpenid(String access_token, String openid) {
         String url = "https://api.weixin.qq.com/sns/userinfo?access_token=" + access_token + "&openid=" + openid;
         return getHttpContentAsync(url).thenApply(json -> {
-            if (logger.isLoggable(Level.FINEST)) logger.finest(url + "--->" + json);
+            if (logger.isLoggable(Level.FINEST)) {
+                logger.finest(url + "--->" + json);
+            }
             Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json.replaceFirst("\\[.*\\]", "null"));
             return jsonmap;
         });
@@ -265,7 +286,9 @@ public final class WeiXinMPService implements Service {
 
     private String verifyMPURL0(String mptoken, String msgSignature, String timeStamp, String nonce, String echoStr) {
         String signature = sha1(mptoken, timeStamp, nonce);
-        if (!signature.equals(msgSignature)) throw new RuntimeException("signature verification error");
+        if (!signature.equals(msgSignature)) {
+            throw new RuntimeException("signature verification error");
+        }
         return echoStr;
     }
 
@@ -326,7 +349,9 @@ public final class WeiXinMPService implements Service {
                 element.mptoken = mptoken;
                 element.miniprogram = miniprogram;
                 map.put(appid, element);
-                if (def_appid.equals(appid)) map.put("", element);
+                if (def_appid.equals(appid)) {
+                    map.put("", element);
+                }
             });
             return map;
         }

@@ -72,7 +72,7 @@ public class KafkaMessageAgent extends MessageAgent {
         for (ResourceEvent event : events) {
             sb.append(KafkaMessageAgent.class.getSimpleName()).append(" skip change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
-        if (!sb.isEmpty()) {
+        if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
     }
@@ -80,16 +80,22 @@ public class KafkaMessageAgent extends MessageAgent {
     @Override
     public void destroy(AnyValue config) {
         super.destroy(config);
-        if (this.adminClient != null) this.adminClient.close();
+        if (this.adminClient != null) {
+            this.adminClient.close();
+        }
     }
 
     public synchronized void startReconnect() {
-        if (this.reconnecting) return;
+        if (this.reconnecting) {
+            return;
+        }
         this.reconnectFuture = this.timeoutExecutor.scheduleAtFixedRate(() -> retryConnect(), 0, this.checkIntervals, TimeUnit.SECONDS);
     }
 
     private void retryConnect() {
-        if (this.adminClient != null) this.adminClient.close();
+        if (this.adminClient != null) {
+            this.adminClient.close();
+        }
         Properties props = new Properties();
         props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, controllers);
         this.adminClient = KafkaAdminClient.create(props);
@@ -115,17 +121,27 @@ public class KafkaMessageAgent extends MessageAgent {
 
     @Override //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
-        if (config == null) return false;
-        if ("kafka".equalsIgnoreCase(config.getValue("type"))) return true;
+        if (config == null) {
+            return false;
+        }
+        if ("kafka".equalsIgnoreCase(config.getValue("type"))) {
+            return true;
+        }
         AnyValue ser = config.getAnyValue("servers");
-        if (ser == null) return false;
-        if (ser.getValue("value") != null && !ser.getValue("value").contains("pulsar")) return true;
+        if (ser == null) {
+            return false;
+        }
+        if (ser.getValue("value") != null && !ser.getValue("value").contains("pulsar")) {
+            return true;
+        }
         return false;
     }
 
     @Override
     public boolean createTopic(String... topics) {
-        if (topics == null || topics.length < 1) return true;
+        if (topics == null || topics.length < 1) {
+            return true;
+        }
         try {
             List<NewTopic> newTopics = new ArrayList<>(topics.length);
             for (String t : topics) {
@@ -141,7 +157,9 @@ public class KafkaMessageAgent extends MessageAgent {
 
     @Override
     public boolean deleteTopic(String... topics) {
-        if (topics == null || topics.length < 1) return true;
+        if (topics == null || topics.length < 1) {
+            return true;
+        }
         try {
             adminClient.deleteTopics(Utility.ofList(topics), new DeleteTopicsOptions().timeoutMs(3000)).all().get(3, TimeUnit.SECONDS);
             return true;
@@ -157,7 +175,9 @@ public class KafkaMessageAgent extends MessageAgent {
             Collection<TopicListing> list = adminClient.listTopics(new ListTopicsOptions().timeoutMs(3000)).listings().get(3, TimeUnit.SECONDS);
             List<String> result = new ArrayList<>(list.size());
             for (TopicListing t : list) {
-                if (!t.isInternal()) result.add(t.name());
+                if (!t.isInternal()) {
+                    result.add(t.name());
+                }
             }
             return result;
         } catch (Exception ex) {

@@ -68,7 +68,9 @@ public class WeiXinPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = JsonConvert.root();
+        if (this.convert == null) {
+            this.convert = JsonConvert.root();
+        }
         this.reloadConfig(Pays.PAYTYPE_WEIXIN);
         this.scheduler = new ScheduledThreadPoolExecutor(1, (Runnable r) -> {
             final Thread t = new Thread(r, "Scheduled-" + Sncp.getServiceType(this).getSimpleName() + "-Certificate-Task-Thread");
@@ -98,7 +100,9 @@ public class WeiXinPayService extends AbstractPayService {
                 sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
-        if (sb.isEmpty()) return; //无相关配置变化
+        if (sb.length() < 1) {
+            return; //无相关配置变化
+        }
         logger.log(Level.INFO, sb.toString());
         this.elements = WeixinPayElement.create(logger, changeProps, home);
         this.elementProps = changeProps;
@@ -107,7 +111,9 @@ public class WeiXinPayService extends AbstractPayService {
     @Override
     public void destroy(AnyValue conf) {
         super.destroy(conf);
-        if (scheduler != null) scheduler.shutdownNow();
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+        }
     }
 
     @Override
@@ -197,10 +203,14 @@ public class WeiXinPayService extends AbstractPayService {
         final PayPreResponse result = new PayPreResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             result.setAppid(element.appid);
             final TreeMap<String, Object> map = new TreeMap<>();
-            if (request.getAttach() != null) map.putAll(request.getAttach());
+            if (request.getAttach() != null) {
+                map.putAll(request.getAttach());
+            }
             map.put("appid", element.appid);
             map.put("mchid", element.merchno);
             map.put("description", request.getPayBody());
@@ -214,7 +224,9 @@ public class WeiXinPayService extends AbstractPayService {
             String url;
             if (request.getPayWay() == PAYWAY_WEB) { //JSAPI下单
                 url = "https://api.mch.weixin.qq.com/v3/pay/transactions/jsapi";
-                if (!map.containsKey("openid")) return result.retcode(RETPAY_PARAM_ERROR).toFuture();
+                if (!map.containsKey("openid")) {
+                    return result.retcode(RETPAY_PARAM_ERROR).toFuture();
+                }
                 map.put("payer", Utility.ofMap("openid", map.remove("openid").toString()));
             } else if (request.getPayWay() == PAYWAY_APP) {
                 url = "https://api.mch.weixin.qq.com/v3/pay/transactions/app";
@@ -230,15 +242,21 @@ public class WeiXinPayService extends AbstractPayService {
             Map<String, String> respHeaders = new LinkedHashMap<>();
             return postHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "POST", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
-                if (logger.isLoggable(Level.FINER)) logger.log(Level.FINER, "Weixin.prepay." + request.getPayWay() + ": " + body + " --> " + responseText);
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (logger.isLoggable(Level.FINER)) {
+                    logger.log(Level.FINER, "Weixin.prepay." + request.getPayWay() + ": " + body + " --> " + responseText);
+                }
+                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
                 //PAYWAY_WEB: {"prepay_id": "wx261153585405162d4d02642eabe7000000"}
                 //PAYWAY_APP: {"prepay_id": "wx261153585405162d4d02642eabe7000000"}
                 //PAYWAY_NATIVE: {"code_url": "weixin://wxpay/bizpayurl?pr=p4lpSuKzz"}
                 //PAYWAY_H5: {"h5_url": "https://wx.tenpay.com/cgi-bin/mmpayweb-bin/checkmweb?prepay_id=wx2916263004719461949c8&package=2150917749"}
                 //ERROR: {"code":"NO_AUTH","message":"商户号该产品权限已被关闭，请前往商户平台>产品中心检查后重试"}
                 Map<String, String> resultmap = convert.convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, responseText);
-                if (resultmap.get("message") != null) return result.retcode(RETPAY_PARAM_ERROR);
+                if (resultmap.get("message") != null) {
+                    return result.retcode(RETPAY_PARAM_ERROR);
+                }
                 Map<String, String> rsmap = new LinkedHashMap<>();
                 if (request.getPayWay() == PAYWAY_WEB) {
                     rsmap.put(PayPreResponse.PREPAY_PREPAYID, resultmap.get("prepay_id"));
@@ -283,9 +301,15 @@ public class WeiXinPayService extends AbstractPayService {
             String json = decryptToString(element, notifyData.resource.associated_data, notifyData.resource.nonce, notifyData.resource.ciphertext);
             result.setResponseText(json);
             NotifyPayResult payResult = convert.convertFrom(NotifyPayResult.class, json);
-            if ("NOTPAY".equals(payResult.trade_state)) return result.retcode(RETPAY_PAY_WAITING).notifytext(rstxt).toFuture();
-            if (refund && !"SUCCESS".equals(payResult.refund_status)) return result.retcode(RETPAY_REFUND_FAILED).notifytext(rstxt).toFuture();
-            if (!refund && !"SUCCESS".equals(payResult.trade_state)) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstxt).toFuture();
+            if ("NOTPAY".equals(payResult.trade_state)) {
+                return result.retcode(RETPAY_PAY_WAITING).notifytext(rstxt).toFuture();
+            }
+            if (refund && !"SUCCESS".equals(payResult.refund_status)) {
+                return result.retcode(RETPAY_REFUND_FAILED).notifytext(rstxt).toFuture();
+            }
+            if (!refund && !"SUCCESS".equals(payResult.trade_state)) {
+                return result.retcode(RETPAY_PAY_FAILED).notifytext(rstxt).toFuture();
+            }
             result.setPayno(payResult.out_trade_no);
             result.setThirdPayno(payResult.transaction_id == null ? "" : payResult.transaction_id);
             if (refund) {
@@ -323,14 +347,18 @@ public class WeiXinPayService extends AbstractPayService {
         final PayQueryResponse result = new PayQueryResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
 
             String url = "https://api.mch.weixin.qq.com/v3/pay/transactions/out-trade-no/" + request.getPayno() + "?mchid=" + element.merchno;
             String body = "";
             Map<String, String> respHeaders = new LinkedHashMap<>();
             return getHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "GET", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
 
                 final NotifyPayResult payResult = convert.convertFrom(NotifyPayResult.class, responseText);
                 String state = payResult.trade_state;
@@ -375,7 +403,9 @@ public class WeiXinPayService extends AbstractPayService {
         final PayResponse result = new PayResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             Map<String, String> map = new TreeMap<>();
             map.put("mchid", element.merchno);
 
@@ -384,7 +414,9 @@ public class WeiXinPayService extends AbstractPayService {
             Map<String, String> respHeaders = new LinkedHashMap<>();
             return postHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "POST", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
 
                 return result;
             });
@@ -408,7 +440,9 @@ public class WeiXinPayService extends AbstractPayService {
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             final TreeMap<String, Object> map = new TreeMap<>();
             map.put("out_trade_no", request.getPayno());
             map.put("out_refund_no", request.getRefundno());
@@ -420,10 +454,14 @@ public class WeiXinPayService extends AbstractPayService {
             Map<String, String> respHeaders = new LinkedHashMap<>();
             return postHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "POST", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
 
                 RefundData refundData = convert.convertFrom(RefundData.class, responseText);
-                if (!"SUCCESS".equals(refundData.status)) return result.retcode(RETPAY_REFUND_ERROR);
+                if (!"SUCCESS".equals(refundData.status)) {
+                    return result.retcode(RETPAY_REFUND_ERROR);
+                }
                 result.setRefundedMoney(refundData.amount.refund);
                 return result;
             });
@@ -445,17 +483,23 @@ public class WeiXinPayService extends AbstractPayService {
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final WeixinPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
 
             String url = "https://api.mch.weixin.qq.com/v3/refund/domestic/refunds/" + request.getRefundno();
             String body = "";
             Map<String, String> respHeaders = new LinkedHashMap<>();
             return getHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "GET", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
 
                 RefundData refundData = convert.convertFrom(RefundData.class, responseText);
-                if (!"SUCCESS".equals(refundData.status)) return result.retcode(RETPAY_REFUND_ERROR);
+                if (!"SUCCESS".equals(refundData.status)) {
+                    return result.retcode(RETPAY_REFUND_ERROR);
+                }
                 result.setRefundedMoney(refundData.amount.refund);
                 return result;
             });
@@ -601,7 +645,9 @@ public class WeiXinPayService extends AbstractPayService {
                 element.certbase64 = certbase64;
                 if (element.initElement(logger, home)) {
                     map.put(appid, element);
-                    if (def_appid.equals(appid)) map.put("", element);
+                    if (def_appid.equals(appid)) {
+                        map.put("", element);
+                    }
                 }
             });
             return map;
@@ -618,7 +664,9 @@ public class WeiXinPayService extends AbstractPayService {
                     File file = (prikeypath.indexOf('/') == 0 || prikeypath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.prikeypath);
                     in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.prikeypath);
                 }
-                if (in == null) return false;
+                if (in == null) {
+                    return false;
+                }
                 KeyFactory kf = KeyFactory.getInstance("RSA");
                 String pripem = Utility.read(in, StandardCharsets.UTF_8).replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "").replaceAll("\\s+", "");
                 this.privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(pripem)));
@@ -630,7 +678,9 @@ public class WeiXinPayService extends AbstractPayService {
                     File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
                     in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
                 }
-                if (in == null) return false;
+                if (in == null) {
+                    return false;
+                }
                 CertificateFactory certificatefactory = CertificateFactory.getInstance("X.509");
                 X509Certificate x509Cert = (X509Certificate) certificatefactory.generateCertificate(in);
                 x509Cert.checkValidity();
@@ -651,9 +701,13 @@ public class WeiXinPayService extends AbstractPayService {
             String url = "https://api.mch.weixin.qq.com/v3/certificates";
             Map<String, String> respHeaders = new LinkedHashMap<>();
             return getHttpContentAsync(url, 6000, createHttpHeaders(this, null, url, "GET", body), body, respHeaders).thenApply(responseText -> {
-                if (responseText == null || responseText.isEmpty()) return "";
+                if (responseText == null || responseText.isEmpty()) {
+                    return "";
+                }
                 CertificateData dataResult = JsonConvert.root().convertFrom(CertificateData.class, responseText);
-                if (dataResult.data == null) return "";
+                if (dataResult.data == null) {
+                    return "";
+                }
                 for (CertificateItem item : dataResult.data) {
                     try {
                         String nonce = item.encrypt_certificate.nonce;

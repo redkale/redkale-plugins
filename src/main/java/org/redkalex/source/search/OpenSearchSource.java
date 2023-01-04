@@ -123,7 +123,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
             sb.append("DataSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
         initFromProperties(newProps);
-        if (!sb.isEmpty()) {
+        if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
     }

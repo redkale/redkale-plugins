@@ -57,7 +57,9 @@ public final class OppoPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = JsonConvert.root();
+        if (this.convert == null) {
+            this.convert = JsonConvert.root();
+        }
         this.reloadConfig(Pays.PAYTYPE_OPPO);
     }
 
@@ -100,7 +102,9 @@ public final class OppoPayService extends AbstractPayService {
                 sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
-        if (sb.isEmpty()) return; //无相关配置变化
+        if (sb.length() < 1) {
+            return; //无相关配置变化
+        }
         logger.log(Level.INFO, sb.toString());
         this.elements = OppoPayElement.create(logger, changeProps, home);
         this.elementProps = changeProps;
@@ -138,11 +142,15 @@ public final class OppoPayService extends AbstractPayService {
         final PayPreResponse result = new PayPreResponse();
         try {
             final OppoPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             result.setAppid(element.appid);
             final long timestamp = System.currentTimeMillis();
             final TreeMap<String, String> map = new TreeMap<>();
-            if (request.getAttach() != null) map.putAll(request.getAttach()); //含openId、appVersion、engineVersion
+            if (request.getAttach() != null) {
+                map.putAll(request.getAttach()); //含openId、appVersion、engineVersion
+            }
             map.put("appId", element.appid);
             map.put("timestamp", "" + timestamp);
             map.put("productName", request.getPayTitle());
@@ -159,9 +167,15 @@ public final class OppoPayService extends AbstractPayService {
                 result.setResponseText(responseText);
 
                 OppoPrePayResult preresult = JsonConvert.root().convertFrom(OppoPrePayResult.class, responseText);
-                if (!"200".equals(preresult.code)) return result.retcode(RETPAY_PAY_ERROR);
-                if (preresult.data == null) return result.retcode(RETPAY_PAY_ERROR);
-                if (preresult.data.orderNo == null) return result.retcode(RETPAY_PAY_ERROR);
+                if (!"200".equals(preresult.code)) {
+                    return result.retcode(RETPAY_PAY_ERROR);
+                }
+                if (preresult.data == null) {
+                    return result.retcode(RETPAY_PAY_ERROR);
+                }
+                if (preresult.data.orderNo == null) {
+                    return result.retcode(RETPAY_PAY_ERROR);
+                }
                 result.setThirdPayno(preresult.data.orderNo);
                 final Map<String, String> retmap = new TreeMap<>();
                 retmap.put("appId", element.appid);
@@ -196,21 +210,35 @@ public final class OppoPayService extends AbstractPayService {
         final String rstext = "<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>";
         Map<String, String> map = null;
         String appid = request.getAppid();
-        if (appid == null || appid.isEmpty()) appid = map.getOrDefault("appid", "");
+        if (appid == null || appid.isEmpty()) {
+            appid = map.getOrDefault("appid", "");
+        }
         final OppoPayElement element = elements.get(appid);
-        if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        if (element == null) {
+            return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        }
         result.setPayno(map.getOrDefault("out_trade_no", ""));
         result.setThirdPayno(map.getOrDefault("transaction_id", ""));
-        if ("NOTPAY".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(rstext).toFuture();
-        if (!"SUCCESS".equals(map.get("return_code"))) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext).toFuture();
-        if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
-        if (!checkSign(element, map, null, request.getHeaders())) return result.retcode(RETPAY_FALSIFY_ERROR).notifytext(rstext).toFuture();
+        if ("NOTPAY".equals(map.get("return_code"))) {
+            return result.retcode(RETPAY_PAY_WAITING).notifytext(rstext).toFuture();
+        }
+        if (!"SUCCESS".equals(map.get("return_code"))) {
+            return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext).toFuture();
+        }
+        if (!(map instanceof SortedMap)) {
+            map = new TreeMap<>(map);
+        }
+        if (!checkSign(element, map, null, request.getHeaders())) {
+            return result.retcode(RETPAY_FALSIFY_ERROR).notifytext(rstext).toFuture();
+        }
         String state = map.get("trade_state");
         if (state == null && "SUCCESS".equals(map.get("result_code")) && Long.parseLong(map.get("total_fee")) > 0) {
             state = "SUCCESS";
             result.setPayedMoney(Long.parseLong(map.get("total_fee")));
         }
-        if (!"SUCCESS".equals(state)) return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext).toFuture();
+        if (!"SUCCESS".equals(state)) {
+            return result.retcode(RETPAY_PAY_FAILED).notifytext(rstext).toFuture();
+        }
         return result.notifytext(rstext).toFuture();
     }
 
@@ -268,7 +296,9 @@ public final class OppoPayService extends AbstractPayService {
     protected String createSign(final PayElement element, Map<String, ?> map, String text) { //计算签名
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> {
-            if (!((String) y).isEmpty()) sb.append(x).append('=').append(y).append('&');
+            if (!((String) y).isEmpty()) {
+                sb.append(x).append('=').append(y).append('&');
+            }
         });
         try {
             KeyFactory keyf = KeyFactory.getInstance("RSA");
@@ -288,11 +318,15 @@ public final class OppoPayService extends AbstractPayService {
 
     @Override
     protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {  //验证签名
-        if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
+        if (!(map instanceof SortedMap)) {
+            map = new TreeMap<>(map);
+        }
         String sign = (String) map.remove("sign");
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> {
-            if (!((String) y).isEmpty()) sb.append(x).append('=').append(y).append('&');
+            if (!((String) y).isEmpty()) {
+                sb.append(x).append('=').append(y).append('&');
+            }
         });
         try {
             KeyFactory keyf = KeyFactory.getInstance("RSA");
@@ -377,7 +411,9 @@ public final class OppoPayService extends AbstractPayService {
                 element.notifyurl = notifyurl;
                 if (element.initElement(logger, home)) {
                     map.put(appid, element);
-                    if (def_appid.equals(appid)) map.put("", element);
+                    if (def_appid.equals(appid)) {
+                        map.put("", element);
+                    }
                 }
             });
             return map;

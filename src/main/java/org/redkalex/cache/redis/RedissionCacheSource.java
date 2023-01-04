@@ -45,7 +45,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public void init(AnyValue conf) {
         super.init(conf);
-        if (conf == null) conf = AnyValue.create();
+        if (conf == null) {
+            conf = AnyValue.create();
+        }
         initClient(conf);
     }
 
@@ -59,7 +61,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (AnyValue node : nodes) {
             String addr = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
             String db0 = node.getValue(CACHE_SOURCE_DB, "").trim();
-            if (!db0.isEmpty()) this.db = Integer.valueOf(db0);
+            if (!db0.isEmpty()) {
+                this.db = Integer.valueOf(db0);
+            }
             String username = node.getValue(CACHE_SOURCE_USER, "").trim();
             String password = node.getValue(CACHE_SOURCE_PASSWORD, "").trim();
             if (addr.startsWith("redis")) {
@@ -135,8 +139,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
                 redisConfig.useSentinelServers().setDatabase(this.db);
             }
             if (baseConfig != null) {  //单个进程的不同自定义密码
-                if (!username.isEmpty()) baseConfig.setUsername(username);
-                if (!password.isEmpty()) baseConfig.setPassword(password);
+                if (!username.isEmpty()) {
+                    baseConfig.setUsername(username);
+                }
+                if (!password.isEmpty()) {
+                    baseConfig.setPassword(password);
+                }
             }
         }
         if (baseConfig != null) { //配置全局密码
@@ -144,15 +152,25 @@ public class RedissionCacheSource extends AbstractRedisSource {
             String password = conf.getValue(CACHE_SOURCE_PASSWORD, "").trim();
             String retryAttempts = conf.getValue("retryAttempts", "").trim();
             String retryInterval = conf.getValue("retryInterval", "").trim();
-            if (!username.isEmpty()) baseConfig.setUsername(username);
-            if (!password.isEmpty()) baseConfig.setPassword(password);
-            if (!retryAttempts.isEmpty()) baseConfig.setRetryAttempts(Integer.parseInt(retryAttempts));
-            if (!retryInterval.isEmpty()) baseConfig.setRetryInterval(Integer.parseInt(retryInterval));
+            if (!username.isEmpty()) {
+                baseConfig.setUsername(username);
+            }
+            if (!password.isEmpty()) {
+                baseConfig.setPassword(password);
+            }
+            if (!retryAttempts.isEmpty()) {
+                baseConfig.setRetryAttempts(Integer.parseInt(retryAttempts));
+            }
+            if (!retryInterval.isEmpty()) {
+                baseConfig.setRetryInterval(Integer.parseInt(retryInterval));
+            }
         }
         RedissonClient old = this.client;
         this.client = Redisson.create(redisConfig);
         this.nodeAddrs = addresses;
-        if (old != null) old.shutdown();
+        if (old != null) {
+            old.shutdown();
+        }
 //        RTopic topic = client.getTopic("__keyevent@" + db + "__:expired", new StringCodec());
 //        topic.addListener(String.class, (CharSequence cs, String key) -> {
 //            if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissionCacheSource.class.getSimpleName() + "." + db + ": expired key=" + key + ", cs=" + cs);
@@ -164,25 +182,35 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        if (events == null || events.length < 1) return;
+        if (events == null || events.length < 1) {
+            return;
+        }
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
         initClient(this.config);
-        if (!sb.isEmpty()) {
+        if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
     }
 
     public boolean acceptsConf(AnyValue config) {
-        if (config == null) return false;
+        if (config == null) {
+            return false;
+        }
         AnyValue[] nodes = getNodes(config);
-        if (nodes == null || nodes.length == 0) return false;
+        if (nodes == null || nodes.length == 0) {
+            return false;
+        }
         for (AnyValue node : nodes) {
             String val = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
-            if (val != null && val.startsWith("redis://")) return true;
-            if (val != null && val.startsWith("rediss://")) return true;
+            if (val != null && val.startsWith("redis://")) {
+                return true;
+            }
+            if (val != null && val.startsWith("rediss://")) {
+                return true;
+            }
         }
         return false;
     }
@@ -193,7 +221,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
             AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
             if (one == null) {
                 String val = config.getValue(CACHE_SOURCE_URL);
-                if (val == null) return nodes;
+                if (val == null) {
+                    return nodes;
+                }
                 nodes = new AnyValue[]{config};
             } else {
                 nodes = new AnyValue[]{one};
@@ -236,7 +266,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public void destroy(AnyValue conf) {
         super.destroy(conf);
-        if (client != null) client.shutdown();
+        if (client != null) {
+            client.shutdown();
+        }
     }
 
     //--------------------- exists ------------------------------
@@ -526,7 +558,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public void setnxLong(String key, long value) {
         RAtomicLong rl = client.getAtomicLong(key);
-        if (!rl.isExists()) rl.set(value);
+        if (!rl.isExists()) {
+            rl.set(value);
+        }
     }
 
     //--------------------- setex ------------------------------    
@@ -706,42 +740,54 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> void hset(final String key, final String field, final Type type, final T value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         map.fastPut(field, encryptValue(key, cryptor, type, convert, value));
     }
 
     @Override
     public <T> void hset(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         map.fastPut(field, encryptValue(key, cryptor, type, convert0, value));
     }
 
     @Override
     public <T> void hsetnx(final String key, final String field, final Type type, final T value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         map.fastPutIfAbsent(field, encryptValue(key, cryptor, type, convert, value));
     }
 
     @Override
     public <T> void hsetnx(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         map.fastPutIfAbsent(field, encryptValue(key, cryptor, type, convert0, value));
     }
 
     @Override
     public void hsetString(final String key, final String field, final String value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
         map.fastPut(field, encryptValue(key, cryptor, value));
     }
 
     @Override
     public void hsetnxString(final String key, final String field, final String value) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
         map.fastPutIfAbsent(field, encryptValue(key, cryptor, value));
     }
@@ -801,11 +847,17 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final Map<String, T> rs = new LinkedHashMap<>();
         int index = -1;
         while (it.hasNext()) {
-            if (++index < offset) continue;
-            if (index >= offset + limit) break;
+            if (++index < offset) {
+                continue;
+            }
+            if (index >= offset + limit) {
+                break;
+            }
             String field = it.next();
             byte[] bs = map.get(field);
-            if (bs != null) rs.put(field, decryptValue(key, cryptor, type, bs));
+            if (bs != null) {
+                rs.put(field, decryptValue(key, cryptor, type, bs));
+            }
         }
         return rs;
     }
@@ -817,11 +869,17 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final Map<String, T> rs = new LinkedHashMap<>();
         int index = -1;
         while (it.hasNext()) {
-            if (++index < offset) continue;
-            if (index >= offset + limit) break;
+            if (++index < offset) {
+                continue;
+            }
+            if (index >= offset + limit) {
+                break;
+            }
             String field = it.next();
             byte[] bs = map.get(field);
-            if (bs != null) rs.put(field, decryptValue(key, cryptor, type, bs));
+            if (bs != null) {
+                rs.put(field, decryptValue(key, cryptor, type, bs));
+            }
         }
         return rs;
     }
@@ -926,14 +984,18 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Void> hsetStringAsync(final String key, final String field, final String value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
         return completableFuture(map.fastPutAsync(field, encryptValue(key, cryptor, value)).thenApply(r -> null));
     }
 
     @Override
     public CompletableFuture<Void> hsetnxStringAsync(final String key, final String field, final String value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
         return completableFuture(map.fastPutIfAbsentAsync(field, encryptValue(key, cryptor, value)).thenApply(r -> null));
     }
@@ -996,11 +1058,17 @@ public class RedissionCacheSource extends AbstractRedisSource {
             final Map<String, T> rs = new LinkedHashMap<>();
             int index = -1;
             while (it.hasNext()) {
-                if (++index < offset) continue;
-                if (index >= offset + limit) break;
+                if (++index < offset) {
+                    continue;
+                }
+                if (index >= offset + limit) {
+                    break;
+                }
                 String field = it.next();
                 byte[] bs = map.get(field);
-                if (bs != null) rs.put(field, decryptValue(key, cryptor, type, bs));
+                if (bs != null) {
+                    rs.put(field, decryptValue(key, cryptor, type, bs));
+                }
             }
             return rs;
         });
@@ -1015,11 +1083,17 @@ public class RedissionCacheSource extends AbstractRedisSource {
             final Map<String, T> rs = new LinkedHashMap<>();
             int index = -1;
             while (it.hasNext()) {
-                if (++index < offset) continue;
-                if (index >= offset + limit) break;
+                if (++index < offset) {
+                    continue;
+                }
+                if (index >= offset + limit) {
+                    break;
+                }
                 String field = it.next();
                 byte[] bs = map.get(field);
-                if (bs != null) rs.put(field, decryptValue(key, cryptor, type, bs));
+                if (bs != null) {
+                    rs.put(field, decryptValue(key, cryptor, type, bs));
+                }
             }
             return rs;
         });
@@ -1090,7 +1164,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
             if (String.valueOf(type).contains("list")) {
                 return (CompletionStage) client.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty()) return list;
+                    if (list == null || list.isEmpty()) {
+                        return list;
+                    }
                     List<T> rs = new ArrayList<>();
                     for (Object item : list) {
                         byte[] bs = (byte[]) item;
@@ -1104,7 +1180,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
                 });
             } else {
                 return (CompletionStage) client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-                    if (set == null || set.isEmpty()) return set;
+                    if (set == null || set.isEmpty()) {
+                        return set;
+                    }
                     Set<T> rs = new LinkedHashSet<>();
                     for (Object item : set) {
                         byte[] bs = (byte[]) item;
@@ -1123,7 +1201,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
         return completableFuture((CompletionStage) client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-            if (set == null || set.isEmpty()) return set;
+            if (set == null || set.isEmpty()) {
+                return set;
+            }
             Set<T> rs = new LinkedHashSet<>();
             for (Object item : set) {
                 byte[] bs = (byte[]) item;
@@ -1140,7 +1220,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType) {
         return completableFuture((CompletionStage) client.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-            if (list == null || list.isEmpty()) return list;
+            if (list == null || list.isEmpty()) {
+                return list;
+            }
             List<T> rs = new ArrayList<>();
             for (Object item : list) {
                 byte[] bs = (byte[]) item;
@@ -1184,7 +1266,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Map<String, String>> mgetStringAsync(String... keys) {
         return completableFuture(client.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).getAsync(keys).thenApply(map -> {
-            if (cryptor == null) return (Map) map;
+            if (cryptor == null) {
+                return (Map) map;
+            }
             Map rs = new LinkedHashMap();
             map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, v == null ? null : v.toString())));
             return rs;
@@ -1218,7 +1302,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
                 futures[i] = completableFuture(client.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty()) return list;
+                    if (list == null || list.isEmpty()) {
+                        return list;
+                    }
                     List<T> rs = new ArrayList<>();
                     for (Object item : list) {
                         byte[] bs = (byte[]) item;
@@ -1238,7 +1324,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
                 futures[i] = completableFuture(client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty()) return list;
+                    if (list == null || list.isEmpty()) {
+                        return list;
+                    }
                     List<T> rs = new ArrayList<>();
                     for (Object item : list) {
                         byte[] bs = (byte[]) item;
@@ -1273,7 +1361,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             futures[i] = completableFuture(client.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                if (list == null || list.isEmpty()) return list;
+                if (list == null || list.isEmpty()) {
+                    return list;
+                }
                 List<T> rs = new ArrayList<>();
                 for (Object item : list) {
                     byte[] bs = (byte[]) item;
@@ -1307,7 +1397,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             futures[i] = completableFuture(client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-                if (set == null || set.isEmpty()) return set;
+                if (set == null || set.isEmpty()) {
+                    return set;
+                }
                 Set<T> rs = new LinkedHashSet<>();
                 for (Object item : set) {
                     byte[] bs = (byte[]) item;
@@ -1420,7 +1512,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
             if (String.valueOf(type).contains("list")) {
                 return (CompletionStage) client.getList(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty() || cryptor == null) return list;
+                    if (list == null || list.isEmpty() || cryptor == null) {
+                        return list;
+                    }
                     List<String> rs = new ArrayList<>();
                     for (Object item : list) {
                         rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
@@ -1429,8 +1523,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
                 });
             } else {
                 return (CompletionStage) client.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply(set -> {
-                    if (set == null) return set;
-                    if (set.isEmpty() || cryptor == null) return new ArrayList<>(set);
+                    if (set == null) {
+                        return set;
+                    }
+                    if (set.isEmpty() || cryptor == null) {
+                        return new ArrayList<>(set);
+                    }
                     List<String> rs = new ArrayList<>(); //不用set
                     for (Object item : set) {
                         rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
@@ -1722,7 +1820,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Set<T>> spopAsync(String key, int count, Type componentType) {
         final RSet<byte[]> bucket = client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.removeRandomAsync(count).thenApply((Set<byte[]> bslist) -> {
-            if (bslist == null || bslist.isEmpty()) return new LinkedHashSet<T>();
+            if (bslist == null || bslist.isEmpty()) {
+                return new LinkedHashSet<T>();
+            }
             Set<T> rs = new LinkedHashSet<>();
             for (byte[] bs : bslist) {
                 rs.add(decryptValue(key, cryptor, componentType, bs));
@@ -1741,8 +1841,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public CompletableFuture<Set<String>> spopStringAsync(String key, int count) {
         final RSet<String> bucket = client.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
         return completableFuture(bucket.removeRandomAsync(count).thenApply(r -> {
-            if (r == null) return r;
-            if (cryptor == null) return new LinkedHashSet<>(r);
+            if (r == null) {
+                return r;
+            }
+            if (cryptor == null) {
+                return new LinkedHashSet<>(r);
+            }
             Set<String> rs = new LinkedHashSet<>();
             for (Object item : r) {
                 rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
@@ -1781,7 +1885,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final RSet<byte[]> bucket = client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         Set< byte[]> bslist = bucket.removeRandom(count);
         Set<T> rs = new LinkedHashSet<>();
-        if (bslist == null) return rs;
+        if (bslist == null) {
+            return rs;
+        }
         for (byte[] bs : bslist) {
             rs.add(decryptValue(key, cryptor, componentType, bs));
         }
@@ -1798,7 +1904,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public Set<String> spopString(String key, int count) {
         final RSet<String> bucket = client.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
         Set<String> r = bucket.removeRandom(count);
-        if (cryptor == null) return r;
+        if (cryptor == null) {
+            return r;
+        }
         Set<String> rs = new LinkedHashSet<>();
         for (String item : r) {
             rs.add(decryptValue(key, cryptor, item));

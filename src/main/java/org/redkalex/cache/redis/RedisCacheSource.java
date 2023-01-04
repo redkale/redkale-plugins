@@ -60,7 +60,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public void init(AnyValue conf) {
         super.init(conf);
-        if (conf == null) conf = AnyValue.create();
+        if (conf == null) {
+            conf = AnyValue.create();
+        }
         initClient(conf);
     }
 
@@ -116,7 +118,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
             }
             password = node.getValue(CACHE_SOURCE_PASSWORD, urlpwd).trim();
             String db0 = node.getValue(CACHE_SOURCE_DB, urldb).trim();
-            if (!db0.isEmpty()) db = Integer.valueOf(db0);
+            if (!db0.isEmpty()) {
+                db = Integer.valueOf(db0);
+            }
             break;
         }
         int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
@@ -124,31 +128,41 @@ public final class RedisCacheSource extends AbstractRedisSource {
         RedisCacheClient old = this.client;
         this.client = new RedisCacheClient(asyncGroup, resourceName() + "." + db, new ClientAddress(address), maxconns, pipelines,
             password == null || password.isEmpty() ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
-        if (old != null) old.close();
+        if (old != null) {
+            old.close();
+        }
         //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" + db);
     }
 
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {
-        if (events == null || events.length < 1) return;
+        if (events == null || events.length < 1) {
+            return;
+        }
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
         initClient(this.config);
-        if (!sb.isEmpty()) {
+        if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
     }
 
     public boolean acceptsConf(AnyValue config) {
-        if (config == null) return false;
+        if (config == null) {
+            return false;
+        }
         AnyValue[] nodes = getNodes(config);
-        if (nodes == null || nodes.length == 0) return false;
+        if (nodes == null || nodes.length == 0) {
+            return false;
+        }
         for (AnyValue node : nodes) {
             String val = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
-            if (val != null && val.startsWith("redis://")) return true;
+            if (val != null && val.startsWith("redis://")) {
+                return true;
+            }
         }
         return false;
     }
@@ -159,7 +173,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
             AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
             if (one == null) {
                 String val = config.getValue(CACHE_SOURCE_URL);
-                if (val == null) return nodes;
+                if (val == null) {
+                    return nodes;
+                }
                 nodes = new AnyValue[]{config};
             } else {
                 nodes = new AnyValue[]{one};
@@ -181,7 +197,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public void destroy(AnyValue conf) {
         super.destroy(conf);
-        if (client != null) client.close();
+        if (client != null) {
+            client.close();
+        }
     }
 
     //--------------------- exists ------------------------------
@@ -492,7 +510,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     //--------------------- del ------------------------------    
     @Override
     public CompletableFuture<Integer> delAsync(String... keys) {
-        if (keys.length == 0) return CompletableFuture.completedFuture(0);
+        if (keys.length == 0) {
+            return CompletableFuture.completedFuture(0);
+        }
         if (keys.length == 1) {
             return sendAsync("DEL", keys[0], keys[0].getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
         } else {
@@ -738,19 +758,25 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Type type, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync("HSET", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, null, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync("HSET", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public CompletableFuture<Void> hsetStringAsync(final String key, final String field, final String value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync("HSET", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
     }
 
@@ -761,19 +787,25 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Void> hsetnxAsync(final String key, final String field, final Type type, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, null, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public <T> CompletableFuture<Void> hsetnxAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public CompletableFuture<Void> hsetnxStringAsync(final String key, final String field, final String value) {
-        if (value == null) return CompletableFuture.completedFuture(null);
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
     }
 
@@ -867,7 +899,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
         return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
             String type = t.getStringValue(key, cryptor);
-            if (type == null) return CompletableFuture.completedFuture(0);
+            if (type == null) {
+                return CompletableFuture.completedFuture(0);
+            }
             return sendAsync(type.contains("list") ? "LLEN" : "SCARD", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
         });
     }
@@ -901,7 +935,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
             String type = t.getStringValue(key, cryptor);
-            if (type == null) return CompletableFuture.completedFuture(null);
+            if (type == null) {
+                return CompletableFuture.completedFuture(null);
+            }
             boolean set = !type.contains("list");
             return sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenApply(v -> set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType));
         });
@@ -952,7 +988,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
+                if (obj != null) {
+                    map.put(keys[i], list.get(i));
+                }
             }
             return map;
         });
@@ -969,7 +1007,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
+                if (obj != null) {
+                    map.put(keys[i], list.get(i));
+                }
             }
             return map;
         });
@@ -986,7 +1026,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
+                if (obj != null) {
+                    map.put(keys[i], list.get(i));
+                }
             }
             return map;
         });
@@ -1003,7 +1045,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
-                if (obj != null) map.put(keys[i], list.get(i));
+                if (obj != null) {
+                    map.put(keys[i], list.get(i));
+                }
             }
             return map;
         });
@@ -1151,7 +1195,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
         return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
             String type = t.getStringValue(key, cryptor);
-            if (type == null) return CompletableFuture.completedFuture(null);
+            if (type == null) {
+                return CompletableFuture.completedFuture(null);
+            }
             boolean set = !type.contains("list");
             return sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenApply(v -> set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class));
         });
@@ -1197,7 +1243,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
         return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
             String type = t.getStringValue(key, cryptor);
-            if (type == null) return CompletableFuture.completedFuture(null);
+            if (type == null) {
+                return CompletableFuture.completedFuture(null);
+            }
             boolean set = !type.contains("list");
             return sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenApply(v -> set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class));
         });
@@ -1554,7 +1602,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<RedisCacheResult> sendAsync(final String command, final String key, final Serializable... args) {
         int start = key == null ? 0 : 1;
         byte[][] bs = new byte[args.length + start][];
-        if (key != null) bs[0] = key.getBytes(StandardCharsets.UTF_8);
+        if (key != null) {
+            bs[0] = key.getBytes(StandardCharsets.UTF_8);
+        }
         for (int i = start; i < bs.length; i++) {
             bs[i] = JsonConvert.root().convertToBytes(args[i - 1]);
         }
@@ -1575,7 +1625,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     private byte[][] keyArgs(boolean set, String key) {
-        if (set) return new byte[][]{key.getBytes(StandardCharsets.UTF_8)};
+        if (set) {
+            return new byte[][]{key.getBytes(StandardCharsets.UTF_8)};
+        }
         return new byte[][]{key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'}};
     }
 
@@ -1584,8 +1636,12 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     private byte[] formatValue(String key, RedisCryptor cryptor, String value) {
-        if (cryptor != null) value = cryptor.encrypt(key, value);
-        if (value == null) throw new NullPointerException();
+        if (cryptor != null) {
+            value = cryptor.encrypt(key, value);
+        }
+        if (value == null) {
+            throw new NullPointerException();
+        }
         return value.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -1608,7 +1664,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
             return (byte[]) value;
         }
         if (value instanceof CharSequence) {
-            if (cryptor != null) value = cryptor.encrypt(key, String.valueOf(value));
+            if (cryptor != null) {
+                value = cryptor.encrypt(key, String.valueOf(value));
+            }
             return String.valueOf(value).getBytes(StandardCharsets.UTF_8);
         }
         if (value.getClass().isPrimitive() || Number.class.isAssignableFrom(value.getClass())) {

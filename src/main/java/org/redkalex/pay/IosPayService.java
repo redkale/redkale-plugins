@@ -60,7 +60,9 @@ public final class IosPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = JsonConvert.root();
+        if (this.convert == null) {
+            this.convert = JsonConvert.root();
+        }
         this.reloadConfig(Pays.PAYTYPE_IOS);
     }
 
@@ -107,7 +109,9 @@ public final class IosPayService extends AbstractPayService {
                 sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
-        if (sb.isEmpty()) return; //无相关配置变化
+        if (sb.length() < 1) {
+            return; //无相关配置变化
+        }
         logger.log(Level.INFO, sb.toString());
         this.elements = IosElement.create(logger, changeProps);
         this.elementProps = changeProps;
@@ -174,8 +178,12 @@ public final class IosPayService extends AbstractPayService {
             try {
                 final Map<String, String> resultmap = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, responseText);
                 resp.setResult(resultmap);
-                if ("21007".equals(resultmap.get("status"))) return verifyRequest(SANDBOX, receiptData, request, resp);
-                if (!"0".equals(resultmap.get("status"))) return resp.retcode(RETPAY_PAY_ERROR).toFuture();
+                if ("21007".equals(resultmap.get("status"))) {
+                    return verifyRequest(SANDBOX, receiptData, request, resp);
+                }
+                if (!"0".equals(resultmap.get("status"))) {
+                    return resp.retcode(RETPAY_PAY_ERROR).toFuture();
+                }
                 resp.setPayedMoney(0);
             } catch (Throwable t) {
                 logger.log(Level.SEVERE, "verifyRequest " + request + " error", t);
@@ -306,7 +314,9 @@ public final class IosPayService extends AbstractPayService {
                 element.notifyurl = notifyurl;
                 if (element.initElement(logger, null)) {
                     map.put(appid, element);
-                    if (def_appid.equals(appid)) map.put("", element);
+                    if (def_appid.equals(appid)) {
+                        map.put("", element);
+                    }
                 }
             });
             return map;

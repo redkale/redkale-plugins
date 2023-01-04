@@ -59,7 +59,9 @@ public final class UnionPayService extends AbstractPayService {
         try {
             Class clazz = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
             Class<? extends java.security.Provider> providerClazz = (Class<? extends java.security.Provider>) clazz;
-            if (Security.getProvider("BC") != null) Security.removeProvider("BC");
+            if (Security.getProvider("BC") != null) {
+                Security.removeProvider("BC");
+            }
             Security.addProvider(providerClazz.getDeclaredConstructor().newInstance());
         } catch (Exception ex) {
         }
@@ -67,7 +69,9 @@ public final class UnionPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
-        if (this.convert == null) this.convert = JsonConvert.root();
+        if (this.convert == null) {
+            this.convert = JsonConvert.root();
+        }
         this.reloadConfig(Pays.PAYTYPE_UNION);
     }
 
@@ -110,7 +114,9 @@ public final class UnionPayService extends AbstractPayService {
                 sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
-        if (sb.isEmpty()) return; //无相关配置变化
+        if (sb.length() < 1) {
+            return; //无相关配置变化
+        }
         logger.log(Level.INFO, sb.toString());
         this.elements = UnionPayElement.create(logger, changeProps, home);
         this.elementProps = changeProps;
@@ -149,10 +155,14 @@ public final class UnionPayService extends AbstractPayService {
         final PayPreResponse result = new PayPreResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             result.setAppid(element.appid);
             TreeMap<String, String> map = new TreeMap<>();
-            if (request.getAttach() != null) map.putAll(request.getAttach());
+            if (request.getAttach() != null) {
+                map.putAll(request.getAttach());
+            }
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
             map.put("version", element.version);            //版本号 全渠道默认值
@@ -180,7 +190,9 @@ public final class UnionPayService extends AbstractPayService {
                 result.responseText = responseText;
                 Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
@@ -212,10 +224,16 @@ public final class UnionPayService extends AbstractPayService {
         result.setPayno(map.getOrDefault("orderId", ""));
         result.setThirdPayno(map.getOrDefault("queryId", ""));
         final UnionPayElement element = elements.get(request.getAppid());
-        if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
-        if (!checkSign(element, map, request.getBody(), request.getHeaders())) return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
+        if (element == null) {
+            return result.retcode(RETPAY_CONF_ERROR).toFuture();
+        }
+        if (!checkSign(element, map, request.getBody(), request.getHeaders())) {
+            return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
+        }
         //https://open.unionpay.com/upload/download/%E5%B9%B3%E5%8F%B0%E6%8E%A5%E5%85%A5%E6%8E%A5%E5%8F%A3%E8%A7%84%E8%8C%83-%E7%AC%AC5%E9%83%A8%E5%88%86-%E9%99%84%E5%BD%95V2.0.pdf
-        if ("70".equals(map.get("respCode"))) return result.retcode(RETPAY_PAY_WAITING).notifytext(map.getOrDefault("respMsg", "unpay")).toFuture();
+        if ("70".equals(map.get("respCode"))) {
+            return result.retcode(RETPAY_PAY_WAITING).notifytext(map.getOrDefault("respMsg", "unpay")).toFuture();
+        }
         if (!"00".equalsIgnoreCase(map.get("respCode")) || Long.parseLong(map.getOrDefault("txnAmt", "0")) < 1) {
             return result.retcode(RETPAY_PAY_ERROR).retinfo(map.getOrDefault("respMsg", null)).toFuture();
         }
@@ -234,9 +252,13 @@ public final class UnionPayService extends AbstractPayService {
         final PayCreatResponse result = new PayCreatResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             TreeMap<String, String> map = new TreeMap<>();
-            if (request.getAttach() != null) map.putAll(request.getAttach());
+            if (request.getAttach() != null) {
+                map.putAll(request.getAttach());
+            }
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
             map.put("version", element.version);            //版本号 全渠道默认值
@@ -263,14 +285,18 @@ public final class UnionPayService extends AbstractPayService {
             //注意:1.需设置为外网能访问，否则收不到通知    2.http https均可  3.收单后台通知后需要10秒内返回http200或302状态码 
             //    4.如果银联通知服务器发送通知后10秒内未收到返回状态码或者应答码非http200或302，那么银联会间隔一段时间再次发送。总共发送5次，银联后续间隔1、2、4、5 分钟后会再次通知。
             //    5.后台通知地址如果上送了带有？的参数，例如：http://abc/web?a=b&c=d 在后台通知处理程序验证签名之前需要编写逻辑将这些字段去掉再验签，否则将会验签失败
-            if (!element.notifyurl.isEmpty()) map.put("backUrl", element.notifyurl);
+            if (!element.notifyurl.isEmpty()) {
+                map.put("backUrl", element.notifyurl);
+            }
             map.put("signature", createSign(element, map, null));
 
             return postHttpContentAsync(element.createurl, joinMap(map)).thenApply(responseText -> {
                 result.responseText = responseText;
                 Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
@@ -296,7 +322,9 @@ public final class UnionPayService extends AbstractPayService {
         final PayQueryResponse result = new PayQueryResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             TreeMap<String, String> map = new TreeMap<>();
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
@@ -322,7 +350,9 @@ public final class UnionPayService extends AbstractPayService {
                 result.responseText = responseText;
                 Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
@@ -362,7 +392,9 @@ public final class UnionPayService extends AbstractPayService {
         final PayResponse result = new PayResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             TreeMap<String, String> map = new TreeMap<>();
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
@@ -386,7 +418,9 @@ public final class UnionPayService extends AbstractPayService {
 
             map.put("origQryId", request.getThirdPayno());  //【原始交易流水号】，原消费交易返回的的queryId，可以从消费交易后台通知接口中或者交易状态查询接口中获取
             //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址，【支付失败的交易银联不会发送后台通知】
-            if (!element.notifyurl.isEmpty()) map.put("backUrl", element.notifyurl);
+            if (!element.notifyurl.isEmpty()) {
+                map.put("backUrl", element.notifyurl);
+            }
 
             map.put("signature", createSign(element, map, null));
 
@@ -394,7 +428,9 @@ public final class UnionPayService extends AbstractPayService {
                 result.responseText = responseText;
                 Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
@@ -418,7 +454,9 @@ public final class UnionPayService extends AbstractPayService {
         final PayRefundResponse result = new PayRefundResponse();
         try {
             final UnionPayElement element = elements.get(request.getAppid());
-            if (element == null) return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            if (element == null) {
+                return result.retcode(RETPAY_CONF_ERROR).toFuture();
+            }
             TreeMap<String, String> map = new TreeMap<>();
 
             /** *银联全渠道系统，产品参数，除了encoding自行选择外其他不需修改** */
@@ -441,14 +479,18 @@ public final class UnionPayService extends AbstractPayService {
 
             map.put("origQryId", request.getThirdPayno());  //【原始交易流水号】，原消费交易返回的的queryId，可以从消费交易后台通知接口中或者交易状态查询接口中获取
             //后台通知地址（需设置为外网能访问 http https均可），支付成功后银联会自动将异步通知报文post到商户上送的该地址，【支付失败的交易银联不会发送后台通知】
-            if (!element.notifyurl.isEmpty()) map.put("backUrl", element.notifyurl);
+            if (!element.notifyurl.isEmpty()) {
+                map.put("backUrl", element.notifyurl);
+            }
 
             map.put("signature", createSign(element, map, null));
             return postHttpContentAsync(element.refundurl, joinMap(map)).thenApply(responseText -> {
                 result.responseText = responseText;
                 Map<String, String> resultmap = formatTextToMap(result.responseText);
                 result.setResult(resultmap);
-                if (!checkSign(element, resultmap, responseText, null)) return result.retcode(RETPAY_FALSIFY_ERROR);
+                if (!checkSign(element, resultmap, responseText, null)) {
+                    return result.retcode(RETPAY_FALSIFY_ERROR);
+                }
                 if (!"00".equalsIgnoreCase(resultmap.get("respCode"))) {
                     return result.retcode(RETPAY_PAY_ERROR).retinfo(resultmap.get("respMsg"));
                 }
@@ -485,7 +527,9 @@ public final class UnionPayService extends AbstractPayService {
         Map<String, String> map = new TreeMap<>();
         for (String item : responseText.split("&")) {
             int pos = item.indexOf('=');
-            if (pos < 0) return map;
+            if (pos < 0) {
+                return map;
+            }
             map.put(item.substring(0, pos), item.substring(pos + 1));
         }
         return map;
@@ -507,8 +551,12 @@ public final class UnionPayService extends AbstractPayService {
 
     @Override
     protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {  //验证签名
-        if (!((UnionPayElement) element).verifycertid.equals(map.get("certId"))) return false;
-        if (!(map instanceof SortedMap)) map = new TreeMap<>(map);
+        if (!((UnionPayElement) element).verifycertid.equals(map.get("certId"))) {
+            return false;
+        }
+        if (!(map instanceof SortedMap)) {
+            map = new TreeMap<>(map);
+        }
         try {
             final byte[] sign = Base64.getDecoder().decode(((String) map.remove("signature")).getBytes(StandardCharsets.UTF_8));
             final byte[] sha1 = MessageDigest.getInstance("SHA-1").digest(joinMap(map).getBytes(StandardCharsets.UTF_8));
@@ -582,7 +630,9 @@ public final class UnionPayService extends AbstractPayService {
                     File signfile = (signcertpath.indexOf('/') == 0 || signcertpath.indexOf(':') > 0) ? new File(signcertpath) : new File(home, "conf/" + signcertpath);
                     signin = signfile.isFile() ? new FileInputStream(signfile) : UnionPayService.class.getResourceAsStream("/META-INF/" + signcertpath);
                 }
-                if (signin == null) return false;
+                if (signin == null) {
+                    return false;
+                }
                 //读取验证证书公钥
                 InputStream verifyin;
                 if (this.verifycertbase64 != null && !this.verifycertbase64.isEmpty()) {
@@ -591,7 +641,9 @@ public final class UnionPayService extends AbstractPayService {
                     File verifyfile = (verifycertpath.indexOf('/') == 0 || verifycertpath.indexOf(':') > 0) ? new File(verifycertpath) : new File(home, "conf/" + verifycertpath);
                     verifyin = verifyfile.isFile() ? new FileInputStream(verifyfile) : UnionPayService.class.getResourceAsStream("/META-INF/" + verifycertpath);
                 }
-                if (verifyin == null) return false;
+                if (verifyin == null) {
+                    return false;
+                }
                 //读取签名证书私钥
                 final KeyStore keyStore = (Security.getProvider("BC") == null) ? KeyStore.getInstance("PKCS12") : KeyStore.getInstance("PKCS12", "BC");
                 keyStore.load(signin, this.signcertpwd.toCharArray());
@@ -672,7 +724,9 @@ public final class UnionPayService extends AbstractPayService {
 
                 if (element.initElement(logger, home)) {
                     map.put(appid, element);
-                    if (def_appid.equals(appid)) map.put("", element);
+                    if (def_appid.equals(appid)) {
+                        map.put("", element);
+                    }
                 }
             });
             //if (logger.isLoggable(Level.FINEST)) logger.finest("" + map);
