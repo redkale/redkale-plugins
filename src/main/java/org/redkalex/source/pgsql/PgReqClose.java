@@ -5,9 +5,10 @@
  */
 package org.redkalex.source.pgsql;
 
+import java.util.Objects;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
-import static org.redkalex.source.pgsql.PgClientRequest.*;
+import static org.redkalex.source.pgsql.PgClientRequest.REQ_TYPE_UPDATE;
 
 /**
  *
@@ -27,7 +28,7 @@ public class PgReqClose extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqClose{}";
+        return "PgReqClose_" + Objects.hashCode(this) + "{type=" + getType() + "}";
     }
 
     @Override

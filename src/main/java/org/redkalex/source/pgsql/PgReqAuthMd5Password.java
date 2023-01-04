@@ -7,7 +7,7 @@ package org.redkalex.source.pgsql;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import java.util.Arrays;
+import java.util.*;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.source.SourceException;
 import org.redkale.util.*;
@@ -37,7 +37,7 @@ public class PgReqAuthMd5Password extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqAuthMd5Password{username=" + username + ", password=" + password + ", salt=" + Arrays.toString(salt) + "}";
+        return "PgReqAuthMd5Password_" + Objects.hashCode(this) + "{username=" + username + ", password=" + password + ", salt=" + Arrays.toString(salt) + "}";
     }
 
     @Override

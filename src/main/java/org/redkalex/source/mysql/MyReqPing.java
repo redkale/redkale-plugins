@@ -5,6 +5,8 @@
  */
 package org.redkalex.source.mysql;
 
+import java.util.Objects;
+
 /**
  *
  * @author zhangjx
@@ -16,5 +18,10 @@ public class MyReqPing extends MyReqQuery {
     @SuppressWarnings("OverridableMethodCallInConstructor")
     public MyReqPing() {
         prepare("SELECT 1");
+    }
+    
+    @Override
+    public String toString() {
+        return "MyReqPing_" + Objects.hashCode(this) + "{sql=" + sql + "}";
     }
 }

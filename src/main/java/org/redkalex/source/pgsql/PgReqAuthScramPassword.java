@@ -7,7 +7,7 @@ package org.redkalex.source.pgsql;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.List;
+import java.util.*;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
 
@@ -54,7 +54,7 @@ public class PgReqAuthScramPassword extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqAuthScramPassword{username=" + username + ", password=" + password + ", mechanisms=" + mechanisms + ", clientNonce=" + clientNonce + ", reqMessage=" + reqMessage + "}";
+        return "PgReqAuthScramPassword_" + Objects.hashCode(this)+"{username=" + username + ", password=" + password + ", mechanisms=" + mechanisms + ", clientNonce=" + clientNonce + ", reqMessage=" + reqMessage + "}";
     }
 
     @Override

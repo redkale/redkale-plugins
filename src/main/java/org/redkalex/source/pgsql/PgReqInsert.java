@@ -5,6 +5,9 @@
  */
 package org.redkalex.source.pgsql;
 
+import java.util.Objects;
+import org.redkale.convert.json.JsonConvert;
+
 /**
  *
  * @author zhangjx
@@ -14,5 +17,10 @@ public class PgReqInsert extends PgReqUpdate {
     @Override
     public int getType() {
         return REQ_TYPE_INSERT;
+    }
+    
+    @Override
+    public String toString() {
+        return "PgReqInsert" + Objects.hashCode(this) + "{sql=" + sql + ", paramValues=" + JsonConvert.root().convertTo(paramValues) + "}";
     }
 }

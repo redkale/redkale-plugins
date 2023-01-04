@@ -57,7 +57,9 @@ public class PgReqAuthScramSaslFinal extends PgClientRequest {
         if (msgs[0].startsWith("v=")) {
             byte[] verifier = Base64.getDecoder().decode(msgs[0].substring(2));
             byte[] localsign = hmac(serverKey, authMessage.getBytes(StandardCharsets.UTF_8));
-            if (!Arrays.equals(localsign, verifier)) throw new IllegalArgumentException("Invalid server SCRAM signature in " + msgs[0] + ", buffer.remain = " + buffer.remaining());
+            if (!Arrays.equals(localsign, verifier)) {
+                throw new IllegalArgumentException("Invalid server SCRAM signature in " + msgs[0] + ", buffer.remain = " + buffer.remaining());
+            }
         } else if (msgs[0].startsWith("e=")) {
             throw new IllegalArgumentException(msgs[0].substring(2));
         } else {
@@ -67,7 +69,7 @@ public class PgReqAuthScramSaslFinal extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqAuthScramSaslFinal{msg=" + clientFinalMessage + "}";
+        return "PgReqAuthScramSaslFinal_" + Objects.hashCode(this) + "{msg=" + clientFinalMessage + "}";
     }
 
     @Override

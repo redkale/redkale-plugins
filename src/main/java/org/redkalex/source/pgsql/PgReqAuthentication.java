@@ -5,9 +5,10 @@
  */
 package org.redkalex.source.pgsql;
 
+import java.util.Objects;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.source.AbstractDataSource.SourceUrlInfo;
-import org.redkale.util.*;
+import org.redkale.util.ByteArray;
 
 /**
  *
@@ -28,7 +29,7 @@ public class PgReqAuthentication extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqAuthentication{username=" + info.username + ", password=" + info.password + ", database=" + info.database + "}";
+        return "PgReqAuthentication_" + Objects.hashCode(this) + "{username=" + info.username + ", password=" + info.password + ", database=" + info.database + "}";
     }
 
     @Override

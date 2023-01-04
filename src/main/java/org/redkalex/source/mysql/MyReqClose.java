@@ -5,9 +5,10 @@
  */
 package org.redkalex.source.mysql;
 
+import java.util.Objects;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
-import static org.redkalex.source.mysql.MyClientRequest.*;
+import static org.redkalex.source.mysql.MyClientRequest.REQ_TYPE_UPDATE;
 
 /**
  *
@@ -27,7 +28,7 @@ public class MyReqClose extends MyClientRequest {
 
     @Override
     public String toString() {
-        return "MyReqClose{}";
+        return "MyReqClose_" + Objects.hashCode(this) + "{type=" + getType() + "}";
     }
 
     @Override
