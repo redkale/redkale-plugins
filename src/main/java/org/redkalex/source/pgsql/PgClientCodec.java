@@ -86,13 +86,15 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         }
         //buffer必然包含一个完整的frame数据
         boolean hadResult = false;
+        ClientFuture<PgClientRequest> respFuture = null;
         PgClientRequest request = null;
         Iterator<ClientFuture> respIt = responseIterator();
         boolean update_1_to_2 = false;
         while (buffer.hasRemaining()) {
             while (buffer.hasRemaining()) {
                 if (request == null) {
-                    request = respIt.hasNext() ? (PgClientRequest) respIt.next().getRequest() : null;
+                    respFuture = respIt.hasNext() ? respIt.next() : null;
+                    request = respFuture == null ? null : respFuture.getRequest();
                 }
                 final char cmd = (char) buffer.get();
                 if (buffer.remaining() < 4) {
@@ -182,6 +184,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastExc = null;
                         lastCount = 0;
                         hadResult = true;
+                        respFuture = null;
                         request = null;
                         break;
                     }
@@ -262,6 +265,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastExc = null;
                         lastCount = 0;
                         hadResult = true;
+                        respFuture = null;
                         request = null;
                         break;
                     }
@@ -272,7 +276,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     if (lastResult != null) {
                         if (request.isExtendType()) { //PgReqExtended
                             PgReqExtended reqext = (PgReqExtended) request;
-                            int mergeCount = reqext.getMergeCount();
+                            int mergeCount = respFuture.getMergeCount();
                             if (mergeCount > 0) {
                                 if (reqext.mode == PgReqExtended.PgReqExtendMode.LIST_ALL) {
                                     int page = lastResult.rowData.size() / (1 + mergeCount);
@@ -329,6 +333,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     lastExc = null;
                     lastCount = 0;
                     hadResult = true;
+                    respFuture = null;
                     request = null;
                     update_1_to_2 = false;
                     break;
