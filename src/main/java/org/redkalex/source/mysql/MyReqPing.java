@@ -13,8 +13,6 @@ import java.util.Objects;
  */
 public class MyReqPing extends MyReqQuery {
 
-    public static final MyReqPing INSTANCE = new MyReqPing();
-
     @SuppressWarnings("OverridableMethodCallInConstructor")
     public MyReqPing() {
         prepare("SELECT 1");

@@ -17,8 +17,11 @@ public class RedisCacheReqClose extends RedisCacheRequest {
 
     private static final byte[] PS = "QUIT".getBytes(StandardCharsets.UTF_8);
 
-    public static final RedisCacheReqClose INSTANCE = new RedisCacheReqClose();
-
+    @Override
+    public final boolean isCloseType() {
+        return true;
+    }
+    
     @Override
     public void accept(ClientConnection conn, ByteArray writer) {
         writer.put((byte) '*');

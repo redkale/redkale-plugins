@@ -27,7 +27,7 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
     @SuppressWarnings("OverridableMethodCallInConstructor")
     public MyClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines,
         final Properties prop, final SourceUrlInfo info, boolean autoddl, final Properties attributes) {
-        super(group, true, address, maxConns, maxPipelines, MyReqPing.INSTANCE, MyReqClose.INSTANCE, null); //maxConns
+        super(group, true, address, maxConns, maxPipelines, () -> new MyReqPing(), () -> new MyReqClose(), null); //maxConns
         this.info = info;
         this.autoddl = autoddl;
         this.connectionContextName = "redkalex-mysql-client-connection-" + key;

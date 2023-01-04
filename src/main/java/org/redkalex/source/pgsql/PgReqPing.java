@@ -13,8 +13,6 @@ import java.util.Objects;
  */
 public class PgReqPing extends PgReqQuery {
 
-    public static final PgReqPing INSTANCE = new PgReqPing();
-
     @SuppressWarnings("OverridableMethodCallInConstructor")
     public PgReqPing() {
         prepare("SELECT 1");

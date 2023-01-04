@@ -16,14 +16,17 @@ import static org.redkalex.source.mysql.MyClientRequest.REQ_TYPE_UPDATE;
  */
 public class MyReqClose extends MyClientRequest {
 
-    public static final MyReqClose INSTANCE = new MyReqClose();
-
     public MyReqClose() {
     }
 
     @Override
     public int getType() {
         return REQ_TYPE_UPDATE;
+    }
+
+    @Override
+    public final boolean isCloseType() {
+        return true;
     }
 
     @Override

@@ -17,8 +17,6 @@ public class RedisCacheReqPing extends RedisCacheRequest {
 
     private static final byte[] PS = "PING".getBytes(StandardCharsets.UTF_8);
 
-    public static final RedisCacheReqPing INSTANCE = new RedisCacheReqPing();
-
     @Override
     public void accept(ClientConnection conn, ByteArray writer) {
         writer.put((byte) '*');

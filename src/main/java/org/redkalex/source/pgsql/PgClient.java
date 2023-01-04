@@ -28,7 +28,7 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
     public PgClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, boolean autoddl, final Properties prop, final SourceUrlInfo info) {
-        super(group, true, address, maxConns, maxPipelines, PgReqPing.INSTANCE, PgReqClose.INSTANCE, null); //maxConns
+        super(group, true, address, maxConns, maxPipelines, () -> new PgReqPing(), () -> new PgReqClose(), null); //maxConns
         this.autoddl = autoddl;
         this.connectionContextName = "redkalex-pgsql-client-connection-" + key;
         this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, new PgReqAuthentication(info)).thenCompose((PgResultSet rs0) -> {

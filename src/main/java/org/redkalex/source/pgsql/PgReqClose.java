@@ -16,14 +16,17 @@ import static org.redkalex.source.pgsql.PgClientRequest.REQ_TYPE_UPDATE;
  */
 public class PgReqClose extends PgClientRequest {
 
-    public static final PgReqClose INSTANCE = new PgReqClose();
-
     public PgReqClose() {
     }
 
     @Override
     public int getType() {
         return REQ_TYPE_UPDATE;
+    }
+
+    @Override
+    public final boolean isCloseType() {
+        return true;
     }
 
     @Override
