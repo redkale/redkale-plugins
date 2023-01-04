@@ -6,7 +6,7 @@
 package org.redkalex.source.mysql;
 
 import java.util.Properties;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
@@ -25,8 +25,8 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
     protected final SourceUrlInfo info;
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public MyClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, final Properties prop,
-        final SourceUrlInfo info, boolean autoddl, final Properties attributes) {
+    public MyClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines,
+        final Properties prop, final SourceUrlInfo info, boolean autoddl, final Properties attributes) {
         super(group, true, address, maxConns, maxPipelines, MyReqPing.INSTANCE, MyReqClose.INSTANCE, null); //maxConns
         this.info = info;
         this.autoddl = autoddl;
@@ -36,7 +36,9 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
             CompletableFuture<MyResultSet> authFuture = writeChannel(conn, new MyReqAuthentication(handshake, info.username, info.password, info.database, attributes));
             return authFuture.thenCompose(v -> {
                 MyRespAuthResultSet authrs = (MyRespAuthResultSet) v;
-                if (authrs.authSwitch != null) return writeChannel(conn, authrs.authSwitch);
+                if (authrs.authSwitch != null) {
+                    return writeChannel(conn, authrs.authSwitch);
+                }
                 return CompletableFuture.completedFuture(authrs);
             }).thenApply(v -> conn);
         }));
@@ -60,7 +62,9 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
 
     @Override
     protected void handlePingResult(ClientConnection conn, MyResultSet result) {
-        if (result != null) result.close();
+        if (result != null) {
+            result.close();
+        }
     }
 
     protected Logger logger() {

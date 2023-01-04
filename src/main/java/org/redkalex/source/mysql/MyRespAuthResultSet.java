@@ -14,4 +14,5 @@ public class MyRespAuthResultSet extends MyResultSet {
     protected boolean authOK;
 
     protected MyReqAuthentication.MyReqAuthSwitch authSwitch;
+
 }

@@ -10,6 +10,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
+import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 
 /**
  *
@@ -26,20 +27,24 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
     protected final boolean autoddl;
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public PgClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, boolean autoddl, final Properties prop, final PgReqAuthentication authReq) {
+    public PgClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, boolean autoddl, final Properties prop, final SourceUrlInfo info) {
         super(group, true, address, maxConns, maxPipelines, PgReqPing.INSTANCE, PgReqClose.INSTANCE, null); //maxConns
         this.autoddl = autoddl;
         this.connectionContextName = "redkalex-pgsql-client-connection-" + key;
-        this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authReq).thenCompose((PgResultSet rs0) -> {
+        this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, new PgReqAuthentication(info)).thenCompose((PgResultSet rs0) -> {
             PgRespAuthResultSet rs = (PgRespAuthResultSet) rs0;
-            if (rs.isAuthOK()) return CompletableFuture.completedFuture(conn);
-            if (rs.getAuthSalt() != null) {
-                return writeChannel(conn, new PgReqAuthMd5Password(authReq.info.username, authReq.info.password, rs.getAuthSalt())).thenApply(pg -> conn);
+            if (rs.isAuthOK()) {
+                return CompletableFuture.completedFuture(conn);
             }
-            return writeChannel(conn, new PgReqAuthScramPassword(authReq.info.username, authReq.info.password, rs.getAuthMechanisms()))
+            if (rs.getAuthSalt() != null) {
+                return writeChannel(conn, new PgReqAuthMd5Password(info.username, info.password, rs.getAuthSalt())).thenApply(pg -> conn);
+            }
+            return writeChannel(conn, new PgReqAuthScramPassword(info.username, info.password, rs.getAuthMechanisms()))
                 .thenCompose((PgResultSet rs2) -> {
                     PgReqAuthScramSaslContinueResult cr = ((PgRespAuthResultSet) rs2).getAuthSaslContinueResult();
-                    if (cr == null) return CompletableFuture.completedFuture(conn);
+                    if (cr == null) {
+                        return CompletableFuture.completedFuture(conn);
+                    }
                     return writeChannel(conn, new PgReqAuthScramSaslFinal(cr)).thenApply(pg -> conn);
                 });
         }));
@@ -63,7 +68,9 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
 
     @Override
     protected void handlePingResult(ClientConnection conn, PgResultSet result) {
-        if (result != null) result.close();
+        if (result != null) {
+            result.close();
+        }
     }
 
     public boolean cachePreparedStatements() {
@@ -71,7 +78,9 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
     }
 
     public long extendedStatementid(String sql) {
-        if (!cachePreparedStatements) return 0L;
+        if (!cachePreparedStatements) {
+            return 0L;
+        }
         return extendedStatementIndexMap.computeIfAbsent(sql, s -> {
             short val = (short) extendedStatementIndex.getAndIncrement();
             long next = 0x30_30_30_00_00_00_00_00L;

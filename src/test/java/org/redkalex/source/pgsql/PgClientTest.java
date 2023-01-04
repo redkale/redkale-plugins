@@ -28,10 +28,9 @@ public class PgClientTest {
         info.password = "1234";
         info.database = "hello_world";
         SocketAddress address = new InetSocketAddress("127.0.0.1", 5432);
-        PgReqAuthentication authreq = new PgReqAuthentication(info);
         Properties prop = new Properties();
         prop.put("preparecache", "true");
-        final PgClient client = new PgClient(asyncGroup, "rw", new ClientAddress(address), 2, 16, false, prop, authreq);
+        final PgClient client = new PgClient(asyncGroup, "rw", new ClientAddress(address), 2, 16, false, prop, info);
         PgReqQuery showReqQuery = new PgReqQuery();
         showReqQuery.prepare("show all");
         CompletableFuture.allOf(client.sendAsync(showReqQuery), client.sendAsync(showReqQuery)).join();

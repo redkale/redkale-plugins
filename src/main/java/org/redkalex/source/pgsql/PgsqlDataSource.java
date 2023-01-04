@@ -23,7 +23,7 @@ import org.redkalex.source.pgsql.PgReqExtended.PgReqExtendMode;
 
 /**
  * 部分协议格式参考： http://wp1i.cn/archives/78556.html
- * 
+ *
  * org.postgresql.jdbc.PgDatabaseMetaData.getTables
  *
  * @author zhangjx
@@ -62,7 +62,6 @@ public class PgsqlDataSource extends DataSqlSource {
         SourceUrlInfo info = parseSourceUrl(url);
         info.username = prop.getProperty(DATA_SOURCE_USER, "");
         info.password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
-        PgReqAuthentication authReq = new PgReqAuthentication(info);
         int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
         int maxPipelines = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
         AsyncGroup ioGroup = clientAsyncGroup;
@@ -74,7 +73,7 @@ public class PgsqlDataSource extends DataSqlSource {
         } else {
             this.readGroup = ioGroup;
         }
-        return new PgClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, autoddl(), prop, authReq);
+        return new PgClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, autoddl(), prop, info);
     }
 
     @Override
@@ -250,7 +249,7 @@ public class PgsqlDataSource extends DataSqlSource {
             return executeUpdate(info, new String[]{copyTableSql}, null, 0, false, null);
         }
     }
-    
+
     @Override
     protected <T> CompletableFuture<Integer> dropTableDBAsync(EntityInfo<T> info, final String[] tables, FilterNode node, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
