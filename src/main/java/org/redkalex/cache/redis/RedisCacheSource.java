@@ -17,6 +17,7 @@ import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import static org.redkale.boot.Application.RESNAME_APP_EXECUTOR;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.*;
@@ -51,7 +52,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
     @Resource(name = RESNAME_APP_CLIENT_ASYNCGROUP, required = false)
-    protected AsyncGroup asyncGroup;
+    protected AsyncGroup clientAsyncGroup;
+
+    //配置<executor threads="0"> APP_EXECUTOR资源为null
+    @Resource(name = RESNAME_APP_EXECUTOR, required = false)
+    protected ExecutorService workExecutor;
 
     protected RedisCacheClient client;
 
@@ -123,10 +128,15 @@ public final class RedisCacheSource extends AbstractRedisSource {
             }
             break;
         }
+        AsyncGroup ioGroup = clientAsyncGroup;
+        if (clientAsyncGroup == null) {
+            String f = "Redkalex-Redis-IOThread-" + resourceName() + "-%s";
+            ioGroup = AsyncGroup.create(f, workExecutor, 16 * 1024, Utility.cpus() * 4).start();
+        }
         int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
         int pipelines = conf.getIntValue(CACHE_SOURCE_PIPELINES, urlpipelines);
         RedisCacheClient old = this.client;
-        this.client = new RedisCacheClient(asyncGroup, resourceName() + "." + db, new ClientAddress(address), maxconns, pipelines,
+        this.client = new RedisCacheClient(resourceName(), ioGroup, resourceName() + "." + db, new ClientAddress(address), maxconns, pipelines,
             password == null || password.isEmpty() ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
         if (old != null) {
             old.close();

@@ -81,7 +81,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
                 return null;
             }
             final AtomicInteger counter = new AtomicInteger();
-            this.listenExecutor = Executors.newFixedThreadPool(infos.size(), r -> new Thread(r, "Nacos-Config-Listen-Thread-" + counter.incrementAndGet()));
+            this.listenExecutor = Executors.newFixedThreadPool(infos.size(), r -> new Thread(r, "Redkalex-Properties-Nacos-Listen-Thread-" + counter.incrementAndGet()));
 
             this.configService = NacosFactory.createConfigService(agentConf);
             Map<String, Properties> result = new LinkedHashMap<>();

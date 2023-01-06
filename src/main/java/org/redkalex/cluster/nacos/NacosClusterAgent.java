@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.boot.*;
@@ -119,8 +120,9 @@ public class NacosClusterAgent extends ClusterAgent {
     @Override
     public void start() {
         if (this.scheduler == null) {
+            AtomicInteger counter = new AtomicInteger();
             this.scheduler = new ScheduledThreadPoolExecutor(4, (Runnable r) -> {
-                final Thread t = new Thread(r, NacosClusterAgent.class.getSimpleName() + "-Task-Thread");
+                final Thread t = new Thread(r, "Redkalex-" + NacosClusterAgent.class.getSimpleName() + "-Task-Thread-" + counter.incrementAndGet());
                 t.setDaemon(true);
                 return t;
             });

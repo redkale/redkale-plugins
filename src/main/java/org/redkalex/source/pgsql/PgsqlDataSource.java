@@ -65,14 +65,15 @@ public class PgsqlDataSource extends DataSqlSource {
         int maxPipelines = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
         AsyncGroup ioGroup = clientAsyncGroup;
         if (clientAsyncGroup == null || "write".equalsIgnoreCase(rw)) {
-            ioGroup = AsyncGroup.create("Redkalex-PgClient-IOThread-" + rw.toUpperCase(), workExecutor, 16 * 1024, Utility.cpus() * 4).start();
+            String f = "Redkalex-PgClient-IOThread-" + resourceName() + "-" + (rw.length() < 3 ? rw.toUpperCase() : Utility.firstCharUpperCase(rw)) + "-%s";
+            ioGroup = AsyncGroup.create(f, workExecutor, 16 * 1024, Utility.cpus() * 4).start();
         }
         if ("write".equals(rw)) {
             this.writeGroup = ioGroup;
         } else {
             this.readGroup = ioGroup;
         }
-        return new PgClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, autoddl(), prop, info);
+        return new PgClient(resourceName(), ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, autoddl(), prop, info);
     }
 
     @Override

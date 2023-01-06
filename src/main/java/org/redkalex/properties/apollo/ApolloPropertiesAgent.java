@@ -109,7 +109,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             result.put(info.namespaceName, info.properties);
         }
 
-        this.listenExecutor = new ScheduledThreadPoolExecutor(1, r -> new Thread(r, "Apollo-Config-Listen-Thread"));
+        this.listenExecutor = new ScheduledThreadPoolExecutor(1, r -> new Thread(r, "Redkalex-Properties-Apollo-Listen-Thread"));
         this.listenExecutor.scheduleWithFixedDelay(() -> {
             try {
                 long s = System.currentTimeMillis();

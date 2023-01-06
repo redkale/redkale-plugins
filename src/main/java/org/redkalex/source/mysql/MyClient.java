@@ -25,10 +25,10 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
     protected final SourceUrlInfo info;
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public MyClient(AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines,
+    public MyClient(String name, AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines,
         final Properties prop, final SourceUrlInfo info, boolean autoddl, final Properties attributes) {
-        super(group, true, address, maxConns, maxPipelines, () -> new MyReqPing(), () -> new MyReqClose(), null); //maxConns
-        this.info = info;
+        super(name, group, true, address, maxConns, maxPipelines, () -> new MyReqPing(), () -> new MyReqClose(), null); //maxConns
+        this.info = info; 
         this.autoddl = autoddl;
         this.connectionContextName = "redkalex-mysql-client-connection-" + key;
         this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, MyClientRequest.EMPTY).thenCompose((MyResultSet rs) -> {

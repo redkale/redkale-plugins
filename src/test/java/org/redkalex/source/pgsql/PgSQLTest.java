@@ -77,8 +77,8 @@ public class PgSQLTest {
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println("-------------------- " + (forFortune ? "Fortune" : "World") + " " + (rwSeparate ? "读写分离" : "读写合并") + " --------------------");
         System.out.println("-------------------- " + "当前内核数: " + Utility.cpus() + " --------------------");
-        if (false) {
-            System.out.println("当前机器CPU核数: " + Runtime.getRuntime().availableProcessors());
+        if (true) {
+            System.out.println("当前机器CPU核数: " + Utility.cpus());
             final CompletableFuture[] futures = new CompletableFuture[Utility.cpus()];
             for (int i = 0; i < futures.length; i++) {
                 futures[i] = source.findAsync(World.class, randomId()).thenCompose(v -> source.updateAsync(v));
@@ -95,7 +95,8 @@ public class PgSQLTest {
                 System.out.println("可写池resp等待数: " + getRespWaitingCount(source.writePool()));
             }
         }
-        System.out.println(source.findsList(Fortune.class, List.of(1, 222, 2, 3).stream()));
+        //System.out.println(source.findsList(Fortune.class, List.of(1, 222, 2, 3).stream()));
+        source.queryList(Fortune.class);
         final int fortuneSize = source.queryList(Fortune.class).size();
         System.out.println("Fortune数量: " + fortuneSize);
 

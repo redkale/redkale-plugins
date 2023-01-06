@@ -67,9 +67,10 @@ public class MysqlDataSource extends DataSqlSource {
         int maxPipelines = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
         AsyncGroup ioGroup = clientAsyncGroup;
         if (clientAsyncGroup == null || "write".equalsIgnoreCase(rw)) {
-            ioGroup = AsyncGroup.create("Redkalex-MyClient-IOThread-" + rw.toUpperCase(), workExecutor, 16 * 1024, Utility.cpus() * 4).start();
+            String f = "Redkalex-MyClient-IOThread-" + resourceName() + "-" + (rw.length() < 3 ? rw.toUpperCase() : Utility.firstCharUpperCase(rw)) + "-%s";
+            ioGroup = AsyncGroup.create(f, workExecutor, 16 * 1024, Utility.cpus() * 4).start();
         }
-        return new MyClient(ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, prop, info, autoddl(), info.attributes);
+        return new MyClient(resourceName(), ioGroup, resourceName() + "." + rw, new ClientAddress(info.servaddr), maxConns, maxPipelines, prop, info, autoddl(), info.attributes);
     }
 
     @Override

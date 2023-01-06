@@ -22,7 +22,6 @@ import org.redkale.annotation.Comment;
 import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.net.sncp.Sncp;
 import org.redkale.service.Local;
 import org.redkale.util.*;
 import static org.redkalex.pay.PayRetCodes.*;
@@ -73,7 +72,7 @@ public class WeiXinPayService extends AbstractPayService {
         }
         this.reloadConfig(Pays.PAYTYPE_WEIXIN);
         this.scheduler = new ScheduledThreadPoolExecutor(1, (Runnable r) -> {
-            final Thread t = new Thread(r, "Scheduled-" + Sncp.getServiceType(this).getSimpleName() + "-Certificate-Task-Thread");
+            final Thread t = new Thread(r, "Redkalex-Pay-Weixin-Certificate-Task-Thread");
             t.setDaemon(true);
             return t;
         });

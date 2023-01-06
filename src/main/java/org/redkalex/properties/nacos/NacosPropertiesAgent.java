@@ -100,13 +100,17 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             result.put(info.dataId, info.properties);
         }
 
-        this.listenExecutor = new ScheduledThreadPoolExecutor(1, r -> new Thread(r, "Nacos-Config-Listen-Thread"));
+        this.listenExecutor = new ScheduledThreadPoolExecutor(1, r -> new Thread(r, "Redkalex-Properties-Nacos-Listen-Thread"));
         this.listenExecutor.scheduleWithFixedDelay(() -> {
             try {
-                if (!remoteLogin()) return;
+                if (!remoteLogin()) {
+                    return;
+                }
                 long s = System.currentTimeMillis();
                 String url = this.apiUrl + "/cs/configs/listener?Listening-Configs=" + urlEncode(NacosInfo.paramBody(infos));
-                if (accessToken != null) url += "&accessToken=" + urlEncode(accessToken);
+                if (accessToken != null) {
+                    url += "&accessToken=" + urlEncode(accessToken);
+                }
                 //Listening-Configs=dataId%02group%02contentMD5%02tenant%01
                 HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(pullTimeoutMs)
                     .header("Long-Pulling-Timeout", String.valueOf(pullTimeoutMs.toMillis())).POST(HttpRequest.BodyPublishers.noBody()).build();
@@ -117,13 +121,17 @@ public class NacosPropertiesAgent extends PropertiesAgent {
                     Thread.sleep(5_000);
                     return;
                 }
-                if (content == null || content.trim().isEmpty()) return;
+                if (content == null || content.trim().isEmpty()) {
+                    return;
+                }
                 logger.log(Level.FINER, "nacos pulling content: " + content.trim() + ", cost " + (System.currentTimeMillis() - s) + " ms");
                 String split1 = Character.toString((char) 1);
                 String split2 = Character.toString((char) 2);
                 content = URLDecoder.decode(content.trim(), StandardCharsets.UTF_8);
                 for (String str : content.split(split1)) {
-                    if (str.isEmpty()) continue;
+                    if (str.isEmpty()) {
+                        continue;
+                    }
                     String[] items = str.split(split2); //dataId%02group%02tenant%01
                     NacosInfo info = infoMap.get(items[0] + "-" + (items.length > 2 ? items[2] : ""));
                     if (info != null) {
@@ -146,8 +154,12 @@ public class NacosPropertiesAgent extends PropertiesAgent {
 
     //https://nacos.io/zh-cn/docs/auth.html
     protected boolean remoteLogin() {
-        if (username == null || username.isEmpty()) return true;
-        if (accessExpireTime > 0 && accessExpireTime > System.currentTimeMillis()) return true;
+        if (username == null || username.isEmpty()) {
+            return true;
+        }
+        if (accessExpireTime > 0 && accessExpireTime > System.currentTimeMillis()) {
+            return true;
+        }
         long s = System.currentTimeMillis();
         String content = null;
         try {
@@ -173,12 +185,18 @@ public class NacosPropertiesAgent extends PropertiesAgent {
 
     //https://nacos.io/zh-cn/docs/open-api.html 
     protected void remoteConfigRequest(final Application application, NacosInfo info, Properties result) {
-        if (!remoteLogin()) return;
+        if (!remoteLogin()) {
+            return;
+        }
         String content = null;
         try {
             String url = this.apiUrl + "/cs/configs?dataId=" + urlEncode(info.dataId) + "&group=" + urlEncode(info.group);
-            if (accessToken != null) url += "&accessToken=" + urlEncode(accessToken);
-            if (!info.tenant.isEmpty()) url += "&tenant=" + urlEncode(info.tenant);
+            if (accessToken != null) {
+                url += "&accessToken=" + urlEncode(accessToken);
+            }
+            if (!info.tenant.isEmpty()) {
+                url += "&tenant=" + urlEncode(info.tenant);
+            }
             HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(pullTimeoutMs)
                 .headers("Content-Type", "application/json", "Accept", "application/json").GET().build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
@@ -208,7 +226,9 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             logger.log(Level.FINER, "Nacos config(dataId=" + info.dataId + ") size: " + props.size() + ", " + info + (oldmd5.isEmpty() ? "" : (" old-contentMD5: " + oldmd5)));
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Load nacos content " + info + " error, content: " + content, e);
-            if (result != null) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
+            if (result != null) {
+                throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
+            }
         }
     }
 
@@ -237,13 +257,17 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             dataGroupStr = dataGroupStr.replace("\\:", tmpkey);
             for (String str : dataGroupStr.split(",")) {
                 String[] dataGroup = str.split(":");
-                if (dataGroup[0].trim().isEmpty()) continue;
+                if (dataGroup[0].trim().isEmpty()) {
+                    continue;
+                }
                 String dataId = dataGroup[0].trim().replace(tmpkey, ":");
                 String group = dataGroup.length > 1 ? dataGroup[1].trim().replace(tmpkey, ":") : "";
                 String tenant = dataGroup.length > 2 ? dataGroup[2].trim().replace(tmpkey, ":") : "";
                 NacosInfo info = new NacosInfo();
                 info.dataId = dataId;
-                if (!group.isEmpty()) info.group = group;
+                if (!group.isEmpty()) {
+                    info.group = group;
+                }
                 info.tenant = tenant;
                 list.add(info);
             }

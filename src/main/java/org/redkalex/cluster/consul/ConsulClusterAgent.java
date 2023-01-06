@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.boot.*;
@@ -69,7 +70,9 @@ public class ConsulClusterAgent extends ClusterAgent {
             this.apiUrl = this.apiUrl.substring(0, this.apiUrl.length() - 1);
         }
         this.ttls = config.getIntValue("ttls", 10);
-        if (this.ttls < 5) this.ttls = 10;
+        if (this.ttls < 5) {
+            this.ttls = 10;
+        }
 
         this.httpClient = HttpClient.newHttpClient();
     }
@@ -102,27 +105,36 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     @Override
     public void destroy(AnyValue config) {
-        if (scheduler != null) scheduler.shutdownNow();
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+        }
     }
 
     @Override //ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
-        if (config == null) return false;
-        if (!"consul".equalsIgnoreCase(config.getValue("type"))) return false;
+        if (config == null) {
+            return false;
+        }
+        if (!"consul".equalsIgnoreCase(config.getValue("type"))) {
+            return false;
+        }
         return config.getValue("apiurl") != null;
     }
 
     @Override
     public void start() {
         if (this.scheduler == null) {
+            AtomicInteger counter = new AtomicInteger();
             this.scheduler = new ScheduledThreadPoolExecutor(4, (Runnable r) -> {
-                final Thread t = new Thread(r, ConsulClusterAgent.class.getSimpleName() + "-Task-Thread");
+                final Thread t = new Thread(r, "Redkalex-" + ConsulClusterAgent.class.getSimpleName() + "-Task-Thread-" + counter.incrementAndGet());
                 t.setDaemon(true);
                 return t;
             });
         }
         //delay为了错开请求
-        if (this.taskFuture1 != null) this.taskFuture1.cancel(true);
+        if (this.taskFuture1 != null) {
+            this.taskFuture1.cancel(true);
+        }
         this.taskFuture1 = this.scheduler.scheduleAtFixedRate(() -> {
             beatApplicationHealth();
             localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
@@ -130,17 +142,23 @@ public class ConsulClusterAgent extends ClusterAgent {
             });
         }, 18, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
-        if (this.taskFuture2 != null) this.taskFuture2.cancel(true);
+        if (this.taskFuture2 != null) {
+            this.taskFuture2.cancel(true);
+        }
         this.taskFuture2 = this.scheduler.scheduleAtFixedRate(() -> {
             reloadMqtpAddressHealth();
         }, 88 * 2, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
-        if (this.taskFuture3 != null) this.taskFuture4.cancel(true);
+        if (this.taskFuture3 != null) {
+            this.taskFuture4.cancel(true);
+        }
         this.taskFuture3 = this.scheduler.scheduleAtFixedRate(() -> {
             reloadHttpAddressHealth();
         }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
-        if (this.taskFuture4 != null) this.taskFuture4.cancel(true);
+        if (this.taskFuture4 != null) {
+            this.taskFuture4.cancel(true);
+        }
         this.taskFuture4 = this.scheduler.scheduleAtFixedRate(() -> {
             remoteEntrys.values().stream().filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol)).forEach(entry -> {
                 updateSncpTransport(entry);
@@ -155,7 +173,9 @@ public class ConsulClusterAgent extends ClusterAgent {
             final Map<String, ServiceEntry> map = JsonConvert.root().convertFrom(MAP_STRING_SERVICEENTRY, content);
             Set<String> mqtpkeys = new HashSet<>();
             map.forEach((key, en) -> {
-                if (en.Service.startsWith("mqtp:")) mqtpkeys.add(en.Service);
+                if (en.Service.startsWith("mqtp:")) {
+                    mqtpkeys.add(en.Service);
+                }
             });
             mqtpkeys.forEach(serviceName -> {
                 try {
@@ -187,7 +207,9 @@ public class ConsulClusterAgent extends ClusterAgent {
         String url = this.apiUrl + "/agent/check/pass/" + entry.checkid;
         try {
             String rs = Utility.remoteHttpContent(httpClient, "PUT", url, StandardCharsets.UTF_8, httpHeaders);
-            if (!rs.isEmpty()) logger.log(Level.SEVERE, entry.checkid + " check error: " + rs);
+            if (!rs.isEmpty()) {
+                logger.log(Level.SEVERE, entry.checkid + " check error: " + rs);
+            }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, entry.checkid + " check error: " + url, ex);
         }
@@ -206,7 +228,9 @@ public class ConsulClusterAgent extends ClusterAgent {
     public CompletableFuture<Collection<InetSocketAddress>> queryHttpAddress(String protocol, String module, String resname) {
         final String serviceName = generateHttpServiceName(protocol, module, resname);
         Collection<InetSocketAddress> rs = httpAddressMap.get(serviceName);
-        if (rs != null) return CompletableFuture.completedFuture(rs);
+        if (rs != null) {
+            return CompletableFuture.completedFuture(rs);
+        }
         return queryAddress(serviceName).thenApply(t -> {
             httpAddressMap.put(serviceName, t);
             return t;
@@ -226,7 +250,9 @@ public class ConsulClusterAgent extends ClusterAgent {
         final Set<InetSocketAddress> set = new CopyOnWriteArraySet<>();
         return client.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenCompose(content -> {
             final Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, (String) content);
-            if (map.isEmpty()) return CompletableFuture.completedFuture(set);
+            if (map.isEmpty()) {
+                return CompletableFuture.completedFuture(set);
+            }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (Map.Entry<String, AddressEntry> en : map.entrySet()) {
                 String url0 = this.apiUrl + "/agent/health/service/id/" + en.getKey() + "?format=text";
@@ -262,7 +288,9 @@ public class ConsulClusterAgent extends ClusterAgent {
         String checkid = generateApplicationCheckId();
         try {
             String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/check/pass/" + checkid, StandardCharsets.UTF_8, httpHeaders);
-            if (!rs.isEmpty()) logger.log(Level.SEVERE, checkid + " check error: " + rs);
+            if (!rs.isEmpty()) {
+                logger.log(Level.SEVERE, checkid + " check error: " + rs);
+            }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, checkid + " check error", ex);
         }
@@ -270,7 +298,9 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     @Override
     public void register(Application application) {
-        if (isApplicationHealth()) throw new RuntimeException("application.nodeid=" + nodeid + " exists in cluster");
+        if (isApplicationHealth()) {
+            throw new RuntimeException("application.nodeid=" + nodeid + " exists in cluster");
+        }
         deregister(application);
 
         String serviceid = generateApplicationServiceId();
@@ -280,7 +310,9 @@ public class ConsulClusterAgent extends ClusterAgent {
             + ",\"Check\":{\"CheckID\": \"" + generateApplicationCheckId() + "\",\"Name\": \"" + generateApplicationCheckName() + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
             String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
-            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " register error: " + rs);
+            if (!rs.isEmpty()) {
+                logger.log(Level.SEVERE, serviceid + " register error: " + rs);
+            }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " register error", ex);
         }
@@ -291,7 +323,9 @@ public class ConsulClusterAgent extends ClusterAgent {
         String serviceid = generateApplicationServiceId();
         try {
             String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
-            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
+            if (!rs.isEmpty()) {
+                logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
+            }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error", ex);
         }
@@ -343,9 +377,15 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
         try {
             String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
-            if (realcanceled && currEntry != null) currEntry.canceled = true;
-            if (!rs.isEmpty()) logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
-            if (!"mqtp".equals(protocol) && currEntry != null && currEntry.submqtp) deregister(ns, "mqtp", service, realcanceled);
+            if (realcanceled && currEntry != null) {
+                currEntry.canceled = true;
+            }
+            if (!rs.isEmpty()) {
+                logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
+            }
+            if (!"mqtp".equals(protocol) && currEntry != null && currEntry.submqtp) {
+                deregister(ns, "mqtp", service, realcanceled);
+            }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error，protocol=" + protocol + ", service=" + service + ", currEntry=" + currEntry, ex);
         }
