@@ -10,10 +10,9 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.time.*;
-import static java.time.format.DateTimeFormatter.*;
 import java.time.format.*;
 import static java.time.format.DateTimeFormatter.*;
-import java.time.temporal.ChronoUnit;
+import java.time.temporal.*;
 import java.util.concurrent.atomic.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.EntityInfo;
@@ -27,7 +26,9 @@ public abstract class PgsqlFormatter {
 
     //attr为空就返回byte[], 不为空返回attr对应类型的对象
     public static <T> Serializable decodeRowColumnValue(ByteBuffer buffer, ByteArray tmp, Attribute<T, Serializable> attr, int bslen) {
-        if (bslen == -1) return null;
+        if (bslen == -1) {
+            return null;
+        }
         if (attr == null) {
             byte[] bs = new byte[bslen];
             buffer.get(bs);
@@ -37,7 +38,9 @@ public abstract class PgsqlFormatter {
         if (type == int.class || type == Integer.class) {
             return buffer.getInt();
         } else if (type == String.class) {
-            if (bslen == 0) return "";
+            if (bslen == 0) {
+                return "";
+            }
             tmp.clear().put(buffer, bslen);
             return tmp.toString(StandardCharsets.UTF_8);
         } else if (type == long.class || type == Long.class) {
@@ -71,7 +74,9 @@ public abstract class PgsqlFormatter {
         } else if (type == java.time.LocalTime.class) {
             return LocalTime.ofNanoOfDay(buffer.getLong() * 1000);
         } else {
-            if (bslen == 0) return null;
+            if (bslen == 0) {
+                return null;
+            }
             tmp.clear().put(buffer, bslen);
             return JsonConvert.root().convertFrom(attr.genericType(), tmp.toString(StandardCharsets.UTF_8));
             //throw new SourceException("Not supported column: " + attr.field() + ", type: " + attr.type());
@@ -79,34 +84,108 @@ public abstract class PgsqlFormatter {
     }
 
     public static <T> void encodePrepareParamValue(ByteArray array, EntityInfo<T> info, boolean binary, Attribute<T, Serializable> attr, Object param) {
-        byte[] bs = formatPrepareParamText(info, attr, param);
-        if (bs == null) {
-            array.putInt(-1);
+        if (binary && attr != null) {
+            formatPrepareParamBinary(array, info, attr, param);
         } else {
+            formatPrepareParamText(array, info, attr, param);
+        }
+    }
+
+    //--------------------------------- binary -----------------------------
+    private static <T> void formatPrepareParamBinary(ByteArray array, EntityInfo<T> info, Attribute<T, Serializable> attr, Object param) {
+        Class type = attr.type();
+        if (param == null) {
+            array.putInt(info.isNotNullJson(attr) ? 0 : -1);
+        } else if (type == byte[].class) {
+            array.put((byte[]) param);
+        } else if (type == int.class || type == Integer.class) {
+            array.putInt(((Number) param).intValue());
+        } else if (type == long.class || type == Long.class) {
+            array.putLong(((Number) param).longValue());
+        } else if (type == boolean.class || type == Boolean.class) {
+            array.put((Boolean) param ? (byte) 1 : (byte) 0);
+        } else if (type == short.class || type == Short.class) {
+            array.putShort(((Number) param).shortValue());
+        } else if (type == float.class || type == Float.class) {
+            array.putInt(Float.floatToIntBits(((Number) param).floatValue()));
+        } else if (type == double.class || type == Double.class) {
+            array.putLong(Double.doubleToLongBits(((Number) param).doubleValue()));
+        } else if (type == AtomicInteger.class) {
+            array.putInt(((Number) param).intValue());
+        } else if (type == AtomicLong.class) {
+            array.putLong(((Number) param).longValue());
+        } else if (type == byte.class || type == Byte.class) {
+            array.put(((Number) param).byteValue());
+        } else if (type == char.class || type == Character.class) {
+            array.putChar((Character) param);
+        } else if (type == java.time.LocalDate.class) {
+            array.putInt((int) -((java.time.LocalDate) param).until(LOCAL_DATE_EPOCH, ChronoUnit.DAYS));
+        } else if (type == java.time.LocalTime.class) {
+            array.putLong((int) -((java.time.LocalTime) param).getLong(ChronoField.MICRO_OF_DAY));
+        } else if (!(param instanceof Number) && !(param instanceof CharSequence) && !(param instanceof java.util.Date)
+            && !param.getClass().getName().startsWith("java.sql.") && !param.getClass().getName().startsWith("java.time.")) {
+            byte[] bs = info.getJsonConvert().convertTo(attr.genericType(), param).getBytes(StandardCharsets.UTF_8);
+            array.putInt(bs.length);
+            array.put(bs);
+        } else {
+            byte[] bs = String.valueOf(param).getBytes(UTF_8);
             array.putInt(bs.length);
             array.put(bs);
         }
     }
 
-    //--------------------------------- binary -----------------------------
     //---------------------------------- text ------------------------------
-    private static <T> byte[] formatPrepareParamText(EntityInfo<T> info, Attribute<T, Serializable> attr, Object param) {
-        if (param == null && info.isNotNullJson(attr)) return new byte[0];
-        if (param == null) return null;
-        if (param instanceof byte[]) return (byte[]) param;
-        if (param instanceof Boolean) return (Boolean) param ? TRUE_BYTES : FALSE_BYTES;
-        if (param instanceof java.sql.Date) return ISO_LOCAL_DATE.format(((java.sql.Date) param).toLocalDate()).getBytes(UTF_8);
-        if (param instanceof java.sql.Time) return ISO_LOCAL_TIME.format(((java.sql.Time) param).toLocalTime()).getBytes(UTF_8);
-        if (param instanceof java.sql.Timestamp) return TIMESTAMP_FORMAT.format(((java.sql.Timestamp) param).toLocalDateTime()).getBytes(UTF_8);
-        if (param instanceof java.time.LocalDate) return ISO_LOCAL_DATE.format((java.time.LocalDate) param).getBytes(UTF_8);
-        if (param instanceof java.time.LocalTime) return ISO_LOCAL_TIME.format((java.time.LocalTime) param).getBytes(UTF_8);
-        if (param instanceof java.time.LocalDateTime) return TIMESTAMP_FORMAT.format((java.time.LocalDateTime) param).getBytes(UTF_8);
-        if (!(param instanceof Number) && !(param instanceof CharSequence) && !(param instanceof java.util.Date)
+    private static <T> void formatPrepareParamText(ByteArray array, EntityInfo<T> info, Attribute<T, Serializable> attr, Object param) {
+        if (param == null) {
+            array.putInt(info.isNotNullJson(attr) ? 0 : -1);
+        } else if (param instanceof byte[]) {
+            byte[] bs = (byte[]) param;
+            array.putInt(bs.length);
+            array.put(bs);
+        } else if (param instanceof Boolean) {
+            byte[] bs = (Boolean) param ? TRUE_BYTES : FALSE_BYTES;
+            array.putInt(bs.length);
+            array.put(bs);
+        } else if (param instanceof java.sql.Date) {
+            byte[] bs = ISO_LOCAL_DATE.format(((java.sql.Date) param).toLocalDate()).getBytes(UTF_8);
+            array.putInt(bs.length);
+            array.put(bs);
+        } else if (param instanceof java.sql.Time) {
+            byte[] bs = ISO_LOCAL_TIME.format(((java.sql.Time) param).toLocalTime()).getBytes(UTF_8);
+            array.putInt(bs.length);
+            array.put(bs);
+        } else if (param instanceof java.sql.Timestamp) {
+            byte[] bs = TIMESTAMP_FORMAT.format(((java.sql.Timestamp) param).toLocalDateTime()).getBytes(UTF_8);
+            array.putInt(bs.length);
+            array.put(bs);
+        } else if (param instanceof java.time.LocalDate) {
+            byte[] bs = ISO_LOCAL_DATE.format((java.time.LocalDate) param).getBytes(UTF_8);
+            array.putInt(bs.length);
+            array.put(bs);
+        } else if (param instanceof java.time.LocalTime) {
+            byte[] bs = ISO_LOCAL_TIME.format((java.time.LocalTime) param).getBytes(UTF_8);
+            array.putInt(bs.length);
+            array.put(bs);
+        } else if (param instanceof java.time.LocalDateTime) {
+            byte[] bs = TIMESTAMP_FORMAT.format((java.time.LocalDateTime) param).getBytes(UTF_8);
+            array.putInt(bs.length);
+            array.put(bs);
+        } else if (!(param instanceof Number) && !(param instanceof CharSequence) && !(param instanceof java.util.Date)
             && !param.getClass().getName().startsWith("java.sql.") && !param.getClass().getName().startsWith("java.time.")) {
-            if (attr == null) return info.getJsonConvert().convertTo(param).getBytes(StandardCharsets.UTF_8);
-            return info.getJsonConvert().convertTo(attr.genericType(), param).getBytes(StandardCharsets.UTF_8);
+            if (attr == null) {
+                byte[] bs = info.getJsonConvert().convertTo(param).getBytes(StandardCharsets.UTF_8);
+                array.putInt(bs.length);
+                array.put(bs);
+            } else {
+                byte[] bs = info.getJsonConvert().convertTo(attr.genericType(), param).getBytes(StandardCharsets.UTF_8);
+                array.putInt(bs.length);
+                array.put(bs);
+            }
+        } else {
+            byte[] bs = String.valueOf(param).getBytes(UTF_8);
+            array.putInt(bs.length);
+            array.put(bs);
         }
-        return String.valueOf(param).getBytes(UTF_8);
     }
 
     static final byte[] TRUE_BYTES = new byte[]{'t'};
