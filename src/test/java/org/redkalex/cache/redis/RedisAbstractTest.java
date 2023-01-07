@@ -390,8 +390,8 @@ public abstract class RedisAbstractTest {
 //        }
         source.del("bigmap");
         {
-            System.out.println("------开始进行压力测试------");
             int count = Runtime.getRuntime().availableProcessors() * 10;
+            System.out.println("------开始进行压力测试 " + count + "个并发------");
             source.del("hmap");
             source.del("testnumber");
             source.hincr("hmap", "key1");
@@ -399,8 +399,11 @@ public abstract class RedisAbstractTest {
             source.hmset("hmap", "key2", "haha", "key3", 333);
             source.hmset("hmap", "sm", (HashMap) Utility.ofMap("a", "aa", "b", "bb"));
             source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING);
-            System.out.println("结果: " + source.getLong("testnumber", -1));
+            if (source.getLong("testnumber", -1) != -1) {
+                System.err.println("testnumber的查询结果应该是 -1，但是得到的值却是:" + source.getLong("testnumber", -1));
+            }
             source.setLong("testnumber", 0);
+            Thread.sleep(10);
             AtomicInteger ai = new AtomicInteger(count);
             CountDownLatch start = new CountDownLatch(count * 3);
             CountDownLatch over = new CountDownLatch(count * 3);
@@ -409,7 +412,9 @@ public abstract class RedisAbstractTest {
                 new Thread() {
                     public void run() {
                         start.countDown();
-                        if (ai.decrementAndGet() == 0) System.out.println("开始了 ");
+                        if (ai.decrementAndGet() == 0) {
+                            System.out.println("开始了 ");
+                        }
                         source.incr("testnumber");
                         over.countDown();
                     }

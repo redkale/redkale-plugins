@@ -306,7 +306,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Long> getLongAsync(String key, long defValue) {
         final RAtomicLong bucket = client.getAtomicLong(key);
-        return completableFuture(bucket.getAsync());
+        return completableFuture(bucket.isExistsAsync().thenCompose(b -> b ? bucket.getAsync() : CompletableFuture.completedFuture(defValue)));
     }
 
     @Override
@@ -337,7 +337,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public long getLong(String key, long defValue) {
         final RAtomicLong bucket = client.getAtomicLong(key);
-        return bucket.get();
+        return bucket.isExists() ? bucket.get() : defValue;
     }
 
     @Override
@@ -381,6 +381,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public long getexLong(String key, final int expireSeconds, long defValue) {
         final RAtomicLong bucket = client.getAtomicLong(key);
+        if (!bucket.isExists()) {
+            return defValue;
+        }
         long rs = bucket.get();
         bucket.expire(Duration.ofSeconds(expireSeconds));
         return rs;
