@@ -6,12 +6,14 @@
 package org.redkalex.source.search;
 
 import java.io.Serializable;
+import org.redkale.annotation.Bean;
 import org.redkale.convert.json.JsonConvert;
 
 /**
  *
  * @author zhangjx
  */
+@Bean
 abstract class BaseBean implements Serializable {
 
     @Override
