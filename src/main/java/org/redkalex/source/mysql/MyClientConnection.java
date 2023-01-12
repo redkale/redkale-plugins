@@ -25,6 +25,8 @@ public class MyClientConnection<R extends MyClientRequest> extends ClientConnect
 
     private final Map<String, MyPrepareDesc> cacheExtendedDescs = new HashMap<>();
 
+    MyRespHandshakeResultSet handshake;
+
     //int clientCapabilitiesFlag;
     //
     public MyClientConnection(MyClient client, int index, AsyncConnection channel) {
@@ -41,11 +43,6 @@ public class MyClientConnection<R extends MyClientRequest> extends ClientConnect
         if (resp != null) {
             resp.request = req;
         }
-    }
-
-    @Override
-    protected void resumeWrite() {
-        super.resumeWrite();
     }
 
     protected boolean autoddl() {

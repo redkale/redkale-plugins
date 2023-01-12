@@ -5,9 +5,10 @@
  */
 package org.redkalex.source.mysql;
 
-import org.redkale.net.client.*;
+import java.util.Objects;
+import org.redkale.net.client.ClientRequest;
 import org.redkale.source.EntityInfo;
-import org.redkale.util.*;
+import org.redkale.util.ObjectPool;
 
 /**
  *
@@ -48,19 +49,7 @@ public abstract class MyClientRequest extends ClientRequest {
         return this;
     }
 
-    public static final MyClientRequest EMPTY = new MyClientRequest() {
-        {
-            this.createTime = System.currentTimeMillis();
-        }
-
-        @Override
-        public int getType() {
-            return 0;
-        }
-
-        @Override
-        public void accept(ClientConnection t, ByteArray u) {
-        }
-    };
-
+    public String toSimpleString() {
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{...}";
+    }
 }

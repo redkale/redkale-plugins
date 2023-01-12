@@ -13,7 +13,7 @@ import org.redkale.convert.json.JsonConvert;
  */
 public class MyRespPrepare {
 
-    public long statementId;
+    public Long statementId;
 
     public int numberOfParameters;  //先param后column
 

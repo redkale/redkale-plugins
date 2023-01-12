@@ -337,7 +337,7 @@ public class PgsqlDataSource extends DataSqlSource {
                 }
             }
         }
-        Object[][] as = objs != null ? objs.toArray(new Object[objs.size()][]) : null;
+        Object[][] as = objs != null && !objs.isEmpty() ? objs.toArray(new Object[objs.size()][]) : null;
         return executeUpdate(info, new String[]{sql.sql}, null, fetchSize(flipper), false, null, as);
     }
 

@@ -28,11 +28,11 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
     public MyClient(String name, AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines,
         final Properties prop, final SourceUrlInfo info, boolean autoddl, final Properties attributes) {
         super(name, group, true, address, maxConns, maxPipelines, () -> new MyReqPing(), () -> new MyReqClose(), null); //maxConns
-        this.info = info; 
+        this.info = info;
         this.autoddl = autoddl;
         this.connectionContextName = "redkalex-mysql-client-connection-" + key;
-        this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, MyClientRequest.EMPTY).thenCompose((MyResultSet rs) -> {
-            MyRespHandshakeResultSet handshake = (MyRespHandshakeResultSet) rs;
+        this.authenticate = future -> future.thenCompose(conn -> {
+            MyRespHandshakeResultSet handshake = ((MyClientConnection) conn).handshake;
             CompletableFuture<MyResultSet> authFuture = writeChannel(conn, new MyReqAuthentication(handshake, info.username, info.password, info.database, attributes));
             return authFuture.thenCompose(v -> {
                 MyRespAuthResultSet authrs = (MyRespAuthResultSet) v;
@@ -41,13 +41,18 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
                 }
                 return CompletableFuture.completedFuture(authrs);
             }).thenApply(v -> conn);
-        }));
+        });
         this.cachePreparedStatements = prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));
     }
 
     @Override
     protected ClientConnection createClientConnection(final int index, AsyncConnection channel) {
         return new MyClientConnection(this, index, channel);
+    }
+
+    @Override  //构建连接上先从服务器拉取数据构建的虚拟请求
+    protected MyClientRequest createVirtualRequestAfterConnect() {
+        return new MyReqVirtual();
     }
 
     @Override

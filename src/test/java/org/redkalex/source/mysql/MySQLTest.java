@@ -34,7 +34,7 @@ public class MySQLTest {
 
         Properties prop = new Properties();
         prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.setProperty("redkale.datasource[].maxconns", "2");
+        prop.setProperty("redkale.datasource[].maxconns", "1");
         prop.setProperty("redkale.datasource[].table-autoddl", "true");
         prop.setProperty("redkale.datasource[].user", "root");
         prop.setProperty("redkale.datasource[].password", "");

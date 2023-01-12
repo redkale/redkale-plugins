@@ -79,6 +79,7 @@ public class PgSQLTest {
         System.out.println("-------------------- " + "当前内核数: " + Utility.cpus() + " --------------------");
         if (true) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
+            System.out.println("随机获取World记录: " + source.find(World.class, randomId()));
             final CompletableFuture[] futures = new CompletableFuture[Utility.cpus()];
             for (int i = 0; i < futures.length; i++) {
                 futures[i] = source.findAsync(World.class, randomId()).thenCompose(v -> source.updateAsync(v));

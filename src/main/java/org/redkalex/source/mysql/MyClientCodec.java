@@ -109,10 +109,11 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                 }
                 final byte index = buffer.get();
                 final int bufpos = buffer.position();
-                if (request == MyClientRequest.EMPTY) {  //首次通讯
+                if ((request == null || request.isVirtualType()) && !conn.isAuthenticated()) {  //首次通讯
                     //logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", length=" + length + ", index=" + index + ", remains=" + buffer.remaining());
                     try {
-                        lastResult = MyRespHandshakeDecoder.instance.read(conn, buffer, length, index, array, request, null);
+                        conn.handshake = MyRespHandshakeDecoder.instance.read(conn, buffer, length, index, array, request, null);
+                        lastResult = conn.handshake;
                     } catch (Exception e) {
                         lastExc = e;
                     }
@@ -130,23 +131,23 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                     break;
                 }
                 final int typeid = lastResult != null && lastResult.status != 0 ? 0xfff : buffer.get() & 0xff;
-                final int reqtype = request == null ? 0 : request.getType();
+                final int reqType = request == null ? 0 : request.getType();
                 if (MysqlDataSource.debug && conn.isAuthenticated()) {
                     logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", length=" + length + ", index=" + index + ", typeid=0x" + Integer.toHexString(typeid) + ", status=" + (lastResult == null ? -1 : lastResult.status) + ", position=" + buffer.position() + ", remains=" + buffer.remaining());
                 }
 
                 if (typeid == TYPE_ID_ERROR) {
-                    if ((reqtype & 0x1) > 0 && ((MyReqExtended) request).sendPrepare) {
+                    if ((reqType & 0x1) > 0 && ((MyReqExtended) request).sendPrepare) {
                         conn.getPrepareFlag(((MyReqExtended) request).sql).set(false);
-                        conn.resumeWrite();
+                        //conn.resumeWrite();
                     }
                     lastExc = MyRespDecoder.readErrorPacket(conn, buffer, length, index, array);
                     //if (!conn.autoddl()) logger.log(Level.WARNING, "mysql.request = " + request, lastExc);
                 } else {
-                    if (lastResult == null && reqtype != REQ_TYPE_AUTH) {
+                    if (lastResult == null && reqType != REQ_TYPE_AUTH) {
                         lastResult = conn.pollResultSet(request == null ? null : request.info);
                     }
-                    if (reqtype == REQ_TYPE_AUTH) { //登录
+                    if (reqType == REQ_TYPE_AUTH) { //登录
                         MyRespAuthResultSet authResult = new MyRespAuthResultSet();
                         if (length < 3) {
                             if (MysqlDataSource.debug) {
@@ -184,10 +185,10 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                         if (MysqlDataSource.debug && conn.isAuthenticated()) {
                             logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", authResult=" + authResult);
                         }
-                    } else if (reqtype == REQ_TYPE_UPDATE || reqtype == REQ_TYPE_INSERT || reqtype == REQ_TYPE_DELETE || reqtype == REQ_TYPE_BATCH) {
+                    } else if (reqType == REQ_TYPE_UPDATE || reqType == REQ_TYPE_INSERT || reqType == REQ_TYPE_DELETE || reqType == REQ_TYPE_BATCH) {
                         //简单更新 开始
                         MyRespOK ok = readOKPacket(conn, buffer, length, index, array);
-                        if (reqtype == REQ_TYPE_BATCH) {
+                        if (reqType == REQ_TYPE_BATCH) {
                             lastResult.increBatchEffectCount(((MyReqBatch) request).sqls.length, (int) ok.affectedRows);
                         } else {
                             lastResult.increUpdateEffectCount((int) ok.affectedRows);
@@ -199,14 +200,14 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                         if (MysqlDataSource.debug && conn.isAuthenticated()) {
                             logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", affectedRows=" + ok.affectedRows + ", statusFlags=" + ok.serverStatusFlags + ", warningCount=" + ok.warningCount);
                         }
-                        if (reqtype == REQ_TYPE_BATCH) {
+                        if (reqType == REQ_TYPE_BATCH) {
                             lastResult.effectRespCount++;
                             if (lastResult.effectRespCount < ((MyReqBatch) request).sqls.length) {
                                 continue;
                             }
                         }
                         //简单更新 结束
-                    } else if (reqtype == REQ_TYPE_QUERY) {
+                    } else if (reqType == REQ_TYPE_QUERY) {
                         //简单查询 开始
                         if (lastResult.status == STATUS_QUERY_ROWDESC) {
                             lastResult.rowDesc.columns[lastResult.rowColumnDecodeIndex] = MyRespRowColumnDecoder.instance.read(conn, buffer, length, index, array, request, lastResult);
@@ -255,7 +256,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                             }
                         }
                         //简单查询 结束
-                    } else if ((reqtype & 0x1) > 0) {
+                    } else if ((reqType & 0x1) > 0) {
                         //REQ_TYPE_EXTEND_XXX 开始
                         final MyReqExtended reqext = (MyReqExtended) request;
                         if (lastResult.status == STATUS_PREPARE_PARAM) {
@@ -282,7 +283,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                             lastResult.status = 0;
                             conn.putPrepareDesc(reqext.sql, new MyPrepareDesc(prepare));
                             conn.putStatementIndex(reqext.sql, prepare.statementId);
-                            conn.resumeWrite();
+                            //conn.resumeWrite();
                             if (MysqlDataSource.debug) {
                                 logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", sendBindCount = " + reqext.getBindCount() + ", 解析完paramColumn后缓存MyPrepareDesc = " + prepare);
                             }
@@ -305,7 +306,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                             lastResult.status = 0;
                             conn.putPrepareDesc(reqext.sql, new MyPrepareDesc(prepare));
                             conn.putStatementIndex(reqext.sql, prepare.statementId);
-                            conn.resumeWrite();
+                            //conn.resumeWrite();
                             if (MysqlDataSource.debug) {
                                 logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 解析完columnColumn后缓存MyPrepareDesc = " + prepare + "\r\n");
                             }
@@ -384,7 +385,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                             if (MysqlDataSource.debug) {
                                 logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 居然没有 lastResult.status");
                             }
-                        } else if (lastResult.status == 0 && reqtype == REQ_TYPE_EXTEND_QUERY) { //Extended-Query第一个响应包
+                        } else if (lastResult.status == 0 && reqType == REQ_TYPE_EXTEND_QUERY) { //Extended-Query第一个响应包
                             buffer.position(buffer.position() - 1); //回退typeid
                             int columnCount = (int) Mysqls.readLength(buffer);
                             if (MysqlDataSource.debug) {
@@ -398,7 +399,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                             MyRespOK ok = MyRespDecoder.readOKPacket(conn, buffer, length, index, array);
                             lastResult.updateEffectCount += (int) ok.affectedRows;
                             lastResult.effectRespCount++;
-                            if (reqtype == REQ_TYPE_EXTEND_UPDATE && buffer.position() != bufpos + length) {
+                            if (reqType == REQ_TYPE_EXTEND_UPDATE && buffer.position() != bufpos + length) {
                                 logger.log(Level.SEVERE, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", rowData buffer-currpos : " + buffer.position() + ", unread-byte-len=" + (bufpos + length - buffer.position()) + ", startpos=" + bufpos + ", length=" + length);
                             }
                             buffer.position(bufpos + length);
@@ -430,7 +431,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                 } else if (lastResult != null) {
                     addMessage(lastResult);
                     if (MysqlDataSource.debug) {
-                        logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 返回结果 = " + lastResult);
+                        logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 返回结果 = " + lastResult + ", request = " + (request == null ? null : request.toSimpleString()));
                     }
                     lastResult = null;
                 } else {

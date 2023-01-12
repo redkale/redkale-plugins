@@ -335,8 +335,8 @@ public class MysqlDataSource extends DataSqlSource {
                 }
             }
         }
-        Object[][] as = objs != null ? objs.toArray(new Object[objs.size()][]) : null;
-        return executeUpdate(info, new String[]{sql.sql}, null, fetchSize(flipper), objs != null ? MyClientRequest.REQ_TYPE_EXTEND_UPDATE : 0, null, as);
+        Object[][] as = objs != null && !objs.isEmpty() ? objs.toArray(new Object[objs.size()][]) : null;
+        return executeUpdate(info, new String[]{sql.sql}, null, fetchSize(flipper), sql.prepare ? MyClientRequest.REQ_TYPE_EXTEND_UPDATE : 0, null, as);
     }
 
     @Override

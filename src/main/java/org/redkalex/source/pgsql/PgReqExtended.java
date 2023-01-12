@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.net.client.ClientConnection;
+import org.redkale.net.client.*;
 import org.redkale.util.*;
 import static org.redkalex.source.pgsql.PgClientCodec.logger;
 
@@ -66,33 +66,55 @@ public class PgReqExtended extends PgClientRequest {
         this.paramValues = paramValues;
     }
 
-//    @Override //是否能合并
-//    protected boolean canMerge(ClientConnection conn) {
-//        if (this.type != REQ_TYPE_EXTEND_QUERY) return false;
-//        // && this.mode != PgReqExtendMode.FINDS  暂时屏蔽
-//        if (this.mode != PgReqExtendMode.FIND && this.mode != PgReqExtendMode.LIST_ALL) return false; //只支持find sql和list all 
-//        AtomicBoolean prepared = ((PgClientConnection) conn).getPrepareFlag(sql);
-//        return prepared.get();
-//    }
-//    @Override //合并成功了返回true
-//    protected boolean merge(ClientConnection conn, ClientRequest other) {
-//        PgClientRequest req = (PgClientRequest) other;
-//        if (this.workThread != req.getWorkThread()) return false;
-//        if (req.getType() != REQ_TYPE_EXTEND_QUERY) return false;
-//        PgReqExtended extreq = (PgReqExtended) req;
-//        if (this.mode != extreq.mode) return false;
-//        if (this.paramValues != null && this.paramValues.length > 256) return false;
-//        if (extreq.mode != PgReqExtendMode.FIND && extreq.mode != PgReqExtendMode.FINDS && extreq.mode != PgReqExtendMode.LIST_ALL) return false; //只支持find sql和list all 
-//        if (!this.sql.equals(extreq.sql)) return false;
-//        if (mode == PgReqExtendMode.FINDS) {
-//            if (paramValues.length + extreq.paramValues.length > 100) return false;
-//            if (findsCount == null) findsCount = new int[]{paramValues.length};
-//            this.findsCount = Utility.append(findsCount, extreq.paramValues.length);
-//        }
-//        this.paramValues = Utility.append(paramValues == null || paramValues.length == 0 ? ONE_EMPTY_PARAMS : paramValues,
-//            extreq.paramValues == null || extreq.paramValues.length == 0 ? ONE_EMPTY_PARAMS : extreq.paramValues);
-//        return true;
-//    }
+    @Override //是否能合并
+    protected boolean canMerge(ClientConnection conn) {
+        if (this.type != REQ_TYPE_EXTEND_QUERY) {
+            return false;
+        }
+        // && this.mode != PgReqExtendMode.FINDS  暂时屏蔽
+        if (this.mode != PgReqExtendMode.FIND && this.mode != PgReqExtendMode.LIST_ALL) {
+            return false; //只支持find sql和list all 
+        }
+        AtomicBoolean prepared = ((PgClientConnection) conn).getPrepareFlag(sql);
+        return prepared.get();
+    }
+
+    @Override //合并成功了返回true
+    protected boolean merge(ClientConnection conn, ClientRequest other) {
+        PgClientRequest req = (PgClientRequest) other;
+        if (this.workThread != req.getWorkThread()) {
+            return false;
+        }
+        if (req.getType() != REQ_TYPE_EXTEND_QUERY) {
+            return false;
+        }
+        PgReqExtended extReq = (PgReqExtended) req;
+        if (this.mode != extReq.mode) {
+            return false;
+        }
+        if (this.paramValues != null && this.paramValues.length > 256) {
+            return false;
+        }
+        if (extReq.mode != PgReqExtendMode.FIND && extReq.mode != PgReqExtendMode.FINDS && extReq.mode != PgReqExtendMode.LIST_ALL) {
+            return false; //只支持find sql和list all 
+        }
+        if (!this.sql.equals(extReq.sql)) {
+            return false;
+        }
+        if (mode == PgReqExtendMode.FINDS) {
+            if (paramValues.length + extReq.paramValues.length > 100) {
+                return false;
+            }
+            if (findsCount == null) {
+                findsCount = new int[]{paramValues.length};
+            }
+            this.findsCount = Utility.append(findsCount, extReq.paramValues.length);
+        }
+        this.paramValues = Utility.append(paramValues == null || paramValues.length == 0 ? ONE_EMPTY_PARAMS : paramValues,
+            extReq.paramValues == null || extReq.paramValues.length == 0 ? ONE_EMPTY_PARAMS : extReq.paramValues);
+        return true;
+    }
+
     private void writeParse(ByteArray array, Long statementIndex) { // PARSE
         array.putByte('P');
         int start = array.length();
