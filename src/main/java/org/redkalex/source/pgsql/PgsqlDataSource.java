@@ -511,11 +511,11 @@ public class PgsqlDataSource extends DataSqlSource {
 
         final String listSql = cachePrepared ? info.getAllQueryPrepareSQL() : (listSubSql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
         if (!needTotal) {
-            CompletableFuture<PgResultSet> listfuture;
+            CompletableFuture<PgResultSet> listFuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currWorkThread();
                 ObjectReference<ClientConnection> connRef = new ObjectReference();
-                listfuture = thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
+                listFuture = thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                     PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
                     req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.LIST_ALL, listSql, 0, info.getQueryAttributes(), (Attribute[]) null);
                     connRef.set(conn);
@@ -525,9 +525,9 @@ public class PgsqlDataSource extends DataSqlSource {
                 if (readCache && info.isLoggable(logger, Level.FINEST, listSql)) {
                     logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
                 }
-                listfuture = executeQuery(info, listSql);
+                listFuture = executeQuery(info, listSql);
             }
-            return listfuture.thenApply((PgResultSet dataset) -> {
+            return listFuture.thenApply((PgResultSet dataset) -> {
                 final List<T> list = new ArrayList();
                 while (dataset.next()) {
                     list.add(getEntityValue(info, sels, dataset));

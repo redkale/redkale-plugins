@@ -488,10 +488,10 @@ public class MysqlDataSource extends DataSqlSource {
         final boolean cachePrepared = pool.cachePreparedStatements() && readcache && info.getTableStrategy() == null && sels == null && node == null && flipper == null && !distinct;
         String[] tables = info.getTables(node);
         String joinAndWhere = (join == null ? "" : join) + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
-        String listsubsql;
+        String listSubSql;
         StringBuilder union = new StringBuilder();
         if (tables.length == 1) {
-            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM " + tables[0] + " a" + joinAndWhere;
+            listSubSql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM " + tables[0] + " a" + joinAndWhere;
         } else {
             int b = 0;
             for (String table : tables) {
@@ -501,33 +501,33 @@ public class MysqlDataSource extends DataSqlSource {
                 String tabalis = "t" + (++b);
                 union.append("SELECT ").append(info.getQueryColumns(tabalis, selects)).append(" FROM ").append(table).append(" ").append(tabalis).append(joinAndWhere);
             }
-            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
+            listSubSql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
         }
-        final String listsql = cachePrepared ? info.getAllQueryPrepareSQL() : (listsubsql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
-        if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) {
-            logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        final String listSql = cachePrepared ? info.getAllQueryPrepareSQL() : (listSubSql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
+        if (readcache && info.isLoggable(logger, Level.FINEST, listSql)) {
+            logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
         }
         if (!needtotal) {
-            CompletableFuture<MyResultSet> listfuture;
+            CompletableFuture<MyResultSet> listFuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currWorkThread();
                 ObjectReference<ClientConnection> connRef = new ObjectReference();
-                listfuture = thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
+                listFuture = thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                     connRef.set(conn);
                     MyReqExtended req = ((MyClientConnection) conn).pollReqExtended(workThread, info);
-                    req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, listsql, 0, null);
+                    req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, listSql, 0, null);
                     return pool.writeChannel(conn, req);
                 }));
             } else {
-                listfuture = executeQuery(info, listsql);
+                listFuture = executeQuery(info, listSql);
             }
-            return listfuture.thenApply((MyResultSet dataset) -> {
+            return listFuture.thenApply((MyResultSet dataset) -> {
                 final List<T> list = new ArrayList();
                 while (dataset.next()) {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
-                slowLog(s, listsql);
+                slowLog(s, listSql);
                 return Sheet.asSheet(list);
             });
         }
@@ -542,13 +542,13 @@ public class MysqlDataSource extends DataSqlSource {
             if (total.longValue() <= 0) {
                 return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
             }
-            return executeQuery(info, listsql).thenApply((MyResultSet dataset) -> {
+            return executeQuery(info, listSql).thenApply((MyResultSet dataset) -> {
                 final List<T> list = new ArrayList();
                 while (dataset.next()) {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
-                slowLog(s, listsql);
+                slowLog(s, listSql);
                 return new Sheet(total.longValue(), list);
             });
         });

@@ -6,7 +6,7 @@
 package org.redkalex.source.pgsql;
 
 import java.util.*;
-import java.util.concurrent.atomic.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.source.EntityInfo;
@@ -18,11 +18,11 @@ import org.redkale.source.EntityInfo;
  */
 public class PgClientConnection<R extends PgClientRequest> extends ClientConnection<R, PgResultSet> {
 
-    private Map<String, Long> cacheExtendedIndexs = new HashMap<>();
+    private final Map<String, Long> cacheExtendedIndexs = new HashMap<>();
 
-    private Map<String, AtomicBoolean> cacheExtendedPrepares = new HashMap<>();
+    private final Map<String, AtomicBoolean> cacheExtendedPrepares = new HashMap<>();
 
-    private Map<String, PgRowDesc> cacheExtendedDescs = new HashMap<>();
+    private final Map<String, PgRowDesc> cacheExtendedDescs = new HashMap<>();
 
     public PgClientConnection(PgClient client, int index, AsyncConnection channel) {
         super(client, index, channel);
