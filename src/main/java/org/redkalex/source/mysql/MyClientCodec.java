@@ -48,7 +48,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean decodeMessages(final ByteBuffer realbuf, ByteArray array) {
+    public boolean decodeMessages(ClientConnection connection, final ByteBuffer realbuf, ByteArray array) {
         MyClientConnection conn = (MyClientConnection) connection;
         if (!realbuf.hasRemaining()) {
             return false;
@@ -448,8 +448,4 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
         return hadresult;
     }
 
-    @Override
-    public void reset() {
-        super.reset();
-    }
 }

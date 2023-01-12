@@ -199,7 +199,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean decodeMessages(ByteBuffer realbuf, ByteArray array) {
+    public boolean decodeMessages(ClientConnection connection, ByteBuffer realbuf, ByteArray array) {
         RedisCacheConnection conn = (RedisCacheConnection) connection;
         if (!realbuf.hasRemaining()) {
             return false;

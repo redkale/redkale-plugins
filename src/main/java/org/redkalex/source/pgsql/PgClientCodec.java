@@ -48,7 +48,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean decodeMessages(final ByteBuffer realBuf, ByteArray array) {
+    public boolean decodeMessages(ClientConnection connection, final ByteBuffer realBuf, ByteArray array) {
         PgClientConnection conn = (PgClientConnection) connection;
         if (!realBuf.hasRemaining()) {
             return false;
@@ -388,9 +388,5 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         }
         return array.toString(StandardCharsets.UTF_8);
     }
-
-    @Override
-    public void reset() {
-        super.reset();
-    }
+    
 }
