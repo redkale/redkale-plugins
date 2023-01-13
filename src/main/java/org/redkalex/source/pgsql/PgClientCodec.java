@@ -48,7 +48,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean decodeMessages(ClientConnection connection, final ByteBuffer realBuf, ByteArray array) {
+    public boolean decodeMessages(final ByteBuffer realBuf, ByteArray array) {
         PgClientConnection conn = (PgClientConnection) connection;
         if (!realBuf.hasRemaining()) {
             return false;
@@ -179,7 +179,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         halfFrameBytes = null;
                         halfFrameCmd = 0;
                         halfFrameLength = 0;
-                        addMessage(lastResult);
+                        addMessage(request, lastResult);
                         lastResult = null;
                         lastExc = null;
                         lastCount = 0;
@@ -266,7 +266,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         halfFrameBytes = null;
                         halfFrameCmd = 0;
                         halfFrameLength = 0;
-                        addMessage(lastExc);
+                        addMessage(request, lastExc);
                         lastResult = null;
                         lastExc = null;
                         lastCount = 0;
@@ -282,27 +282,6 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     if (lastResult != null) {
                         if (request.isExtendType()) { //PgReqExtended
                             PgReqExtended reqext = (PgReqExtended) request;
-                            int mergeCount = respFuture.getMergeCount();
-                            if (mergeCount > 0) {
-                                if (reqext.mode == PgReqExtended.PgReqExtendMode.LIST_ALL) {
-                                    int page = lastResult.rowData.size() / (1 + mergeCount);
-                                    if (page > 0) {
-                                        lastResult.page = page;
-                                        lastResult.limit = page;
-                                    }
-                                } else if (reqext.mode == PgReqExtended.PgReqExtendMode.FINDS) {
-                                    int[] pages = reqext.findsCount;
-                                    if (pages != null) {
-                                        lastResult.pages = pages;
-                                        lastResult.limit = pages[0];
-                                    }
-                                }
-                                for (int i = 0; i < mergeCount; i++) {
-                                    if (respIt.hasNext()) {
-                                        respIt.next();
-                                    }
-                                }
-                            }
                             if (lastResult.rowDesc == null) {
                                 PgRowDesc rowDesc = conn.getPrepareDesc(reqext.sql);
                                 if (rowDesc != null) {
@@ -331,9 +310,9 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         return hadResult;
                     }
                     if (lastExc != null) {
-                        addMessage(lastExc);
+                        addMessage(request, lastExc);
                     } else if (lastResult != null) {
-                        addMessage(lastResult);
+                        addMessage(request, lastResult);
                         lastResult = null;
                     }
                     lastExc = null;
@@ -388,5 +367,5 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         }
         return array.toString(StandardCharsets.UTF_8);
     }
-    
+
 }

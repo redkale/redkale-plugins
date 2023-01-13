@@ -381,7 +381,7 @@ public class PgsqlDataSource extends DataSqlSource {
             return thenApplyQueryUpdateStrategy(info, connRef, pool.connect(null).thenCompose(conn -> {
                 connRef.set(conn);
                 PgReqExtended req = ((PgClientConnection) conn).pollReqExtended(workThread, info);
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FIND, sql, 0, info.getQueryAttributes(), new Attribute[]{info.getPrimary()}, new Object[]{pk});
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FIND, sql, 0, info.getQueryAttributes(), info.getPrimaryOneArray(), new Object[]{pk});
                 return pool.writeChannel(conn, req);
             })).thenApply((PgResultSet dataset) -> {
                 T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
@@ -417,7 +417,7 @@ public class PgsqlDataSource extends DataSqlSource {
                 for (int i = 0; i < params.length; i++) {
                     params[i] = new Object[]{pks[i]};
                 }
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FINDS, sql, 0, info.getQueryAttributes(), new Attribute[]{info.getPrimary()}, params);
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FINDS, sql, 0, info.getQueryAttributes(), info.getPrimaryOneArray(), params);
                 req.finds = true;
                 return pool.writeChannel(conn, req);
             })).thenApply((PgResultSet dataset) -> {
@@ -452,7 +452,7 @@ public class PgsqlDataSource extends DataSqlSource {
                 for (int i = 0; i < params.length; i++) {
                     params[i] = new Object[]{ids[i]};
                 }
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FINDS, sql, 0, info.getQueryAttributes(), new Attribute[]{info.getPrimary()}, params);
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FINDS, sql, 0, info.getQueryAttributes(), info.getPrimaryOneArray(), params);
                 req.finds = true;
                 return pool.writeChannel(conn, req);
             })).thenApply((PgResultSet dataset) -> {

@@ -48,7 +48,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
     }
 
     @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean decodeMessages(ClientConnection connection, final ByteBuffer realbuf, ByteArray array) {
+    public boolean decodeMessages(final ByteBuffer realbuf, ByteArray array) {
         MyClientConnection conn = (MyClientConnection) connection;
         if (!realbuf.hasRemaining()) {
             return false;
@@ -120,9 +120,9 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                     halfFrameBytes = null;
                     halfFrameLength = 0;
                     if (lastExc != null) {
-                        addMessage(lastExc);
+                        addMessage(request, lastExc);
                     } else if (lastResult != null) {
-                        addMessage(lastResult);
+                        addMessage(request, lastResult);
                         lastResult = null;
                     }
                     lastExc = null;
@@ -424,12 +424,12 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                 halfFrameBytes = null;
                 halfFrameLength = 0;
                 if (lastExc != null) {
-                    addMessage(lastExc);
+                    addMessage(request, lastExc);
                     if (MysqlDataSource.debug) {
                         logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 返回结果异常 = " + lastExc);
                     }
                 } else if (lastResult != null) {
-                    addMessage(lastResult);
+                    addMessage(request, lastResult);
                     if (MysqlDataSource.debug) {
                         logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 返回结果 = " + lastResult + ", request = " + (request == null ? null : request.toSimpleString()));
                     }
