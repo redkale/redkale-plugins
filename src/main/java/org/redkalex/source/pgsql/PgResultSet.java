@@ -12,7 +12,6 @@ import java.sql.Date;
 import java.sql.*;
 import java.util.*;
 import org.redkale.convert.ConvertDisabled;
-import org.redkale.net.WorkThread;
 import org.redkale.source.*;
 import org.redkale.util.Attribute;
 
@@ -33,8 +32,6 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
             return false;
         }
     };
-
-    protected final WorkThread thread = WorkThread.currWorkThread();
 
     protected PgClientRequest request;
 
@@ -73,6 +70,27 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
         return info;
     }
 
+    protected void prepare() {
+    }
+
+    protected boolean recycle() {
+        this.request = null;
+        this.info = null;
+        this.rowDesc = null;
+        this.colmap = null;
+        this.rowData.clear();
+        this.rowIndex = -1;
+        this.limit = -1;
+        this.page = -1;
+        this.pages = null;
+        this.pageIndex = 0;
+        this.currRow = null;
+        this.updateEffectCount = 0;
+        this.effectRespCount = 0;
+        this.batchEffectCounts = null;
+        return true;
+    }
+
     @Override
     public <T> Serializable getObject(Attribute<T, Serializable> attr, int index, String column) {
         if (currRow.realValues != null) {
@@ -108,7 +126,9 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
     }
 
     private Map<String, Integer> colmap() {
-        if (colmap != null) return colmap;
+        if (colmap != null) {
+            return colmap;
+        }
         colmap = new HashMap<>();
         int i = -1;
         for (PgRowColumn col : this.rowDesc.getColumns()) {
@@ -128,7 +148,9 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
     }
 
     public PgResultSet increBatchEffectCount(int length, int c) {
-        if (batchEffectCounts == null) batchEffectCounts = new int[length];
+        if (batchEffectCounts == null) {
+            batchEffectCounts = new int[length];
+        }
         batchEffectCounts[effectRespCount] = c;
         return this;
     }
@@ -156,7 +178,9 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
 
     @Override
     public boolean next() {
-        if (this.rowData.isEmpty()) return false;
+        if (this.rowData.isEmpty()) {
+            return false;
+        }
         if (++this.rowIndex < (this.limit > 0 ? this.limit : this.rowData.size())) {
             this.currRow = this.rowData.get(this.rowIndex);
             return true;

@@ -67,12 +67,6 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         cacheExtendedDescs.put(prepareSql, desc);
     }
 
-    public PgResultSet pollResultSet(EntityInfo info) {
-        PgResultSet rs = new PgResultSet();
-        rs.info = info;
-        return rs;
-    }
-
     public PgReqInsert pollReqInsert(WorkThread workThread, EntityInfo info) {
         PgReqInsert rs = new PgReqInsert();
         rs.info = info;

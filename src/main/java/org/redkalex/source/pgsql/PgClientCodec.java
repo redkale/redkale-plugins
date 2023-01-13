@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.*;
 import org.redkale.net.client.*;
+import org.redkale.source.EntityInfo;
 import org.redkale.util.*;
 
 /**
@@ -32,10 +33,22 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
 
     Throwable lastExc = null;
 
+    private final ObjectPool<PgResultSet> resultSetPool = ObjectPool.createUnsafePool(256, t -> new PgResultSet(), PgResultSet::prepare, PgResultSet::recycle);
+
     int lastCount;
 
     public PgClientCodec(ClientConnection connection) {
         super(connection);
+    }
+
+    protected PgResultSet pollResultSet(EntityInfo info) {
+        PgResultSet rs = resultSetPool.get();
+        rs.info = info;
+        return rs;
+    }
+
+    protected void offerResultSet(PgResultSet rs) {
+        resultSetPool.accept(rs);
     }
 
     protected ByteArray pollArray() {
@@ -190,7 +203,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                 } else if (cmd == 'C') { //Count
                     if (lastResult == null) {
-                        lastResult = conn.pollResultSet(request == null ? null : request.info);
+                        lastResult = pollResultSet(request == null ? null : request.info);
                     }
                     if (request != null && (request.getType() != PgClientRequest.REQ_TYPE_QUERY)) {
                         int count = PgRespCountDecoder.instance.read(conn, buffer, length, array, request, lastResult);
@@ -214,7 +227,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                 } else if (cmd == 'T') {  //RowDesc
                     if (request != null) {
                         if (lastResult == null) {
-                            lastResult = conn.pollResultSet(request.info);
+                            lastResult = pollResultSet(request.info);
                         }
                         PgRowDesc oldrowDesc = request.isExtendType() ? conn.getPrepareDesc(((PgReqExtended) request).sql) : null;
                         if (oldrowDesc == null) {
@@ -237,7 +250,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                 } else if (cmd == 'D') { //RowData 一行数据
                     if (request != null) {
                         if (lastResult == null) {
-                            lastResult = conn.pollResultSet(request.info);
+                            lastResult = pollResultSet(request.info);
                         }
                         PgRowData rowData = PgRespRowDataDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         lastResult.addRowData(rowData);
