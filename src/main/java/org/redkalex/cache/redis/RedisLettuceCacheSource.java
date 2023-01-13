@@ -295,6 +295,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         }
     }
 
+    protected <T, U> CompletableFuture<U> completableBoolFuture(RedisClusterAsyncCommands<String, byte[]> command, CompletionStage<Boolean> rf) {
+        return (CompletableFuture) rf.toCompletableFuture().whenComplete((v, e) -> releaseBytesCommand(command));
+    }
+
+    protected <T, U> CompletableFuture<U> completableBoolFuture(String key, RedisCryptor cryptor, RedisClusterAsyncCommands<String, String> command, CompletionStage<Boolean> rf) {
+        return (CompletableFuture) rf.toCompletableFuture().whenComplete((v, e) -> releaseStringCommand(command));
+    }
+
     protected <T, U> CompletableFuture<U> completableBytesFuture(RedisClusterAsyncCommands<String, byte[]> command, CompletionStage<T> rf) {
         return (CompletableFuture) rf.toCompletableFuture().whenComplete((v, e) -> releaseBytesCommand(command));
     }
@@ -586,16 +594,16 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setnxAsync(String key, final Type type, T value) {
+    public <T> CompletableFuture<Boolean> setnxAsync(String key, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setnx(key, encryptValue(key, cryptor, type, this.convert, value)));
+            return completableBoolFuture(command, command.setnx(key, encryptValue(key, cryptor, type, this.convert, value)));
         });
     }
 
     @Override
-    public <T> CompletableFuture<Void> setnxAsync(String key, Convert convert0, final Type type, T value) {
+    public <T> CompletableFuture<Boolean> setnxAsync(String key, Convert convert0, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setnx(key, encryptValue(key, cryptor, type, convert0, value)));
+            return completableBoolFuture(command, command.setnx(key, encryptValue(key, cryptor, type, convert0, value)));
         });
     }
 
@@ -661,17 +669,19 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void setnx(final String key, final Type type, T value) {
+    public <T> boolean setnx(final String key, final Type type, T value) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.setnx(key, encryptValue(key, cryptor, type, this.convert, value));
+        Boolean rs = command.setnx(key, encryptValue(key, cryptor, type, this.convert, value));
         releaseBytesCommand(command);
+        return rs;
     }
 
     @Override
-    public <T> void setnx(String key, final Convert convert0, final Type type, T value) {
+    public <T> boolean setnx(String key, final Convert convert0, final Type type, T value) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.setnx(key, encryptValue(key, cryptor, type, convert0, value));
+        Boolean rs = command.setnx(key, encryptValue(key, cryptor, type, convert0, value));
         releaseBytesCommand(command);
+        return rs;
     }
 
     @Override
@@ -683,10 +693,10 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> setnxStringAsync(String key, String value) {
+    public CompletableFuture<Boolean> setnxStringAsync(String key, String value) {
         return connectStringAsync().thenCompose(command -> {
             //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.setnx(key, encryptValue(key, cryptor, value)));
+            return completableBoolFuture(key, null, command, command.setnx(key, encryptValue(key, cryptor, value)));
         });
     }
 
@@ -698,10 +708,11 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void setnxString(String key, String value) {
+    public boolean setnxString(String key, String value) {
         final RedisClusterCommands<String, String> command = connectString();
-        command.setnx(key, encryptValue(key, cryptor, value));
+        Boolean rs = command.setnx(key, encryptValue(key, cryptor, value));
         releaseStringCommand(command);
+        return rs;
     }
 
     @Override
@@ -713,7 +724,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> setnxLongAsync(String key, long value) {
+    public CompletableFuture<Boolean> setnxLongAsync(String key, long value) {
         return connectStringAsync().thenCompose(command -> {
             //不处理返回值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.setnx(key, String.valueOf(value)));
@@ -728,21 +739,23 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void setnxLong(String key, long value) {
+    public boolean setnxLong(String key, long value) {
         final RedisClusterCommands<String, String> command = connectString();
-        command.setnx(key, String.valueOf(value));
+        Boolean rs = command.setnx(key, String.valueOf(value));
         releaseStringCommand(command);
+        return rs;
     }
 
     @Override
-    public void setnxBytes(final String key, final byte[] value) {
+    public boolean setnxBytes(final String key, final byte[] value) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.setnx(key, value);
+        Boolean rs = command.setnx(key, value);
         releaseBytesCommand(command);
+        return rs;
     }
 
     @Override
-    public CompletableFuture<Void> setnxBytesAsync(String key, byte[] value) {
+    public CompletableFuture<Boolean> setnxBytesAsync(String key, byte[] value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.setnx(key, value));
         });
@@ -1047,40 +1060,44 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void hsetnx(final String key, final String field, final Type type, final T value) {
+    public <T> boolean hsetnx(final String key, final String field, final Type type, final T value) {
         if (value == null) {
-            return;
+            return false;
         }
         final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.hsetnx(key, field, encryptValue(key, cryptor, type, this.convert, value));
+        Boolean rs = command.hsetnx(key, field, encryptValue(key, cryptor, type, this.convert, value));
         releaseBytesCommand(command);
+        return rs;
     }
 
     @Override
-    public <T> void hsetnx(final String key, final String field, final Convert convert0, final Type type, final T value) {
+    public <T> boolean hsetnx(final String key, final String field, final Convert convert0, final Type type, final T value) {
         if (value == null) {
-            return;
+            return false;
         }
         final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.hsetnx(key, field, encryptValue(key, cryptor, type, convert0, value));
+        Boolean rs = command.hsetnx(key, field, encryptValue(key, cryptor, type, convert0, value));
         releaseBytesCommand(command);
+        return rs;
     }
 
     @Override
-    public void hsetnxString(final String key, final String field, final String value) {
+    public boolean hsetnxString(final String key, final String field, final String value) {
         if (value == null) {
-            return;
+            return false;
         }
         final RedisClusterCommands<String, String> command = connectString();
-        command.hsetnx(key, field, encryptValue(key, cryptor, value));
+        Boolean rs = command.hsetnx(key, field, encryptValue(key, cryptor, value));
         releaseStringCommand(command);
+        return rs;
     }
 
     @Override
-    public void hsetnxLong(final String key, final String field, final long value) {
+    public boolean hsetnxLong(final String key, final String field, final long value) {
         final RedisClusterCommands<String, String> command = connectString();
-        command.hsetnx(key, field, String.valueOf(value));
+        Boolean rs = command.hsetnx(key, field, String.valueOf(value));
         releaseStringCommand(command);
+        return rs;
     }
 
     @Override
@@ -1839,7 +1856,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetnxAsync(String key, String field, Type type, T value) {
+    public <T> CompletableFuture<Boolean> hsetnxAsync(String key, String field, Type type, T value) {
         if (value == null) {
             return CompletableFuture.completedFuture(null);
         }
@@ -1849,7 +1866,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetnxAsync(String key, String field, Convert convert0, Type type, T value) {
+    public <T> CompletableFuture<Boolean> hsetnxAsync(String key, String field, Convert convert0, Type type, T value) {
         if (value == null) {
             return CompletableFuture.completedFuture(null);
         }
@@ -1859,7 +1876,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> hsetnxStringAsync(String key, String field, String value) {
+    public CompletableFuture<Boolean> hsetnxStringAsync(String key, String field, String value) {
         return connectStringAsync().thenCompose(command -> {
             //不处理返回值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.hsetnx(key, field, value));
@@ -1867,7 +1884,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> hsetnxLongAsync(String key, String field, long value) {
+    public CompletableFuture<Boolean> hsetnxLongAsync(String key, String field, long value) {
         return connectStringAsync().thenCompose(command -> {
             //不处理返回值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.hsetnx(key, field, String.valueOf(value)));

@@ -356,23 +356,23 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setnxAsync(String key, final Type type, T value) {
-        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> v.getVoidValue());
+    public <T> CompletableFuture<Boolean> setnxAsync(String key, final Type type, T value) {
+        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> v.getBoolValue());
     }
 
     @Override
-    public <T> CompletableFuture<Void> setnxAsync(String key, Convert convert, final Type type, T value) {
-        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
+    public <T> CompletableFuture<Boolean> setnxAsync(String key, Convert convert, final Type type, T value) {
+        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getBoolValue());
     }
 
     @Override
-    public void setnxBytes(final String key, final byte[] value) {
-        setnxBytesAsync(key, value).join();
+    public boolean setnxBytes(final String key, final byte[] value) {
+        return setnxBytesAsync(key, value).join();
     }
 
     @Override
-    public CompletableFuture<Void> setnxBytesAsync(final String key, byte[] value) {
-        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getVoidValue());
+    public CompletableFuture<Boolean> setnxBytesAsync(final String key, byte[] value) {
+        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), value).thenApply(v -> v.getBoolValue());
     }
 
     @Override
@@ -406,13 +406,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void setnx(final String key, final Type type, T value) {
-        setnxAsync(key, type, value).join();
+    public <T> boolean setnx(final String key, final Type type, T value) {
+        return setnxAsync(key, type, value).join();
     }
 
     @Override
-    public <T> void setnx(String key, final Convert convert, final Type type, T value) {
-        setnxAsync(key, convert, type, value).join();
+    public <T> boolean setnx(String key, final Convert convert, final Type type, T value) {
+        return setnxAsync(key, convert, type, value).join();
     }
 
     @Override
@@ -431,8 +431,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> setnxStringAsync(String key, String value) {
-        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
+    public CompletableFuture<Boolean> setnxStringAsync(String key, String value) {
+        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getBoolValue());
     }
 
     @Override
@@ -441,8 +441,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void setnxString(String key, String value) {
-        setnxStringAsync(key, value).join();
+    public boolean setnxString(String key, String value) {
+        return setnxStringAsync(key, value).join();
     }
 
     @Override
@@ -451,8 +451,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> setnxLongAsync(String key, long value) {
-        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
+    public CompletableFuture<Boolean> setnxLongAsync(String key, long value) {
+        return sendAsync("SETNX", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getBoolValue());
     }
 
     @Override
@@ -461,8 +461,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void setnxLong(String key, long value) {
-        setnxLongAsync(key, value).join();
+    public boolean setnxLong(String key, long value) {
+        return setnxLongAsync(key, value).join();
     }
 
     //--------------------- setex ------------------------------    
@@ -657,23 +657,23 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void hsetnx(final String key, final String field, final Type type, final T value) {
-        hsetnxAsync(key, field, type, value).join();
+    public <T> boolean hsetnx(final String key, final String field, final Type type, final T value) {
+        return hsetnxAsync(key, field, type, value).join();
     }
 
     @Override
-    public <T> void hsetnx(final String key, final String field, final Convert convert, final Type type, final T value) {
-        hsetnxAsync(key, field, convert, type, value).join();
+    public <T> boolean hsetnx(final String key, final String field, final Convert convert, final Type type, final T value) {
+        return hsetnxAsync(key, field, convert, type, value).join();
     }
 
     @Override
-    public void hsetnxString(final String key, final String field, final String value) {
-        hsetnxStringAsync(key, field, value).join();
+    public boolean hsetnxString(final String key, final String field, final String value) {
+        return hsetnxStringAsync(key, field, value).join();
     }
 
     @Override
-    public void hsetnxLong(final String key, final String field, final long value) {
-        hsetnxLongAsync(key, field, value).join();
+    public boolean hsetnxLong(final String key, final String field, final long value) {
+        return hsetnxLongAsync(key, field, value).join();
     }
 
     @Override
@@ -796,32 +796,32 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetnxAsync(final String key, final String field, final Type type, final T value) {
+    public <T> CompletableFuture<Boolean> hsetnxAsync(final String key, final String field, final Type type, final T value) {
         if (value == null) {
             return CompletableFuture.completedFuture(null);
         }
-        return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, null, type, value)).thenApply(v -> v.getVoidValue());
+        return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, null, type, value)).thenApply(v -> v.getBoolValue());
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetnxAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
+    public <T> CompletableFuture<Boolean> hsetnxAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
         if (value == null) {
             return CompletableFuture.completedFuture(null);
         }
-        return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getVoidValue());
+        return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value)).thenApply(v -> v.getBoolValue());
     }
 
     @Override
-    public CompletableFuture<Void> hsetnxStringAsync(final String key, final String field, final String value) {
+    public CompletableFuture<Boolean> hsetnxStringAsync(final String key, final String field, final String value) {
         if (value == null) {
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(false);
         }
-        return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
+        return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getBoolValue());
     }
 
     @Override
-    public CompletableFuture<Void> hsetnxLongAsync(final String key, final String field, final long value) {
-        return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getVoidValue());
+    public CompletableFuture<Boolean> hsetnxLongAsync(final String key, final String field, final long value) {
+        return sendAsync("HSETNX", key, key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value)).thenApply(v -> v.getBoolValue());
     }
 
     @Override

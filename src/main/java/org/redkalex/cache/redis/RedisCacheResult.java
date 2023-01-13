@@ -47,10 +47,18 @@ public class RedisCacheResult {
         return frameValue;
     }
 
+    public Boolean getBoolValue() {
+        return frameValue == null ? false : Integer.parseInt(new String(frameValue, StandardCharsets.UTF_8)) > 0;
+    }
+
     public String getStringValue(String key, RedisCryptor cryptor) {
-        if (frameValue == null) return null;
+        if (frameValue == null) {
+            return null;
+        }
         String val = new String(frameValue, StandardCharsets.UTF_8);
-        if (cryptor != null) val = cryptor.decrypt(key, val);
+        if (cryptor != null) {
+            val = cryptor.decrypt(key, val);
+        }
         return val;
     }
 
@@ -71,7 +79,9 @@ public class RedisCacheResult {
     }
 
     protected <T> Set<T> getSetValue(String key, RedisCryptor cryptor, Type type) {
-        if (frameList == null || frameList.isEmpty()) return new LinkedHashSet<>();
+        if (frameList == null || frameList.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
         Set<T> set = new LinkedHashSet<>();
         for (byte[] bs : frameList) {
             set.add(formatValue(key, cryptor, bs, type));
@@ -80,7 +90,9 @@ public class RedisCacheResult {
     }
 
     protected <T> List<T> getListValue(String key, RedisCryptor cryptor, Type type) {
-        if (frameList == null || frameList.isEmpty()) return new ArrayList<>();
+        if (frameList == null || frameList.isEmpty()) {
+            return new ArrayList<>();
+        }
         List<T> list = new ArrayList<>();
         for (byte[] bs : frameList) {
             list.add(formatValue(key, cryptor, bs, type));
@@ -89,23 +101,33 @@ public class RedisCacheResult {
     }
 
     protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Type type) {
-        if (frameList == null || frameList.isEmpty()) return new LinkedHashMap<>();
+        if (frameList == null || frameList.isEmpty()) {
+            return new LinkedHashMap<>();
+        }
         Map<String, T> map = new LinkedHashMap<>();
         for (int i = 0; i < frameList.size(); i += 2) {
             byte[] bs1 = frameList.get(i);
             byte[] bs2 = frameList.get(i + 1);
             T val = formatValue(key, cryptor, bs2, type);
-            if (val != null) map.put(formatValue(key, cryptor, bs1, String.class).toString(), val);
+            if (val != null) {
+                map.put(formatValue(key, cryptor, bs1, String.class).toString(), val);
+            }
         }
         return map;
     }
 
     protected static <T> T formatValue(String key, RedisCryptor cryptor, byte[] frames, Type type) {
-        if (frames == null) return null;
-        if (type == byte[].class) return (T) frames;
+        if (frames == null) {
+            return null;
+        }
+        if (type == byte[].class) {
+            return (T) frames;
+        }
         if (type == String.class) {
             String val = new String(frames, StandardCharsets.UTF_8);
-            if (cryptor != null) val = cryptor.decrypt(key, val);
+            if (cryptor != null) {
+                val = cryptor.decrypt(key, val);
+            }
             return (T) val;
         }
         if (type == boolean.class || type == Boolean.class) {
