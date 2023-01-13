@@ -168,7 +168,7 @@ public class PgReqExtended extends PgClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         PgClientConnection pgconn = (PgClientConnection) conn;
         AtomicBoolean prepared = pgconn.getPrepareFlag(sql);
         this.syncedCount = 0;

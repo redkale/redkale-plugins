@@ -52,7 +52,7 @@ public class MyReqUpdate extends MyClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         byte[] sqlbytes = sql.getBytes(StandardCharsets.UTF_8);
         Mysqls.writeUB3(array, 1 + sqlbytes.length);
         array.put(packetIndex);

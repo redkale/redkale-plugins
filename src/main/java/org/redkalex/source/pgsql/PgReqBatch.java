@@ -36,7 +36,7 @@ public class PgReqBatch extends PgClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         for (String sql : sqls) {
             { // PARSE
                 array.putByte('P');

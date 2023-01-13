@@ -41,7 +41,7 @@ public class PgReqAuthMd5Password extends PgClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         array.putByte('p');
         int start = array.length();
         array.putInt(0);

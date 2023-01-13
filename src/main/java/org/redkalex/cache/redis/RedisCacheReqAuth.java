@@ -24,7 +24,7 @@ public class RedisCacheReqAuth extends RedisCacheRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray writer) {
+    public void writeTo(ClientConnection conn, ByteArray writer) {
         byte[] pwd = password.getBytes();
         writer.put((byte) '*');
         writer.put((byte) '2');

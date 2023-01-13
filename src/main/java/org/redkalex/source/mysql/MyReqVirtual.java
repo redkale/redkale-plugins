@@ -14,7 +14,7 @@ import org.redkale.util.ByteArray;
 public class MyReqVirtual extends MyClientRequest {
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
     }
 
     @Override

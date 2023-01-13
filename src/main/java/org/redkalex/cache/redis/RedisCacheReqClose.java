@@ -23,7 +23,7 @@ public class RedisCacheReqClose extends RedisCacheRequest {
     }
     
     @Override
-    public void accept(ClientConnection conn, ByteArray writer) {
+    public void writeTo(ClientConnection conn, ByteArray writer) {
         writer.put((byte) '*');
         writer.put((byte) '1');
         writer.put((byte) '\r', (byte) '\n');

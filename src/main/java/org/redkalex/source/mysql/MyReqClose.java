@@ -35,7 +35,7 @@ public class MyReqClose extends MyClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         Mysqls.writeUB3(array, 1);
         array.put(packetIndex);
         array.put(Mysqls.COM_QUIT);

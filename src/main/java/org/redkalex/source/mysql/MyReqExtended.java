@@ -76,7 +76,7 @@ public class MyReqExtended extends MyClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         MyClientConnection myconn = (MyClientConnection) conn;
         AtomicBoolean prepared = myconn.getPrepareFlag(sql);
         Logger logger = myconn.logger();

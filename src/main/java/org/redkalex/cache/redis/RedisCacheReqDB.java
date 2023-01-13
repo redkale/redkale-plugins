@@ -22,7 +22,7 @@ public class RedisCacheReqDB extends RedisCacheRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray writer) {
+    public void writeTo(ClientConnection conn, ByteArray writer) {
         writer.put((byte) '*');
         writer.put((byte) '2');
         writer.put((byte) '\r', (byte) '\n');

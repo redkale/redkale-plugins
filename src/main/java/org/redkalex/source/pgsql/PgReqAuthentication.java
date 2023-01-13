@@ -33,7 +33,7 @@ public class PgReqAuthentication extends PgClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         int start = array.length();
         array.putInt(0);
         array.putInt(196608);

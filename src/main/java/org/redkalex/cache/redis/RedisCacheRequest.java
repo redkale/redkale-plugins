@@ -34,7 +34,7 @@ public class RedisCacheRequest extends ClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray writer) {
+    public void writeTo(ClientConnection conn, ByteArray writer) {
         writer.put((byte) '*');
         writer.put(String.valueOf(args.length + 1).getBytes(StandardCharsets.UTF_8));
         writer.put((byte) '\r', (byte) '\n');

@@ -62,7 +62,7 @@ public class MyReqAuthentication extends MyClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         final int startPos = array.length();
         Mysqls.writeUB3(array, 0);
         array.putByte(packetIndex);
@@ -157,7 +157,7 @@ public class MyReqAuthentication extends MyClientRequest {
         }
 
         @Override
-        public void accept(ClientConnection conn, ByteArray array) {
+        public void writeTo(ClientConnection conn, ByteArray array) {
             Mysqls.writeUB3(array, scrambledPassword.length);
             array.putByte(3);
             array.put(scrambledPassword);

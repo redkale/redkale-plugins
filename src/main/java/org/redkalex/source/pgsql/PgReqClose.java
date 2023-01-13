@@ -35,7 +35,7 @@ public class PgReqClose extends PgClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         array.putByte('X');
         array.putInt(4);
     }

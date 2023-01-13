@@ -52,7 +52,7 @@ public class PgReqUpdate extends PgClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         { // PARSE
             array.putByte('P');
             int start = array.length();

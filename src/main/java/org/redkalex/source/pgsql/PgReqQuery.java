@@ -33,7 +33,7 @@ public class PgReqQuery extends PgClientRequest {
     }
 
     @Override
-    public void accept(ClientConnection conn, ByteArray array) {
+    public void writeTo(ClientConnection conn, ByteArray array) {
         array.putByte('Q');
         int start = array.length();
         array.putInt(0);
