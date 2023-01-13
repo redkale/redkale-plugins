@@ -13,7 +13,7 @@ import org.redkale.net.client.*;
  *
  * @author zhangjx
  */
-public class RedisCacheClient extends Client<RedisCacheRequest, RedisCacheResult> {
+public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheRequest, RedisCacheResult> {
 
     public RedisCacheClient(String name, AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, RedisCacheReqAuth authReq, RedisCacheReqDB dbReq) {
         super(name, group, true, address, maxConns, maxPipelines, () -> new RedisCacheReqPing(), () -> new RedisCacheReqClose(), null); //maxConns
@@ -30,7 +30,7 @@ public class RedisCacheClient extends Client<RedisCacheRequest, RedisCacheResult
     }
 
     @Override
-    protected ClientConnection createClientConnection(final int index, AsyncConnection channel) {
+    protected RedisCacheConnection createClientConnection(final int index, AsyncConnection channel) {
         return new RedisCacheConnection(this, index, channel);
     }
 

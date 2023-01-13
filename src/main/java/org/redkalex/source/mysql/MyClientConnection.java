@@ -15,9 +15,8 @@ import org.redkale.source.EntityInfo;
 /**
  *
  * @author zhangjx
- * @param <R> ClientRequest
  */
-public class MyClientConnection<R extends MyClientRequest> extends ClientConnection<R, MyResultSet> {
+public class MyClientConnection extends ClientConnection<MyClientRequest, MyResultSet> {
 
     private final Map<String, Long> cacheExtendedIndexs = new HashMap<>();
 
@@ -39,7 +38,7 @@ public class MyClientConnection<R extends MyClientRequest> extends ClientConnect
     }
 
     @Override
-    protected void preComplete(MyResultSet resp, R req, Throwable exc) {
+    protected void preComplete(MyResultSet resp, MyClientRequest req, Throwable exc) {
         if (resp != null) {
             resp.request = req;
         }

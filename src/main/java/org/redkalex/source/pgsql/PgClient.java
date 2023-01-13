@@ -16,7 +16,7 @@ import org.redkale.source.AbstractDataSource.SourceUrlInfo;
  *
  * @author zhangjx
  */
-public class PgClient extends Client<PgClientRequest, PgResultSet> {
+public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResultSet> {
 
     private static final AtomicInteger extendedStatementIndex = new AtomicInteger();
 
@@ -52,7 +52,7 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
     }
 
     @Override
-    protected ClientConnection createClientConnection(final int index, AsyncConnection channel) {
+    protected PgClientConnection createClientConnection(final int index, AsyncConnection channel) {
         return new PgClientConnection(this, index, channel);
     }
 
@@ -62,12 +62,12 @@ public class PgClient extends Client<PgClientRequest, PgResultSet> {
     }
 
     @Override
-    protected CompletableFuture<ClientConnection> connect(final ChannelContext context) {
+    protected CompletableFuture<PgClientConnection> connect(final ChannelContext context) {
         return super.connect(context);
     }
 
     @Override
-    protected void handlePingResult(ClientConnection conn, PgResultSet result) {
+    protected void handlePingResult(PgClientConnection conn, PgResultSet result) {
         if (result != null) {
             result.close();
         }

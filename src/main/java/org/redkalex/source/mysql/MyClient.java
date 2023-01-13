@@ -16,7 +16,7 @@ import org.redkale.source.AbstractDataSource.SourceUrlInfo;
  *
  * @author zhangjx
  */
-public class MyClient extends Client<MyClientRequest, MyResultSet> {
+public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResultSet> {
 
     protected final boolean cachePreparedStatements;
 
@@ -46,7 +46,7 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
     }
 
     @Override
-    protected ClientConnection createClientConnection(final int index, AsyncConnection channel) {
+    protected MyClientConnection createClientConnection(final int index, AsyncConnection channel) {
         return new MyClientConnection(this, index, channel);
     }
 
@@ -61,12 +61,12 @@ public class MyClient extends Client<MyClientRequest, MyResultSet> {
     }
 
     @Override
-    protected CompletableFuture<ClientConnection> connect(final ChannelContext context) {
+    protected CompletableFuture<MyClientConnection> connect(final ChannelContext context) {
         return super.connect(context);
     }
 
     @Override
-    protected void handlePingResult(ClientConnection conn, MyResultSet result) {
+    protected void handlePingResult(MyClientConnection conn, MyResultSet result) {
         if (result != null) {
             result.close();
         }

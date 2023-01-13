@@ -14,9 +14,8 @@ import org.redkale.source.EntityInfo;
 /**
  *
  * @author zhangjx
- * @param <R> ClientRequest
  */
-public class PgClientConnection<R extends PgClientRequest> extends ClientConnection<R, PgResultSet> {
+public class PgClientConnection extends ClientConnection<PgClientRequest, PgResultSet> {
 
     private final Map<String, Long> cacheExtendedIndexs = new HashMap<>();
 
@@ -38,7 +37,7 @@ public class PgClientConnection<R extends PgClientRequest> extends ClientConnect
     }
 
     @Override
-    protected void preComplete(PgResultSet resp, R req, Throwable exc) {
+    protected void preComplete(PgResultSet resp, PgClientRequest req, Throwable exc) {
         if (resp != null) resp.request = req;
     }
 

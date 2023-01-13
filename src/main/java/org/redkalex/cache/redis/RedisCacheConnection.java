@@ -13,7 +13,7 @@ import org.redkale.net.client.*;
  *
  * @author zhangjx
  */
-class RedisCacheConnection<R extends RedisCacheRequest> extends ClientConnection<R, RedisCacheResult> {
+public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, RedisCacheResult> {
 
     public RedisCacheConnection(Client client, int index, AsyncConnection channel) {
         super(client, index, channel);
@@ -24,7 +24,7 @@ class RedisCacheConnection<R extends RedisCacheRequest> extends ClientConnection
         return new RedisCacheCodec(this);
     }
 
-    protected CompletableFuture<RedisCacheResult> writeRequest(R request) {
+    protected CompletableFuture<RedisCacheResult> writeRequest(RedisCacheRequest request) {
         return super.writeChannel(request);
     }
 
