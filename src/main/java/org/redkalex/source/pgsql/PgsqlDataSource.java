@@ -375,11 +375,11 @@ public class PgsqlDataSource extends DataSqlSource {
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(pk);
             WorkThread workThread = WorkThread.currWorkThread();
-            return pool.connect(null).thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
+            return pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FIND, sql, 0, info.getQueryAttributes(), info.getPrimaryOneArray(), new Object[]{pk});
                 return pool.writeChannel(conn, req);
-            })).thenApply((PgResultSet dataset) -> {
+            }).thenApply((PgResultSet dataset) -> {
                 T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
                 dataset.close();
                 slowLog(s, sql);
