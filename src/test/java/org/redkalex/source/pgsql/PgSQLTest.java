@@ -141,15 +141,7 @@ public class PgSQLTest {
             }
         };
 
-        final AtomicReference<ExecutorService> workref = new AtomicReference<>();
-        final AtomicInteger wclientCounter = new AtomicInteger();
-        ExecutorService executor = Executors.newFixedThreadPool(count, (Runnable r) -> {
-            int i = wclientCounter.get();
-            int c = wclientCounter.incrementAndGet();
-            String threadname = "Test-WorkThread-" + (c > 9 ? c : ("0" + c));
-            Thread t = new WorkThread(threadname, i, count, workref.get(), r);
-            return t;
-        });
+        final ExecutorService executor = WorkThread.createExecutor(count, "Test-WorkThread-%s");
         final CountDownLatch cdl = new CountDownLatch(count);
         final CountDownLatch startcdl = new CountDownLatch(count);
         errorCompleteConsumer.set(source, bc);

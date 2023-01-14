@@ -25,7 +25,7 @@ public class MySQLCodecTest {
     public void run() throws Exception {
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         CountDownLatch cdl = new CountDownLatch(1);
-        new WorkThread("", 0, 1, null, null) {
+        new WorkThread(null, "", 0, 1, null, null) {
             public void run() {
                 SourceUrlInfo info = new SourceUrlInfo();
                 info.username = "root";
