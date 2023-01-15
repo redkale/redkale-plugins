@@ -771,10 +771,40 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, final Type type, T value) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.set(key, encryptValue(key, cryptor, type, convert, value), SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
+        });
+    }
+
+    @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert0, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.setex(key, expireSeconds, encryptValue(key, cryptor, type, convert0, value)).thenApply(r -> null));
         });
+    }
+
+    @Override
+    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert0, final Type type, T value) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.set(key, encryptValue(key, cryptor, type, convert0, value), SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
+        });
+    }
+
+    @Override
+    public <T> boolean setnxex(String key, int expireSeconds, final Type type, T value) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        String r = command.set(key, encryptValue(key, cryptor, type, convert, value), SetArgs.Builder.nx().ex(expireSeconds));
+        releaseBytesCommand(command);
+        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
+    }
+
+    @Override
+    public <T> boolean setnxex(String key, int expireSeconds, Convert convert0, final Type type, T value) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        String r = command.set(key, encryptValue(key, cryptor, type, convert0, value), SetArgs.Builder.nx().ex(expireSeconds));
+        releaseBytesCommand(command);
+        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
     }
 
     @Override
@@ -800,10 +830,25 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Boolean> setnxexStringAsync(String key, int expireSeconds, String value) {
+        return connectStringAsync().thenCompose(command -> {
+            return completableStringFuture(key, null, command, command.set(key, encryptValue(key, cryptor, value), SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
+        });
+    }
+
+    @Override
     public void setexString(String key, int expireSeconds, String value) {
         final RedisClusterCommands<String, String> command = connectString();
         command.setex(key, expireSeconds, encryptValue(key, cryptor, value));
         releaseStringCommand(command);
+    }
+
+    @Override
+    public boolean setnxexString(String key, int expireSeconds, String value) {
+        final RedisClusterCommands<String, String> command = connectString();
+        String r = command.set(key, encryptValue(key, cryptor, value), SetArgs.Builder.nx().ex(expireSeconds));
+        releaseStringCommand(command);
+        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
     }
 
     @Override
@@ -815,10 +860,25 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Boolean> setnxexLongAsync(String key, int expireSeconds, long value) {
+        return connectStringAsync().thenCompose(command -> {
+            return completableStringFuture(key, null, command, command.set(key, String.valueOf(value), SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
+        });
+    }
+
+    @Override
     public void setexLong(String key, int expireSeconds, long value) {
         final RedisClusterCommands<String, String> command = connectString();
         command.setex(key, expireSeconds, String.valueOf(value));
         releaseStringCommand(command);
+    }
+
+    @Override
+    public boolean setnxexLong(String key, int expireSeconds, long value) {
+        final RedisClusterCommands<String, String> command = connectString();
+        String r = command.set(key, String.valueOf(value), SetArgs.Builder.nx().ex(expireSeconds));
+        releaseStringCommand(command);
+        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
     }
 
 //    //--------------------- expire ------------------------------    
@@ -1469,6 +1529,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         command.setex(key, expireSeconds, value);
         releaseBytesCommand(command);
+    }
+
+    @Override
+    public boolean setnxexBytes(final String key, final int expireSeconds, final byte[] value) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        String r = command.set(key, value, SetArgs.Builder.nx().ex(expireSeconds));
+        releaseBytesCommand(command);
+        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
     }
 
     @Override
@@ -2243,6 +2311,13 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public CompletableFuture<Void> setexBytesAsync(String key, int expireSeconds, byte[] value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.setex(key, expireSeconds, value));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setnxexBytesAsync(String key, int expireSeconds, byte[] value) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.set(key, value, SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
         });
     }
 

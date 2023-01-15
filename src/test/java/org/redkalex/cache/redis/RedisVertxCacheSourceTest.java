@@ -22,7 +22,7 @@ public class RedisVertxCacheSourceTest extends RedisAbstractTest {
         source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
         try {
-            run(source);
+            run(source, true);
         } finally {
             source.close();
         }

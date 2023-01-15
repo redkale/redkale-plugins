@@ -13,7 +13,7 @@ import org.redkale.util.AnyValue;
  *
  * @author zhangjx
  */
-public class RedisLettuceCacheSourceTest extends RedisAbstractTest{
+public class RedisLettuceCacheSourceTest extends RedisAbstractTest {
 
     public static void main(String[] args) throws Exception {
         AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_MAXCONNS, "1");
@@ -23,7 +23,7 @@ public class RedisLettuceCacheSourceTest extends RedisAbstractTest{
         source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
         try {
-            run(source);
+            run(source, true);
         } finally {
             source.close();
         }

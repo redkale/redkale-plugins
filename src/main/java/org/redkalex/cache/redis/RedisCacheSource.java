@@ -49,6 +49,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     protected static final byte FRAME_TYPE_NUMBER = ':'; //整型
 
+    protected static final byte[] NX = "NX".getBytes();
+
+    protected static final byte[] EX = "EX".getBytes();
+
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
     @Resource(name = RESNAME_APP_CLIENT_ASYNCGROUP, required = false)
@@ -504,6 +508,56 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public void setexLong(String key, int expireSeconds, long value) {
         setexLongAsync(key, expireSeconds, value).join();
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setnxexStringAsync(String key, int expireSeconds, String value) {
+        return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value), NX, EX, String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBoolValue());
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setnxexLongAsync(String key, int expireSeconds, long value) {
+        return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, value), NX, EX, String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBoolValue());
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setnxexBytesAsync(String key, int expireSeconds, byte[] value) {
+        return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), value, NX, EX, String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBoolValue());
+    }
+
+    @Override
+    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, final Type type, T value) {
+        return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, (Convert) null, type, value), NX, EX, String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBoolValue());
+    }
+
+    @Override
+    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
+        return sendAsync("SET", key, key.getBytes(StandardCharsets.UTF_8), formatValue(key, cryptor, convert, type, value), NX, EX, String.valueOf(expireSeconds).getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBoolValue());
+    }
+
+    @Override
+    public <T> boolean setnxex(final String key, final int expireSeconds, final Type type, final T value) {
+        return setnxexAsync(key, expireSeconds, type, value).join();
+    }
+
+    @Override
+    public <T> boolean setnxex(final String key, final int expireSeconds, final Convert convert, final Type type, final T value) {
+        return setnxexAsync(key, expireSeconds, convert, type, value).join();
+    }
+
+    @Override
+    public boolean setnxexString(final String key, final int expireSeconds, final String value) {
+        return setnxexStringAsync(key, expireSeconds, value).join();
+    }
+
+    @Override
+    public boolean setnxexLong(final String key, final int expireSeconds, final long value) {
+        return setnxexLongAsync(key, expireSeconds, value).join();
+    }
+
+    @Override
+    public boolean setnxexBytes(final String key, final int expireSeconds, final byte[] value) {
+        return setnxexBytesAsync(key, expireSeconds, value).join();
     }
 
     //--------------------- expire ------------------------------    

@@ -11,7 +11,12 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
-import org.redkale.convert.json.JsonConvert;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import org.redkale.convert.json.*;
+import org.redkale.net.AsyncIOGroup;
+import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
+import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODE;
+import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_URL;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
@@ -21,7 +26,7 @@ import org.redkale.util.*;
  */
 public abstract class RedisAbstractTest {
 
-    protected static void run(CacheSource source) throws Exception {
+    protected static void run(CacheSource source, boolean press) throws Exception {
         System.out.println("------------------------------------");
         source.del("stritem1", "stritem2");
         source.setString("stritem1", "value1");
@@ -341,6 +346,35 @@ public abstract class RedisAbstractTest {
         System.out.println("SPOP五个元素：" + source.spopLong("popset", 5));
         System.out.println("SPOP一个元素：" + source.spopLong("popset"));
 
+        source.del("nxexkey1");
+        Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "hahaha"));
+        Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehehe"));
+        Thread.sleep(1100);
+        Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "haha"));
+        Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehe"));
+        Assertions.assertEquals(source.getString("nxexkey1"), "haha");
+        source.del("nxexkey1");
+        Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 1111));
+        Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 2222));
+        Thread.sleep(1100);
+        Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 111));
+        Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 222));
+        Assertions.assertEquals(source.getLong("nxexkey1", 0L), 111L);
+        source.del("nxexkey1");
+        Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1, 1}));
+        Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2, 2}));
+        Thread.sleep(1100);
+        Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1}));
+        Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2}));
+        Assertions.assertEquals(Arrays.toString(source.getBytes("nxexkey1")), Arrays.toString(new byte[]{1}));
+        source.del("nxexkey1");
+        Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
+        Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
+        Thread.sleep(1100);
+        Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
+        Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
+        Assertions.assertEquals(source.get("nxexkey1", InetSocketAddress.class).toString(), addr88.toString());
+
         long dbsize = source.dbsize();
         System.out.println("keys总数量 : " + dbsize);
         //清除
@@ -371,7 +405,8 @@ public abstract class RedisAbstractTest {
         source.del("hmapstr");
         source.del("hmapstrmap");
         source.del("byteskey");
-        System.out.println("------------------------------------");
+        source.del("nxexkey1");
+        System.out.println("--------###------- 接口测试结束 --------###-------");
 //        System.out.println("--------------测试大文本---------------");
 //        HashMap<String, String> bigmap = new HashMap<>();
 //        StringBuilder sb = new StringBuilder();
@@ -389,7 +424,7 @@ public abstract class RedisAbstractTest {
 //            System.out.println("内容长度: " + fs.get("val").length());
 //        }
         source.del("bigmap");
-        {
+        if (press) {
             int count = Runtime.getRuntime().availableProcessors() * 10;
             System.out.println("------开始进行压力测试 " + count + "个并发------");
             source.del("hmap");
@@ -438,6 +473,61 @@ public abstract class RedisAbstractTest {
             long e = System.currentTimeMillis() - s;
             System.out.println("hmap.key1 = " + source.hgetLong("hmap", "key1", -1));
             System.out.println("结束了, 循环" + count + "次耗时: " + e + "ms");
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_MAXCONNS, "1");
+        conf.addValue(CACHE_SOURCE_NODE, new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_URL, "redis://127.0.0.1:6363"));
+        final ResourceFactory factory = ResourceFactory.create();
+        {
+            final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
+            asyncGroup.start();
+            factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
+
+            RedisCacheSource source = new RedisCacheSource();
+            factory.inject(source);
+            source.defaultConvert = JsonFactory.root().getConvert();
+            source.init(conf);
+            try {
+                run(source, true);
+            } finally {
+                source.close();
+            }
+        }
+        {
+            System.out.println("############################  开始 Lettuce ############################");
+            RedisLettuceCacheSource source = new RedisLettuceCacheSource();
+            source.defaultConvert = JsonFactory.root().getConvert();
+            source.init(conf);
+            try {
+                run(source, false);
+            } finally {
+                source.close();
+            }
+        }
+        {
+            System.out.println("############################  开始 Vertx ############################");
+            RedisVertxCacheSource source = new RedisVertxCacheSource();
+            factory.inject(source);
+            source.defaultConvert = JsonFactory.root().getConvert();
+            source.init(conf);
+            try {
+                run(source, false);
+            } finally {
+                source.close();
+            }
+        }
+        {
+            System.out.println("############################  开始 Redission ############################");
+            RedissionCacheSource source = new RedissionCacheSource();
+            source.defaultConvert = JsonFactory.root().getConvert();
+            source.init(conf);
+            try {
+                run(source, false);
+            } finally {
+                source.close();
+            }
         }
     }
 }

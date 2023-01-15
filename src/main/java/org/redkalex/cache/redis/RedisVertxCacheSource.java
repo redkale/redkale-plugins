@@ -587,6 +587,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, final Type type, T value) {
+        return sendAsync(Command.SET, key, formatValue(key, cryptor, (Convert) null, type, value), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
+    }
+
+    @Override
+    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
+    }
+
+    @Override
     public <T> void setex(String key, int expireSeconds, final Type type, T value) {
         setexAsync(key, expireSeconds, type, value).join();
     }
@@ -597,13 +607,33 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> boolean setnxex(String key, int expireSeconds, final Type type, T value) {
+        return setnxexAsync(key, expireSeconds, type, value).join();
+    }
+
+    @Override
+    public <T> boolean setnxex(String key, int expireSeconds, Convert convert, final Type type, T value) {
+        return setnxexAsync(key, expireSeconds, convert, type, value).join();
+    }
+
+    @Override
     public CompletableFuture<Void> setexStringAsync(String key, int expireSeconds, String value) {
         return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), formatValue(key, cryptor, value)).thenApply(v -> null);
     }
 
     @Override
+    public CompletableFuture<Boolean> setnxexStringAsync(String key, int expireSeconds, String value) {
+        return sendAsync(Command.SET, key, formatValue(key, cryptor, value), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
+    }
+
+    @Override
     public void setexString(String key, int expireSeconds, String value) {
         setexStringAsync(key, expireSeconds, value).join();
+    }
+
+    @Override
+    public boolean setnxexString(String key, int expireSeconds, String value) {
+        return setnxexStringAsync(key, expireSeconds, value).join();
     }
 
     @Override
@@ -614,6 +644,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public void setexLong(String key, int expireSeconds, long value) {
         setexLongAsync(key, expireSeconds, value).join();
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setnxexLongAsync(String key, int expireSeconds, long value) {
+        return sendAsync(Command.SET, key, formatValue(value), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
+    }
+
+    @Override
+    public boolean setnxexLong(String key, int expireSeconds, long value) {
+        return setnxexLongAsync(key, expireSeconds, value).join();
     }
 
     //--------------------- expire ------------------------------    
@@ -1655,6 +1695,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public boolean setnxexBytes(final String key, final int expireSeconds, final byte[] value) {
+        return setnxexBytesAsync(key, expireSeconds, value).join();
+    }
+
+    @Override
     public CompletableFuture<byte[]> getBytesAsync(final String key) {
         return sendAsync(Command.GET, key).thenApply(v -> v.toBytes());
     }
@@ -1687,6 +1732,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
         return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), new String(value, StandardCharsets.UTF_8)).thenApply(v -> null);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setnxexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
+        return sendAsync(Command.SET, key, new String(value, StandardCharsets.UTF_8), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
     }
 
     @Override

@@ -43,7 +43,14 @@ public class RedisCacheResult {
     }
 
     public Boolean getBoolValue() {
-        return frameValue == null ? false : Integer.parseInt(new String(frameValue, StandardCharsets.UTF_8)) > 0;
+        if (frameValue == null) {
+            return false;
+        }
+        String val = new String(frameValue, StandardCharsets.UTF_8);
+        if ("OK".equals(val)) {
+            return true;
+        }
+        return Integer.parseInt(val) > 0;
     }
 
     public String getStringValue(String key, RedisCryptor cryptor) {

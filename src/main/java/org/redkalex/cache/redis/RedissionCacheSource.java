@@ -613,9 +613,57 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     public void setexLong(String key, int expireSeconds, long value) {
+        final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        bucket.set(String.valueOf(value), expireSeconds, TimeUnit.SECONDS);
+    }
+
+    //--------------------- setex ------------------------------    
+    @Override
+    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, type, convert, value), Duration.ofSeconds(expireSeconds)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert0, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, type, convert0, value), Duration.ofSeconds(expireSeconds)));
+    }
+
+    @Override
+    public <T> boolean setnxex(String key, int expireSeconds, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.setIfAbsent(encryptValue(key, cryptor, type, convert, value), Duration.ofSeconds(expireSeconds));
+    }
+
+    @Override
+    public <T> boolean setnxex(String key, int expireSeconds, Convert convert0, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.setIfAbsent(encryptValue(key, cryptor, type, convert0, value), Duration.ofSeconds(expireSeconds));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setnxexStringAsync(String key, int expireSeconds, String value) {
+        final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return completableFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, value), Duration.ofSeconds(expireSeconds)));
+    }
+
+    @Override
+    public boolean setnxexString(String key, int expireSeconds, String value) {
+        final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return bucket.setIfAbsent(encryptValue(key, cryptor, value), Duration.ofSeconds(expireSeconds));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setnxexLongAsync(String key, int expireSeconds, long value) {
         final RAtomicLong bucket = client.getAtomicLong(key);
-        bucket.set(value);
-        bucket.expire(Duration.ofSeconds(expireSeconds));
+        return completableFuture(bucket.setAsync(value).thenCompose(v -> bucket.expireAsync(Duration.ofSeconds(expireSeconds))));
+    }
+
+    @Override
+    public boolean setnxexLong(String key, int expireSeconds, long value) {
+        final RBucket<String> bucket = client.getBucket(key, org.redisson.client.codec.StringCodec.INSTANCE);
+        return bucket.setIfAbsent(String.valueOf(value), Duration.ofSeconds(expireSeconds));
     }
 
     //--------------------- expire ------------------------------    
@@ -2028,6 +2076,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public boolean setnxexBytes(final String key, final int expireSeconds, final byte[] value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return bucket.setIfAbsent(value, Duration.ofSeconds(expireSeconds));
+    }
+
+    @Override
     public CompletableFuture<byte[]> getBytesAsync(final String key) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.getAsync());
@@ -2055,6 +2109,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
         final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.setAsync(value, expireSeconds, TimeUnit.SECONDS).thenApply(v -> null));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setnxexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.setIfAbsentAsync(value, Duration.ofSeconds(expireSeconds)));
     }
 
     @Override
