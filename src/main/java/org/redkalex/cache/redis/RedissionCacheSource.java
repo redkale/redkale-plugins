@@ -1172,17 +1172,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     //--------------------- collection ------------------------------  
     @Override
-    public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
-        return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
-            if (String.valueOf(type).contains("list")) {
-                return client.getList(key).sizeAsync();
-            } else {
-                return client.getSet(key).sizeAsync();
-            }
-        }));
-    }
-
-    @Override
     public CompletableFuture<Integer> llenAsync(String key) {
         return completableFuture(client.getList(key).sizeAsync());
     }
@@ -1200,55 +1189,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public int scard(String key) {
         return client.getSet(key).size();
-    }
-
-    @Override
-    public int getCollectionSize(String key) {
-        String type = client.getScript().eval(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE);
-        if (String.valueOf(type).contains("list")) {
-            return client.getList(key).size();
-        } else {
-            return client.getSet(key).size();
-        }
-    }
-
-    @Override
-    public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
-        return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
-            if (String.valueOf(type).contains("list")) {
-                return (CompletionStage) client.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty()) {
-                        return list;
-                    }
-                    List<T> rs = new ArrayList<>();
-                    for (Object item : list) {
-                        byte[] bs = (byte[]) item;
-                        if (bs == null) {
-                            rs.add(null);
-                        } else {
-                            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
-                        }
-                    }
-                    return rs;
-                });
-            } else {
-                return (CompletionStage) client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-                    if (set == null || set.isEmpty()) {
-                        return set;
-                    }
-                    Set<T> rs = new LinkedHashSet<>();
-                    for (Object item : set) {
-                        byte[] bs = (byte[]) item;
-                        if (bs == null) {
-                            rs.add(null);
-                        } else {
-                            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
-                        }
-                    }
-                    return rs;
-                });
-            }
-        }));
     }
 
     @Override
@@ -1295,28 +1235,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
-        return completableFuture(client.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).getAsync(keys).thenApply(map -> {
-            Long[] rs = new Long[keys.length];
-            for (int i = 0; i < rs.length; i++) {
-                rs[i] = (Long) map.get(keys[i]);
-            }
-            return rs;
-        }));
-    }
-
-    @Override
-    public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
-        return completableFuture(client.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).getAsync(keys).thenApply(map -> {
-            String[] rs = new String[keys.length];
-            for (int i = 0; i < rs.length; i++) {
-                rs[i] = decryptValue(keys[i], cryptor, (String) map.get(keys[i]));
-            }
-            return rs;
-        }));
-    }
-
-    @Override
     public CompletableFuture<Map<String, String>> mgetStringAsync(String... keys) {
         return completableFuture(client.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).getAsync(keys).thenApply(map -> {
             if (cryptor == null) {
@@ -1344,66 +1262,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
             map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, byte[].class, (byte[]) v)));
             return rs;
         }));
-    }
-
-    @Override
-    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
-        final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
-        final Map<String, Collection<T>> map = new LinkedHashMap<>();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        if (!set) { //list    
-            for (int i = 0; i < keys.length; i++) {
-                final String key = keys[i];
-                futures[i] = completableFuture(client.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty()) {
-                        return list;
-                    }
-                    List<T> rs = new ArrayList<>();
-                    for (Object item : list) {
-                        byte[] bs = (byte[]) item;
-                        if (bs == null) {
-                            rs.add(null);
-                        } else {
-                            rs.add(decryptValue(key, cryptor, componentType, bs));
-                        }
-                    }
-                    synchronized (map) {
-                        map.put(key, rs);
-                    }
-                    return rs;
-                }));
-            }
-        } else {
-            for (int i = 0; i < keys.length; i++) {
-                final String key = keys[i];
-                futures[i] = completableFuture(client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty()) {
-                        return list;
-                    }
-                    List<T> rs = new ArrayList<>();
-                    for (Object item : list) {
-                        byte[] bs = (byte[]) item;
-                        if (bs == null) {
-                            rs.add(null);
-                        } else {
-                            rs.add(decryptValue(key, cryptor, componentType, bs));
-                        }
-                    }
-                    synchronized (map) {
-                        map.put(key, rs);
-                    }
-                    return rs;
-                }));
-            }
-        }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
-            }
-        });
-        return rsFuture;
     }
 
     @Override
@@ -1479,11 +1337,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Collection<T> getCollection(String key, final Type componentType) {
-        return (Collection) getCollectionAsync(key, componentType).join();
-    }
-
-    @Override
     public <T> Set<T> smembers(String key, final Type componentType) {
         return (Set) smembersAsync(key, componentType).join();
     }
@@ -1499,16 +1352,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public Long[] getLongArray(final String... keys) {
-        Map<String, Long> map = client.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).get(keys);
-        Long[] rs = new Long[keys.length];
-        for (int i = 0; i < rs.length; i++) {
-            rs[i] = map.get(keys[i]);
-        }
-        return rs;
-    }
-
-    @Override
     public Map<String, String> mgetString(final String... keys) {
         Map<String, String> map = client.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).get(keys);
         if (cryptor != null && !map.isEmpty()) {
@@ -1517,16 +1360,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
             return rs;
         }
         return map;
-    }
-
-    @Override
-    public String[] getStringArray(final String... keys) {
-        Map<String, String> map = client.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).get(keys);
-        String[] rs = new String[keys.length];
-        for (int i = 0; i < rs.length; i++) {
-            rs[i] = decryptValue(keys[i], cryptor, map.get(keys[i]));
-        }
-        return rs;
     }
 
     @Override
@@ -1546,11 +1379,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
-        return (Map) getCollectionMapAsync(set, componentType, keys).join();
-    }
-
-    @Override
     public <T> Map<String, Set<T>> smembers(final Type componentType, String... keys) {
         return (Map) smembersAsync(componentType, keys).join();
     }
@@ -1558,196 +1386,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public <T> Map<String, List<T>> lrange(final Type componentType, String... keys) {
         return (Map) lrangeAsync(componentType, keys).join();
-    }
-
-    @Override
-    public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
-        return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
-            if (String.valueOf(type).contains("list")) {
-                return (CompletionStage) client.getList(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty() || cryptor == null) {
-                        return list;
-                    }
-                    List<String> rs = new ArrayList<>();
-                    for (Object item : list) {
-                        rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
-                    }
-                    return rs;
-                });
-            } else {
-                return (CompletionStage) client.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply(set -> {
-                    if (set == null) {
-                        return set;
-                    }
-                    if (set.isEmpty() || cryptor == null) {
-                        return new ArrayList<>(set);
-                    }
-                    List<String> rs = new ArrayList<>(); //不用set
-                    for (Object item : set) {
-                        rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
-                    }
-                    return rs;
-                });
-            }
-        }));
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(final boolean set, String... keys) {
-        final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
-        final Map<String, Collection<String>> map = new LinkedHashMap<>();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        if (!set) { //list    
-            for (int i = 0; i < keys.length; i++) {
-                final String key = keys[i];
-                futures[i] = completableFuture(client.getList(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply((Collection r) -> {
-                    if (r != null) {
-                        if (cryptor != null && !r.isEmpty()) {
-                            List<String> rs = new ArrayList<>();
-                            for (Object item : r) {
-                                rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
-                            }
-                            r = rs;
-                        }
-                        synchronized (map) {
-                            map.put(key, r);
-                        }
-                    }
-                    return null;
-                }));
-            }
-        } else {
-            for (int i = 0; i < keys.length; i++) {
-                final String key = keys[i];
-                futures[i] = completableFuture(client.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply((Collection r) -> {
-                    if (r != null) {
-                        boolean changed = false;
-                        if (cryptor != null && !r.isEmpty()) {
-                            List<String> rs = new ArrayList<>();
-                            for (Object item : r) {
-                                rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
-                            }
-                            r = rs;
-                            changed = true;
-                        }
-                        synchronized (map) {
-                            map.put(key, changed ? r : new ArrayList(r));
-                        }
-                    }
-                    return null;
-                }));
-            }
-        }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
-            }
-        });
-        return rsFuture;
-    }
-
-    @Override
-    public Collection<String> getStringCollection(String key) {
-        return getStringCollectionAsync(key).join();
-    }
-
-    @Override
-    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
-        return getStringCollectionMapAsync(set, keys).join();
-    }
-
-    @Override
-    public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
-        return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
-            if (String.valueOf(type).contains("list")) {
-                return (CompletionStage) client.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync();
-            } else {
-                return (CompletionStage) client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(s -> s == null ? null : new ArrayList(s));
-            }
-        }));
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(final boolean set, String... keys) {
-        final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
-        final Map<String, Collection<Long>> map = new LinkedHashMap<>();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        if (!set) { //list    
-            for (int i = 0; i < keys.length; i++) {
-                final String key = keys[i];
-                futures[i] = completableFuture(client.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(r -> {
-                    if (r != null) {
-                        synchronized (map) {
-                            map.put(key, (Collection) r);
-                        }
-                    }
-                    return null;
-                }));
-            }
-        } else {
-            for (int i = 0; i < keys.length; i++) {
-                final String key = keys[i];
-                futures[i] = completableFuture(client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(r -> {
-                    if (r != null) {
-                        synchronized (map) {
-                            map.put(key, new ArrayList(r));
-                        }
-                    }
-                    return null;
-                }));
-            }
-        }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
-            }
-        });
-        return rsFuture;
-    }
-
-    @Override
-    public Collection<Long> getLongCollection(String key) {
-        return getLongCollectionAsync(key).join();
-    }
-
-    @Override
-    public Map<String, Collection<Long>> getLongCollectionMap(final boolean set, String... keys) {
-        return getLongCollectionMapAsync(set, keys).join();
-    }
-
-    //--------------------- getexCollection ------------------------------  
-    @Override
-    public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
-        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
-    }
-
-    @Override
-    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
-        return (Collection) getexCollectionAsync(key, expireSeconds, componentType).join();
-    }
-
-    @Override
-    public CompletableFuture<Collection<String>> getexStringCollectionAsync(String key, int expireSeconds) {
-        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(key));
-    }
-
-    @Override
-    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
-        return getexStringCollectionAsync(key, expireSeconds).join();
-    }
-
-    @Override
-    public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
-        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
-    }
-
-    @Override
-    public Collection<Long> getexLongCollection(String key, final int expireSeconds) {
-        return getexLongCollectionAsync(key, expireSeconds).join();
     }
 
     //--------------------- existsItem ------------------------------  
@@ -2192,4 +1830,367 @@ public class RedissionCacheSource extends AbstractRedisSource {
             return org.redisson.client.codec.StringCodec.INSTANCE.getValueEncoder();
         }
     }
+
+    @Override
+    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
+        final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
+        final Map<String, Collection<T>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        if (!set) { //list    
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = completableFuture(client.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
+                    if (list == null || list.isEmpty()) {
+                        return list;
+                    }
+                    List<T> rs = new ArrayList<>();
+                    for (Object item : list) {
+                        byte[] bs = (byte[]) item;
+                        if (bs == null) {
+                            rs.add(null);
+                        } else {
+                            rs.add(decryptValue(key, cryptor, componentType, bs));
+                        }
+                    }
+                    synchronized (map) {
+                        map.put(key, rs);
+                    }
+                    return rs;
+                }));
+            }
+        } else {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = completableFuture(client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
+                    if (list == null || list.isEmpty()) {
+                        return list;
+                    }
+                    List<T> rs = new ArrayList<>();
+                    for (Object item : list) {
+                        byte[] bs = (byte[]) item;
+                        if (bs == null) {
+                            rs.add(null);
+                        } else {
+                            rs.add(decryptValue(key, cryptor, componentType, bs));
+                        }
+                    }
+                    synchronized (map) {
+                        map.put(key, rs);
+                    }
+                    return rs;
+                }));
+            }
+        }
+        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+            if (e != null) {
+                rsFuture.completeExceptionally(e);
+            } else {
+                rsFuture.complete(map);
+            }
+        });
+        return rsFuture;
+    }
+
+    @Override
+    public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
+        return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
+            if (String.valueOf(type).contains("list")) {
+                return client.getList(key).sizeAsync();
+            } else {
+                return client.getSet(key).sizeAsync();
+            }
+        }));
+    }
+
+    @Override
+    public int getCollectionSize(String key) {
+        String type = client.getScript().eval(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE);
+        if (String.valueOf(type).contains("list")) {
+            return client.getList(key).size();
+        } else {
+            return client.getSet(key).size();
+        }
+    }
+
+    @Override
+    public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
+        return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
+            if (String.valueOf(type).contains("list")) {
+                return (CompletionStage) client.getList(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
+                    if (list == null || list.isEmpty()) {
+                        return list;
+                    }
+                    List<T> rs = new ArrayList<>();
+                    for (Object item : list) {
+                        byte[] bs = (byte[]) item;
+                        if (bs == null) {
+                            rs.add(null);
+                        } else {
+                            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
+                        }
+                    }
+                    return rs;
+                });
+            } else {
+                return (CompletionStage) client.getSet(key, org.redisson.client.codec.ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
+                    if (set == null || set.isEmpty()) {
+                        return set;
+                    }
+                    Set<T> rs = new LinkedHashSet<>();
+                    for (Object item : set) {
+                        byte[] bs = (byte[]) item;
+                        if (bs == null) {
+                            rs.add(null);
+                        } else {
+                            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
+                        }
+                    }
+                    return rs;
+                });
+            }
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
+        return completableFuture(client.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).getAsync(keys).thenApply(map -> {
+            Long[] rs = new Long[keys.length];
+            for (int i = 0; i < rs.length; i++) {
+                rs[i] = (Long) map.get(keys[i]);
+            }
+            return rs;
+        }));
+    }
+
+    @Override
+    public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
+        return completableFuture(client.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).getAsync(keys).thenApply(map -> {
+            String[] rs = new String[keys.length];
+            for (int i = 0; i < rs.length; i++) {
+                rs[i] = decryptValue(keys[i], cryptor, (String) map.get(keys[i]));
+            }
+            return rs;
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
+        return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
+            if (String.valueOf(type).contains("list")) {
+                return (CompletionStage) client.getList(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply(list -> {
+                    if (list == null || list.isEmpty() || cryptor == null) {
+                        return list;
+                    }
+                    List<String> rs = new ArrayList<>();
+                    for (Object item : list) {
+                        rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
+                    }
+                    return rs;
+                });
+            } else {
+                return (CompletionStage) client.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply(set -> {
+                    if (set == null) {
+                        return set;
+                    }
+                    if (set.isEmpty() || cryptor == null) {
+                        return new ArrayList<>(set);
+                    }
+                    List<String> rs = new ArrayList<>(); //不用set
+                    for (Object item : set) {
+                        rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
+                    }
+                    return rs;
+                });
+            }
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(final boolean set, String... keys) {
+        final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
+        final Map<String, Collection<String>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        if (!set) { //list    
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = completableFuture(client.getList(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply((Collection r) -> {
+                    if (r != null) {
+                        if (cryptor != null && !r.isEmpty()) {
+                            List<String> rs = new ArrayList<>();
+                            for (Object item : r) {
+                                rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
+                            }
+                            r = rs;
+                        }
+                        synchronized (map) {
+                            map.put(key, r);
+                        }
+                    }
+                    return null;
+                }));
+            }
+        } else {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = completableFuture(client.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).readAllAsync().thenApply((Collection r) -> {
+                    if (r != null) {
+                        boolean changed = false;
+                        if (cryptor != null && !r.isEmpty()) {
+                            List<String> rs = new ArrayList<>();
+                            for (Object item : r) {
+                                rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
+                            }
+                            r = rs;
+                            changed = true;
+                        }
+                        synchronized (map) {
+                            map.put(key, changed ? r : new ArrayList(r));
+                        }
+                    }
+                    return null;
+                }));
+            }
+        }
+        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+            if (e != null) {
+                rsFuture.completeExceptionally(e);
+            } else {
+                rsFuture.complete(map);
+            }
+        });
+        return rsFuture;
+    }
+
+    @Override
+    public Collection<String> getStringCollection(String key) {
+        return getStringCollectionAsync(key).join();
+    }
+
+    @Override
+    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
+        return getStringCollectionMapAsync(set, keys).join();
+    }
+
+    @Override
+    public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
+        return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
+            if (String.valueOf(type).contains("list")) {
+                return (CompletionStage) client.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync();
+            } else {
+                return (CompletionStage) client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(s -> s == null ? null : new ArrayList(s));
+            }
+        }));
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(final boolean set, String... keys) {
+        final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
+        final Map<String, Collection<Long>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        if (!set) { //list    
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = completableFuture(client.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(r -> {
+                    if (r != null) {
+                        synchronized (map) {
+                            map.put(key, (Collection) r);
+                        }
+                    }
+                    return null;
+                }));
+            }
+        } else {
+            for (int i = 0; i < keys.length; i++) {
+                final String key = keys[i];
+                futures[i] = completableFuture(client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(r -> {
+                    if (r != null) {
+                        synchronized (map) {
+                            map.put(key, new ArrayList(r));
+                        }
+                    }
+                    return null;
+                }));
+            }
+        }
+        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+            if (e != null) {
+                rsFuture.completeExceptionally(e);
+            } else {
+                rsFuture.complete(map);
+            }
+        });
+        return rsFuture;
+    }
+
+    @Override
+    public Collection<Long> getLongCollection(String key) {
+        return getLongCollectionAsync(key).join();
+    }
+
+    @Override
+    public Map<String, Collection<Long>> getLongCollectionMap(final boolean set, String... keys) {
+        return getLongCollectionMapAsync(set, keys).join();
+    }
+
+    //--------------------- getexCollection ------------------------------  
+    @Override
+    public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
+        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
+    }
+
+    @Override
+    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
+        return (Collection) getexCollectionAsync(key, expireSeconds, componentType).join();
+    }
+
+    @Override
+    public CompletableFuture<Collection<String>> getexStringCollectionAsync(String key, int expireSeconds) {
+        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(key));
+    }
+
+    @Override
+    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
+        return getexStringCollectionAsync(key, expireSeconds).join();
+    }
+
+    @Override
+    public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
+        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
+    }
+
+    @Override
+    public Collection<Long> getexLongCollection(String key, final int expireSeconds) {
+        return getexLongCollectionAsync(key, expireSeconds).join();
+    }
+
+    @Override
+    public <T> Collection<T> getCollection(String key, final Type componentType) {
+        return (Collection) getCollectionAsync(key, componentType).join();
+    }
+
+    @Override
+    public Long[] getLongArray(final String... keys) {
+        Map<String, Long> map = client.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).get(keys);
+        Long[] rs = new Long[keys.length];
+        for (int i = 0; i < rs.length; i++) {
+            rs[i] = map.get(keys[i]);
+        }
+        return rs;
+    }
+
+    @Override
+    public String[] getStringArray(final String... keys) {
+        Map<String, String> map = client.getBuckets(org.redisson.client.codec.StringCodec.INSTANCE).get(keys);
+        String[] rs = new String[keys.length];
+        for (int i = 0; i < rs.length; i++) {
+            rs[i] = decryptValue(keys[i], cryptor, map.get(keys[i]));
+        }
+        return rs;
+    }
+
+    @Override
+    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
+        return (Map) getCollectionMapAsync(set, componentType, keys).join();
+    }
+
 }

@@ -960,17 +960,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     //--------------------- collection ------------------------------  
     @Override
-    public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
-        return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
-            String type = t.getStringValue(key, cryptor);
-            if (type == null) {
-                return CompletableFuture.completedFuture(0);
-            }
-            return sendAsync(type.contains("list") ? "LLEN" : "SCARD", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
-        });
-    }
-
-    @Override
     public CompletableFuture<Integer> llenAsync(String key) {
         return sendAsync("LLEN", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
     }
@@ -981,11 +970,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int getCollectionSize(String key) {
-        return getCollectionSizeAsync(key).join();
-    }
-
-    @Override
     public int llen(String key) {
         return llenAsync(key).join();
     }
@@ -993,52 +977,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public int scard(String key) {
         return scardAsync(key).join();
-    }
-
-    @Override
-    public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
-        return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
-            String type = t.getStringValue(key, cryptor);
-            if (type == null) {
-                return CompletableFuture.completedFuture(null);
-            }
-            boolean set = !type.contains("list");
-            return sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenApply(v -> set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
-        byte[][] bs = new byte[keys.length][];
-        for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
-        }
-        return sendAsync("MGET", keys[0], bs).thenApply(v -> {
-            List list = (List) v.getListValue(keys[0], cryptor, long.class);
-            Long[] rs = new Long[keys.length];
-            for (int i = 0; i < keys.length; i++) {
-                Number obj = (Number) list.get(i);
-                rs[i] = obj == null ? null : obj.longValue();
-            }
-            return rs;
-        });
-    }
-
-    @Override
-    public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
-        byte[][] bs = new byte[keys.length][];
-        for (int i = 0; i < bs.length; i++) {
-            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
-        }
-        return sendAsync("MGET", keys[0], bs).thenApply(v -> {
-            List list = (List) v.getListValue(keys[0], cryptor, String.class);
-            String[] rs = new String[keys.length];
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                rs[i] = obj == null ? null : obj.toString();
-            }
-            return rs;
-        });
     }
 
     @Override
@@ -1170,32 +1108,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
-        final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
-        final Map<String, Collection<T>> map = new LinkedHashMap<>();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        for (int i = 0; i < keys.length; i++) {
-            final String key = keys[i];
-            futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenAccept(v -> {
-                Collection c = set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType);
-                if (c != null) {
-                    synchronized (map) {
-                        map.put(key, (Collection) c);
-                    }
-                }
-            });
-        }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
-            }
-        });
-        return rsFuture;
-    }
-
-    @Override
     public <T> Set<T> smembers(String key, final Type componentType) {
         return (Set) smembersAsync(key, componentType).join();
     }
@@ -1203,21 +1115,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public <T> List<T> lrange(String key, final Type componentType) {
         return (List) lrangeAsync(key, componentType).join();
-    }
-
-    @Override
-    public <T> Collection<T> getCollection(String key, final Type componentType) {
-        return (Collection) getCollectionAsync(key, componentType).join();
-    }
-
-    @Override
-    public Long[] getLongArray(final String... keys) {
-        return getLongArrayAsync(keys).join();
-    }
-
-    @Override
-    public String[] getStringArray(final String... keys) {
-        return getStringArrayAsync(keys).join();
     }
 
     @Override
@@ -1241,11 +1138,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
-        return (Map) getCollectionMapAsync(set, componentType, keys).join();
-    }
-
-    @Override
     public <T> Map<String, Set<T>> smembers(final Type componentType, String... keys) {
         return (Map) smembersAsync(componentType, keys).join();
     }
@@ -1253,133 +1145,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public <T> Map<String, List<T>> lrange(final Type componentType, String... keys) {
         return (Map) lrangeAsync(componentType, keys).join();
-    }
-
-    @Override
-    public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
-        return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
-            String type = t.getStringValue(key, cryptor);
-            if (type == null) {
-                return CompletableFuture.completedFuture(null);
-            }
-            boolean set = !type.contains("list");
-            return sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenApply(v -> set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(final boolean set, String... keys) {
-        final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
-        final Map<String, Collection<String>> map = new LinkedHashMap<>();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        for (int i = 0; i < keys.length; i++) {
-            final String key = keys[i];
-            futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenAccept(v -> {
-                Collection<String> c = set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class);
-                if (c != null) {
-                    synchronized (map) {
-                        map.put(key, (Collection) c);
-                    }
-                }
-            });
-        }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
-            }
-        });
-        return rsFuture;
-    }
-
-    @Override
-    public Collection<String> getStringCollection(String key) {
-        return getStringCollectionAsync(key).join();
-    }
-
-    @Override
-    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
-        return getStringCollectionMapAsync(set, keys).join();
-    }
-
-    @Override
-    public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
-        return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
-            String type = t.getStringValue(key, cryptor);
-            if (type == null) {
-                return CompletableFuture.completedFuture(null);
-            }
-            boolean set = !type.contains("list");
-            return sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenApply(v -> set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(final boolean set, String... keys) {
-        final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
-        final Map<String, Collection<Long>> map = new LinkedHashMap<>();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        for (int i = 0; i < keys.length; i++) {
-            final String key = keys[i];
-            futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenAccept(v -> {
-                Collection<Long> c = set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class);
-                if (c != null) {
-                    synchronized (map) {
-                        map.put(key, (Collection) c);
-                    }
-                }
-            });
-        }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
-            }
-        });
-        return rsFuture;
-    }
-
-    @Override
-    public Collection<Long> getLongCollection(String key) {
-        return getLongCollectionAsync(key).join();
-    }
-
-    @Override
-    public Map<String, Collection<Long>> getLongCollectionMap(final boolean set, String... keys) {
-        return getLongCollectionMapAsync(set, keys).join();
-    }
-
-    //--------------------- getexCollection ------------------------------  
-    @Override
-    public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
-        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
-    }
-
-    @Override
-    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
-        return (Collection) getexCollectionAsync(key, expireSeconds, componentType).join();
-    }
-
-    @Override
-    public CompletableFuture<Collection<String>> getexStringCollectionAsync(String key, int expireSeconds) {
-        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(key));
-    }
-
-    @Override
-    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
-        return getexStringCollectionAsync(key, expireSeconds).join();
-    }
-
-    @Override
-    public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
-        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
-    }
-
-    @Override
-    public Collection<Long> getexLongCollection(String key, final int expireSeconds) {
-        return getexLongCollectionAsync(key, expireSeconds).join();
     }
 
     //--------------------- existsItem ------------------------------  
@@ -1750,4 +1515,238 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return bs;
     }
 
+    @Override
+    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
+        final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
+        final Map<String, Collection<T>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            final String key = keys[i];
+            futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenAccept(v -> {
+                Collection c = set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType);
+                if (c != null) {
+                    synchronized (map) {
+                        map.put(key, (Collection) c);
+                    }
+                }
+            });
+        }
+        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+            if (e != null) {
+                rsFuture.completeExceptionally(e);
+            } else {
+                rsFuture.complete(map);
+            }
+        });
+        return rsFuture;
+    }
+
+    @Override
+    public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
+        return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
+            String type = t.getStringValue(key, cryptor);
+            if (type == null) {
+                return CompletableFuture.completedFuture(0);
+            }
+            return sendAsync(type.contains("list") ? "LLEN" : "SCARD", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getIntValue(0));
+        });
+    }
+
+    @Override
+    public int getCollectionSize(String key) {
+        return getCollectionSizeAsync(key).join();
+    }
+
+    @Override
+    public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
+        return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
+            String type = t.getStringValue(key, cryptor);
+            if (type == null) {
+                return CompletableFuture.completedFuture(null);
+            }
+            boolean set = !type.contains("list");
+            return sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenApply(v -> set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
+        byte[][] bs = new byte[keys.length][];
+        for (int i = 0; i < bs.length; i++) {
+            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
+        }
+        return sendAsync("MGET", keys[0], bs).thenApply(v -> {
+            List list = (List) v.getListValue(keys[0], cryptor, long.class);
+            Long[] rs = new Long[keys.length];
+            for (int i = 0; i < keys.length; i++) {
+                Number obj = (Number) list.get(i);
+                rs[i] = obj == null ? null : obj.longValue();
+            }
+            return rs;
+        });
+    }
+
+    @Override
+    public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
+        byte[][] bs = new byte[keys.length][];
+        for (int i = 0; i < bs.length; i++) {
+            bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
+        }
+        return sendAsync("MGET", keys[0], bs).thenApply(v -> {
+            List list = (List) v.getListValue(keys[0], cryptor, String.class);
+            String[] rs = new String[keys.length];
+            for (int i = 0; i < keys.length; i++) {
+                Object obj = list.get(i);
+                rs[i] = obj == null ? null : obj.toString();
+            }
+            return rs;
+        });
+    }
+
+    @Override
+    public <T> Collection<T> getCollection(String key, final Type componentType) {
+        return (Collection) getCollectionAsync(key, componentType).join();
+    }
+
+    @Override
+    public Long[] getLongArray(final String... keys) {
+        return getLongArrayAsync(keys).join();
+    }
+
+    @Override
+    public String[] getStringArray(final String... keys) {
+        return getStringArrayAsync(keys).join();
+    }
+
+    @Override
+    public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
+        return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
+            String type = t.getStringValue(key, cryptor);
+            if (type == null) {
+                return CompletableFuture.completedFuture(null);
+            }
+            boolean set = !type.contains("list");
+            return sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenApply(v -> set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(final boolean set, String... keys) {
+        final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
+        final Map<String, Collection<String>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            final String key = keys[i];
+            futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenAccept(v -> {
+                Collection<String> c = set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class);
+                if (c != null) {
+                    synchronized (map) {
+                        map.put(key, (Collection) c);
+                    }
+                }
+            });
+        }
+        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+            if (e != null) {
+                rsFuture.completeExceptionally(e);
+            } else {
+                rsFuture.complete(map);
+            }
+        });
+        return rsFuture;
+    }
+
+    @Override
+    public Collection<String> getStringCollection(String key) {
+        return getStringCollectionAsync(key).join();
+    }
+
+    @Override
+    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
+        return getStringCollectionMapAsync(set, keys).join();
+    }
+
+    @Override
+    public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
+        return sendAsync("TYPE", key, key.getBytes(StandardCharsets.UTF_8)).thenCompose(t -> {
+            String type = t.getStringValue(key, cryptor);
+            if (type == null) {
+                return CompletableFuture.completedFuture(null);
+            }
+            boolean set = !type.contains("list");
+            return sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenApply(v -> set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(final boolean set, String... keys) {
+        final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
+        final Map<String, Collection<Long>> map = new LinkedHashMap<>();
+        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            final String key = keys[i];
+            futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenAccept(v -> {
+                Collection<Long> c = set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class);
+                if (c != null) {
+                    synchronized (map) {
+                        map.put(key, (Collection) c);
+                    }
+                }
+            });
+        }
+        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
+            if (e != null) {
+                rsFuture.completeExceptionally(e);
+            } else {
+                rsFuture.complete(map);
+            }
+        });
+        return rsFuture;
+    }
+
+    @Override
+    public Collection<Long> getLongCollection(String key) {
+        return getLongCollectionAsync(key).join();
+    }
+
+    @Override
+    public Map<String, Collection<Long>> getLongCollectionMap(final boolean set, String... keys) {
+        return getLongCollectionMapAsync(set, keys).join();
+    }
+
+    //--------------------- getexCollection ------------------------------  
+    @Override
+    public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
+        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
+    }
+
+    @Override
+    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
+        return (Collection) getexCollectionAsync(key, expireSeconds, componentType).join();
+    }
+
+    @Override
+    public CompletableFuture<Collection<String>> getexStringCollectionAsync(String key, int expireSeconds) {
+        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(key));
+    }
+
+    @Override
+    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
+        return getexStringCollectionAsync(key, expireSeconds).join();
+    }
+
+    @Override
+    public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
+        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
+    }
+
+    @Override
+    public Collection<Long> getexLongCollection(String key, final int expireSeconds) {
+        return getexLongCollectionAsync(key, expireSeconds).join();
+    }
+
+    @Override
+    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
+        return (Map) getCollectionMapAsync(set, componentType, keys).join();
+    }
 }

@@ -1311,14 +1311,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return rs;
     }
 
-    @Override
-    public <T> Collection<T> getCollection(String key, final Type componentType) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Collection<T> rs = getCollection(command, key, componentType);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
     protected <T> Collection<T> getCollection(final RedisClusterCommands<String, byte[]> command, String key, final Type componentType) {
         final String type = command.type(key);
         if (type.contains("list")) {
@@ -1326,23 +1318,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         } else { //set
             return formatCollection(key, cryptor, command.smembers(key), convert, componentType);
         }
-    }
-
-    @Override
-    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        final Map<String, Collection<T>> map = new LinkedHashMap<>();
-        if (set) {  //set
-            for (String key : keys) {
-                map.put(key, formatCollection(key, cryptor, command.smembers(key), convert, componentType));
-            }
-        } else { //list
-            for (String key : keys) {
-                map.put(key, formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType));
-            }
-        }
-        releaseBytesCommand(command);
-        return map;
     }
 
     @Override
@@ -1368,20 +1343,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int getCollectionSize(String key) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        final String type = command.type(key);
-        int rs;
-        if (type.contains("list")) {
-            rs = command.llen(key).intValue();
-        } else { //set
-            rs = command.scard(key).intValue();
-        }
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
     public int llen(String key) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         int rs = command.llen(key).intValue();
@@ -1393,15 +1354,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public int scard(String key) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         int rs = command.scard(key).intValue();
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.expire(key, Duration.ofSeconds(expireSeconds));
-        Collection<T> rs = getCollection(command, key, componentType);
         releaseBytesCommand(command);
         return rs;
     }
@@ -1561,33 +1513,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return map;
     }
 
-    @Override
-    public String[] getStringArray(final String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        List<KeyValue<String, String>> rs = command.mget(keys);
-        releaseStringCommand(command);
-        String[] array = new String[keys.length];
-        for (int i = 0; i < array.length; i++) {
-            String bs = null;
-            for (KeyValue<String, String> kv : rs) {
-                if (kv.getKey().equals(keys[i])) {
-                    bs = kv.hasValue() ? (cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue()) : null;
-                    break;
-                }
-            }
-            array[i] = bs;
-        }
-        return array;
-    }
-
-    @Override
-    public Collection<String> getStringCollection(String key) {
-        final RedisClusterCommands<String, String> command = connectString();
-        Collection<String> rs = getStringCollection(command, key);
-        releaseStringCommand(command);
-        return rs;
-    }
-
     protected Collection<String> decryptStringCollection(String key, final boolean set, Collection<String> collection) {
         if (collection == null || collection.isEmpty() || cryptor == null) {
             return collection;
@@ -1614,32 +1539,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         } else { //set
             return decryptStringCollection(key, true, command.smembers(key));
         }
-    }
-
-    @Override
-    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        final Map<String, Collection<String>> map = new LinkedHashMap<>();
-        if (set) {//set    
-            for (String key : keys) {
-                map.put(key, decryptStringCollection(key, true, command.smembers(key)));
-            }
-        } else {  //list           
-            for (String key : keys) {
-                map.put(key, decryptStringCollection(key, false, command.lrange(key, 0, -1)));
-            }
-        }
-        releaseStringCommand(command);
-        return map;
-    }
-
-    @Override
-    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.expire(key, expireSeconds);
-        Collection<String> rs = getStringCollection(command, key);
-        releaseStringCommand(command);
-        return rs;
     }
 
     @Override
@@ -1708,70 +1607,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             }
         });
         return map;
-    }
-
-    @Override
-    public Long[] getLongArray(String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        List<KeyValue<String, String>> rs = command.mget(keys);
-        releaseStringCommand(command);
-        Long[] array = new Long[keys.length];
-        for (int i = 0; i < array.length; i++) {
-            Long bs = null;
-            for (KeyValue<String, String> kv : rs) {
-                if (kv.getKey().equals(keys[i])) {
-                    bs = kv.hasValue() ? Long.parseLong(kv.getValue()) : null;
-                    break;
-                }
-            }
-            array[i] = bs;
-        }
-        return array;
-    }
-
-    @Override
-    public Collection<Long> getLongCollection(String key) {
-        final RedisClusterCommands<String, String> command = connectString();
-        Collection<Long> rs = getLongCollection(command, key);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    protected Collection<Long> getLongCollection(final RedisClusterCommands<String, String> command, String key) {
-        final String type = command.type(key);
-        Collection<Long> rs;
-        if (type.contains("list")) { //list
-            rs = formatLongCollection(false, command.lrange(key, 0, -1));
-        } else { //set
-            rs = formatLongCollection(true, command.smembers(key));
-        }
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public Map<String, Collection<Long>> getLongCollectionMap(boolean set, String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        final Map<String, Collection<Long>> map = new LinkedHashMap<>();
-        if (set) { //set
-            for (String key : keys) {
-                map.put(key, formatLongCollection(true, command.smembers(key)));
-            }
-        } else { //list                
-            for (String key : keys) {
-                map.put(key, formatLongCollection(false, command.lrange(key, 0, -1)));
-            }
-        }
-        releaseStringCommand(command);
-        return map;
-    }
-
-    @Override
-    public Collection<Long> getexLongCollection(String key, int expireSeconds) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.expire(key, expireSeconds);
-        releaseStringCommand(command);
-        return getLongCollection(key);
     }
 
     @Override
@@ -2103,13 +1938,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
-        return connectBytesAsync().thenCompose(command -> {
-            return getCollectionAsync(command, key, componentType);
-        });
-    }
-
     protected <T> CompletableFuture<Collection<T>> getCollectionAsync(
         final RedisClusterAsyncCommands<String, byte[]> command, String key, final Type componentType) {
         return completableBytesFuture(command, command.type(key).thenCompose(type -> {
@@ -2119,38 +1947,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                 return command.smembers(key).thenApply(set -> formatCollection(key, cryptor, set, convert, componentType));
             }
         }));
-    }
-
-    @Override
-    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(boolean set, Type componentType, String... keys) {
-        return connectBytesAsync().thenCompose(command -> {
-            final Map<String, Collection<T>> map = new LinkedHashMap<>();
-            final CompletableFuture[] futures = new CompletableFuture[keys.length];
-            if (set) {
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = command.smembers(key).thenAccept(rs -> {
-                        if (rs != null) {
-                            synchronized (map) {
-                                map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
-                            }
-                        }
-                    }).toCompletableFuture();
-                }
-            } else {
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
-                        if (rs != null) {
-                            synchronized (map) {
-                                map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
-                            }
-                        }
-                    }).toCompletableFuture();
-                }
-            }
-            return CompletableFuture.allOf(futures).thenApply(v -> map);
-        });
     }
 
     @Override
@@ -2192,19 +1988,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.type(key).thenCompose(type -> {
-                if (type.contains("list")) {
-                    return command.llen(key).thenApply(v -> v.intValue());
-                } else { //set 
-                    return command.scard(key).thenApply(v -> v.intValue());
-                }
-            }));
-        });
-    }
-
-    @Override
     public CompletableFuture<Integer> llenAsync(String key) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.type(key).thenCompose(type -> {
@@ -2219,13 +2002,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             return completableBytesFuture(command, command.type(key).thenCompose(type -> {
                 return command.scard(key).thenApply(v -> v.intValue());
             }));
-        });
-    }
-
-    @Override
-    public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.expire(key, expireSeconds).thenCompose(v -> getCollectionAsync(command, key, componentType)));
         });
     }
 
@@ -2344,31 +2120,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(null, null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
-                String[] array = new String[keys.length];
-                for (int i = 0; i < array.length; i++) {
-                    String bs = null;
-                    for (KeyValue<String, String> kv : rs) {
-                        if (kv.getKey().equals(keys[i])) {
-                            bs = kv.hasValue() ? (cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue()) : null;
-                            break;
-                        }
-                    }
-                    array[i] = bs;
-                }
-                return array;
-            }));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
-        return getStringCollectionAsync(connectStringAsync(), key);
-    }
-
     protected CompletableFuture<Collection<String>> getStringCollectionAsync(CompletableFuture<RedisClusterAsyncCommands<String, String>> commandFuture, String key) {
         return commandFuture.thenCompose(command -> getStringCollectionAsync(command, key));
     }
@@ -2381,45 +2132,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                 return command.smembers(key).thenApply(list -> formatStringCollection(key, cryptor, true, list));
             }
         }));
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(boolean set, String... keys) {
-        return connectStringAsync().thenCompose(command -> {
-            final Map<String, Collection<String>> map = new LinkedHashMap<>();
-            final CompletableFuture[] futures = new CompletableFuture[keys.length];
-            if (set) {
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = command.smembers(key).thenAccept(rs -> {
-                        if (rs != null) {
-                            synchronized (map) {
-                                map.put(key, formatStringCollection(key, cryptor, set, rs));
-                            }
-                        }
-                    }).toCompletableFuture();
-                }
-            } else {
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
-                        if (rs != null) {
-                            synchronized (map) {
-                                map.put(key, formatStringCollection(key, cryptor, set, rs));
-                            }
-                        }
-                    }).toCompletableFuture();
-                }
-            }
-            return CompletableFuture.allOf(futures).thenApply(v -> map);
-        });
-    }
-
-    @Override
-    public CompletableFuture<Collection<String>> getexStringCollectionAsync(String key, int expireSeconds) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, null, command, command.expire(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(command, key)));
-        });
     }
 
     @Override
@@ -2491,32 +2203,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的long值，无需传cryptor进行解密
-            return completableStringFuture(keys[0], null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
-                Long[] array = new Long[keys.length];
-                for (int i = 0; i < array.length; i++) {
-                    Long bs = null;
-                    for (KeyValue<String, String> kv : rs) {
-                        if (kv.getKey().equals(keys[i])) {
-                            bs = kv.hasValue() ? Long.parseLong(kv.getValue()) : null;
-                            break;
-                        }
-                    }
-                    array[i] = bs;
-                }
-                return array;
-            }));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
-        return getLongCollectionAsync(connectStringAsync(), key);
-    }
-
     protected CompletableFuture<Collection<Long>> getLongCollectionAsync(final CompletableFuture<RedisClusterAsyncCommands<String, String>> commandFuture, String key) {
         return commandFuture.thenCompose(command -> getLongCollectionAsync(command, key));
     }
@@ -2530,46 +2216,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                 return command.smembers(key).thenApply(rs -> formatLongCollection(true, rs));
             }
         }));
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(boolean set, String... keys) {
-        return connectStringAsync().thenCompose(command -> {
-            final Map<String, Collection<Long>> map = new LinkedHashMap<>();
-            final CompletableFuture[] futures = new CompletableFuture[keys.length];
-            if (set) {
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = command.smembers(key).thenAccept(rs -> {
-                        if (rs != null) {
-                            synchronized (map) {
-                                map.put(key, formatLongCollection(set, rs));
-                            }
-                        }
-                    }).toCompletableFuture();
-                }
-            } else {
-                for (int i = 0; i < keys.length; i++) {
-                    final String key = keys[i];
-                    futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
-                        if (rs != null) {
-                            synchronized (map) {
-                                map.put(key, formatLongCollection(set, rs));
-                            }
-                        }
-                    }).toCompletableFuture();
-                }
-            }
-            return CompletableFuture.allOf(futures).thenApply(v -> map);
-        });
-    }
-
-    @Override
-    public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的long值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.expire(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(command, key)));
-        });
     }
 
     @Override
@@ -2626,6 +2272,360 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             //此处获取的int值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.srem(key, String.valueOf(value)).thenApply(v -> v.intValue()));
         });
+    }
+
+    @Override
+    public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
+        return connectStringAsync().thenCompose(command -> {
+            //此处获取的long值，无需传cryptor进行解密
+            return completableStringFuture(keys[0], null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
+                Long[] array = new Long[keys.length];
+                for (int i = 0; i < array.length; i++) {
+                    Long bs = null;
+                    for (KeyValue<String, String> kv : rs) {
+                        if (kv.getKey().equals(keys[i])) {
+                            bs = kv.hasValue() ? Long.parseLong(kv.getValue()) : null;
+                            break;
+                        }
+                    }
+                    array[i] = bs;
+                }
+                return array;
+            }));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
+        return getLongCollectionAsync(connectStringAsync(), key);
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(boolean set, String... keys) {
+        return connectStringAsync().thenCompose(command -> {
+            final Map<String, Collection<Long>> map = new LinkedHashMap<>();
+            final CompletableFuture[] futures = new CompletableFuture[keys.length];
+            if (set) {
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = command.smembers(key).thenAccept(rs -> {
+                        if (rs != null) {
+                            synchronized (map) {
+                                map.put(key, formatLongCollection(set, rs));
+                            }
+                        }
+                    }).toCompletableFuture();
+                }
+            } else {
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
+                        if (rs != null) {
+                            synchronized (map) {
+                                map.put(key, formatLongCollection(set, rs));
+                            }
+                        }
+                    }).toCompletableFuture();
+                }
+            }
+            return CompletableFuture.allOf(futures).thenApply(v -> map);
+        });
+    }
+
+    @Override
+    public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
+        return connectStringAsync().thenCompose(command -> {
+            //此处获取的long值，无需传cryptor进行解密
+            return completableStringFuture(key, null, command, command.expire(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(command, key)));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(boolean set, String... keys) {
+        return connectStringAsync().thenCompose(command -> {
+            final Map<String, Collection<String>> map = new LinkedHashMap<>();
+            final CompletableFuture[] futures = new CompletableFuture[keys.length];
+            if (set) {
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = command.smembers(key).thenAccept(rs -> {
+                        if (rs != null) {
+                            synchronized (map) {
+                                map.put(key, formatStringCollection(key, cryptor, set, rs));
+                            }
+                        }
+                    }).toCompletableFuture();
+                }
+            } else {
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
+                        if (rs != null) {
+                            synchronized (map) {
+                                map.put(key, formatStringCollection(key, cryptor, set, rs));
+                            }
+                        }
+                    }).toCompletableFuture();
+                }
+            }
+            return CompletableFuture.allOf(futures).thenApply(v -> map);
+        });
+    }
+
+    @Override
+    public CompletableFuture<Collection<String>> getexStringCollectionAsync(String key, int expireSeconds) {
+        return connectStringAsync().thenCompose(command -> {
+            return completableStringFuture(key, null, command, command.expire(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(command, key)));
+        });
+    }
+
+    @Override
+    public <T> Collection<T> getCollection(String key, final Type componentType) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        Collection<T> rs = getCollection(command, key, componentType);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        final Map<String, Collection<T>> map = new LinkedHashMap<>();
+        if (set) {  //set
+            for (String key : keys) {
+                map.put(key, formatCollection(key, cryptor, command.smembers(key), convert, componentType));
+            }
+        } else { //list
+            for (String key : keys) {
+                map.put(key, formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType));
+            }
+        }
+        releaseBytesCommand(command);
+        return map;
+    }
+
+    @Override
+    public int getCollectionSize(String key) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        final String type = command.type(key);
+        int rs;
+        if (type.contains("list")) {
+            rs = command.llen(key).intValue();
+        } else { //set
+            rs = command.scard(key).intValue();
+        }
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        command.expire(key, Duration.ofSeconds(expireSeconds));
+        Collection<T> rs = getCollection(command, key, componentType);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+    @Override
+    public String[] getStringArray(final String... keys) {
+        final RedisClusterCommands<String, String> command = connectString();
+        List<KeyValue<String, String>> rs = command.mget(keys);
+        releaseStringCommand(command);
+        String[] array = new String[keys.length];
+        for (int i = 0; i < array.length; i++) {
+            String bs = null;
+            for (KeyValue<String, String> kv : rs) {
+                if (kv.getKey().equals(keys[i])) {
+                    bs = kv.hasValue() ? (cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue()) : null;
+                    break;
+                }
+            }
+            array[i] = bs;
+        }
+        return array;
+    }
+
+    @Override
+    public Collection<String> getStringCollection(String key) {
+        final RedisClusterCommands<String, String> command = connectString();
+        Collection<String> rs = getStringCollection(command, key);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
+        final RedisClusterCommands<String, String> command = connectString();
+        final Map<String, Collection<String>> map = new LinkedHashMap<>();
+        if (set) {//set    
+            for (String key : keys) {
+                map.put(key, decryptStringCollection(key, true, command.smembers(key)));
+            }
+        } else {  //list           
+            for (String key : keys) {
+                map.put(key, decryptStringCollection(key, false, command.lrange(key, 0, -1)));
+            }
+        }
+        releaseStringCommand(command);
+        return map;
+    }
+
+    @Override
+    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
+        final RedisClusterCommands<String, String> command = connectString();
+        command.expire(key, expireSeconds);
+        Collection<String> rs = getStringCollection(command, key);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public Long[] getLongArray(String... keys) {
+        final RedisClusterCommands<String, String> command = connectString();
+        List<KeyValue<String, String>> rs = command.mget(keys);
+        releaseStringCommand(command);
+        Long[] array = new Long[keys.length];
+        for (int i = 0; i < array.length; i++) {
+            Long bs = null;
+            for (KeyValue<String, String> kv : rs) {
+                if (kv.getKey().equals(keys[i])) {
+                    bs = kv.hasValue() ? Long.parseLong(kv.getValue()) : null;
+                    break;
+                }
+            }
+            array[i] = bs;
+        }
+        return array;
+    }
+
+    @Override
+    public Collection<Long> getLongCollection(String key) {
+        final RedisClusterCommands<String, String> command = connectString();
+        Collection<Long> rs = getLongCollection(command, key);
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    protected Collection<Long> getLongCollection(final RedisClusterCommands<String, String> command, String key) {
+        final String type = command.type(key);
+        Collection<Long> rs;
+        if (type.contains("list")) { //list
+            rs = formatLongCollection(false, command.lrange(key, 0, -1));
+        } else { //set
+            rs = formatLongCollection(true, command.smembers(key));
+        }
+        releaseStringCommand(command);
+        return rs;
+    }
+
+    @Override
+    public Map<String, Collection<Long>> getLongCollectionMap(boolean set, String... keys) {
+        final RedisClusterCommands<String, String> command = connectString();
+        final Map<String, Collection<Long>> map = new LinkedHashMap<>();
+        if (set) { //set
+            for (String key : keys) {
+                map.put(key, formatLongCollection(true, command.smembers(key)));
+            }
+        } else { //list                
+            for (String key : keys) {
+                map.put(key, formatLongCollection(false, command.lrange(key, 0, -1)));
+            }
+        }
+        releaseStringCommand(command);
+        return map;
+    }
+
+    @Override
+    public Collection<Long> getexLongCollection(String key, int expireSeconds) {
+        final RedisClusterCommands<String, String> command = connectString();
+        command.expire(key, expireSeconds);
+        releaseStringCommand(command);
+        return getLongCollection(key);
+    }
+
+    @Override
+    public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
+        return connectStringAsync().thenCompose(command -> {
+            return completableStringFuture(null, null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
+                String[] array = new String[keys.length];
+                for (int i = 0; i < array.length; i++) {
+                    String bs = null;
+                    for (KeyValue<String, String> kv : rs) {
+                        if (kv.getKey().equals(keys[i])) {
+                            bs = kv.hasValue() ? (cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue()) : null;
+                            break;
+                        }
+                    }
+                    array[i] = bs;
+                }
+                return array;
+            }));
+        });
+    }
+
+    @Override
+    public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.expire(key, expireSeconds).thenCompose(v -> getCollectionAsync(command, key, componentType)));
+        });
+    }
+
+    @Override
+    public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
+        return connectBytesAsync().thenCompose(command -> {
+            return getCollectionAsync(command, key, componentType);
+        });
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(boolean set, Type componentType, String... keys) {
+        return connectBytesAsync().thenCompose(command -> {
+            final Map<String, Collection<T>> map = new LinkedHashMap<>();
+            final CompletableFuture[] futures = new CompletableFuture[keys.length];
+            if (set) {
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = command.smembers(key).thenAccept(rs -> {
+                        if (rs != null) {
+                            synchronized (map) {
+                                map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
+                            }
+                        }
+                    }).toCompletableFuture();
+                }
+            } else {
+                for (int i = 0; i < keys.length; i++) {
+                    final String key = keys[i];
+                    futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
+                        if (rs != null) {
+                            synchronized (map) {
+                                map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
+                            }
+                        }
+                    }).toCompletableFuture();
+                }
+            }
+            return CompletableFuture.allOf(futures).thenApply(v -> map);
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.type(key).thenCompose(type -> {
+                if (type.contains("list")) {
+                    return command.llen(key).thenApply(v -> v.intValue());
+                } else { //set 
+                    return command.scard(key).thenApply(v -> v.intValue());
+                }
+            }));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
+        return getStringCollectionAsync(connectStringAsync(), key);
     }
 
 }

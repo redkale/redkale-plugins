@@ -40,7 +40,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] MGET : " + map);
         Assertions.assertTrue(Utility.equalsElement(map, Utility.ofMap("stritem1", "value1", "stritem2", "value2")));
 
-        String[] array = source.getStringArray("stritem1", "stritem2");
+        String[] array = source.mgetsString("stritem1", "stritem2");
         System.out.println("[有值] MGET : " + Arrays.toString(array));
         Assertions.assertTrue(Utility.equalsElement(array, new String[]{"value1", "value2"}));
 
@@ -52,7 +52,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] MGET : " + map);
         Assertions.assertTrue(Utility.equalsElement(map, Utility.ofMap("intitem1", "333", "intitem2", "444")));
 
-        array = source.getStringArray("intitem1", "intitem22", "intitem2");
+        array = source.mgetsString("intitem1", "intitem22", "intitem2");
         System.out.println("[有值] MGET : " + Arrays.toString(array));
         Assertions.assertTrue(Utility.equalsElement(array, new Object[]{"333", null, "444"}));
 
