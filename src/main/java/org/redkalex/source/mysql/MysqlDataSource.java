@@ -397,7 +397,7 @@ public class MysqlDataSource extends DataSqlSource {
     }
 
     @Override
-    protected <T> CompletableFuture<T[]> findsComposeAsync(final EntityInfo<T> info, final SelectColumn selects, Serializable... pks) {
+    protected <T> CompletableFuture<T[]> findsDBAsync(final EntityInfo<T> info, final SelectColumn selects, Serializable... pks) {
         final long s = System.currentTimeMillis();
         MyClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
@@ -423,7 +423,7 @@ public class MysqlDataSource extends DataSqlSource {
                 return rs;
             });
         } else {
-            return super.findsComposeAsync(info, selects, pks);
+            return super.findsDBAsync(info, selects, pks);
         }
     }
 

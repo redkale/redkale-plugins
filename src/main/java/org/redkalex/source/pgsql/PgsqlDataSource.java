@@ -401,8 +401,8 @@ public class PgsqlDataSource extends DataSqlSource {
         return findDBApply(info, executeQuery(info, sql), onlypk, selects);
     }
 
-    @Override
-    protected <T> CompletableFuture<T[]> findsComposeAsync(final EntityInfo<T> info, final SelectColumn selects, Serializable... pks) {
+    @Override //无Cache的findsAsync
+    protected <T> CompletableFuture<T[]> findsDBAsync(final EntityInfo<T> info, final SelectColumn selects, Serializable... pks) {
         final long s = System.currentTimeMillis();
         PgClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
@@ -428,7 +428,7 @@ public class PgsqlDataSource extends DataSqlSource {
                 return rs;
             });
         } else {
-            return super.findsComposeAsync(info, selects, pks);
+            return super.findsDBAsync(info, selects, pks);
         }
     }
 
@@ -477,7 +477,7 @@ public class PgsqlDataSource extends DataSqlSource {
         return existsDBApply(info, executeQuery(info, sql), onlypk);
     }
 
-    @Override
+    @Override  //无Cache版querySheetDBAsync
     protected <T> CompletableFuture<Sheet<T>> querySheetDBAsync(EntityInfo<T> info, final boolean readCache, boolean needTotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
         final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
@@ -515,7 +515,7 @@ public class PgsqlDataSource extends DataSqlSource {
                 WorkThread workThread = WorkThread.currWorkThread();
                 return pool.connect(null).thenCompose(conn -> {
                     PgReqExtended req = conn.pollReqExtended(workThread, info);
-                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.LIST_ALL, listSql, 0, info.getQueryAttributes(), (Attribute[]) null);
+                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.LIST_ALL, listSql, 0, info.getQueryAttributes(), (Attribute[]) null, PgReqExtended.ONE_EMPTY_PARAMS);
                     Function<PgResultSet, Sheet<T>> transfer = dataset -> {
                         final List<T> list = new ArrayList();
                         while (dataset.next()) {

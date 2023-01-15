@@ -20,7 +20,7 @@ import static org.redkalex.source.pgsql.PgClientCodec.logger;
  */
 public class PgReqExtended extends PgClientRequest {
 
-    private static final Object[][] ONE_EMPTY_PARAMS = new Object[][]{new Object[0]};
+    static final Object[][] ONE_EMPTY_PARAMS = new Object[][]{new Object[0]};
 
     protected int type;
 
