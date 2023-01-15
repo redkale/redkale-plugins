@@ -9,17 +9,12 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.net.WorkThread;
 
 /**
  *
  * @author zhangjx
  */
 public class RedisCacheResult {
-
-    protected final WorkThread thread = WorkThread.currWorkThread();
-
-    protected RedisCacheRequest request;
 
     //+   简单字符串类型 (不包含CRLF)
     //-   错误类型 (不包含CRLF)

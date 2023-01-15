@@ -6,6 +6,7 @@
 package org.redkalex.cache.redis;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 
@@ -28,15 +29,17 @@ public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, Re
         return super.writeChannel(request);
     }
 
+    protected <T> CompletableFuture<T> writeRequest(RedisCacheRequest request, Function<RedisCacheResult, T> respTransfer) {
+        return super.writeChannel(request, respTransfer);
+    }
+
     public RedisCacheResult pollResultSet(RedisCacheRequest request) {
         RedisCacheResult rs = new RedisCacheResult();
-        rs.request = request;
         return rs;
     }
 
     public RedisCacheRequest pollRequest(WorkThread workThread) {
-        RedisCacheRequest rs = new RedisCacheRequest();
-        rs.currThread(workThread);
+        RedisCacheRequest rs = new RedisCacheRequest().currThread(workThread);
         return rs;
     }
 
