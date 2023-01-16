@@ -20,11 +20,11 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
         this.connectionContextName = "redkalex-redis-client-connection-" + key;
         if (authReq != null || dbReq != null) {
             if (authReq != null && dbReq != null) {
-                this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authReq).thenCompose(v -> writeChannel(conn, dbReq)).thenApply(v -> conn));
+                this.authenticate = conn -> writeChannel(conn, authReq).thenCompose(v -> writeChannel(conn, dbReq)).thenApply(v -> conn);
             } else if (authReq != null) {
-                this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, authReq).thenApply(v -> conn));
+                this.authenticate = conn -> writeChannel(conn, authReq).thenApply(v -> conn);
             } else {
-                this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, dbReq).thenApply(v -> conn));
+                this.authenticate = conn -> writeChannel(conn, dbReq).thenApply(v -> conn);
             }
         }
     }

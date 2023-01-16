@@ -32,7 +32,7 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
         super(name, group, true, address, maxConns, maxPipelines, () -> new PgReqPing(), () -> new PgReqClose(), null); //maxConns
         this.autoddl = autoddl;
         this.connectionContextName = "redkalex-pgsql-client-connection-" + key;
-        this.authenticate = future -> future.thenCompose(conn -> writeChannel(conn, new PgReqAuthentication(info)).thenCompose((PgResultSet rs0) -> {
+        this.authenticate = conn -> writeChannel(conn, new PgReqAuthentication(info)).thenCompose((PgResultSet rs0) -> {
             PgRespAuthResultSet rs = (PgRespAuthResultSet) rs0;
             if (rs.isAuthOK()) {
                 return CompletableFuture.completedFuture(conn);
@@ -48,7 +48,7 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
                     }
                     return writeChannel(conn, new PgReqAuthScramSaslFinal(cr)).thenApply(pg -> conn);
                 });
-        }));
+        });
         this.cachePreparedStatements = prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));
     }
 

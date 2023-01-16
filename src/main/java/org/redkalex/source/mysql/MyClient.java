@@ -31,17 +31,16 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
         this.info = info;
         this.autoddl = autoddl;
         this.connectionContextName = "redkalex-mysql-client-connection-" + key;
-        this.authenticate = future -> future.thenCompose(conn -> {
+        this.authenticate = conn -> {
             MyRespHandshakeResultSet handshake = ((MyClientConnection) conn).handshake;
-            CompletableFuture<MyResultSet> authFuture = writeChannel(conn, new MyReqAuthentication(handshake, info.username, info.password, info.database, attributes));
-            return authFuture.thenCompose(v -> {
+            return writeChannel(conn, new MyReqAuthentication(handshake, info.username, info.password, info.database, attributes)).thenCompose(v -> {
                 MyRespAuthResultSet authrs = (MyRespAuthResultSet) v;
                 if (authrs.authSwitch != null) {
                     return writeChannel(conn, authrs.authSwitch);
                 }
                 return CompletableFuture.completedFuture(authrs);
             }).thenApply(v -> conn);
-        });
+        };
         this.cachePreparedStatements = prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));
     }
 
