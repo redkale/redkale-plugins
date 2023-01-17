@@ -54,6 +54,8 @@ public class PgSQLTest {
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
+        
+        final PgsqlDataSource source = new PgsqlDataSource();
 
         Properties prop = new Properties();
         if (rwSeparate) { //读写分离
@@ -72,7 +74,6 @@ public class PgSQLTest {
             prop.setProperty("redkale.datasource[].user", user);
             prop.setProperty("redkale.datasource[].password", password);
         }
-        final PgsqlDataSource source = new PgsqlDataSource();
         factory.inject(source);
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println("-------------------- " + (forFortune ? "Fortune" : "World") + " " + (rwSeparate ? "读写分离" : "读写合并") + " --------------------");
@@ -80,7 +81,8 @@ public class PgSQLTest {
         if (true) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
             System.out.println("随机获取World记录: " + source.findAsync(World.class, randomId()).join());
-            System.out.println("随机获取World记录: " + Arrays.toString(source.findsAsync(World.class, randomId(), randomId()).join()));
+            System.out.println("随机获取World记录: " + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId())).join());
+            System.out.println("随机获取World记录: " + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId()).join()));
             World w1 = source.findAsync(World.class, 11).join();
             World w2 = source.findAsync(World.class, 22).join();
             System.out.println("随机获取World记录: " + w1 + ", " + w2);

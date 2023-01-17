@@ -10,7 +10,7 @@ import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.source.EntityInfo.EntityColumn;
 import org.redkale.source.*;
-import org.redkale.util.Attribute;
+import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
 /**
@@ -20,6 +20,8 @@ import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 public class PgClientConnection extends ClientConnection<PgClientRequest, PgResultSet> {
 
     private final Map<String, PgPrepareDesc> cachePreparedDescs = new HashMap<>();
+
+    private final ObjectPool<PgReqExtended> reqExtendedPool = ObjectPool.createUnsafePool(Thread.currentThread(), 256, ObjectPool.createSafePool(256, t -> new PgReqExtended(), PgReqExtended::prepare, PgReqExtended::recycle));
 
     public PgClientConnection(PgClient client, int index, AsyncConnection channel) {
         super(client, index, channel);
@@ -34,9 +36,10 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         return ((PgClient) client).autoddl;
     }
 
-    protected void offerResultSet(PgResultSet rs) {
+    protected void offerResultSet(PgReqExtended req, PgResultSet rs) {
         PgClientCodec c = getCodec();
         c.offerResultSet(rs);
+        reqExtendedPool.accept(req);
     }
 
     @Override
@@ -122,7 +125,7 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
     }
 
     public PgReqExtended pollReqExtended(WorkThread workThread, EntityInfo info) {
-        PgReqExtended rs = new PgReqExtended();
+        PgReqExtended rs = reqExtendedPool.get();
         rs.info = info;
         rs.currThread(workThread);
         return rs;

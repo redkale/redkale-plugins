@@ -7,7 +7,10 @@ package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import org.redkale.source.EntityInfo;
 import org.redkale.util.ByteArray;
+import static org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode.*;
 
 /**
  *
@@ -41,7 +44,26 @@ public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
         for (int i = 0; i < realValues.length; i++) {
             realValues[i] = formats[i].decoder().decode(buffer, array, buffer.getInt());
         }
-        return new PgRowData(null, realValues);
+        EntityInfo info = request.info;
+        if (prepareDesc.mode() == FIND_ENTITY) {
+            if (((PgReqExtended) request).finds) {
+                if (dataset.findsEntity == null) {
+                    dataset.findsEntity = new ArrayList<>();
+                }
+                dataset.findsEntity.add(info.getFullEntityValue(realValues));
+            } else {
+                dataset.findEntity = info.getFullEntityValue(realValues);
+            }
+            return PgRowData.NIL;
+        } else if (prepareDesc.mode() == LISTALL_ENTITY) {
+            if (dataset.listallEntity == null) {
+                dataset.listallEntity = new ArrayList<>();
+            }
+            dataset.listallEntity.add(info.getFullEntityValue(realValues));
+            return PgRowData.NIL;
+        } else {
+            return new PgRowData(null, realValues);
+        }
     }
 
 }

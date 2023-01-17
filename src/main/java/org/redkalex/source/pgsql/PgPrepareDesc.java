@@ -42,6 +42,10 @@ public class PgPrepareDesc {
 
     private final AtomicBoolean completed = new AtomicBoolean();
 
+    private final byte[] bindPrefixBytes;
+
+    private final byte[] bindPostfixBytes;
+
     private PgRowDesc rowDesc;
 
     public PgPrepareDesc(int type, PgExtendMode mode, String sql, byte[] statement,
@@ -67,6 +71,37 @@ public class PgPrepareDesc {
         this.resultFormats = new PgColumnFormat[resultAttrs.length];
         for (int i = 0; i < resultAttrs.length; i++) {
             this.resultFormats[i] = PgColumnFormat.valueOf(resultAttrs[i], resultCols[i]);
+        }
+        {
+            ByteArray array = new ByteArray(128);
+            array.putInt(0); //command-length
+            array.putByte(0); // portal  
+            array.put(statement); //prepared statement
+
+            // Param columns are all in Binary format
+            PgColumnFormat[] pformats = paramFormats;
+            int paramLen = pformats.length;
+            array.putShort(paramLen);
+            for (PgColumnFormat f : pformats) {
+                array.putShort(f.supportsBinary() ? 1 : 0);
+            }
+            array.putShort(paramLen);
+            this.bindPrefixBytes = array.getBytes();
+        }
+        {
+            ByteArray array = new ByteArray(128);
+            // Result columns are all in Binary format
+            PgColumnFormat[] rformats = resultFormats;
+            if (rformats.length > 0) {
+                array.putShort(rformats.length);
+                for (PgColumnFormat f : rformats) {
+                    array.putShort(f.supportsBinary() ? 1 : 0);
+                }
+            } else {
+                array.putShort(1);
+                array.putShort(1);
+            }
+            this.bindPostfixBytes = array.getBytes();
         }
     }
 
@@ -129,6 +164,14 @@ public class PgPrepareDesc {
 
     public void uncomplete() {
         this.completed.set(false);
+    }
+
+    public byte[] bindPrefixBytes() {
+        return bindPrefixBytes;
+    }
+
+    public byte[] bindPostfixBytes() {
+        return bindPostfixBytes;
     }
 
     public int type() {

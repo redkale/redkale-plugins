@@ -61,6 +61,12 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
 
     protected int[] batchEffectCounts;
 
+    protected Object findEntity; //只有PgReqExtended.mode = FIND_ENTITY 才有效
+
+    protected List<Object> findsEntity; //只有PgReqExtended.mode = FIND_ENTITY 才有效
+
+    protected List<Object> listallEntity; //只有PgReqExtended.mode = LISTALL_ENTITY 才有效
+
     public PgResultSet() {
     }
 
@@ -88,6 +94,9 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
         this.updateEffectCount = 0;
         this.effectRespCount = 0;
         this.batchEffectCounts = null;
+        this.findEntity = null;
+        this.findsEntity = null;
+        this.listallEntity = null;
         return true;
     }
 

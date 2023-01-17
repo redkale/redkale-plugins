@@ -201,8 +201,7 @@ public class PgsqlDataSource extends DataSqlSource {
                 Function<PgResultSet, Integer> transfer = dataset -> {
                     int rs = dataset.getUpdateEffectCount();
                     slowLog(s, sql);
-                    dataset.close();
-                    conn.offerResultSet(dataset);
+                    conn.offerResultSet(req, dataset);
                     return rs;
                 };
                 return pool.writeChannel(conn, req, transfer);
@@ -303,8 +302,7 @@ public class PgsqlDataSource extends DataSqlSource {
                 Function<PgResultSet, Integer> transfer = dataset -> {
                     int rs = dataset.getUpdateEffectCount();
                     slowLog(s, sql);
-                    dataset.close();
-                    conn.offerResultSet(dataset);
+                    conn.offerResultSet(req, dataset);
                     return rs;
                 };
                 return pool.writeChannel(conn, req, transfer);
@@ -383,9 +381,10 @@ public class PgsqlDataSource extends DataSqlSource {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, pk);
                 Function<PgResultSet, T> transfer = dataset -> {
-                    T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
-                    dataset.close();
-                    conn.offerResultSet(dataset);
+//                    T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
+//                    dataset.close();
+                    T rs = (T) dataset.findEntity;
+                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -416,13 +415,14 @@ public class PgsqlDataSource extends DataSqlSource {
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, pks);
                 req.finds = true;
                 Function<PgResultSet, T[]> transfer = dataset -> {
-                    T[] rs = info.getArrayer().apply(pks.length);
-                    int i = -1;
-                    while (dataset.next()) {
-                        rs[++i] = getEntityValue(info, selects, dataset);
-                    }
-                    dataset.close();
-                    conn.offerResultSet(dataset);
+//                    T[] rs = info.getArrayer().apply(pks.length);
+//                    int i = -1;
+//                    while (dataset.next()) {
+//                        rs[++i] = getEntityValue(info, selects, dataset);
+//                    }
+//                    dataset.close();
+                    T[] rs = dataset.findsEntity == null ? info.getArrayer().apply(pks.length) : dataset.findsEntity.toArray(info.getArrayer());
+                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -447,12 +447,13 @@ public class PgsqlDataSource extends DataSqlSource {
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, ids);
                 req.finds = true;
                 Function<PgResultSet, List<T>> transfer = dataset -> {
-                    List<T> rs = new ArrayList<>();
-                    while (dataset.next()) {
-                        rs.add(getEntityValue(info, null, dataset));
-                    }
-                    dataset.close();
-                    conn.offerResultSet(dataset);
+//                    List<T> rs = new ArrayList<>();
+//                    while (dataset.next()) {
+//                        rs.add(getEntityValue(info, null, dataset));
+//                    }
+//                    dataset.close();
+                    List<T> rs = dataset.findsEntity == null ? new ArrayList<>() : (List) dataset.findsEntity;
+                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -513,14 +514,15 @@ public class PgsqlDataSource extends DataSqlSource {
                     PgReqExtended req = conn.pollReqExtended(workThread, info);
                     req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, listSql, 0);
                     Function<PgResultSet, Sheet<T>> transfer = dataset -> {
-                        final List<T> list = new ArrayList();
-                        while (dataset.next()) {
-                            list.add(getEntityValue(info, sels, dataset));
-                        }
-                        dataset.close();
-                        conn.offerResultSet(dataset);
+//                        final List<T> list = new ArrayList();
+//                        while (dataset.next()) {
+//                            list.add(getEntityValue(info, sels, dataset));
+//                        }
+//                        dataset.close();
+                        List<T> rs = dataset.listallEntity == null ? new ArrayList<>() : (List) dataset.listallEntity;
+                        conn.offerResultSet(req, dataset);
                         slowLog(s, listSql);
-                        return Sheet.asSheet(list);
+                        return Sheet.asSheet(rs);
                     };
                     return pool.writeChannel(conn, req, transfer);
                 });

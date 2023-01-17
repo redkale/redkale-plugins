@@ -214,7 +214,14 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                                 lastResult.increUpdateEffectCount(count);
                             }
                             if (count == 0 && request.getType() == PgClientRequest.REQ_TYPE_EXTEND_QUERY && ((PgReqExtended) request).finds) {
-                                lastResult.addRowData(null);
+                                if (((PgReqExtended) request).mode == PgPrepareDesc.PgExtendMode.FIND_ENTITY) {
+                                    if (lastResult.findsEntity == null) {
+                                        lastResult.findsEntity = new ArrayList<>();
+                                    }
+                                    lastResult.findsEntity.add(null);
+                                } else {
+                                    lastResult.addRowData(null);
+                                }
                             }
                         }
                         if (buffer.position() != bufpos + length) {
@@ -254,7 +261,9 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                             lastResult = pollResultSet(request.info);
                         }
                         PgRowData rowData = PgRespRowDataDecoder.instance.read(conn, buffer, length, array, request, lastResult);
-                        lastResult.addRowData(rowData);
+                        if (rowData != PgRowData.NIL) {
+                            lastResult.addRowData(rowData);
+                        }
                         if (buffer.position() != bufpos + length) {
                             logger.log(Level.SEVERE, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", D buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
                             buffer.position(bufpos + length);

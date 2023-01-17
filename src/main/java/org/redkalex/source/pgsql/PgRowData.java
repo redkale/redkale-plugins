@@ -15,6 +15,8 @@ import java.util.Arrays;
  */
 public class PgRowData {
 
+    static final PgRowData NIL = new PgRowData(null, null);
+
     final byte[][] byteBalues;
 
     final Serializable[] realValues;

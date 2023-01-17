@@ -53,6 +53,26 @@ public class PgReqExtended extends PgClientRequest {
         return type;
     }
 
+    @Override
+    protected void prepare() {
+        super.prepare();
+    }
+
+    @Override
+    protected boolean recycle() {
+        boolean rs = super.recycle();
+        this.type = 0;
+        this.sql = null;
+        this.mode = null;
+        this.sendPrepare = false;
+        this.fetchSize = 0;
+        this.paramValues = null;
+        this.pkValues = null;
+        this.finds = false;
+        this.findsCount = null;
+        return rs;
+    }
+
     public <T> void prepare(int type, PgExtendMode mode, String sql, int fetchSize) {
         super.prepare();
         this.type = type;
@@ -75,19 +95,22 @@ public class PgReqExtended extends PgClientRequest {
         // BIND
         array.putByte('B');
         int start = array.length();
-        array.putInt(0); //command-length
-        array.putByte(0); // portal  
-        array.put(prepareDesc.statement()); //prepared statement
+        array.put(prepareDesc.bindPrefixBytes());
+//        array.putInt(0); //command-length
+//        array.putByte(0); // portal  
+//        array.put(prepareDesc.statement()); //prepared statement
+//
+//        // Param columns are all in Binary format
+//        PgColumnFormat[] pformats = prepareDesc.paramFormats();
+//        int paramLen = pformats.length;
+//        array.putShort(paramLen);
+//        for (PgColumnFormat f : pformats) {
+//            array.putShort(f.supportsBinary() ? 1 : 0);
+//        }
+//        array.putShort(paramLen);
 
-        // Param columns are all in Binary format
         PgColumnFormat[] pformats = prepareDesc.paramFormats();
-        int paramLen = pformats.length;
-        array.putShort(paramLen);
-        for (PgColumnFormat f : pformats) {
-            array.putShort(f.supportsBinary() ? 1 : 0);
-        }
-        array.putShort(paramLen);
-        for (int c = 0; c < paramLen; c++) {
+        for (int c = 0; c < pformats.length; c++) {
             Serializable param = params[c];
             if (param == null) {
                 array.putInt(-1); // NULL value
@@ -99,17 +122,18 @@ public class PgReqExtended extends PgClientRequest {
             }
         }
 
-        // Result columns are all in Binary format
-        PgColumnFormat[] rformats = prepareDesc.resultFormats();
-        if (rformats.length > 0) {
-            array.putShort(rformats.length);
-            for (PgColumnFormat f : rformats) {
-                array.putShort(f.supportsBinary() ? 1 : 0);
-            }
-        } else {
-            array.putShort(1);
-            array.putShort(1);
-        }
+//        // Result columns are all in Binary format
+//        PgColumnFormat[] rformats = prepareDesc.resultFormats();
+//        if (rformats.length > 0) {
+//            array.putShort(rformats.length);
+//            for (PgColumnFormat f : rformats) {
+//                array.putShort(f.supportsBinary() ? 1 : 0);
+//            }
+//        } else {
+//            array.putShort(1);
+//            array.putShort(1);
+//        }
+        array.put(prepareDesc.bindPostfixBytes());
 
         array.putInt(start, array.length() - start);
         // EXECUTE
