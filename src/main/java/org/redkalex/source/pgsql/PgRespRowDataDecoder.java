@@ -8,7 +8,7 @@ package org.redkalex.source.pgsql;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import org.redkale.source.EntityInfo;
-import org.redkale.util.ByteArray;
+import org.redkale.util.*;
 import static org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode.*;
 
 /**
@@ -39,9 +39,10 @@ public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
         }
         //binary
         PgColumnFormat[] formats = prepareDesc.resultFormats();
+        Attribute[] attrs = prepareDesc.resultAttrs();
         Serializable[] realValues = new Serializable[buffer.getShort()];
         for (int i = 0; i < realValues.length; i++) {
-            realValues[i] = formats[i].decoder().decode(buffer, array, buffer.getInt());
+            realValues[i] = formats[i].decoder().decode(buffer, array, attrs[i], buffer.getInt());
         }
         EntityInfo info = request.info;
         if (prepareDesc.mode() == FIND_ENTITY) {

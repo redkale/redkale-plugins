@@ -32,7 +32,7 @@ public class PgRowColumn {
         this.name = name;
         this.oid = oid;
         this.format = PgColumnFormat.valueOf(oid);
-        if (this.format == PgColumnFormat.UNKNOWN) {
+        if (this.format.encoder() == null || this.format.decoder() == null) {
             throw new SourceException("Unsupported oid: " + oid);
         }
     }

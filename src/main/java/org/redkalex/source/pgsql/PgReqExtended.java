@@ -104,6 +104,7 @@ public class PgReqExtended extends PgClientRequest {
 //        array.putShort(paramLen);
 
         PgColumnFormat[] pformats = prepareDesc.paramFormats();
+        Attribute[] pattrs = prepareDesc.paramAttrs();
         for (int c = 0; c < pformats.length; c++) {
             Serializable param = params[c];
             if (param == null) {
@@ -111,7 +112,7 @@ public class PgReqExtended extends PgClientRequest {
             } else {
                 int s2 = array.length();
                 array.putInt(0); //value-length
-                pformats[c].encoder().encode(array, param);
+                pformats[c].encoder().encode(array, pattrs[c], param);
                 array.putInt(s2, array.length() - s2 - 4);
             }
         }

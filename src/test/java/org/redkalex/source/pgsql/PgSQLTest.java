@@ -54,7 +54,7 @@ public class PgSQLTest {
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
-        
+
         final PgsqlDataSource source = new PgsqlDataSource();
 
         Properties prop = new Properties();
@@ -94,6 +94,10 @@ public class PgSQLTest {
             System.out.println("修改后World记录: " + w1 + ", " + w2);
 
             System.out.println("随机获取World记录5: " + source.findsListAsync(World.class, Stream.of(randomId(), randomId())).join());
+
+            IntStream ids = IntStream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
+            System.out.println("组合操作: " + source.findsListAsync(World.class, ids.boxed()).thenCompose(words -> source.updateAsync(words.toArray()).thenApply(v -> words)).join());
+
             System.out.println(source.queryList(Fortune.class));
             if (true) {
                 return;

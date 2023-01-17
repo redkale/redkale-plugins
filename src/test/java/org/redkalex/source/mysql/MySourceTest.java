@@ -7,7 +7,6 @@ import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.util.*;
-import org.redkalex.source.base.*;
 
 /**
  *
@@ -24,7 +23,7 @@ public class MySourceTest {
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/are_hello");
+        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8");
         prop.setProperty("redkale.datasource[].table-autoddl", "true");
         prop.setProperty("redkale.datasource[].user", "root");
         prop.setProperty("redkale.datasource[].password", "");
@@ -33,7 +32,13 @@ public class MySourceTest {
         factory.inject(source);
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println("---------");
-        SourceTest.run(source);
+        World[] words = new World[10000];
+        for (int i = 0; i < words.length; i++) {
+            words[i] = new World();
+            words[i].id = i + 1;
+            words[i].randomNumber = i + 1;
+        }
+        source.insert(words);
         source.close();
     }
 }

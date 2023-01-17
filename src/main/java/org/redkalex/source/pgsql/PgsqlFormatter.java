@@ -13,6 +13,7 @@ import java.time.*;
 import java.time.format.*;
 import static java.time.format.DateTimeFormatter.*;
 import java.time.temporal.*;
+import java.util.Locale;
 import java.util.concurrent.atomic.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.EntityInfo;
@@ -203,4 +204,11 @@ public abstract class PgsqlFormatter {
     static final LocalDateTime LOCAL_DATE_TIME_EPOCH = LocalDateTime.of(2000, 1, 1, 0, 0, 0);
 
     static final OffsetDateTime OFFSET_DATE_TIME_EPOCH = LocalDateTime.of(2000, 1, 1, 0, 0, 0).atOffset(ZoneOffset.UTC);
+
+    // 294277-01-09 04:00:54.775807
+    static final LocalDateTime LDT_PLUS_INFINITY = LOCAL_DATE_TIME_EPOCH.plus(Long.MAX_VALUE, ChronoUnit.MICROS);
+    
+    // 4714-11-24 00:00:00 BC
+    static final LocalDateTime LDT_MINUS_INFINITY = LocalDateTime.parse("4714-11-24 00:00:00 BC", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss G", Locale.ROOT));
+
 }

@@ -8,12 +8,14 @@ package org.redkalex.source.mysql;
 //import org.redkalex.source.mysql_old.MysqlDataSource;
 import java.io.Serializable;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.*;
 import java.util.function.Function;
+import java.util.stream.*;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.AsyncIOGroup;
+import org.redkale.persistence.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import org.redkalex.source.vertx.VertxSqlDataSource;
@@ -52,6 +54,30 @@ public class MySQLTest {
         //System.out.println("查询结果: " + source.directQuery("SHOW TABLES", func));
         //System.out.println("执行结果: " + source.directExecute("SET NAMES UTF8MB4"));
         if (true) {
+            System.out.println("当前机器CPU核数: " + Utility.cpus());
+            System.out.println("随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
+            System.out.println("随机获取World记录2: " + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId())).join());
+            System.out.println("随机获取World记录3: " + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId()).join()));
+            World w1 = source.findAsync(World.class, 11).join();
+            World w2 = source.findAsync(World.class, 22).join();
+            System.out.println("随机获取World记录4: " + w1 + ", " + w2);
+            w1.setRandomNumber(w1.getRandomNumber() + 2);
+            w2.setRandomNumber(w2.getRandomNumber() + 2);
+            source.updateAsync(w1, w2).join();
+            w1 = source.findAsync(World.class, 11).join();
+            w2 = source.findAsync(World.class, 22).join();
+            System.out.println("修改后World记录: " + w1 + ", " + w2);
+
+            System.out.println("随机获取World记录5: " + source.findsListAsync(World.class, Stream.of(randomId(), randomId())).join());
+
+            IntStream ids = IntStream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
+            System.out.println("组合操作: " + source.findsListAsync(World.class, ids.boxed()).thenCompose(words -> source.updateAsync(words.toArray()).thenApply(v -> words)).join());
+
+            System.out.println(source.queryList(Fortune.class));
+            if (true) {
+                return;
+            }
+            
             DayRecord record1 = new DayRecord();
             record1.setCreateTime(System.currentTimeMillis());
             record1.setContent("这是内容1 " + Utility.formatTime(record1.getCreateTime()));
@@ -209,4 +235,53 @@ public class MySQLTest {
         source.close();
         System.out.println("---------------- 全部执行完毕 ----------------");
     }
+    
+    protected static int randomId() {
+        return ThreadLocalRandom.current().nextInt(10000) + 1;
+    }
+
+    @Entity
+    public static class Fortune implements Comparable<Fortune> {
+
+        @Id
+        private int id;
+
+        private String message = "";
+
+        public Fortune() {
+        }
+
+        public Fortune(int id, String message) {
+            this.id = id;
+            this.message = message;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+
+        @Override
+        public int compareTo(Fortune o) {
+            return message.compareTo(o.message);
+        }
+
+        @Override
+        public String toString() {
+            return JsonConvert.root().convertTo(this);
+        }
+
+    }
+
 }

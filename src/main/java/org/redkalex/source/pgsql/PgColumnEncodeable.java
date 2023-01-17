@@ -4,7 +4,7 @@
 package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
-import org.redkale.util.ByteArray;
+import org.redkale.util.*;
 
 /**
  *
@@ -12,5 +12,5 @@ import org.redkale.util.ByteArray;
  */
 public interface PgColumnEncodeable {
 
-    public void encode(ByteArray array, Serializable value);
+    public void encode(ByteArray array, Attribute attr, Serializable value);
 }
