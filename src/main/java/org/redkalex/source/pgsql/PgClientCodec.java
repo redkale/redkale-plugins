@@ -229,12 +229,13 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         if (lastResult == null) {
                             lastResult = pollResultSet(request.info);
                         }
-                        PgRowDesc oldrowDesc = request.isExtendType() ? conn.getPrepareDesc(((PgReqExtended) request).sql) : null;
+                        PgPrepareDesc prepareDesc = request.isExtendType() ? conn.getPgPrepareDesc(((PgReqExtended) request).sql) : null;
+                        PgRowDesc oldrowDesc = prepareDesc == null ? null : prepareDesc.getRowDesc();
                         if (oldrowDesc == null) {
                             PgRowDesc rowDesc = PgRespRowDescDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                             lastResult.setRowDesc(rowDesc);
-                            if (request.isExtendType()) {
-                                conn.putPrepareDesc(((PgReqExtended) request).sql, rowDesc);
+                            if (prepareDesc != null) {
+                                prepareDesc.setRowDesc(rowDesc);
                             }
                             if (buffer.position() != bufpos + length) {
                                 logger.log(Level.SEVERE, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", T buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
@@ -271,7 +272,10 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                             logger.log(Level.SEVERE, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", E buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
                         }
                         if (request.isExtendType() && ((PgReqExtended) request).sendPrepare) {
-                            conn.getPrepareFlag(((PgReqExtended) request).sql).set(false);
+                            conn.getPgPrepareDesc(((PgReqExtended) request).sql).uncomplete();
+                        }
+                        if (PgsqlDataSource.debug) {
+                            logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", error=" + exc + ", request=" + request, exc);
                         }
                     }
                     buffer.position(bufpos + length);
@@ -296,9 +300,9 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         if (request.isExtendType()) { //PgReqExtended
                             PgReqExtended reqext = (PgReqExtended) request;
                             if (lastResult.rowDesc == null) {
-                                PgRowDesc rowDesc = conn.getPrepareDesc(reqext.sql);
-                                if (rowDesc != null) {
-                                    lastResult.setRowDesc(rowDesc);
+                                PgPrepareDesc prepareDesc = conn.getPgPrepareDesc(reqext.sql);
+                                if (prepareDesc != null) {
+                                    lastResult.setRowDesc(prepareDesc.getRowDesc());
                                 }
                             }
                         }
@@ -309,9 +313,9 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                     buffer.position(bufpos + length);
 
-                    if (request != null && lastCount < request.getSyncedCount()) {
+                    if (request != null && lastCount < request.getSyncCount()) {
                         if (PgsqlDataSource.debug) {
-                            logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", continue parse, lastCount=" + lastCount + ", syncedCount=" + request.getSyncedCount());
+                            logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", continue parse, lastCount=" + lastCount + ", syncCount=" + request.getSyncCount());
                         }
                         continue;
                     }

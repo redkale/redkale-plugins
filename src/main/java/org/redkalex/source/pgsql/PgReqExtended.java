@@ -1,18 +1,16 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ *
  */
 package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
 import static org.redkalex.source.pgsql.PgClientCodec.logger;
+import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
 /**
  *
@@ -20,23 +18,19 @@ import static org.redkalex.source.pgsql.PgClientCodec.logger;
  */
 public class PgReqExtended extends PgClientRequest {
 
-    static final Object[][] ONE_EMPTY_PARAMS = new Object[][]{new Object[0]};
-
     protected int type;
-
-    protected int fetchSize;
 
     protected String sql;
 
-    protected PgReqExtendMode mode;
+    protected PgExtendMode mode;
 
     protected boolean sendPrepare;
 
-    protected Attribute[] resultAttrs;
+    protected int fetchSize;
 
-    protected Attribute[] paramAttrs;
+    protected Serializable[][] paramValues;
 
-    protected Object[][] paramValues;
+    protected Serializable[] pkValues;
 
     protected boolean finds;
 
@@ -47,7 +41,11 @@ public class PgReqExtended extends PgClientRequest {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', type = " + getType() + ", paramValues = " + (paramValues != null && paramValues.length > 10 ? ("size " + paramValues.length) : JsonConvert.root().convertTo(paramValues)) + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', type = " + getType()
+            + (pkValues == null
+                ? (", paramValues = " + (paramValues != null && paramValues.length > 10 ? ("size " + paramValues.length) : JsonConvert.root().convertTo(paramValues)))
+                : (", pkValues = " + (pkValues.length > 10 ? ("size " + pkValues.length) : JsonConvert.root().convertTo(pkValues))))
+            + "}";
     }
 
     @Override
@@ -55,139 +53,117 @@ public class PgReqExtended extends PgClientRequest {
         return type;
     }
 
-    public <T> void prepare(int type, PgReqExtendMode mode, String sql, int fetchSize, final Attribute<T, Serializable>[] resultAttrs, final Attribute<T, Serializable>[] paramAttrs, final Object[]... paramValues) {
+    public <T> void prepare(int type, PgExtendMode mode, String sql, int fetchSize) {
         super.prepare();
         this.type = type;
         this.mode = mode;
         this.sql = sql;
         this.fetchSize = fetchSize;
-        this.resultAttrs = resultAttrs;
-        this.paramAttrs = paramAttrs;
+    }
+
+    public <T> void preparePrimarys(int type, PgExtendMode mode, String sql, int fetchSize, final Serializable... pkValues) {
+        prepare(type, mode, sql, fetchSize);
+        this.pkValues = pkValues;
+    }
+
+    public <T> void prepareParams(int type, PgExtendMode mode, String sql, int fetchSize, final Serializable[][] paramValues) {
+        prepare(type, mode, sql, fetchSize);
         this.paramValues = paramValues;
     }
 
-    private void writeParse(ByteArray array, Long statementIndex) { // PARSE
-        array.putByte('P');
+    private void writeBind(ByteArray array, PgPrepareDesc prepareDesc, Serializable... params) { // BIND
+        // BIND
+        array.putByte('B');
         int start = array.length();
-        array.putInt(0);
-        if (statementIndex == null) {
-            array.putByte(0); // unnamed prepared statement
-        } else {
-            array.putLong(statementIndex);
+        array.putInt(0); //command-length
+        array.putByte(0); // portal  
+        array.put(prepareDesc.statement()); //prepared statement
+
+        // Param columns are all in Binary format
+        PgColumnFormat[] pformats = prepareDesc.paramFormats();
+        int paramLen = pformats.length;
+        array.putShort(paramLen);
+        for (PgColumnFormat f : pformats) {
+            array.putShort(f.supportsBinary() ? 1 : 0);
         }
-        writeUTF8String(array, sql);
-        array.putShort(0); // no parameter types
+        array.putShort(paramLen);
+        for (int c = 0; c < paramLen; c++) {
+            Serializable param = params[c];
+            if (param == null) {
+                array.putInt(-1); // NULL value
+            } else {
+                int s2 = array.length();
+                array.putInt(0); //value-length
+                pformats[c].encoder().encode(array, param);
+                array.putInt(s2, array.length() - s2 - 4);
+            }
+        }
+
+        // Result columns are all in Binary format
+        PgColumnFormat[] rformats = prepareDesc.resultFormats();
+        if (rformats.length > 0) {
+            array.putShort(rformats.length);
+            for (PgColumnFormat f : rformats) {
+                array.putShort(f.supportsBinary() ? 1 : 0);
+            }
+        } else {
+            array.putShort(1);
+            array.putShort(1);
+        }
+
         array.putInt(start, array.length() - start);
-    }
-
-    private void writeDescribe(ByteArray array, Long statementIndex) { // DESCRIBE
-        array.putByte('D');
-        array.putInt(4 + 1 + (statementIndex == null ? 1 : 8));
-        if (statementIndex == null) {
-            array.putByte('S');
-            array.putByte(0);
-        } else {
-            array.putByte('S');
-            array.putLong(statementIndex);
-        }
-    }
-
-    private void writeBind(ByteArray array, Long statementIndex) { // BIND
-        if (paramValues != null && paramValues.length > 0) {
-            for (Object[] params : paramValues) {
-                // BIND
-                array.putByte('B');
-                int start = array.length();
-                array.putInt(0);
-                array.putByte(0); // portal
-                if (statementIndex == null) {
-                    array.putByte(0); // prepared statement
-                } else {
-                    array.putLong(statementIndex);
-                }
-
-                int size = params == null ? 0 : params.length;
-                // number of format codes  // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
-                if (size == 0 || paramAttrs == null) {
-                    array.putShort(0);  //参数全部为文本格式
-                } else {
-                    array.putShort(0);
-                }
-
-                // number of parameters //number of format codes 参数格式代码。目前每个都必须是0(文本)或者1(二进制)。
-                if (size == 0) {
-                    array.putShort(0); //结果全部为文本格式
-                } else {
-                    array.putShort(size);
-                    int i = -1;
-                    for (Object param : params) {
-                        PgsqlFormatter.encodePrepareParamValue(array, info, false, paramAttrs == null ? null : paramAttrs[++i], param);
-                    }
-                }
-
-                if (type == REQ_TYPE_EXTEND_QUERY && resultAttrs != null) {   //Text format
-                    // Result columns are all in Binary format
-                    array.putShort(1);
-                    array.putShort(1);
-                } else {
-                    array.putShort(0);
-                }
-                array.putInt(start, array.length() - start);
-                // EXECUTE
-                writeExecute(array, fetchSize);
-                // SYNC
-                writeSync(array);
-            }
-        } else {
-            // BIND
-            array.putByte('B');
-            int start = array.length();
-            array.putInt(0);
-            array.putByte(0); // portal  
-            if (statementIndex == null) {
-                array.putByte(0); // prepared statement
-            } else {
-                array.putLong(statementIndex);
-            }
-            array.putShort(0); // 后面跟着的参数格式代码的数目(在下面的 C 中说明)。这个数值可以是零，表示没有参数，或者是参数都使用缺省格式(文本)
-            array.putShort(0);  //number of format codes 参数格式代码。目前每个都必须是0(文本)或者1(二进制)。
-
-            if (type == REQ_TYPE_EXTEND_QUERY && resultAttrs != null) {   //Text format
-                // Result columns are all in Binary format
-                array.putShort(1);
-                array.putShort(1);
-            } else {
-                array.putShort(0);
-            }
-            array.putInt(start, array.length() - start);
-            // EXECUTE
-            writeExecute(array, fetchSize);
-            // SYNC      
-            writeSync(array);
-        }
+        // EXECUTE
+        writeExecute(array, fetchSize);
     }
 
     @Override
     public void writeTo(ClientConnection conn, ByteArray array) {
         PgClientConnection pgconn = (PgClientConnection) conn;
-        AtomicBoolean prepared = pgconn.getPrepareFlag(sql);
-        this.syncedCount = 0;
-        if (prepared.get()) {
+        PgPrepareDesc prepareDesc = pgconn.getPgPrepareDesc(sql);
+        this.syncCount = 0;
+        if (prepareDesc != null) {
             this.sendPrepare = false;
-            writeBind(array, pgconn.getStatementIndex(sql));
+            //绑定参数
+            if (prepareDesc.paramFormats().length > 0) {
+                if (pkValues != null) {
+                    for (Serializable pk : pkValues) {
+                        writeBind(array, prepareDesc, pk);
+                    }
+                } else {
+                    for (Serializable[] params : paramValues) {
+                        writeBind(array, prepareDesc, params);
+                    }
+                }
+            } else {
+                writeBind(array, prepareDesc);
+            }
+            // SYNC      
+            writeSync(array);
             if (PgsqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
         } else {
-            Long statementIndex = pgconn.createStatementIndex(sql);
-            prepared.set(true);
+            prepareDesc = pgconn.createPgPrepareDesc(type, mode, info, sql);
             this.sendPrepare = true;
-            writeParse(array, statementIndex);
-            writeDescribe(array, statementIndex);
+            prepareDesc.writeTo(conn, array);
             //绑定参数
-            writeBind(array, statementIndex);
+            if (prepareDesc.paramFormats().length > 0) {
+                if (pkValues != null) {
+                    for (Serializable pk : pkValues) {
+                        writeBind(array, prepareDesc, pk);
+                    }
+                } else {
+                    for (Serializable[] params : paramValues) {
+                        writeBind(array, prepareDesc, params);
+                    }
+                }
+            } else {
+                writeBind(array, prepareDesc);
+            }
+            // SYNC      
+            writeSync(array);
             if (PgsqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", LONGID: " + statementIndex + ", DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", PARSE, DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
         }
     }

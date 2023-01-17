@@ -7,7 +7,7 @@ package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
 
 /**
  *
@@ -25,16 +25,22 @@ public class PgRowData {
     }
 
     public Serializable getObject(PgRowDesc rowDesc, int i) {
-        if (realValues != null) return realValues[i];
+        if (realValues != null) {
+            return realValues[i];
+        }
         byte[] bs = byteBalues[i];
         PgRowColumn colDesc = rowDesc.getColumn(i);
-        if (bs == null) return null;
+        if (bs == null) {
+            return null;
+        }
         return colDesc.getObject(bs);
     }
 
     @Override
     public String toString() {
-        if (realValues != null) return Arrays.toString(realValues).replace('[', '{').replace(']', '}');
+        if (realValues != null) {
+            return Arrays.toString(realValues).replace('[', '{').replace(']', '}');
+        }
         int size = byteBalues == null ? -1 : byteBalues.length;
         StringBuilder sb = new StringBuilder();
         sb.append(PgRowData.class.getSimpleName()).append('{');
@@ -43,7 +49,9 @@ public class PgRowData {
         } else {
             StringBuilder d = new StringBuilder();
             for (int i = 0; i < size; i++) {
-                if (d.length() > 0) d.append(',');
+                if (d.length() > 0) {
+                    d.append(',');
+                }
                 d.append(new String(byteBalues[0], StandardCharsets.UTF_8));
             }
             sb.append(d);

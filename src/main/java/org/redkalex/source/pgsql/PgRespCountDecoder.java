@@ -31,8 +31,12 @@ public class PgRespCountDecoder extends PgRespDecoder<Integer> {
     @Override
     public Integer read(PgClientConnection conn, ByteBuffer buffer, int length, ByteArray array, PgClientRequest request, PgResultSet dataset) {
         String val = PgClientCodec.readUTF8String(buffer, array);
-        if (val.endsWith(END1)) return 1;
-        if (val.endsWith(END0)) return 0;
+        if (val.endsWith(END1)) {
+            return 1;
+        }
+        if (val.endsWith(END0)) {
+            return 0;
+        }
         int pos = val.lastIndexOf(' ');
         if (pos > 0) {
             String numstr = val.substring(pos + 1);

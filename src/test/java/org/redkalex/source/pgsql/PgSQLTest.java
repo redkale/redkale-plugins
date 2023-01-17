@@ -14,7 +14,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.BiConsumer;
-import java.util.stream.IntStream;
+import java.util.stream.*;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingBaseHandler;
 import org.redkale.convert.json.JsonConvert;
@@ -79,7 +79,23 @@ public class PgSQLTest {
         System.out.println("-------------------- " + "当前内核数: " + Utility.cpus() + " --------------------");
         if (true) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
-            System.out.println("随机获取World记录: " + source.find(World.class, randomId()));
+            System.out.println("随机获取World记录: " + source.findAsync(World.class, randomId()).join());
+            System.out.println("随机获取World记录: " + Arrays.toString(source.findsAsync(World.class, randomId(), randomId()).join()));
+            World w1 = source.findAsync(World.class, 11).join();
+            World w2 = source.findAsync(World.class, 22).join();
+            System.out.println("随机获取World记录: " + w1 + ", " + w2);
+            w1.setRandomNumber(w1.getRandomNumber() + 2);
+            w2.setRandomNumber(w2.getRandomNumber() + 2);
+            source.updateAsync(w1, w2).join();
+            w1 = source.findAsync(World.class, 11).join();
+            w2 = source.findAsync(World.class, 22).join();
+            System.out.println("修改后World记录: " + w1 + ", " + w2);
+
+            System.out.println("随机获取World记录: " + source.findsListAsync(World.class, Stream.of(randomId(), randomId())).join());
+            System.out.println(source.queryList(Fortune.class));
+            if (true) {
+                return;
+            }
             final CompletableFuture[] futures = new CompletableFuture[Utility.cpus()];
             for (int i = 0; i < futures.length; i++) {
                 futures[i] = source.findAsync(World.class, randomId()).thenCompose(v -> source.updateAsync(v));

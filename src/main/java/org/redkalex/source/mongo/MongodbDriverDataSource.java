@@ -609,7 +609,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<DeleteResult> future = new ReatorFuture<>();
-        collection.deleteMany(Filters.in(info.getPrimaryColumn(), pks)).subscribe(future); //deleteOne bug?
+        collection.deleteMany(Filters.in(info.getPrimaryField(), pks)).subscribe(future); //deleteOne bug?
         return future.thenApply(v -> (int) v.getDeletedCount());
     }
 
@@ -694,7 +694,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             for (Attribute<T, Serializable> attr : info.getUpdateAttributes()) {
                 items.add(Updates.set(attr.field(), attr.get(entity)));
             }
-            list.add(new UpdateOneModel(Filters.eq(info.getPrimaryColumn(), pk), Updates.combine(items)));
+            list.add(new UpdateOneModel(Filters.eq(info.getPrimaryField(), pk), Updates.combine(items)));
         }
         ReatorFuture<BulkWriteResult> future = new ReatorFuture<>();
         collection.bulkWrite(list).subscribe(future);
@@ -712,7 +712,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
-        collection.updateOne(Filters.eq(info.getPrimaryColumn(), pk), Updates.set(column, value)).subscribe(future);
+        collection.updateOne(Filters.eq(info.getPrimaryField(), pk), Updates.set(column, value)).subscribe(future);
         return future.thenApply(v -> (int) v.getModifiedCount());
     }
 
@@ -747,7 +747,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
-        collection.updateOne(Filters.eq(info.getPrimaryColumn(), pk), Updates.combine(items)).subscribe(future);
+        collection.updateOne(Filters.eq(info.getPrimaryField(), pk), Updates.combine(items)).subscribe(future);
         return future.thenApply(v -> (int) v.getModifiedCount());
     }
 
@@ -816,7 +816,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             publisher.subscribe(future);
             return future.thenApply(v -> v.intValue());
         } else if (func == FilterFunc.DISTINCTCOUNT) {
-            String key = column == null ? info.getPrimaryColumn() : column;
+            String key = column == null ? info.getPrimaryField() : column;
             ReatorFuture<Document> future = new ReatorFuture<>();
             List<Bson> items = new ArrayList<>();
             if (filter != null) {
@@ -1003,7 +1003,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getReadMongoCollection(info);
         ReatorFuture<T> future = new ReatorFuture<>();
-        collection.find(Filters.eq(info.getPrimaryColumn(), pk)).first().subscribe(future);
+        collection.find(Filters.eq(info.getPrimaryField(), pk)).first().subscribe(future);
         return future;
     }
 
@@ -1017,7 +1017,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getReadMongoCollection(info);
         ReatorFuture<T> future = new ReatorFuture<>();
-        FindPublisher<T> publisher = collection.find(Filters.eq(info.getPrimaryColumn(), pk));
+        FindPublisher<T> publisher = collection.find(Filters.eq(info.getPrimaryField(), pk));
         if (selects != null) {
             publisher.projection(selects.isExcludable() ? Projections.exclude(selects.getColumns()) : Projections.include(selects.getColumns()));
         }
@@ -1098,7 +1098,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getReadMongoCollection(info);
         ReatorFuture<T> future = new ReatorFuture<>();
-        FindPublisher<T> publisher = collection.find(Filters.eq(info.getPrimaryColumn(), pk));
+        FindPublisher<T> publisher = collection.find(Filters.eq(info.getPrimaryField(), pk));
         publisher.projection(Projections.include(column));
         publisher.first().subscribe(future);
         return future.thenApply(v -> v == null ? defValue : info.getAttribute(column).get(v));
@@ -1130,7 +1130,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getReadMongoCollection(info);
         ReatorFuture<T> future = new ReatorFuture<>();
-        collection.find(Filters.eq(info.getPrimaryColumn(), pk)).first().subscribe(future);
+        collection.find(Filters.eq(info.getPrimaryField(), pk)).first().subscribe(future);
         return future.thenApply(v -> v != null);
     }
 
@@ -1144,7 +1144,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getReadMongoCollection(info);
         ReatorFuture<T> future = new ReatorFuture<>();
-        collection.find(createFilterElement(info, node)).projection(Projections.include(info.getPrimaryColumn())).first().subscribe(future);
+        collection.find(createFilterElement(info, node)).projection(Projections.include(info.getPrimaryField())).first().subscribe(future);
         return future.thenApply(v -> v != null);
     }
 

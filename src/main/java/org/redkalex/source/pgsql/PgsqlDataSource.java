@@ -18,7 +18,7 @@ import org.redkale.net.client.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import org.redkalex.source.pgsql.PgReqExtended.PgReqExtendMode;
+import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
 /**
  * 部分协议格式参考： http://wp1i.cn/archives/78556.html
@@ -181,9 +181,9 @@ public class PgsqlDataSource extends DataSqlSource {
     protected <T> CompletableFuture<Integer> insertDBAsync(EntityInfo<T> info, T... entitys) {
         final long s = System.currentTimeMillis();
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
-        final Object[][] objs = new Object[entitys.length][];
+        final Serializable[][] objs = new Serializable[entitys.length][];
         for (int i = 0; i < entitys.length; i++) {
-            final Object[] params = new Object[attrs.length];
+            final Serializable[] params = new Serializable[attrs.length];
             for (int j = 0; j < attrs.length; j++) {
                 params[j] = getEntityAttrValue(info, attrs[j], entitys[i]);
             }
@@ -195,17 +195,17 @@ public class PgsqlDataSource extends DataSqlSource {
         if ((prepareInfos == null || prepareInfos.size() < 2) && pool.cachePreparedStatements()) {
             String sql = info.getInsertDollarPrepareSQL(entitys[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            ObjectReference<PgClientRequest> reqRef = new ObjectReference();
-            ObjectReference<ClientConnection> connRef = new ObjectReference();
-            return thenApplyInsertStrategy(info, pool.connect(null).thenCompose(conn -> {
+            return pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_INSERT, PgReqExtendMode.OTHER, sql, 0, null, attrs, objs);
-                reqRef.set(req);
-                connRef.set(conn);
-                return pool.writeChannel(conn, req);
-            }), reqRef, connRef, entitys).thenApply(g -> {
-                slowLog(s, sql);
-                return g.getUpdateEffectCount();
+                req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_INSERT, PgExtendMode.INSERT_ENTITY, sql, 0, objs);
+                Function<PgResultSet, Integer> transfer = dataset -> {
+                    int rs = dataset.getUpdateEffectCount();
+                    slowLog(s, sql);
+                    dataset.close();
+                    conn.offerResultSet(dataset);
+                    return rs;
+                };
+                return pool.writeChannel(conn, req, transfer);
             });
         } else {
             return executeUpdate(info, new String[]{info.getInsertDollarPrepareSQL(entitys[0])}, entitys, 0, true, attrs, objs);
@@ -270,12 +270,12 @@ public class PgsqlDataSource extends DataSqlSource {
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
         PgClient pool = writePool();
-        final String caseSql = pool.cachePreparedStatements() ? info.getUpdateDollarPrepareCaseSQL(values) : null;
-        Object[][] objs0;
+        final String caseSql = info.getTableStrategy() == null && pool.cachePreparedStatements() ? info.getUpdateDollarPrepareCaseSQL(values) : null;
+        Serializable[][] objs0;
         if (caseSql == null) {
-            objs0 = new Object[values.length][];
+            objs0 = new Serializable[values.length][];
             for (int i = 0; i < values.length; i++) {
-                final Object[] params = new Object[attrs.length + 1];
+                final Serializable[] params = new Serializable[attrs.length + 1];
                 for (int j = 0; j < attrs.length; j++) {
                     params[j] = getEntityAttrValue(info, attrs[j], values[i]);
                 }
@@ -284,8 +284,8 @@ public class PgsqlDataSource extends DataSqlSource {
             }
         } else {
             int len = values.length;
-            objs0 = new Object[1][];
-            Object[] params = new Object[len * 2];
+            objs0 = new Serializable[1][];
+            Serializable[] params = new Serializable[len * 2];
             Attribute<T, Serializable> otherAttr = attrs[0];
             for (int i = 0; i < values.length; i++) {
                 params[i] = primary.get(values[i]);
@@ -293,17 +293,21 @@ public class PgsqlDataSource extends DataSqlSource {
             }
             objs0[0] = params;
         }
-        final Object[][] objs = objs0;
-        if (pool.cachePreparedStatements()) {
+        final Serializable[][] objs = objs0;
+        if (info.getTableStrategy() == null && pool.cachePreparedStatements()) {
             String sql = caseSql == null ? info.getUpdateDollarPrepareSQL(values[0]) : caseSql;
             WorkThread workThread = WorkThread.currWorkThread();
-            return pool.connect(null).thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
+            return pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, PgReqExtendMode.OTHER, sql, 0, null, caseSql == null ? Utility.append(attrs, primary) : null, objs);
-                return pool.writeChannel(conn, req);
-            })).thenApply(g -> {
-                slowLog(s, sql);
-                return g.getUpdateEffectCount();
+                req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, caseSql == null ? PgExtendMode.UPDATE_ENTITY : PgExtendMode.UPCASE_ENTITY, sql, 0, objs);
+                Function<PgResultSet, Integer> transfer = dataset -> {
+                    int rs = dataset.getUpdateEffectCount();
+                    slowLog(s, sql);
+                    dataset.close();
+                    conn.offerResultSet(dataset);
+                    return rs;
+                };
+                return pool.writeChannel(conn, req, transfer);
             });
         } else {
             return executeUpdate(info, new String[]{info.getUpdateDollarPrepareSQL(values[0])}, null, 0, false, Utility.append(attrs, primary), objs);
@@ -377,12 +381,11 @@ public class PgsqlDataSource extends DataSqlSource {
             WorkThread workThread = WorkThread.currWorkThread();
             return pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FIND, sql, 0, info.getQueryAttributes(), info.getPrimaryOneArray(), new Object[]{pk});
+                req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, pk);
                 Function<PgResultSet, T> transfer = dataset -> {
                     T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
                     dataset.close();
-                    PgClientCodec codec = conn.getCodec();
-                    codec.offerResultSet(dataset);
+                    conn.offerResultSet(dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -408,24 +411,22 @@ public class PgsqlDataSource extends DataSqlSource {
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(pks[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            return pool.connect(null).thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
+            return pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
-                Object[][] params = new Object[pks.length][];
-                for (int i = 0; i < params.length; i++) {
-                    params[i] = new Object[]{pks[i]};
-                }
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FINDS, sql, 0, info.getQueryAttributes(), info.getPrimaryOneArray(), params);
+                req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, pks);
                 req.finds = true;
-                return pool.writeChannel(conn, req);
-            })).thenApply((PgResultSet dataset) -> {
-                T[] rs = info.getArrayer().apply(pks.length);
-                int i = -1;
-                while (dataset.next()) {
-                    rs[++i] = getEntityValue(info, selects, dataset);
-                }
-                dataset.close();
-                slowLog(s, sql);
-                return rs;
+                Function<PgResultSet, T[]> transfer = dataset -> {
+                    T[] rs = info.getArrayer().apply(pks.length);
+                    int i = -1;
+                    while (dataset.next()) {
+                        rs[++i] = getEntityValue(info, selects, dataset);
+                    }
+                    dataset.close();
+                    conn.offerResultSet(dataset);
+                    slowLog(s, sql);
+                    return rs;
+                };
+                return pool.writeChannel(conn, req, transfer);
             });
         } else {
             return super.findsDBAsync(info, selects, pks);
@@ -443,11 +444,7 @@ public class PgsqlDataSource extends DataSqlSource {
             WorkThread workThread = WorkThread.currWorkThread();
             return pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
-                Object[][] params = new Object[ids.length][];
-                for (int i = 0; i < params.length; i++) {
-                    params[i] = new Object[]{ids[i]};
-                }
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.FINDS, sql, 0, info.getQueryAttributes(), info.getPrimaryOneArray(), params);
+                req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, ids);
                 req.finds = true;
                 Function<PgResultSet, List<T>> transfer = dataset -> {
                     List<T> rs = new ArrayList<>();
@@ -455,8 +452,7 @@ public class PgsqlDataSource extends DataSqlSource {
                         rs.add(getEntityValue(info, null, dataset));
                     }
                     dataset.close();
-                    PgClientCodec codec = conn.getCodec();
-                    codec.offerResultSet(dataset);
+                    conn.offerResultSet(dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -515,15 +511,14 @@ public class PgsqlDataSource extends DataSqlSource {
                 WorkThread workThread = WorkThread.currWorkThread();
                 return pool.connect(null).thenCompose(conn -> {
                     PgReqExtended req = conn.pollReqExtended(workThread, info);
-                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgReqExtendMode.LIST_ALL, listSql, 0, info.getQueryAttributes(), (Attribute[]) null, PgReqExtended.ONE_EMPTY_PARAMS);
+                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, listSql, 0);
                     Function<PgResultSet, Sheet<T>> transfer = dataset -> {
                         final List<T> list = new ArrayList();
                         while (dataset.next()) {
                             list.add(getEntityValue(info, sels, dataset));
                         }
                         dataset.close();
-                        PgClientCodec codec = conn.getCodec();
-                        codec.offerResultSet(dataset);
+                        conn.offerResultSet(dataset);
                         slowLog(s, listSql);
                         return Sheet.asSheet(list);
                     };

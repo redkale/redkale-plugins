@@ -26,9 +26,15 @@ public class PgRowColumn {
 
     final int oid;
 
+    final PgColumnFormat format;
+
     public PgRowColumn(String name, int oid) {
         this.name = name;
         this.oid = oid;
+        this.format = PgColumnFormat.valueOf(oid);
+        if (this.format == PgColumnFormat.UNKNOWN) {
+            throw new SourceException("Unsupported oid: " + oid);
+        }
     }
 
     public String getName() {
@@ -39,13 +45,19 @@ public class PgRowColumn {
         return oid;
     }
 
+    public PgColumnFormat getFormat() {
+        return format;
+    }
+
     @Override
     public String toString() {
         return "{\"name\"=\"" + name + "\", \"oid\"=" + oid + "}";
     }
 
     public Serializable getObject(byte[] value) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         switch (oid) {
             case TEXT: // fallthrough
             case CHAR: // fallthrough

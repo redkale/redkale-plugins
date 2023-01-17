@@ -38,10 +38,6 @@ public interface PgsqlOid {
 
     int TEXT_ARRAY = 1009;
 
-    int NUMERIC = 1700;
-
-    int NUMERIC_ARRAY = 1231;
-
     int FLOAT4 = 700;
 
     int FLOAT4_ARRAY = 1021;
@@ -133,5 +129,19 @@ public interface PgsqlOid {
     int JSONB = 3802;
 
     int HSTORE = 33670;
+
+    int NUMERIC = 1700; //false  Number
+
+    int NUMERIC_ARRAY = 1231; //false  Number
+
+    int UNKNOWN = 705;  //false String
+
+    int TS_VECTOR = 3614;  //false String
+
+    int TS_VECTOR_ARRAY = 3643;  //false String
+
+    int TS_QUERY = 3615;  //false String
+
+    int TS_QUERY_ARRAY = 3645;  //false String
 
 }

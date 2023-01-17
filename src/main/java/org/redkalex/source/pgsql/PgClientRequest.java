@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 import org.redkale.net.WorkThread;
 import org.redkale.net.client.ClientRequest;
 import org.redkale.source.EntityInfo;
-import org.redkale.util.*;
+import org.redkale.util.ByteArray;
 
 /**
  *
@@ -44,7 +44,7 @@ public abstract class PgClientRequest extends ClientRequest {
     //--------------------------------------------------
     protected EntityInfo info;
 
-    protected int syncedCount;
+    protected int syncCount;
 
     public abstract int getType();
 
@@ -52,14 +52,20 @@ public abstract class PgClientRequest extends ClientRequest {
         return (getType() & 0x1) == 1;
     }
 
-    public int getSyncedCount() {
-        return syncedCount;
+    public int getSyncCount() {
+        return syncCount;
     }
 
     @Override
     protected void prepare() {
         super.prepare();
-        this.syncedCount = 0;
+        this.syncCount = 0;
+    }
+
+    @Override
+    protected boolean recycle() {
+        boolean rs = super.recycle();
+        return rs;
     }
 
     protected void writeExecute(ByteArray array, int fetchSize) { // EXECUTE
@@ -75,7 +81,7 @@ public abstract class PgClientRequest extends ClientRequest {
 
     protected void writeSync(ByteArray array) { // SYNC
         array.put(SYNC_BYTES);
-        this.syncedCount++;
+        this.syncCount++;
     }
 
     protected static ByteArray writeUTF8String(ByteArray array, String string) {
