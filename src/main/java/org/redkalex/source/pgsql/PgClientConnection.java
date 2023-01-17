@@ -86,16 +86,18 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         } else if (mode == PgExtendMode.UPCASE_ENTITY) {
             String in = sql.substring(sql.lastIndexOf('(') + 1, sql.lastIndexOf(')'));
             int size = (int) in.chars().filter(c -> c == '$').count();
-            paramAttrs = new Attribute[size * 2];
-            paramCols = new EntityColumn[size * 2];
+            Attribute[] attrs = info.getUpdateAttributes();
+            paramAttrs = new Attribute[size * (attrs.length + 1)];
+            paramCols = new EntityColumn[paramAttrs.length];
             for (int i = 0; i < size; i++) {
                 paramAttrs[i] = info.getPrimary();
                 paramCols[i] = info.getPrimaryColumn();
-                Attribute[] attrs = info.getUpdateEntityAttributes();
-                EntityColumn[] cols = info.getUpdateEntityColumns();
-                for (int j = 0; j < attrs.length; j++) {
-                    paramAttrs[size + j] = attrs[j];
-                    paramCols[size + j] = cols[j];
+            }
+            EntityColumn[] cols = info.getUpdateColumns();
+            for (int j = 1; j <= attrs.length; j++) {
+                for (int i = 0; i < size; i++) {
+                    paramAttrs[size * j + i] = attrs[j - 1];
+                    paramCols[size * j + i] = cols[j - 1];
                 }
             }
             resultAttrs = new Attribute[0];
