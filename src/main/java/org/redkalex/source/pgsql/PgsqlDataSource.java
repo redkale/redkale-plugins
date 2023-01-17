@@ -383,7 +383,7 @@ public class PgsqlDataSource extends DataSqlSource {
                 Function<PgResultSet, T> transfer = dataset -> {
 //                    T rs = dataset.next() ? getEntityValue(info, selects, dataset) : null;
 //                    dataset.close();
-                    T rs = (T) dataset.findEntity;
+                    T rs = (T) dataset.oneEntity;
                     conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
@@ -408,12 +408,11 @@ public class PgsqlDataSource extends DataSqlSource {
         final long s = System.currentTimeMillis();
         PgClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
-            String sql = info.getFindDollarPrepareSQL(pks[0]);
+            String sql = info.getFindsDollarPrepareSQL(pks[0]);
             WorkThread workThread = WorkThread.currWorkThread();
             return pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
-                req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, pks);
-                req.finds = true;
+                req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FINDS_ENTITY, sql, 0, pks);
                 Function<PgResultSet, T[]> transfer = dataset -> {
 //                    T[] rs = info.getArrayer().apply(pks.length);
 //                    int i = -1;
@@ -421,7 +420,7 @@ public class PgsqlDataSource extends DataSqlSource {
 //                        rs[++i] = getEntityValue(info, selects, dataset);
 //                    }
 //                    dataset.close();
-                    T[] rs = dataset.findsEntity == null ? info.getArrayer().apply(pks.length) : dataset.findsEntity.toArray(info.getArrayer());
+                    T[] rs = dataset.listEntity == null ? info.getArrayer().apply(pks.length) : dataset.listEntity.toArray(info.getArrayer());
                     conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
@@ -440,19 +439,18 @@ public class PgsqlDataSource extends DataSqlSource {
         Serializable[] ids = pks.toArray(v -> new Serializable[v]);
         PgClient pool = readPool();
         if (info.getTableStrategy() == null && pool.cachePreparedStatements()) {
-            String sql = info.getFindDollarPrepareSQL(ids[0]);
+            String sql = info.getFindsDollarPrepareSQL(ids[0]);
             WorkThread workThread = WorkThread.currWorkThread();
             return pool.connect(null).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
-                req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, ids);
-                req.finds = true;
+                req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FINDS_ENTITY, sql, 0, ids);
                 Function<PgResultSet, List<T>> transfer = dataset -> {
 //                    List<T> rs = new ArrayList<>();
 //                    while (dataset.next()) {
 //                        rs.add(getEntityValue(info, null, dataset));
 //                    }
 //                    dataset.close();
-                    List<T> rs = dataset.findsEntity == null ? new ArrayList<>() : (List) dataset.findsEntity;
+                    List<T> rs = dataset.listEntity == null ? new ArrayList<>() : (List) dataset.listEntity;
                     conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
@@ -519,7 +517,7 @@ public class PgsqlDataSource extends DataSqlSource {
 //                            list.add(getEntityValue(info, sels, dataset));
 //                        }
 //                        dataset.close();
-                        List<T> rs = dataset.listallEntity == null ? new ArrayList<>() : (List) dataset.listallEntity;
+                        List<T> rs = dataset.listEntity == null ? new ArrayList<>() : (List) dataset.listEntity;
                         conn.offerResultSet(req, dataset);
                         slowLog(s, listSql);
                         return Sheet.asSheet(rs);

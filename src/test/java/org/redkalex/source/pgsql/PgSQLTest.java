@@ -80,12 +80,12 @@ public class PgSQLTest {
         System.out.println("-------------------- " + "当前内核数: " + Utility.cpus() + " --------------------");
         if (true) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
-            System.out.println("随机获取World记录: " + source.findAsync(World.class, randomId()).join());
-            System.out.println("随机获取World记录: " + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId())).join());
-            System.out.println("随机获取World记录: " + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId()).join()));
+            System.out.println("随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
+            System.out.println("随机获取World记录2: " + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId())).join());
+            System.out.println("随机获取World记录3: " + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId()).join()));
             World w1 = source.findAsync(World.class, 11).join();
             World w2 = source.findAsync(World.class, 22).join();
-            System.out.println("随机获取World记录: " + w1 + ", " + w2);
+            System.out.println("随机获取World记录4: " + w1 + ", " + w2);
             w1.setRandomNumber(w1.getRandomNumber() + 2);
             w2.setRandomNumber(w2.getRandomNumber() + 2);
             source.updateAsync(w1, w2).join();
@@ -93,7 +93,7 @@ public class PgSQLTest {
             w2 = source.findAsync(World.class, 22).join();
             System.out.println("修改后World记录: " + w1 + ", " + w2);
 
-            System.out.println("随机获取World记录: " + source.findsListAsync(World.class, Stream.of(randomId(), randomId())).join());
+            System.out.println("随机获取World记录5: " + source.findsListAsync(World.class, Stream.of(randomId(), randomId())).join());
             System.out.println(source.queryList(Fortune.class));
             if (true) {
                 return;

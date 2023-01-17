@@ -17,7 +17,7 @@ import static org.redkalex.source.pgsql.PgClientRequest.writeUTF8String;
 public class PgPrepareDesc {
 
     public static enum PgExtendMode {
-        FIND_ENTITY, INSERT_ENTITY, UPDATE_ENTITY, UPCASE_ENTITY, LISTALL_ENTITY;
+        FIND_ENTITY, FINDS_ENTITY, INSERT_ENTITY, UPDATE_ENTITY, UPCASE_ENTITY, LISTALL_ENTITY;
     }
 
     private final int type;

@@ -61,11 +61,9 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
 
     protected int[] batchEffectCounts;
 
-    protected Object findEntity; //只有PgReqExtended.mode = FIND_ENTITY 才有效
+    protected Object oneEntity; //只有PgReqExtended.mode = FIND_ENTITY 才有效
 
-    protected List<Object> findsEntity; //只有PgReqExtended.mode = FIND_ENTITY 才有效
-
-    protected List<Object> listallEntity; //只有PgReqExtended.mode = LISTALL_ENTITY 才有效
+    protected List<Object> listEntity; //只有PgReqExtended.mode = FINDS_ENTITY/LISTALL_ENTITY 才有效
 
     public PgResultSet() {
     }
@@ -94,9 +92,8 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
         this.updateEffectCount = 0;
         this.effectRespCount = 0;
         this.batchEffectCounts = null;
-        this.findEntity = null;
-        this.findsEntity = null;
-        this.listallEntity = null;
+        this.oneEntity = null;
+        this.listEntity = null;
         return true;
     }
 
@@ -106,6 +103,13 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
             return index > 0 ? currRow.realValues[index - 1] : currRow.realValues[colmap().get(column.toLowerCase())];
         }
         return DataResultSet.getRowColumnValue(this, attr, index, column);
+    }
+
+    public void addEntity(Object entity) {
+        if (listEntity == null) {
+            listEntity = new ArrayList<>();
+        }
+        listEntity.add(entity);
     }
 
     @Override

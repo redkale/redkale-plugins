@@ -12,6 +12,7 @@ import java.util.logging.*;
 import org.redkale.net.client.*;
 import org.redkale.source.EntityInfo;
 import org.redkale.util.*;
+import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
 /**
  *
@@ -213,12 +214,9 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                             } else {
                                 lastResult.increUpdateEffectCount(count);
                             }
-                            if (count == 0 && request.getType() == PgClientRequest.REQ_TYPE_EXTEND_QUERY && ((PgReqExtended) request).finds) {
-                                if (((PgReqExtended) request).mode == PgPrepareDesc.PgExtendMode.FIND_ENTITY) {
-                                    if (lastResult.findsEntity == null) {
-                                        lastResult.findsEntity = new ArrayList<>();
-                                    }
-                                    lastResult.findsEntity.add(null);
+                            if (count == 0 && request.getType() == PgClientRequest.REQ_TYPE_EXTEND_QUERY) {
+                                if (((PgReqExtended) request).mode == PgExtendMode.FINDS_ENTITY) {
+                                    lastResult.addEntity(null);
                                 } else {
                                     lastResult.addRowData(null);
                                 }

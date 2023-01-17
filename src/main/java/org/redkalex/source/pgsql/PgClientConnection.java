@@ -68,6 +68,11 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
             paramCols = info.getPrimaryColumnOneArray();
             resultAttrs = info.getQueryAttributes();
             resultCols = info.getQueryColumns();
+        } else if (mode == PgExtendMode.FINDS_ENTITY) {
+            paramAttrs = info.getPrimaryOneArray();
+            paramCols = info.getPrimaryColumnOneArray();
+            resultAttrs = info.getQueryAttributes();
+            resultCols = info.getQueryColumns();
         } else if (mode == PgExtendMode.UPDATE_ENTITY) {
             paramAttrs = info.getUpdateEntityAttributes();
             paramCols = info.getUpdateEntityColumns();

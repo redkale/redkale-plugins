@@ -32,10 +32,6 @@ public class PgReqExtended extends PgClientRequest {
 
     protected Serializable[] pkValues;
 
-    protected boolean finds;
-
-    protected int[] findsCount;
-
     public PgReqExtended() {
     }
 
@@ -68,8 +64,6 @@ public class PgReqExtended extends PgClientRequest {
         this.fetchSize = 0;
         this.paramValues = null;
         this.pkValues = null;
-        this.finds = false;
-        this.findsCount = null;
         return rs;
     }
 
