@@ -242,7 +242,10 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     if (lastResult == null) {
                         lastResult = pollResultSet(request == null ? null : request.info);
                     }
-                    if (request != null && (request.getType() != PgClientRequest.REQ_TYPE_QUERY)) {
+                    if (request != null && request.isExtendType() && (((PgReqExtended) request).mode == PgExtendMode.FIND_ENTITY
+                        || ((PgReqExtended) request).mode == PgExtendMode.LISTALL_ENTITY)) {
+                        buffer.position(bufpos + length);
+                    } else if (request != null && (request.getType() != PgClientRequest.REQ_TYPE_QUERY)) {
                         int count = PgRespCountDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         if (PgsqlDataSource.debug) {
                             logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", count=" + array.toString());
