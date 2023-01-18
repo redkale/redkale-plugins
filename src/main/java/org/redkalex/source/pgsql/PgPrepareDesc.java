@@ -46,6 +46,8 @@ public class PgPrepareDesc {
 
     private final byte[] bindPostfixBytes;
 
+    private final byte[] bindNoParamBytes;
+
     private PgRowDesc rowDesc;
 
     public PgPrepareDesc(int type, PgExtendMode mode, String sql, byte[] statement,
@@ -72,8 +74,9 @@ public class PgPrepareDesc {
         for (int i = 0; i < resultAttrs.length; i++) {
             this.resultFormats[i] = PgColumnFormat.valueOf(resultAttrs[i], resultCols[i]);
         }
+        ByteArray array = new ByteArray(128);
         {
-            ByteArray array = new ByteArray(128);
+            array.clear();
             array.putInt(0); //command-length
             array.putByte(0); // portal  
             array.put(statement); //prepared statement
@@ -89,7 +92,7 @@ public class PgPrepareDesc {
             this.bindPrefixBytes = array.getBytes();
         }
         {
-            ByteArray array = new ByteArray(128);
+            array.clear();
             // Result columns are all in Binary format
             PgColumnFormat[] rformats = resultFormats;
             if (rformats.length > 0) {
@@ -102,6 +105,15 @@ public class PgPrepareDesc {
                 array.putShort(1);
             }
             this.bindPostfixBytes = array.getBytes();
+        }
+        {
+            array.clear();
+            array.putByte('B');
+            int start = array.length();
+            array.put(bindPrefixBytes);
+            array.put(bindPostfixBytes);
+            array.putInt(start, array.length() - start);
+            this.bindNoParamBytes = array.getBytes();
         }
     }
 
@@ -164,6 +176,10 @@ public class PgPrepareDesc {
 
     public void uncomplete() {
         this.completed.set(false);
+    }
+
+    public byte[] bindNoParamBytes() {
+        return bindNoParamBytes;
     }
 
     public byte[] bindPrefixBytes() {

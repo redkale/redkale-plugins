@@ -135,6 +135,13 @@ public class PgReqExtended extends PgClientRequest {
         writeExecute(array, fetchSize);
     }
 
+    private void writeBind(ByteArray array, PgPrepareDesc prepareDesc) { // BIND
+        // BIND
+        array.put(prepareDesc.bindNoParamBytes());
+        // EXECUTE
+        writeExecute(array, fetchSize);
+    }
+
     @Override
     public void writeTo(ClientConnection conn, ByteArray array) {
         PgClientConnection pgconn = (PgClientConnection) conn;
