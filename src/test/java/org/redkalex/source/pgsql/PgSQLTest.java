@@ -56,6 +56,7 @@ public class PgSQLTest {
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         final PgsqlDataSource source = new PgsqlDataSource();
+        PgsqlDataSource.debug = true;
 
         Properties prop = new Properties();
         if (rwSeparate) { //读写分离
