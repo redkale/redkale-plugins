@@ -6,7 +6,8 @@
 package org.redkalex.source.pgsql;
 
 import java.nio.ByteBuffer;
-import org.redkale.util.*;
+import org.redkale.util.ByteArray;
+import static org.redkalex.source.pgsql.PgClientCodec.*;
 
 /**
  *
@@ -21,7 +22,7 @@ public class PgRespRowDescDecoder extends PgRespDecoder<PgRowDesc> {
 
     @Override
     public byte messageid() {
-        return 'T';
+        return MESSAGE_TYPE_ROW_DESCRIPTION; // 'T'
     }
 
     @Override

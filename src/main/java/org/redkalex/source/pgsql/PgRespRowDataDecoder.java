@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import org.redkale.source.EntityInfo;
 import org.redkale.util.*;
+import static org.redkalex.source.pgsql.PgClientCodec.*;
 import static org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode.*;
 
 /**
@@ -24,7 +25,7 @@ public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
 
     @Override
     public byte messageid() {
-        return 'D';
+        return MESSAGE_TYPE_DATA_ROW; // 'D'
     }
 
     @Override  //RowData 一行数据

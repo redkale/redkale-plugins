@@ -20,6 +20,46 @@ import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
  */
 public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
 
+    public static final byte MESSAGE_TYPE_BACKEND_KEY_DATA = 'K';
+
+    public static final byte MESSAGE_TYPE_AUTHENTICATION = 'R';
+
+    public static final byte MESSAGE_TYPE_ERROR_RESPONSE = 'E';
+
+    public static final byte MESSAGE_TYPE_NOTICE_RESPONSE = 'N';
+
+    public static final byte MESSAGE_TYPE_NOTIFICATION_RESPONSE = 'A';
+
+    public static final byte MESSAGE_TYPE_COMMAND_COMPLETE = 'C';
+
+    public static final byte MESSAGE_TYPE_PARAMETER_STATUS = 'S';
+
+    public static final byte MESSAGE_TYPE_READY_FOR_QUERY = 'Z';
+
+    public static final byte MESSAGE_TYPE_PARAMETER_DESCRIPTION = 't';
+
+    public static final byte MESSAGE_TYPE_ROW_DESCRIPTION = 'T';
+
+    public static final byte MESSAGE_TYPE_DATA_ROW = 'D';
+
+    public static final byte MESSAGE_TYPE_PORTAL_SUSPENDED = 's';
+
+    public static final byte MESSAGE_TYPE_NO_DATA = 'n';
+
+    public static final byte MESSAGE_TYPE_EMPTY_QUERY_RESPONSE = 'I';
+
+    public static final byte MESSAGE_TYPE_PARSE_COMPLETE = '1';
+
+    public static final byte MESSAGE_TYPE_BIND_COMPLETE = '2';
+
+    public static final byte MESSAGE_TYPE_CLOSE_COMPLETE = '3';
+
+    public static final byte MESSAGE_TYPE_FUNCTION_RESULT = 'V';
+
+    public static final byte MESSAGE_TYPE_SSL_YES = 'S';
+
+    public static final byte MESSAGE_TYPE_SSL_NO = 'N';
+
     protected static final Logger logger = Logger.getLogger(PgClientCodec.class.getSimpleName());
 
     protected char halfFrameCmd;
@@ -142,7 +182,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                     return hadResult;
                 }
-                if (cmd == 'R') {  //登录鉴权
+                if (cmd == MESSAGE_TYPE_AUTHENTICATION) {  // 'R' 登录鉴权
                     int type = buffer.getInt();
                     byte[] salt = null;
                     boolean authOK = false;
@@ -198,13 +238,16 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         request = null;
                         break;
                     }
-                } else if (cmd == 'C') { //Count
+                } else if (cmd == MESSAGE_TYPE_COMMAND_COMPLETE) { // 'C' Count
                     if (lastResult == null) {
                         lastResult = pollResultSet(request == null ? null : request.info);
                     }
                     if (request != null && (request.getType() != PgClientRequest.REQ_TYPE_QUERY)) {
                         int count = PgRespCountDecoder.instance.read(conn, buffer, length, array, request, lastResult);
-                        if (count != Integer.MIN_VALUE) {
+                        if (PgsqlDataSource.debug) {
+                            logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", count=" + array.toString());
+                        }
+                        if (count > -1) {
                             if (request.getType() == PgClientRequest.REQ_TYPE_BATCH) {
                                 lastResult.increBatchEffectCount(((PgReqBatch) request).sqls.length, count);
                             } else {
@@ -225,7 +268,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     } else {
                         buffer.position(bufpos + length);
                     }
-                } else if (cmd == 'T') {  //RowDesc
+                } else if (cmd == MESSAGE_TYPE_ROW_DESCRIPTION) {  // 'T' RowDesc
                     if (request != null) {
                         if (lastResult == null) {
                             lastResult = pollResultSet(request.info);
@@ -249,7 +292,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     } else {
                         buffer.position(bufpos + length);
                     }
-                } else if (cmd == 'D') { //RowData 一行数据
+                } else if (cmd == MESSAGE_TYPE_DATA_ROW) { // 'D' RowData 一行数据
                     if (request != null) {
                         if (lastResult == null) {
                             lastResult = pollResultSet(request.info);
@@ -265,7 +308,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     } else {
                         buffer.position(bufpos + length);
                     }
-                } else if (cmd == 'E') { //Error
+                } else if (cmd == MESSAGE_TYPE_ERROR_RESPONSE) { // 'E' Error
                     if (request != null) {
                         Exception exc = PgRespErrorDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         if (lastExc == null) {
@@ -294,7 +337,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         request = null;
                         break;
                     }
-                } else if (cmd == 'Z') { //ReadyForQuery
+                } else if (cmd == MESSAGE_TYPE_READY_FOR_QUERY) { // 'Z' ReadyForQuery
                     lastCount++;
                     buffer.get(); //'I' TransactionState.IDLE、'T' TransactionState.OPEN、'E' TransactionState.FAILED
                     //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
@@ -340,11 +383,11 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     request = null;
                     update_1_to_2 = false;
                     break;
-                } else if (cmd == '1') { //UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,  也可能是1、t、T、Z再发2、D...C/E、Z
+                } else if (cmd == MESSAGE_TYPE_PARSE_COMPLETE) { // '1' UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,  也可能是1、t、T、Z再发2、D...C/E、Z
                     //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
                     update_1_to_2 = true;
                     buffer.position(bufpos + length);
-                } else if (cmd == '2') { //UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,  也可能是1、t、T、Z再发2、D...C/E、Z
+                } else if (cmd == MESSAGE_TYPE_BIND_COMPLETE) { // '2' UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,  也可能是1、t、T、Z再发2、D...C/E、Z
                     //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
                     update_1_to_2 = false;
                     buffer.position(bufpos + length);

@@ -7,6 +7,7 @@ package org.redkalex.source.pgsql;
 
 import java.nio.ByteBuffer;
 import org.redkale.util.ByteArray;
+import static org.redkalex.source.pgsql.PgClientCodec.*;
 
 /**
  *
@@ -21,7 +22,7 @@ public class PgRespReadyDecoder extends PgRespDecoder<Boolean> {
 
     @Override
     public byte messageid() {
-        return 'Z';
+        return MESSAGE_TYPE_READY_FOR_QUERY; // 'Z'
     }
 
     @Override
@@ -30,7 +31,6 @@ public class PgRespReadyDecoder extends PgRespDecoder<Boolean> {
             return true;
         }
         buffer.position(buffer.position() + length - 4);
-        //buffer.skip(length - 4);
         return true;
     }
 

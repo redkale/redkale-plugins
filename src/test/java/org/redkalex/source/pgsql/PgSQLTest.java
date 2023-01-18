@@ -95,13 +95,19 @@ public class PgSQLTest {
 
             System.out.println("随机获取World记录5: " + source.findsListAsync(World.class, Stream.of(1, 2, 3, 4, 5)).join());
 
-            IntStream ids = IntStream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
+            IntStream ids = IntStream.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
             System.out.println("组合操作1: " + source.findsListAsync(World.class, ids.boxed()).thenCompose(words -> source.updateAsync(World.modifyNumber(words)).thenApply(v -> words)).join());
 
             ids = IntStream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
             System.out.println("组合操作2: " + source.findsListAsync(World.class, ids.boxed()).thenCompose(words -> source.updateAsync(World.modifyNumber(words)).thenApply(v -> words)).join());
 
-            System.out.println(source.queryList(Fortune.class));
+            System.out.println("查询模板数据: " + source.queryList(Fortune.class));
+
+            source.directQuery("SELECT COUNT(*) FROM World", rs -> {
+                System.out.println("获得World总数: " + (rs.next() ? rs.getObject(1) : null));
+                return null;
+            });
+            System.out.println("执行结果应该是(3): " + source.directExecute("UPDATE World SET randomNumber = id WHERE id < 3"));
             if (true) {
                 return;
             }

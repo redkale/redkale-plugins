@@ -30,25 +30,26 @@ public class PgRespCountDecoder extends PgRespDecoder<Integer> {
 
     @Override
     public Integer read(PgClientConnection conn, ByteBuffer buffer, int length, ByteArray array, PgClientRequest request, PgResultSet dataset) {
-        String val = PgClientCodec.readUTF8String(buffer, array);
-        if (val.endsWith(END1)) {
-            return 1;
+        int len = length - 5; //最后字节是(byte)0
+        byte b;
+        int rows = -1;
+        boolean debug = PgsqlDataSource.debug;
+        if (debug) {
+            array.clear();
         }
-        if (val.endsWith(END0)) {
-            return 0;
-        }
-        int pos = val.lastIndexOf(' ');
-        if (pos > 0) {
-            String numstr = val.substring(pos + 1);
-            if (numstr.charAt(0) >= '0' && numstr.charAt(0) <= '9') {
-                return Integer.parseInt(numstr);
-            } else if (numstr.startsWith("CREATE TABLE")) {
-                return 1;
-            } else {
-                return 0;
+        for (int i = 0; i < len; i++) {
+            b = buffer.get();
+            if (rows != -1) {
+                rows = rows * 10 + (b - '0');
+            } else if (b == ' ') {
+                rows = 0;
+            }
+            if (debug) {
+                array.put(b);
             }
         }
-        return Integer.MIN_VALUE;
+        buffer.get();
+        return rows;
     }
 
 }
