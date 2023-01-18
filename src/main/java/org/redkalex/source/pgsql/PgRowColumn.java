@@ -26,15 +26,9 @@ public class PgRowColumn {
 
     final int oid;
 
-    final PgColumnFormat format;
-
     public PgRowColumn(String name, int oid) {
         this.name = name;
-        this.oid = oid;
-        this.format = PgColumnFormat.valueOf(oid);
-        if (this.format.encoder() == null || this.format.decoder() == null) {
-            throw new SourceException("Unsupported oid: " + oid);
-        }
+        this.oid = oid;        
     }
 
     public String getName() {
@@ -43,10 +37,6 @@ public class PgRowColumn {
 
     public int getOid() {
         return oid;
-    }
-
-    public PgColumnFormat getFormat() {
-        return format;
     }
 
     @Override

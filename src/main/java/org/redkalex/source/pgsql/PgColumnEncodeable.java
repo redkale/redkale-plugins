@@ -12,5 +12,6 @@ import org.redkale.util.*;
  */
 public interface PgColumnEncodeable {
 
+    //attr可能会为null
     public void encode(ByteArray array, Attribute attr, Serializable value);
 }

@@ -63,7 +63,7 @@ public enum PgColumnFormat {
         array.put(val.toString().getBytes(UTF_8));
     }, (buffer, array, attr, len) -> {
         String v = array.clear().put(buffer, len).toString(UTF_8);
-        Class clazz = attr.type();
+        Class clazz = attr == null ? (v.indexOf('.') >= 0 ? BigDecimal.class : BigInteger.class) : attr.type();
         if (clazz == BigInteger.class) {
             return new BigInteger(v);
         } else if (clazz == BigDecimal.class) {

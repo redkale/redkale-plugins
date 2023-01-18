@@ -30,15 +30,7 @@ public class PgPrepareDesc {
 
     private final Attribute[] paramAttrs;
 
-    private final EntityColumn[] paramCols;
-
-    private final PgColumnFormat[] paramFormats;
-
     private final Attribute[] resultAttrs;
-
-    private final EntityColumn[] resultCols;
-
-    private final PgColumnFormat[] resultFormats;
 
     private final AtomicBoolean completed = new AtomicBoolean();
 
@@ -48,7 +40,11 @@ public class PgPrepareDesc {
 
     private final byte[] bindNoParamBytes;
 
-    private PgRowDesc rowDesc;
+    private PgColumnFormat[] paramFormats;  //预编译结果中't'信息
+
+    private PgColumnFormat[] resultFormats; //预编译结果中'T'信息
+
+    private PgRowDesc rowDesc; //预编译结果中'T'信息
 
     public PgPrepareDesc(int type, PgExtendMode mode, String sql, byte[] statement,
         Attribute[] paramAttrs, EntityColumn[] paramCols, Attribute[] resultAttrs, EntityColumn[] resultCols) {
@@ -63,9 +59,7 @@ public class PgPrepareDesc {
         this.sql = sql;
         this.statement = statement;
         this.paramAttrs = paramAttrs;
-        this.paramCols = paramCols;
         this.resultAttrs = resultAttrs;
-        this.resultCols = resultCols;
         this.paramFormats = new PgColumnFormat[paramAttrs.length];
         for (int i = 0; i < paramAttrs.length; i++) {
             this.paramFormats[i] = PgColumnFormat.valueOf(paramAttrs[i], paramCols[i]);
@@ -150,24 +144,41 @@ public class PgPrepareDesc {
     @Override
     public String toString() {
         StringBuilder paramsb = new StringBuilder();
-        paramsb.append('[');
-        for (PgColumnFormat f : paramFormats) {
-            if (paramsb.length() > 1) {
-                paramsb.append(',');
+        if (paramFormats != null) {
+            paramsb.append('[');
+            for (PgColumnFormat f : paramFormats) {
+                if (paramsb.length() > 1) {
+                    paramsb.append(',');
+                }
+                paramsb.append(f.name());
             }
-            paramsb.append(f.name());
+            paramsb.append(']');
+        } else {
+            paramsb.append("null");
         }
-        paramsb.append(']');
         StringBuilder resultsb = new StringBuilder();
-        resultsb.append('[');
-        for (PgColumnFormat f : resultFormats) {
-            if (resultsb.length() > 1) {
-                resultsb.append(',');
+        if (resultFormats != null) {
+            resultsb.append('[');
+            for (PgColumnFormat f : resultFormats) {
+                if (resultsb.length() > 1) {
+                    resultsb.append(',');
+                }
+                resultsb.append(f.name());
             }
-            resultsb.append(f.name());
+            resultsb.append(']');
+        } else {
+            resultsb.append("null");
         }
-        resultsb.append(']');
         return "PgPrepareDesc_" + Objects.hashCode(this) + "{sql=" + sql + ", rowDesc=" + rowDesc + ", paramFormats=" + paramsb + ", resultFormats=" + resultsb + "}";
+    }
+
+    void updateParamFormats(PgColumnFormat[] paramFormats) {
+        this.paramFormats = paramFormats;
+    }
+
+    void updateRowDesc(PgRowDesc rowDesc) {
+        this.rowDesc = rowDesc;
+        this.resultFormats = rowDesc.formats;
     }
 
     public void complete() {
@@ -210,10 +221,6 @@ public class PgPrepareDesc {
         return paramAttrs;
     }
 
-    public EntityColumn[] paramCols() {
-        return paramCols;
-    }
-
     public PgColumnFormat[] paramFormats() {
         return paramFormats;
     }
@@ -222,20 +229,12 @@ public class PgPrepareDesc {
         return resultAttrs;
     }
 
-    public EntityColumn[] resultCols() {
-        return resultCols;
-    }
-
     public PgColumnFormat[] resultFormats() {
         return resultFormats;
     }
 
     public PgRowDesc getRowDesc() {
         return rowDesc;
-    }
-
-    public void setRowDesc(PgRowDesc rowDesc) {
-        this.rowDesc = rowDesc;
     }
 
 }

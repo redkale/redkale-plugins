@@ -15,8 +15,11 @@ public class PgRowDesc {
 
     final PgRowColumn[] columns;
 
-    public PgRowDesc(PgRowColumn[] columns) {
+    final PgColumnFormat[] formats;
+
+    public PgRowDesc(PgRowColumn[] columns, PgColumnFormat[] formats) {
         this.columns = columns;
+        this.formats = formats;
     }
 
     public PgRowColumn[] getColumns() {
@@ -28,7 +31,9 @@ public class PgRowDesc {
     }
 
     public int length() {
-        if (columns == null) return -1;
+        if (columns == null) {
+            return -1;
+        }
         return columns.length;
     }
 

@@ -33,7 +33,7 @@ import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 @ResourceType(DataSource.class)
 public class PgsqlDataSource extends DataSqlSource {
 
-    static final boolean debug = false; //System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
+    static final boolean debug = false; //true false
 
     protected PgClient readPool;
 

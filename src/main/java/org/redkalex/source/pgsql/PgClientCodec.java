@@ -268,6 +268,26 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     } else {
                         buffer.position(bufpos + length);
                     }
+                } else if (cmd == MESSAGE_TYPE_PARAMETER_DESCRIPTION) {  // 't' ParamDesc
+                    if (request != null) {
+                        if (lastResult == null) {
+                            lastResult = pollResultSet(request.info);
+                        }
+                        PgPrepareDesc prepareDesc = request.isExtendType() ? conn.getPgPrepareDesc(((PgReqExtended) request).sql) : null;
+                        PgColumnFormat[] oldParamFormats = prepareDesc == null ? null : prepareDesc.paramFormats();
+                        if (prepareDesc != null && oldParamFormats == null) {
+                            PgColumnFormat[] paramFormats = PgRespParamDescDecoder.instance.read(conn, buffer, length, array, request, lastResult);
+                            prepareDesc.updateParamFormats(paramFormats);
+                            if (buffer.position() != bufpos + length) {
+                                logger.log(Level.SEVERE, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", t buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                                buffer.position(bufpos + length);
+                            }
+                        } else {
+                            buffer.position(bufpos + length);
+                        }
+                    } else {
+                        buffer.position(bufpos + length);
+                    }
                 } else if (cmd == MESSAGE_TYPE_ROW_DESCRIPTION) {  // 'T' RowDesc
                     if (request != null) {
                         if (lastResult == null) {
@@ -279,7 +299,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                             PgRowDesc rowDesc = PgRespRowDescDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                             lastResult.setRowDesc(rowDesc);
                             if (prepareDesc != null) {
-                                prepareDesc.setRowDesc(rowDesc);
+                                prepareDesc.updateRowDesc(rowDesc);
                             }
                             if (buffer.position() != bufpos + length) {
                                 logger.log(Level.SEVERE, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", T buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
