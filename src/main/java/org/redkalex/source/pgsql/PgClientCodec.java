@@ -100,15 +100,12 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         }
         //buffer必然包含一个完整的frame数据
         boolean hadResult = false;
-        ClientFuture<PgClientRequest> respFuture = null;
         PgClientRequest request = null;
-        Iterator<ClientFuture> respIt = responseIterator();
         boolean update_1_to_2 = false;
         while (buffer.hasRemaining()) {
             while (buffer.hasRemaining()) {
                 if (request == null) {
-                    respFuture = respIt.hasNext() ? respIt.next() : null;
-                    request = respFuture == null ? null : respFuture.getRequest();
+                    request = nextRequest();
                 }
                 final char cmd = (char) buffer.get();
                 if (buffer.remaining() < 4) {
@@ -198,7 +195,6 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastExc = null;
                         lastCount = 0;
                         hadResult = true;
-                        respFuture = null;
                         request = null;
                         break;
                     }
@@ -295,7 +291,6 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastExc = null;
                         lastCount = 0;
                         hadResult = true;
-                        respFuture = null;
                         request = null;
                         break;
                     }
@@ -342,7 +337,6 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     lastExc = null;
                     lastCount = 0;
                     hadResult = true;
-                    respFuture = null;
                     request = null;
                     update_1_to_2 = false;
                     break;

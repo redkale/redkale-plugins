@@ -7,7 +7,6 @@ package org.redkalex.source.mysql;
 
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
-import java.util.Iterator;
 import java.util.logging.*;
 import org.redkale.net.client.*;
 import org.redkale.util.*;
@@ -84,11 +83,10 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
         //buffer必然包含一个完整的frame数据
         boolean hadresult = false;
         MyClientRequest request = null;
-        Iterator<ClientFuture> respIt = responseIterator();
         while (buffer.hasRemaining()) {
             while (buffer.hasRemaining()) {
                 if (request == null) {
-                    request = respIt.hasNext() ? (MyClientRequest) respIt.next().getRequest() : null;
+                    request = nextRequest();
                 }
                 if (buffer.remaining() < 3) { //不足以读取length
                     halfFrameBytes = pollArray();

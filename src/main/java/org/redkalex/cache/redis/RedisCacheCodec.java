@@ -212,10 +212,9 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         boolean first = true;
         boolean hadresult = false;
         RedisCacheRequest request = null;
-        Iterator<ClientFuture<RedisCacheRequest>> respIt = (Iterator) responseIterator();
         while (first || buffer.hasRemaining()) {
             if (request == null) {
-                request = respIt.hasNext() ? respIt.next().getRequest() : null;
+                request = nextRequest();
             }
             if (!first && !checkBytesFrame(conn, buffer, array)) {
                 break;
