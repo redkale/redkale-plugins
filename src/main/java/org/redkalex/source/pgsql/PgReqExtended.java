@@ -133,6 +133,8 @@ public class PgReqExtended extends PgClientRequest {
         array.putInt(start, array.length() - start);
         // EXECUTE
         writeExecute(array, fetchSize);
+        // SYNC      
+        writeSync(array);
     }
 
     private void writeBind(ByteArray array, PgPrepareDesc prepareDesc) { // BIND
@@ -140,6 +142,8 @@ public class PgReqExtended extends PgClientRequest {
         array.put(prepareDesc.bindNoParamBytes());
         // EXECUTE
         writeExecute(array, fetchSize);
+        // SYNC      
+        writeSync(array);
     }
 
     @Override
@@ -163,8 +167,6 @@ public class PgReqExtended extends PgClientRequest {
             } else {
                 writeBind(array, prepareDesc);
             }
-            // SYNC      
-            writeSync(array);
             if (PgsqlDataSource.debug) {
                 logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
@@ -186,8 +188,6 @@ public class PgReqExtended extends PgClientRequest {
             } else {
                 writeBind(array, prepareDesc);
             }
-            // SYNC      
-            writeSync(array);
             if (PgsqlDataSource.debug) {
                 logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", PARSE, DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
