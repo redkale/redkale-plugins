@@ -40,6 +40,9 @@ public class PgReqAuthentication extends PgClientRequest {
         writeUTF8String(writeUTF8String(array, "user"), info.username);
         writeUTF8String(writeUTF8String(array, "database"), info.database);
         writeUTF8String(writeUTF8String(array, "client_encoding"), "UTF8");
+        writeUTF8String(writeUTF8String(array, "application_name"), "redkalex-pgsql-client");
+        writeUTF8String(writeUTF8String(array, "DateStyle"), "ISO");
+        writeUTF8String(writeUTF8String(array, "extra_float_digits"), "2");
         array.putByte(0);
         array.putInt(start, array.length() - start);
     }
