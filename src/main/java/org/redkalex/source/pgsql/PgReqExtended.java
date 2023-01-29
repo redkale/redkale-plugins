@@ -174,6 +174,8 @@ public class PgReqExtended extends PgClientRequest {
             prepareDesc = pgconn.createPgPrepareDesc(type, mode, info, sql);
             this.sendPrepare = true;
             prepareDesc.writeTo(conn, array);
+            // SYNC      
+            writeSync(array);
             //绑定参数
             if (prepareDesc.paramFormats().length > 0) {
                 if (pkValues != null) {
