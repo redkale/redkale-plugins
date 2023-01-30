@@ -10,7 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.*;
 import org.redkale.net.client.*;
-import org.redkale.source.EntityInfo;
 import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
@@ -82,9 +81,10 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         super(connection);
     }
 
-    protected PgResultSet pollResultSet(EntityInfo info) {
+    protected PgResultSet pollResultSet(PgClientRequest request) {
         PgResultSet rs = resultSetPool.get();
-        rs.info = info;
+        rs.request = request;
+        rs.info = request == null ? null : request.info;
         return rs;
     }
 
@@ -240,7 +240,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                 } else if (cmd == MESSAGE_TYPE_COMMAND_COMPLETE) { // 'C' Count
                     if (lastResult == null) {
-                        lastResult = pollResultSet(request == null ? null : request.info);
+                        lastResult = pollResultSet(request);
                     }
                     if (request != null && request.isExtendType() && (((PgReqExtended) request).mode == PgExtendMode.FIND_ENTITY
                         || ((PgReqExtended) request).mode == PgExtendMode.LISTALL_ENTITY)) {
@@ -274,7 +274,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                 } else if (cmd == MESSAGE_TYPE_PARAMETER_DESCRIPTION) {  // 't' ParamDesc
                     if (request != null) {
                         if (lastResult == null) {
-                            lastResult = pollResultSet(request.info);
+                            lastResult = pollResultSet(request);
                         }
                         PgPrepareDesc prepareDesc = request.isExtendType() ? conn.getPgPrepareDesc(((PgReqExtended) request).sql) : null;
                         PgColumnFormat[] oldParamFormats = prepareDesc == null ? null : prepareDesc.paramFormats();
@@ -294,7 +294,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                 } else if (cmd == MESSAGE_TYPE_ROW_DESCRIPTION) {  // 'T' RowDesc
                     if (request != null) {
                         if (lastResult == null) {
-                            lastResult = pollResultSet(request.info);
+                            lastResult = pollResultSet(request);
                         }
                         PgPrepareDesc prepareDesc = request.isExtendType() ? conn.getPgPrepareDesc(((PgReqExtended) request).sql) : null;
                         PgRowDesc oldrowDesc = prepareDesc == null ? null : prepareDesc.getRowDesc();
@@ -318,7 +318,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                 } else if (cmd == MESSAGE_TYPE_DATA_ROW) { // 'D' RowData 一行数据
                     if (request != null) {
                         if (lastResult == null) {
-                            lastResult = pollResultSet(request.info);
+                            lastResult = pollResultSet(request);
                         }
                         PgRowData rowData = PgRespRowDataDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         if (rowData != PgRowData.NIL) {

@@ -19,6 +19,8 @@ import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
  */
 public class PgClientConnection extends ClientConnection<PgClientRequest, PgResultSet> {
 
+    private PgPrepareDesc lastPrepareDesc;
+
     private final Map<String, PgPrepareDesc> cachePreparedDescs = new HashMap<>();
 
     private final ObjectPool<PgReqExtended> reqExtendedPool = ObjectPool.createUnsafePool(Thread.currentThread(), 256, ObjectPool.createSafePool(256, t -> new PgReqExtended(), PgReqExtended::prepare, PgReqExtended::recycle));
@@ -42,15 +44,14 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         reqExtendedPool.accept(req);
     }
 
-    @Override
-    protected void preComplete(PgResultSet resp, PgClientRequest req, Throwable exc) {
-        if (resp != null) {
-            resp.request = req;
-        }
-    }
-
     public PgPrepareDesc getPgPrepareDesc(String prepareSql) {
-        return cachePreparedDescs.get(prepareSql);
+        PgPrepareDesc desc = lastPrepareDesc;
+        if (desc != null && desc.sql().equals(prepareSql)) {
+            return desc;
+        }
+        desc = cachePreparedDescs.get(prepareSql);
+        lastPrepareDesc = desc;
+        return desc;
     }
 
     public PgPrepareDesc createPgPrepareDesc(int type, PgExtendMode mode, EntityInfo info, String sql) {
