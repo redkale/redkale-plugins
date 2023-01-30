@@ -129,7 +129,9 @@ public final class SearchInfo<T> {
 
     public static <T> SearchInfo<T> load(Class<T> clazz, final Properties conf) {
         SearchInfo rs = entityInfos.get(clazz);
-        if (rs != null) return rs;
+        if (rs != null) {
+            return rs;
+        }
         synchronized (entityInfos) {
             rs = entityInfos.get(clazz);
             if (rs == null) {
@@ -194,7 +196,9 @@ public final class SearchInfo<T> {
         DistributeTableStrategy dts = null;
         try {
             dts = (dt == null) ? null : dt.strategy().getDeclaredConstructor().newInstance();
-            if (dts != null) RedkaleClassLoader.putReflectionDeclaredConstructors(dt.strategy(), dt.strategy().getName());
+            if (dts != null) {
+                RedkaleClassLoader.putReflectionDeclaredConstructors(dt.strategy(), dt.strategy().getName());
+            }
         } catch (Exception e) {
             logger.log(Level.SEVERE, type + " init DistributeTableStrategy error", e);
         }
@@ -224,16 +228,26 @@ public final class SearchInfo<T> {
         Attribute<T, String> highlightAttrIndex = null;
         do {
             for (Field field : cltmp.getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers())) continue;
-                if (Modifier.isFinal(field.getModifiers())) continue;
-                if (field.getAnnotation(Transient.class) != null) continue;
-                if (fields.contains(field.getName())) continue;
+                if (Modifier.isStatic(field.getModifiers())) {
+                    continue;
+                }
+                if (Modifier.isFinal(field.getModifiers())) {
+                    continue;
+                }
+                if (field.getAnnotation(Transient.class) != null) {
+                    continue;
+                }
+                if (fields.contains(field.getName())) {
+                    continue;
+                }
                 final String fieldname = field.getName();
                 final Column col = field.getAnnotation(Column.class);
                 int strlen = col == null || col.length() < 1 ? 255 : col.length();
                 final String sqlfield = col == null || col.name().isEmpty() ? fieldname : col.name();
                 if (!fieldname.equals(sqlfield)) {
-                    if (aliasmap0 == null) aliasmap0 = new HashMap<>();
+                    if (aliasmap0 == null) {
+                        aliasmap0 = new HashMap<>();
+                    }
                     aliasmap0.put(fieldname, sqlfield);
                 }
                 Attribute attr;
@@ -246,8 +260,12 @@ public final class SearchInfo<T> {
                 SearchColumn sc = field.getAnnotation(SearchColumn.class);
                 if (sc != null) {
                     if (!sc.highlight().isEmpty()) {
-                        if (!sc.ignore()) throw new SourceException("@SearchColumn.ignore must be true when highlight is not empty on field(" + field + ")");
-                        if (field.getType() != String.class) throw new SourceException("@SearchColumn.ignore must be on String field(" + field + ")");
+                        if (!sc.ignore()) {
+                            throw new SourceException("@SearchColumn.ignore must be true when highlight is not empty on field(" + field + ")");
+                        }
+                        if (field.getType() != String.class) {
+                            throw new SourceException("@SearchColumn.ignore must be on String field(" + field + ")");
+                        }
                         if (SearchColumn.HighLights.HIGHLIGHT_NAME_ID.equals(sc.highlight())) {
                             highlightAttrId = attr;
                         } else if (SearchColumn.HighLights.HIGHLIGHT_NAME_INDEX.equals(sc.highlight())) {
@@ -258,12 +276,14 @@ public final class SearchInfo<T> {
                     }
                     text = sc.text();
                     if (sc.ignore()) {
-                        if (factory == JsonFactory.root()) factory = JsonFactory.create();
+                        if (factory == JsonFactory.root()) {
+                            factory = JsonFactory.create();
+                        }
                         factory.register(type, true, fieldname);
                         continue;
                     }
                 }
-                if ((field.getAnnotation(org.redkale.persistence.Id.class) != null || field.getAnnotation(javax.persistence.Id.class) != null) && idAttr0 == null) {
+                if (field.getAnnotation(org.redkale.persistence.Id.class) != null && idAttr0 == null) {
                     idAttr0 = attr;
                     insertcols.add(sqlfield);
                     insertattrs.add(attr);
@@ -297,7 +317,9 @@ public final class SearchInfo<T> {
                     }
                     if (sc != null && (sc.html() || !sc.analyzer().isEmpty())) {
                         String analyzer = (sc.html() ? "html_" : "") + sc.analyzer();
-                        if ("html_".equals(analyzer)) analyzer = "html_standard";
+                        if ("html_".equals(analyzer)) {
+                            analyzer = "html_standard";
+                        }
                         if (analyzer.startsWith("html_")) {
                             customAnalyzerMap.put(analyzer, Utility.ofMap("type", "custom",
                                 "tokenizer", analyzer.replace("html_", ""),
@@ -307,7 +329,9 @@ public final class SearchInfo<T> {
                     }
                     if (sc != null && (sc.html() || !sc.searchAnalyzer().isEmpty())) {
                         String searchAnalyzer = (sc.html() ? "html_" : "") + sc.searchAnalyzer();
-                        if ("html_".equals(searchAnalyzer)) searchAnalyzer = "html_standard";
+                        if ("html_".equals(searchAnalyzer)) {
+                            searchAnalyzer = "html_standard";
+                        }
                         if (searchAnalyzer.startsWith("html_")) {
                             customAnalyzerMap.put(searchAnalyzer, Utility.ofMap("type", "custom",
                                 "tokenizer", searchAnalyzer.replace("html_", ""),
@@ -334,7 +358,9 @@ public final class SearchInfo<T> {
                 attributeMap.put(fieldname, attr);
             }
         } while ((cltmp = cltmp.getSuperclass()) != Object.class);
-        if (idAttr0 == null) throw new SourceException(type.getName() + " have no primary column by @org.redkale.persistence.Id");
+        if (idAttr0 == null) {
+            throw new SourceException(type.getName() + " have no primary column by @org.redkale.persistence.Id");
+        }
         this.jsonConvert = factory.getConvert();
 
         this.primary = idAttr0;
@@ -390,7 +416,9 @@ public final class SearchInfo<T> {
      * @return String
      */
     public String getTable(Serializable primary) {
-        if (tableStrategy == null) return table;
+        if (tableStrategy == null) {
+            return table;
+        }
         String t = tableStrategy.getTable(table, primary);
         if (t == null || t.isEmpty()) {
             throw new SourceException(table + " tableStrategy.getTable is empty, primary=" + primary);
@@ -406,12 +434,16 @@ public final class SearchInfo<T> {
      * @return String
      */
     public String getTable(FilterNode node) {
-        if (tableStrategy == null) return table;
+        if (tableStrategy == null) {
+            return table;
+        }
         String[] t = tableStrategy.getTables(table, node);
         if (t == null || t.length < 1) {
             throw new SourceException(table + " tableStrategy.getTable is empty, filter=" + node);
         }
-        if (t.length == 1) return t[0];
+        if (t.length == 1) {
+            return t[0];
+        }
         return Utility.joining(t, ',');
     }
 
@@ -423,7 +455,9 @@ public final class SearchInfo<T> {
      * @return String
      */
     public String getTable(T bean) {
-        if (tableStrategy == null) return table;
+        if (tableStrategy == null) {
+            return table;
+        }
         String t = tableStrategy.getTable(table, bean);
         if (t == null || t.isEmpty()) {
             throw new SourceException(table + " tableStrategy.getTable is empty, entity=" + bean);
@@ -457,7 +491,9 @@ public final class SearchInfo<T> {
      * @return Attribute
      */
     public Attribute<T, Serializable> getAttribute(String fieldname) {
-        if (fieldname == null) return null;
+        if (fieldname == null) {
+            return null;
+        }
         return this.attributeMap.get(fieldname);
     }
 

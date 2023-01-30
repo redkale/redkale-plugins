@@ -16,10 +16,10 @@ import org.redkale.util.ByteArray;
  */
 public class PgReqAuthentication extends PgClientRequest {
 
-    protected final SourceUrlInfo info;
+    protected final SourceUrlInfo urlInfo;
 
-    public PgReqAuthentication(SourceUrlInfo info) {
-        this.info = info;
+    public PgReqAuthentication(SourceUrlInfo urlInfo) {
+        this.urlInfo = urlInfo;
     }
 
     @Override
@@ -29,7 +29,7 @@ public class PgReqAuthentication extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqAuthentication_" + Objects.hashCode(this) + "{username=" + info.username + ", password=" + info.password + ", database=" + info.database + "}";
+        return "PgReqAuthentication_" + Objects.hashCode(this) + "{username=" + urlInfo.username + ", password=" + urlInfo.password + ", database=" + urlInfo.database + "}";
     }
 
     @Override
@@ -37,8 +37,8 @@ public class PgReqAuthentication extends PgClientRequest {
         int start = array.length();
         array.putInt(0);
         array.putInt(196608);
-        writeUTF8String(writeUTF8String(array, "user"), info.username);
-        writeUTF8String(writeUTF8String(array, "database"), info.database);
+        writeUTF8String(writeUTF8String(array, "user"), urlInfo.username);
+        writeUTF8String(writeUTF8String(array, "database"), urlInfo.database);
         writeUTF8String(writeUTF8String(array, "client_encoding"), "UTF8");
         writeUTF8String(writeUTF8String(array, "application_name"), "redkalex-pgsql-client");
         writeUTF8String(writeUTF8String(array, "DateStyle"), "ISO");
