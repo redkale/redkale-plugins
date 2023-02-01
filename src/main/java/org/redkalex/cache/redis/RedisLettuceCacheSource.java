@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceListener;
@@ -1953,13 +1954,17 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, List<T>>> lrangeAsync(Type componentType, String... keys) {
         return connectBytesAsync().thenCompose(command -> {
             final Map<String, List<T>> map = new LinkedHashMap<>();
+            final ReentrantLock mapLock = new ReentrantLock();
             final CompletableFuture[] futures = new CompletableFuture[keys.length];
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
                 futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
                     if (rs != null) {
-                        synchronized (map) {
+                        mapLock.lock();
+                        try {
                             map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
+                        } finally {
+                            mapLock.unlock();
                         }
                     }
                 }).toCompletableFuture();
@@ -1972,13 +1977,17 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, Set<T>>> smembersAsync(Type componentType, String... keys) {
         return connectBytesAsync().thenCompose(command -> {
             final Map<String, Set<T>> map = new LinkedHashMap<>();
+            final ReentrantLock mapLock = new ReentrantLock();
             final CompletableFuture[] futures = new CompletableFuture[keys.length];
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
                 futures[i] = command.smembers(key).thenAccept(rs -> {
                     if (rs != null) {
-                        synchronized (map) {
+                        mapLock.lock();
+                        try {
                             map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
+                        } finally {
+                            mapLock.unlock();
                         }
                     }
                 }).toCompletableFuture();
@@ -2304,14 +2313,18 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(boolean set, String... keys) {
         return connectStringAsync().thenCompose(command -> {
             final Map<String, Collection<Long>> map = new LinkedHashMap<>();
+            final ReentrantLock mapLock = new ReentrantLock();
             final CompletableFuture[] futures = new CompletableFuture[keys.length];
             if (set) {
                 for (int i = 0; i < keys.length; i++) {
                     final String key = keys[i];
                     futures[i] = command.smembers(key).thenAccept(rs -> {
                         if (rs != null) {
-                            synchronized (map) {
+                            mapLock.lock();
+                            try {
                                 map.put(key, formatLongCollection(set, rs));
+                            } finally {
+                                mapLock.unlock();
                             }
                         }
                     }).toCompletableFuture();
@@ -2321,8 +2334,11 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                     final String key = keys[i];
                     futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
                         if (rs != null) {
-                            synchronized (map) {
+                            mapLock.lock();
+                            try {
                                 map.put(key, formatLongCollection(set, rs));
+                            } finally {
+                                mapLock.unlock();
                             }
                         }
                     }).toCompletableFuture();
@@ -2344,14 +2360,18 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(boolean set, String... keys) {
         return connectStringAsync().thenCompose(command -> {
             final Map<String, Collection<String>> map = new LinkedHashMap<>();
+            final ReentrantLock mapLock = new ReentrantLock();
             final CompletableFuture[] futures = new CompletableFuture[keys.length];
             if (set) {
                 for (int i = 0; i < keys.length; i++) {
                     final String key = keys[i];
                     futures[i] = command.smembers(key).thenAccept(rs -> {
                         if (rs != null) {
-                            synchronized (map) {
+                            mapLock.lock();
+                            try {
                                 map.put(key, formatStringCollection(key, cryptor, set, rs));
+                            } finally {
+                                mapLock.unlock();
                             }
                         }
                     }).toCompletableFuture();
@@ -2361,8 +2381,11 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                     final String key = keys[i];
                     futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
                         if (rs != null) {
-                            synchronized (map) {
+                            mapLock.lock();
+                            try {
                                 map.put(key, formatStringCollection(key, cryptor, set, rs));
+                            } finally {
+                                mapLock.unlock();
                             }
                         }
                     }).toCompletableFuture();
@@ -2582,14 +2605,18 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(boolean set, Type componentType, String... keys) {
         return connectBytesAsync().thenCompose(command -> {
             final Map<String, Collection<T>> map = new LinkedHashMap<>();
+            final ReentrantLock mapLock = new ReentrantLock();
             final CompletableFuture[] futures = new CompletableFuture[keys.length];
             if (set) {
                 for (int i = 0; i < keys.length; i++) {
                     final String key = keys[i];
                     futures[i] = command.smembers(key).thenAccept(rs -> {
                         if (rs != null) {
-                            synchronized (map) {
+                            mapLock.lock();
+                            try {
                                 map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
+                            } finally {
+                                mapLock.unlock();
                             }
                         }
                     }).toCompletableFuture();
@@ -2599,8 +2626,11 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                     final String key = keys[i];
                     futures[i] = command.lrange(key, 0, -1).thenAccept(rs -> {
                         if (rs != null) {
-                            synchronized (map) {
+                            mapLock.lock();
+                            try {
                                 map.put(key, formatCollection(key, cryptor, rs, convert, componentType));
+                            } finally {
+                                mapLock.unlock();
                             }
                         }
                     }).toCompletableFuture();

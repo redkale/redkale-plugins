@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.IntFunction;
 import java.util.logging.*;
 import org.redkale.annotation.ConstructorParameters;
@@ -37,6 +38,8 @@ public final class SearchInfo<T> {
 
     //全局静态资源
     private static final ConcurrentHashMap<Class, SearchInfo> entityInfos = new ConcurrentHashMap<>();
+
+    private static final ReentrantLock infosLock = new ReentrantLock();
 
     //日志
     private static final Logger logger = Logger.getLogger(SearchInfo.class.getSimpleName());
@@ -132,13 +135,16 @@ public final class SearchInfo<T> {
         if (rs != null) {
             return rs;
         }
-        synchronized (entityInfos) {
+        infosLock.lock();
+        try {
             rs = entityInfos.get(clazz);
             if (rs == null) {
                 rs = new SearchInfo(clazz, conf);
                 entityInfos.put(clazz, rs);
             }
             return rs;
+        } finally {
+            infosLock.unlock();
         }
     }
 

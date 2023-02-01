@@ -7,6 +7,7 @@ package org.redkalex.mq.kafka;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.producer.*;
@@ -36,7 +37,9 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
 
     protected boolean reconnecting;
 
-    protected final Object resumeLock = new Object();
+    protected final ReentrantLock resumeLock = new ReentrantLock();
+
+    private final ReentrantLock startCloseLock = new ReentrantLock();
 
     public KafkaMessageProducer(String name, MessageAgent messageAgent, String servers, int partitions, Properties producerConfig) {
         super(name, messageAgent.getLogger());
@@ -63,13 +66,19 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
     public void run() {
         this.producer = new KafkaProducer<>(this.config, new StringSerializer(), new MessageRecordSerializer(messageAgent.getMessageCoder()));
         this.startFuture.complete(null);
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + "(name=" + this.name + ") startuped");
+        if (logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, MessageProducer.class.getSimpleName() + "(name=" + this.name + ") startuped");
+        }
     }
 
     @Override
     public CompletableFuture<Void> apply(MessageRecord message) {
-        if (closed) throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") is closed when send " + message);
-        if (this.producer == null) throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") not started when send " + message);
+        if (closed.get()) {
+            throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") is closed when send " + message);
+        }
+        if (this.producer == null) {
+            throw new IllegalStateException(this.getClass().getSimpleName() + "(name=" + name + ") not started when send " + message);
+        }
         final CompletableFuture future = new CompletableFuture();
         Integer partition = null;
         if (this.partitions > 0) {    //不指定 partition则设计上需要以对等为主
@@ -111,7 +120,9 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
                     parts[i] = list.get(i).partition();
                 }
                 Arrays.sort(parts);
-                if (logger.isLoggable(Level.FINER)) logger.log(Level.FINER, "Topic(" + topic + ") load partitions = " + list);
+                if (logger.isLoggable(Level.FINER)) {
+                    logger.log(Level.FINER, "Topic(" + topic + ") load partitions = " + list);
+                }
                 return parts;
             } catch (Exception ex) {
                 logger.log(Level.SEVERE, "Topic(" + topic + ")  load partitions error", ex);
@@ -121,24 +132,44 @@ public class KafkaMessageProducer extends MessageProducer implements Runnable {
     }
 
     @Override
-    public synchronized CompletableFuture<Void> startup() {
-        if (this.startFuture != null) return this.startFuture;
-        this.thread = new Thread(this);
-        this.thread.setName("MQ-Producer-Thread");
-        this.startFuture = new CompletableFuture<>();
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] startuping");
-        this.thread.start();
-        return this.startFuture;
+    public CompletableFuture<Void> startup() {
+        startCloseLock.lock();
+        try {
+            if (this.startFuture != null) {
+                return this.startFuture;
+            }
+            this.thread = new Thread(this);
+            this.thread.setName("MQ-Producer-Thread");
+            this.startFuture = new CompletableFuture<>();
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] startuping");
+            }
+            this.thread.start();
+            return this.startFuture;
+        } finally {
+            startCloseLock.unlock();
+        }
     }
 
     @Override
-    public synchronized CompletableFuture<Void> shutdown() {
-        if (!this.closed) return CompletableFuture.completedFuture(null);
-        this.closed = true;
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] shutdowning");
-        if (this.producer != null) this.producer.close();
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] shutdowned");
-        return CompletableFuture.completedFuture(null);
+    public CompletableFuture<Void> shutdown() {
+        startCloseLock.lock();
+        try {
+            if (this.closed.compareAndSet(false, true)) {
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] shutdowning");
+                }
+                if (this.producer != null) {
+                    this.producer.close();
+                }
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + this.name + "] shutdowned");
+                }
+            }
+            return CompletableFuture.completedFuture(null);
+        } finally {
+            startCloseLock.unlock();
+        }
     }
 
     public static class MessageRecordSerializer implements Serializer<MessageRecord> {

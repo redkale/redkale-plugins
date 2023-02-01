@@ -74,7 +74,7 @@ public final class IosPayService extends AbstractPayService {
 
     @Override
     @Comment("重新加载本地文件配置")
-    public synchronized void reloadConfig(short payType) {
+    public void reloadConfig(short payType) {
         if (client == null) {
             this.client = HttpClient.newHttpClient();
         }
@@ -99,7 +99,7 @@ public final class IosPayService extends AbstractPayService {
 
     @ResourceListener //    
     @Comment("通过配置中心更改配置后的回调")
-    synchronized void onResourceChanged(ResourceEvent[] events) {
+    void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();
         changeProps.putAll(this.elementProps);
         StringBuilder sb = new StringBuilder();

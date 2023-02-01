@@ -42,7 +42,7 @@ public class WeiXinPayService extends AbstractPayService {
     protected static final Map<String, String> headers = Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
 
     protected static final Pattern PAYXML = Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
-
+    
     //原始的配置
     protected Properties elementProps = new Properties();
 
@@ -89,7 +89,7 @@ public class WeiXinPayService extends AbstractPayService {
 
     @ResourceListener //    
     @Comment("通过配置中心更改配置后的回调")
-    synchronized void onResourceChanged(ResourceEvent[] events) {
+    void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();
         changeProps.putAll(this.elementProps);
         StringBuilder sb = new StringBuilder();
@@ -123,7 +123,7 @@ public class WeiXinPayService extends AbstractPayService {
 
     @Override
     @Comment("重新加载本地文件配置")
-    public synchronized void reloadConfig(short payType) {
+    public void reloadConfig(short payType) {
         Properties properties = new Properties();
         if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置
             try {

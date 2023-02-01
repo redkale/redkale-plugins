@@ -7,7 +7,8 @@ package org.redkalex.mq.kafka;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.*;
 import java.util.logging.Level;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.errors.InvalidTopicException;
@@ -35,7 +36,11 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     protected boolean autoCommit;
 
-    protected final Object resumeLock = new Object();
+    private final ReentrantLock startCloseLock = new ReentrantLock();
+
+    protected final ReentrantLock resumeLock = new ReentrantLock();
+
+    protected final Condition resumeCondition = resumeLock.newCondition();
 
     public KafkaMessageConsumer(MessageAgent agent, String[] topics, String group,
         MessageProcessor processor, String servers, Properties consumerConfig) {
@@ -53,12 +58,17 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
     }
 
     public void retryConnect() {
-        if (!this.reconnecting) return;
+        if (!this.reconnecting) {
+            return;
+        }
         KafkaConsumer one = new KafkaConsumer<>(this.config);
         one.subscribe(Arrays.asList(this.topics));
         this.consumer = one;
-        synchronized (this.resumeLock) {
-            this.resumeLock.notifyAll();
+        resumeLock.lock();
+        try {
+            resumeCondition.signalAll();
+        } finally {
+            resumeLock.unlock();
         }
     }
 
@@ -73,17 +83,23 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
             messageAgent.createTopic(this.topics);
         }
         this.startFuture.complete(null);
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuped");
+        if (logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuped");
+        }
 
         try {
             if (records0 != null && records0.count() > 0) {
                 if (!this.autoCommit) {
                     long cs = System.currentTimeMillis();
                     consumer.commitAsync((map, exp) -> {
-                        if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
+                        if (exp != null) {
+                            logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer error: " + map, exp);
+                        }
                     });
                     long ce = System.currentTimeMillis() - cs;
-                    if (logger.isLoggable(Level.FINEST) && ce > 100) logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
+                    if (logger.isLoggable(Level.FINEST) && ce > 100) {
+                        logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
+                    }
                 }
                 long s = System.currentTimeMillis();
                 MessageRecord msg = null;
@@ -97,7 +113,9 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     }
                     processor.commit();
                     long e = System.currentTimeMillis() - s;
-                    if (logger.isLoggable(Level.FINEST) && e > 10) logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
+                    if (logger.isLoggable(Level.FINEST) && e > 10) {
+                        logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
+                    }
                 } catch (Throwable e) {
                     logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
                 }
@@ -113,22 +131,34 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     if (!this.closed) {
                         this.reconnecting = true;
                         ((KafkaMessageAgent) messageAgent).startReconnect();
-                        synchronized (resumeLock) {
-                            resumeLock.wait();
+                        resumeLock.lock();
+                        try {
+                            resumeCondition.await();
+                        } catch (Exception e) {
+                        } finally {
+                            resumeLock.unlock();
                         }
                     }
                     continue;
                 }
-                if (this.reconnecting) this.reconnecting = false;
+                if (this.reconnecting) {
+                    this.reconnecting = false;
+                }
                 int count = records.count();
-                if (count == 0) continue;
+                if (count == 0) {
+                    continue;
+                }
                 if (!this.autoCommit) {
                     long cs = System.currentTimeMillis();
                     this.consumer.commitAsync((map, exp) -> {
-                        if (exp != null) logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer commitAsync error: " + map, exp);
+                        if (exp != null) {
+                            logger.log(Level.SEVERE, Arrays.toString(this.topics) + " consumer commitAsync error: " + map, exp);
+                        }
                     });
                     long ce = System.currentTimeMillis() - cs;
-                    if (logger.isLoggable(Level.FINEST) && ce > 100) logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
+                    if (logger.isLoggable(Level.FINEST) && ce > 100) {
+                        logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
+                    }
                 }
                 long s = System.currentTimeMillis();
                 MessageRecord msg = null;
@@ -141,7 +171,9 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     }
                     processor.commit();
                     long e = System.currentTimeMillis() - s;
-                    if (logger.isLoggable(Level.FINEST) && e > 10) logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
+                    if (logger.isLoggable(Level.FINEST) && e > 10) {
+                        logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
+                    }
                 } catch (Throwable e) {
                     logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
                 }
@@ -154,42 +186,71 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
                     logger.log(Level.FINEST, "Kafka." + processor.getClass().getSimpleName() + ".consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
                 }
             }
-            if (this.consumer != null) this.consumer.close();
+            if (this.consumer != null) {
+                this.consumer.close();
+            }
             if (this.closeFuture != null) {
                 this.closeFuture.complete(null);
-                if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
+                }
             }
         } catch (Throwable t) {
             if (this.closeFuture != null && !this.closeFuture.isDone()) {
                 this.closeFuture.complete(null);
-                if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
+                }
             }
             logger.log(Level.SEVERE, MessageConsumer.class.getSimpleName() + "(" + Arrays.toString(this.topics) + ") occur error", t);
         }
     }
 
     @Override
-    public synchronized CompletableFuture<Void> startup() {
-        if (this.startFuture != null) return this.startFuture;
-        this.thread = new Thread(this);
-        this.thread.setName("MQ-" + consumerid + "-Thread");
-        this.startFuture = new CompletableFuture<>();
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuping");
-        this.thread.start();
-        return this.startFuture;
+    public CompletableFuture<Void> startup() {
+        startCloseLock.lock();
+        try {
+            if (this.startFuture != null) {
+                return this.startFuture;
+            }
+            this.thread = new Thread(this);
+            this.thread.setName("MQ-" + consumerid + "-Thread");
+            this.startFuture = new CompletableFuture<>();
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuping");
+            }
+            this.thread.start();
+            return this.startFuture;
+        } finally {
+            startCloseLock.unlock();
+        }
     }
 
     @Override
-    public synchronized CompletableFuture<Void> shutdown() {
-        if (this.consumer == null) return CompletableFuture.completedFuture(null);
-        if (this.closeFuture != null) return this.closeFuture;
-        this.closeFuture = new CompletableFuture<>();
-        if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdownling");
-        this.closed = true;
-        synchronized (resumeLock) {
-            resumeLock.notifyAll();
+    public CompletableFuture<Void> shutdown() {
+        startCloseLock.lock();
+        try {
+            if (this.consumer == null) {
+                return CompletableFuture.completedFuture(null);
+            }
+            if (this.closeFuture != null) {
+                return this.closeFuture;
+            }
+            this.closeFuture = new CompletableFuture<>();
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdownling");
+            }
+            this.closed = true;
+            resumeLock.lock();
+            try {
+                resumeCondition.signalAll();
+            } finally {
+                resumeLock.unlock();
+            }
+            return this.closeFuture;
+        } finally {
+            startCloseLock.unlock();
         }
-        return this.closeFuture;
     }
 
     public static class MessageRecordDeserializer implements Deserializer<MessageRecord> {

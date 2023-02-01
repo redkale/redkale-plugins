@@ -11,6 +11,7 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.*;
@@ -1059,14 +1060,18 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, Set<T>>> smembersAsync(final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Set<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, Set<T>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             futures[i] = sendAsync("SMEMBERS", key, keySetArgs(key)).thenAccept(v -> {
                 Set c = v.getSetValue(key, cryptor, componentType);
                 if (c != null) {
-                    synchronized (map) {
+                    mapLock.lock();
+                    try {
                         map.put(key, c);
+                    } finally {
+                        mapLock.unlock();
                     }
                 }
             });
@@ -1085,14 +1090,18 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, List<T>>> lrangeAsync(final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, List<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, List<T>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             futures[i] = sendAsync("LRANGE", key, keyListArgs(key)).thenAccept(v -> {
                 List c = v.getListValue(key, cryptor, componentType);
                 if (c != null) {
-                    synchronized (map) {
+                    mapLock.lock();
+                    try {
                         map.put(key, c);
+                    } finally {
+                        mapLock.unlock();
                     }
                 }
             });
@@ -1519,14 +1528,18 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<T>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenAccept(v -> {
                 Collection c = set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType);
                 if (c != null) {
-                    synchronized (map) {
+                    mapLock.lock();
+                    try {
                         map.put(key, (Collection) c);
+                    } finally {
+                        mapLock.unlock();
                     }
                 }
             });
@@ -1634,14 +1647,18 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(final boolean set, String... keys) {
         final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<String>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenAccept(v -> {
                 Collection<String> c = set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class);
                 if (c != null) {
-                    synchronized (map) {
+                    mapLock.lock();
+                    try {
                         map.put(key, (Collection) c);
+                    } finally {
+                        mapLock.unlock();
                     }
                 }
             });
@@ -1682,14 +1699,18 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(final boolean set, String... keys) {
         final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<Long>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, keyArgs(set, key)).thenAccept(v -> {
                 Collection<Long> c = set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class);
                 if (c != null) {
-                    synchronized (map) {
+                    mapLock.lock();
+                    try {
                         map.put(key, (Collection) c);
+                    } finally {
+                        mapLock.unlock();
                     }
                 }
             });

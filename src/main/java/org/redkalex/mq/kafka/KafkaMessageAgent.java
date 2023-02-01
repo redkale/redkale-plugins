@@ -7,6 +7,7 @@ package org.redkalex.mq.kafka;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.*;
@@ -36,7 +37,7 @@ public class KafkaMessageAgent extends MessageAgent {
 
     protected ScheduledFuture reconnectFuture;
 
-    protected boolean reconnecting;
+    protected final AtomicBoolean reconnecting = new AtomicBoolean();
 
     @Override
     public void init(ResourceFactory factory, AnyValue config) {
@@ -85,11 +86,10 @@ public class KafkaMessageAgent extends MessageAgent {
         }
     }
 
-    public synchronized void startReconnect() {
-        if (this.reconnecting) {
-            return;
+    public void startReconnect() {
+        if (this.reconnecting.compareAndSet(false, true)) {
+            this.reconnectFuture = this.timeoutExecutor.scheduleAtFixedRate(() -> retryConnect(), 0, this.checkIntervals, TimeUnit.SECONDS);
         }
-        this.reconnectFuture = this.timeoutExecutor.scheduleAtFixedRate(() -> retryConnect(), 0, this.checkIntervals, TimeUnit.SECONDS);
     }
 
     private void retryConnect() {
@@ -101,7 +101,7 @@ public class KafkaMessageAgent extends MessageAgent {
         this.adminClient = KafkaAdminClient.create(props);
         if (queryTopic() != null) {
             logger.log(Level.INFO, getClass().getSimpleName() + " resume connect");
-            this.reconnecting = false;
+            this.reconnecting.set(false);
             if (this.reconnectFuture != null) {
                 this.reconnectFuture.cancel(true);
                 this.reconnectFuture = null;

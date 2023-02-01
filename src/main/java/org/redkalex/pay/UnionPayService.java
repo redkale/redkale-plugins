@@ -83,7 +83,7 @@ public final class UnionPayService extends AbstractPayService {
 
     @Override
     @Comment("重新加载本地文件配置")
-    public synchronized void reloadConfig(short payType) {
+    public void reloadConfig(short payType) {
         Properties properties = new Properties();
         if (this.conf != null && !this.conf.isEmpty()) { //存在支付宝支付配置
             try {
@@ -104,7 +104,7 @@ public final class UnionPayService extends AbstractPayService {
 
     @ResourceListener //    
     @Comment("通过配置中心更改配置后的回调")
-    synchronized void onResourceChanged(ResourceEvent[] events) {
+    void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();
         changeProps.putAll(this.elementProps);
         StringBuilder sb = new StringBuilder();

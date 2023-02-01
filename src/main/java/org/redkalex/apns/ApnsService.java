@@ -68,7 +68,7 @@ public final class ApnsService implements Service {
 
     @ResourceListener
     @Comment("通过配置中心更改配置后的回调")
-    synchronized void onResourceChanged(ResourceEvent[] events) {
+    void onResourceChanged(ResourceEvent[] events) {
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
             if (event.name().contains("certpwd") || event.name().contains("certbase64")) { //敏感配置不打印日志

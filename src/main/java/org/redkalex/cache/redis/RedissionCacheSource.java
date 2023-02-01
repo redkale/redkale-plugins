@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import java.util.stream.Collectors;
 import org.redisson.Redisson;
@@ -1263,6 +1264,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, List<T>>> lrangeAsync(final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, List<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, List<T>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
@@ -1279,8 +1281,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
                         rs.add(decryptValue(key, cryptor, componentType, bs));
                     }
                 }
-                synchronized (map) {
+                mapLock.lock();
+                try {
                     map.put(key, rs);
+                } finally {
+                    mapLock.unlock();
                 }
                 return rs;
             }));
@@ -1299,6 +1304,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, Set<T>>> smembersAsync(final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Set<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, Set<T>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
@@ -1315,8 +1321,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
                         rs.add(decryptValue(key, cryptor, componentType, bs));
                     }
                 }
-                synchronized (map) {
+                mapLock.lock();
+                try {
                     map.put(key, rs);
+                } finally {
+                    mapLock.unlock();
                 }
                 return rs;
             }));
@@ -1830,6 +1839,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<T>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         if (!set) { //list    
             for (int i = 0; i < keys.length; i++) {
@@ -1847,8 +1857,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
                             rs.add(decryptValue(key, cryptor, componentType, bs));
                         }
                     }
-                    synchronized (map) {
+                    mapLock.lock();
+                    try {
                         map.put(key, rs);
+                    } finally {
+                        mapLock.unlock();
                     }
                     return rs;
                 }));
@@ -1869,8 +1882,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
                             rs.add(decryptValue(key, cryptor, componentType, bs));
                         }
                     }
-                    synchronized (map) {
+                    mapLock.lock();
+                    try {
                         map.put(key, rs);
+                    } finally {
+                        mapLock.unlock();
                     }
                     return rs;
                 }));
@@ -2004,6 +2020,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(final boolean set, String... keys) {
         final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<String>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         if (!set) { //list    
             for (int i = 0; i < keys.length; i++) {
@@ -2017,8 +2034,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
                             }
                             r = rs;
                         }
-                        synchronized (map) {
+                        mapLock.lock();
+                        try {
                             map.put(key, r);
+                        } finally {
+                            mapLock.unlock();
                         }
                     }
                     return null;
@@ -2038,8 +2058,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
                             r = rs;
                             changed = true;
                         }
-                        synchronized (map) {
+                        mapLock.lock();
+                        try {
                             map.put(key, changed ? r : new ArrayList(r));
+                        } finally {
+                            mapLock.unlock();
                         }
                     }
                     return null;
@@ -2081,14 +2104,18 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(final boolean set, String... keys) {
         final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<Long>> map = new LinkedHashMap<>();
+        final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         if (!set) { //list    
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
                 futures[i] = completableFuture(client.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(r -> {
                     if (r != null) {
-                        synchronized (map) {
+                        mapLock.lock();
+                        try {
                             map.put(key, (Collection) r);
+                        } finally {
+                            mapLock.unlock();
                         }
                     }
                     return null;
@@ -2099,8 +2126,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
                 final String key = keys[i];
                 futures[i] = completableFuture(client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).readAllAsync().thenApply(r -> {
                     if (r != null) {
-                        synchronized (map) {
+                        mapLock.lock();
+                        try {
                             map.put(key, new ArrayList(r));
+                        } finally {
+                            mapLock.unlock();
                         }
                     }
                     return null;
