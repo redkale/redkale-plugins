@@ -30,7 +30,7 @@ import org.redkale.util.*;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class VertxSqlDataSource extends DataSqlSource {
+public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     protected Vertx vertx;
 

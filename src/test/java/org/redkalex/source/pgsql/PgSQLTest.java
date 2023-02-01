@@ -160,7 +160,7 @@ public class PgSQLTest {
         getPollRespCounter(source.writePool()).reset();
         long s1 = System.currentTimeMillis();
         final AtomicInteger timeouts = new AtomicInteger();
-        Field errorCompleteConsumer = DataSqlSource.class.getDeclaredField("errorCompleteConsumer");
+        Field errorCompleteConsumer = AbstractDataSqlSource.class.getDeclaredField("errorCompleteConsumer");
         errorCompleteConsumer.setAccessible(true);
         BiConsumer<Object, Throwable> bc = (Object r, Throwable t) -> {
             if (t == null) {

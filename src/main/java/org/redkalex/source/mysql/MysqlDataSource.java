@@ -28,7 +28,7 @@ import org.redkale.util.*;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class MysqlDataSource extends DataSqlSource {
+public class MysqlDataSource extends AbstractDataSqlSource {
 
     static final boolean debug = false; //System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
 

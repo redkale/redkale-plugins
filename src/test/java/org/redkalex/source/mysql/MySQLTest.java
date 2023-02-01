@@ -41,7 +41,7 @@ public class MySQLTest {
         prop.setProperty("redkale.datasource[].user", "root");
         prop.setProperty("redkale.datasource[].password", "");
 
-        if (VertxSqlDataSource.class.isAssignableFrom(DataSqlSource.class)) {
+        if (VertxSqlDataSource.class.isAssignableFrom(AbstractDataSqlSource.class)) {
             return;
         }
 

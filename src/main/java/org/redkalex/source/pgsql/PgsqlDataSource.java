@@ -31,7 +31,7 @@ import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class PgsqlDataSource extends DataSqlSource {
+public class PgsqlDataSource extends AbstractDataSqlSource {
 
     static boolean debug = false; //true false
 
