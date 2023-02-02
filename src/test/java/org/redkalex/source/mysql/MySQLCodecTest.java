@@ -5,13 +5,14 @@
  */
 package org.redkalex.source.mysql;
 
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.*;
 import org.redkale.net.*;
-import org.redkale.net.client.ClientAddress;
+import org.redkale.net.client.*;
 import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 import org.redkale.util.*;
 
@@ -39,26 +40,42 @@ public class MySQLCodecTest {
                 for (int i = 0; i < data.length; i++) {
                     data[i] = (byte) ints[i];
                 }
+                List respResults = new ArrayList();
+                try {
+                    Field respResultsField = ClientCodec.class.getDeclaredField("respResults");
+                    respResultsField.setAccessible(true);
+                    respResults = (List) respResultsField.get(codec);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 ByteBuffer realbuf;
                 boolean bool;
                 {
                     realbuf = ByteBuffer.wrap(data);
-                    bool = codec.decodeMessages(realbuf, array);
+                    codec.decodeMessages(realbuf, array);
+                    bool = respResults.size() > 0;
+                    respResults.clear();
                     System.out.println("had result 0: " + bool);
                     Assertions.assertTrue(bool);
                 }
                 realbuf = ByteBuffer.wrap(data, 0, 1);
-                bool = codec.decodeMessages(realbuf, array);
+                codec.decodeMessages(realbuf, array);
+                bool = respResults.size() > 0;
+                respResults.clear();
                 System.out.println("had result 1: " + bool + ", half = " + codec.halfFrameBytes.length());
                 Assertions.assertFalse(bool);
 
                 realbuf = ByteBuffer.wrap(data, 1, 1);
-                bool = codec.decodeMessages(realbuf, array);
+                codec.decodeMessages(realbuf, array);
+                bool = respResults.size() > 0;
+                respResults.clear();
                 System.out.println("had result 2: " + bool + ", half = " + codec.halfFrameBytes.length());
                 Assertions.assertFalse(bool);
 
                 realbuf = ByteBuffer.wrap(data, 2, data.length - 2);
-                bool = codec.decodeMessages(realbuf, array);
+                codec.decodeMessages(realbuf, array);
+                bool = respResults.size() > 0;
+                respResults.clear();
                 System.out.println("had result 3: " + bool);
                 Assertions.assertTrue(bool);
                 cdl.countDown();

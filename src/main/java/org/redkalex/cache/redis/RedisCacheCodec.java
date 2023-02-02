@@ -198,19 +198,18 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         halfFrameBytes = null;
     }
 
-    @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean decodeMessages(ByteBuffer realbuf, ByteArray array) {
+    @Override 
+    public void decodeMessages(ByteBuffer realbuf, ByteArray array) {
         RedisCacheConnection conn = (RedisCacheConnection) connection;
         if (!realbuf.hasRemaining()) {
-            return false;
+            return;
         }
         ByteBuffer buffer = realbuf;
         if (!checkBytesFrame(conn, buffer, array)) {
-            return false;
+            return;
         }
         //buffer必然包含一个完整的frame数据
         boolean first = true;
-        boolean hadresult = false;
         RedisCacheRequest request = null;
         while (first || buffer.hasRemaining()) {
             if (request == null) {
@@ -230,11 +229,8 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
             halfFrameCmd = 0;
             halfFrameBytes = null;
             first = false;
-            hadresult = true;
             buffer = realbuf;
         }
-        //解析了完整的frame
-        return hadresult;
     }
 
     protected boolean readComplete(ByteBuffer buffer, ByteArray array) {

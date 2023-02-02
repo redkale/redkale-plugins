@@ -46,11 +46,11 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
         return recyclableArray;
     }
 
-    @Override //解析完成返回true，还需要继续读取返回false; 返回true: array会clear, 返回false: buffer会clear
-    public boolean decodeMessages(final ByteBuffer realbuf, ByteArray array) {
+    @Override 
+    public void decodeMessages(final ByteBuffer realbuf, ByteArray array) {
         MyClientConnection conn = (MyClientConnection) connection;
         if (!realbuf.hasRemaining()) {
-            return false;
+            return;
         }
         ByteBuffer buffer = realbuf;
         //logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", realbuf读到的长度: " + realbuf.remaining() + ", halfFrameBytes=" + (halfFrameBytes == null ? -1 : halfFrameBytes.length()));
@@ -59,7 +59,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
             if (halfFrameLength == 0) {
                 if (remain + halfFrameBytes.length() < 3) {//还是不足以读取length
                     halfFrameBytes.put(realbuf);
-                    return false;
+                    return;
                 }
                 while (halfFrameBytes.length() < 3) halfFrameBytes.put(realbuf.get());
                 halfFrameLength = Mysqls.readUB3(halfFrameBytes, 0) + 4;
@@ -68,7 +68,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
             int bulen = halfFrameLength - halfFrameBytes.length(); //还差多少字节
             if (bulen > remain) { //不够，继续读取
                 halfFrameBytes.put(realbuf);
-                return false;
+                return;
             }
             halfFrameBytes.put(realbuf, bulen);
             //此时halfFrameBytes是完整的frame数据            
@@ -78,10 +78,9 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
         } else if (realbuf.remaining() < 4) { //第一次就只有几个字节buffer
             halfFrameBytes = pollArray();
             halfFrameBytes.put(realbuf);
-            return false;
+            return;
         }
         //buffer必然包含一个完整的frame数据
-        boolean hadresult = false;
         MyClientRequest request = null;
         while (buffer.hasRemaining()) {
             while (buffer.hasRemaining()) {
@@ -103,7 +102,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                     halfFrameLength = length + 4;
                     Mysqls.writeUB3(halfFrameBytes, length);
                     halfFrameBytes.put(buffer);
-                    return hadresult;
+                    return;
                 }
                 final byte index = buffer.get();
                 final int bufpos = buffer.position();
@@ -124,7 +123,6 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                         lastResult = null;
                     }
                     lastExc = null;
-                    hadresult = true;
                     request = null;
                     break;
                 }
@@ -438,13 +436,11 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
                     }
                 }
                 lastExc = null;
-                hadresult = true;
                 request = null;
                 break;
             }
             buffer = realbuf;
         }
-        return hadresult;
     }
 
 }
