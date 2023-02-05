@@ -56,7 +56,7 @@ public class MultiPayService extends AbstractPayService {
             if (!(service instanceof AbstractPayService)) return false;
             DIYPayService diy = service.getClass().getAnnotation(DIYPayService.class);
             if (diy == null) return false;
-            if (diy.payType() < Pays.MIN_DIY_PAYTYPE) throw new RuntimeException("DIYPayService.paytype must be greater than " + Pays.MIN_DIY_PAYTYPE);
+            if (diy.payType() < Pays.MIN_DIY_PAYTYPE) throw new RedkaleException("DIYPayService.paytype must be greater than " + Pays.MIN_DIY_PAYTYPE);
             return true;
         });
         for (AbstractPayService service : services) {
@@ -114,7 +114,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.payType == PAYTYPE_OPPO) return oppoPayService.prepay(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.payType);
         if (diyPayService != null) return diyPayService.prepay(request);
-        throw new RuntimeException(request + ".paytype is illegal");
+        throw new RedkaleException(request + ".paytype is illegal");
     }
 
     @Override
@@ -142,7 +142,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.payType == PAYTYPE_OPPO) return oppoPayService.notify(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.payType);
         if (diyPayService != null) return diyPayService.notify(request);
-        throw new RuntimeException(request + ".paytype is illegal");
+        throw new RedkaleException(request + ".paytype is illegal");
     }
 
     @Override
@@ -170,7 +170,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.payType == PAYTYPE_OPPO) return oppoPayService.create(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.payType);
         if (diyPayService != null) return diyPayService.create(request);
-        throw new RuntimeException(request + ".paytype is illegal");
+        throw new RedkaleException(request + ".paytype is illegal");
     }
 
     @Override
@@ -198,7 +198,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.payType == PAYTYPE_OPPO) return oppoPayService.query(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.payType);
         if (diyPayService != null) return diyPayService.query(request);
-        throw new RuntimeException(request + ".paytype is illegal");
+        throw new RedkaleException(request + ".paytype is illegal");
     }
 
     @Override
@@ -226,7 +226,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.payType == PAYTYPE_OPPO) return oppoPayService.close(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.payType);
         if (diyPayService != null) return diyPayService.close(request);
-        throw new RuntimeException(request + ".paytype is illegal");
+        throw new RedkaleException(request + ".paytype is illegal");
     }
 
     @Override
@@ -254,7 +254,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.payType == PAYTYPE_OPPO) return oppoPayService.refund(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.payType);
         if (diyPayService != null) return diyPayService.refund(request);
-        throw new RuntimeException(request + ".paytype is illegal");
+        throw new RedkaleException(request + ".paytype is illegal");
     }
 
     @Override
@@ -282,7 +282,7 @@ public class MultiPayService extends AbstractPayService {
         if (request.payType == PAYTYPE_OPPO) return oppoPayService.queryRefund(request);
         AbstractPayService diyPayService = diyPayServiceMap.get(request.payType);
         if (diyPayService != null) return diyPayService.queryRefund(request);
-        throw new RuntimeException(request + ".paytype is illegal");
+        throw new RedkaleException(request + ".paytype is illegal");
     }
 
     @Override
@@ -330,7 +330,7 @@ public class MultiPayService extends AbstractPayService {
             element = iosPayService.getPayElement(appid);
         } else {
             AbstractPayService diyPayService = diyPayServiceMap.get(paytype);
-            if (diyPayService == null) throw new RuntimeException("paytype = " + paytype + " is illegal");
+            if (diyPayService == null) throw new RedkaleException("paytype = " + paytype + " is illegal");
             element = diyPayService.getPayElement(appid);
         }
         return element == null ? "" : element.notifyurl;

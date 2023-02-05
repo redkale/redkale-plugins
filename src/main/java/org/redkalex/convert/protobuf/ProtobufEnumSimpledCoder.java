@@ -37,7 +37,7 @@ public class ProtobufEnumSimpledCoder<R extends Reader, W extends Writer, E exte
                 values.put(item.ordinal(), item);
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new ConvertException(e);
         }
     }
 

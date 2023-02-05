@@ -100,7 +100,9 @@ public final class WeiXinQYService implements Service {
         return getQYAccessToken().thenCompose(token -> {
             String url = "https://qyapi.weixin.qq.com/cgi-bin/user/getuserinfo?access_token=" + token + "&code=" + code + "&agentid=" + agentid;
             return getHttpContentAsync(url).thenApply(json -> {
-                if (logger.isLoggable(Level.FINEST)) logger.finest(url + "--->" + json);
+                if (logger.isLoggable(Level.FINEST)) {
+                    logger.finest(url + "--->" + json);
+                }
                 return (Map<String, String>) convert.convertFrom(MAPTYPE, json);
             });
         });
@@ -126,7 +128,9 @@ public final class WeiXinQYService implements Service {
                 }
                 String url = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=" + getQYAccessToken();
                 result = postHttpContent(url, convert.convertTo(message));
-                if (logger.isLoggable(Level.FINEST)) logger.finest("sendQYMessage ok: " + message + " -> " + result);
+                if (logger.isLoggable(Level.FINEST)) {
+                    logger.finest("sendQYMessage ok: " + message + " -> " + result);
+                }
                 future.complete(null);
             } catch (Exception e) {
                 future.completeExceptionally(e);
@@ -138,21 +142,29 @@ public final class WeiXinQYService implements Service {
 
     public String verifyQYURL(String msgSignature, String timeStamp, String nonce, String echoStr) {
         String signature = sha1(qytoken, timeStamp, nonce, echoStr);
-        if (!signature.equals(msgSignature)) throw new RuntimeException("signature verification error");
+        if (!signature.equals(msgSignature)) {
+            throw new RedkaleException("signature verification error");
+        }
         return decryptQY(echoStr);
     }
 
     protected CompletableFuture<String> getQYAccessToken() throws IOException {
-        if (qyAccessToken.accesstime < System.currentTimeMillis() - qyAccessToken.expires) qyAccessToken.token = null;
+        if (qyAccessToken.accesstime < System.currentTimeMillis() - qyAccessToken.expires) {
+            qyAccessToken.token = null;
+        }
         if (qyAccessToken.token == null) {
             String url = "https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=" + qycorpid + "&corpsecret=" + qysecret;
             return getHttpContentAsync(url).thenApply(json -> {
-                if (logger.isLoggable(Level.FINEST)) logger.finest(url + "--->" + json);
+                if (logger.isLoggable(Level.FINEST)) {
+                    logger.finest(url + "--->" + json);
+                }
                 Map<String, String> jsonmap = convert.convertFrom(MAPTYPE, json);
                 qyAccessToken.accesstime = System.currentTimeMillis();
                 qyAccessToken.token = jsonmap.get("access_token");
                 String exp = jsonmap.get("expires_in");
-                if (exp != null) qyAccessToken.expires = (Integer.parseInt(exp) - 100) * 1000;
+                if (exp != null) {
+                    qyAccessToken.expires = (Integer.parseInt(exp) - 100) * 1000;
+                }
                 return qyAccessToken.token;
             });
         }
@@ -178,7 +190,9 @@ public final class WeiXinQYService implements Service {
         String encrypt = encryptQY(random16String(), replyMsg);
 
         // 生成安全签名
-        if (timeStamp == null || timeStamp.isEmpty()) timeStamp = Long.toString(System.currentTimeMillis());
+        if (timeStamp == null || timeStamp.isEmpty()) {
+            timeStamp = Long.toString(System.currentTimeMillis());
+        }
         String signature = sha1(qytoken, timeStamp, nonce, encrypt);
 
         // 生成发送的xml
@@ -193,7 +207,9 @@ public final class WeiXinQYService implements Service {
         // 提取密文
         String encrypt = postData.substring(postData.indexOf("<Encrypt><![CDATA[") + "<Encrypt><![CDATA[".length(), postData.indexOf("]]></Encrypt>"));
         // 验证安全签名
-        if (!sha1(qytoken, timeStamp, nonce, encrypt).equals(msgSignature)) throw new RuntimeException("signature verification error");
+        if (!sha1(qytoken, timeStamp, nonce, encrypt).equals(msgSignature)) {
+            throw new RedkaleException("signature verification error");
+        }
         return decryptQY(encrypt);
     }
 
@@ -228,7 +244,7 @@ public final class WeiXinQYService implements Service {
             // 使用BASE64对加密后的字符串进行编码
             return Base64.getEncoder().encodeToString(encrypted);
         } catch (Exception e) {
-            throw new RuntimeException("AES加密失败", e);
+            throw new RedkaleException("AES加密失败", e);
         }
     }
 
@@ -238,7 +254,7 @@ public final class WeiXinQYService implements Service {
             // 使用BASE64对密文进行解码
             original = createQYCipher(Cipher.DECRYPT_MODE).doFinal(Base64.getDecoder().decode(text));
         } catch (Exception e) {
-            throw new RuntimeException("AES解密失败", e);
+            throw new RedkaleException("AES解密失败", e);
         }
         try {
             // 去除补位字符
@@ -246,12 +262,14 @@ public final class WeiXinQYService implements Service {
             // 分离16位随机字符串,网络字节序和corpid
             int xmlLength = (bytes[16] & 0xFF) << 24 | (bytes[17] & 0xFF) << 16 | (bytes[18] & 0xFF) << 8 | bytes[19] & 0xFF;
             if (!qycorpid.equals(new String(bytes, 20 + xmlLength, bytes.length - 20 - xmlLength, StandardCharsets.UTF_8))) {
-                throw new RuntimeException("corpid校验失败");
+                throw new RedkaleException("corpid校验失败");
             }
             return new String(bytes, 20, xmlLength, StandardCharsets.UTF_8);
         } catch (RuntimeException e) {
-            if (e.getMessage().contains("corpid")) throw e;
-            throw new RuntimeException("解密后得到的buffer非法", e);
+            if (e.getMessage().contains("corpid")) {
+                throw e;
+            }
+            throw new RedkaleException("解密后得到的buffer非法", e);
         }
     }
 
@@ -299,7 +317,7 @@ public final class WeiXinQYService implements Service {
             for (String s : strings) md.update(s.getBytes());
             return Utility.binToHexString(md.digest());
         } catch (Exception e) {
-            throw new RuntimeException("SHA encryption to generate signature failure", e);
+            throw new RedkaleException("SHA encryption to generate signature failure", e);
         }
     }
 
@@ -313,7 +331,9 @@ public final class WeiXinQYService implements Service {
     private static byte[] encodePKCS7(int count) {
         // 计算需要填充的位数
         int amountToPad = 32 - (count % 32);
-        if (amountToPad == 0) amountToPad = 32;
+        if (amountToPad == 0) {
+            amountToPad = 32;
+        }
         // 获得补位所用的字符
         char padChr = (char) (byte) (amountToPad & 0xFF);
         StringBuilder tmp = new StringBuilder();
@@ -332,7 +352,9 @@ public final class WeiXinQYService implements Service {
      */
     private static byte[] decodePKCS7(byte[] decrypted) {
         int pad = (int) decrypted[decrypted.length - 1];
-        if (pad < 1 || pad > 32) pad = 0;
+        if (pad < 1 || pad > 32) {
+            pad = 0;
+        }
         return Arrays.copyOfRange(decrypted, 0, decrypted.length - pad);
     }
 }

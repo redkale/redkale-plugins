@@ -9,7 +9,7 @@ import java.io.*;
 import org.redkale.annotation.Resource;
 import org.redkale.convert.Convert;
 import org.redkale.net.http.*;
-import org.redkale.util.AnyValue;
+import org.redkale.util.*;
 
 /**
  *
@@ -29,7 +29,7 @@ public class FreemarkerTemplateRender implements org.redkale.net.http.HttpRender
         try {
             this.engine.setDirectoryForTemplateLoading(new File(path));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RedkaleException(e);
         }
     }
 
@@ -39,7 +39,7 @@ public class FreemarkerTemplateRender implements org.redkale.net.http.HttpRender
         try {
             engine.getTemplate(scope.getReferid()).process(scope.getAttributes(), new OutputStreamWriter(out));
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RedkaleException(e);
         }
         response.finish(out.toByteArray());
     }

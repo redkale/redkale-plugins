@@ -102,7 +102,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             }
             return result;
         } catch (NacosException e) {
-            throw new RuntimeException(e);
+            throw new RedkaleException(e);
         }
     }
 

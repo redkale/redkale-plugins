@@ -2,6 +2,8 @@
  */
 package org.redkalex.pay;
 
+import org.redkale.util.RedkaleException;
+
 /**
  *
  * 详情见: https://redkale.org
@@ -17,7 +19,9 @@ public class PayRefundQryReq extends PayRequest {
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.refundno == null || this.refundno.isEmpty()) throw new RuntimeException("refundno is illegal");
+        if (this.refundno == null || this.refundno.isEmpty()) {
+            throw new RedkaleException("refundno is illegal");
+        }
     }
 
     public String getRefundno() {

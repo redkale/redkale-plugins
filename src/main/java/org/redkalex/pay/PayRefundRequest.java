@@ -7,6 +7,7 @@ package org.redkalex.pay;
 
 import java.util.*;
 import org.redkale.convert.ConvertDisabled;
+import org.redkale.util.RedkaleException;
 
 /**
  *
@@ -37,15 +38,27 @@ public class PayRefundRequest extends PayRequest {
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.refundMoney < 1) throw new RuntimeException("refundMoney is illegal");
-        if (this.payMoney < 1) throw new RuntimeException("payMoney is illegal");
-        if (this.refundno == null || this.refundno.isEmpty()) throw new RuntimeException("refundno is illegal");
-        if (this.thirdPayno == null || this.thirdPayno.isEmpty()) throw new RuntimeException("thirdPayno is illegal");
-        if (this.clientAddr == null || this.clientAddr.isEmpty()) throw new RuntimeException("clientAddr is illegal");
+        if (this.refundMoney < 1) {
+            throw new RedkaleException("refundMoney is illegal");
+        }
+        if (this.payMoney < 1) {
+            throw new RedkaleException("payMoney is illegal");
+        }
+        if (this.refundno == null || this.refundno.isEmpty()) {
+            throw new RedkaleException("refundno is illegal");
+        }
+        if (this.thirdPayno == null || this.thirdPayno.isEmpty()) {
+            throw new RedkaleException("thirdPayno is illegal");
+        }
+        if (this.clientAddr == null || this.clientAddr.isEmpty()) {
+            throw new RedkaleException("clientAddr is illegal");
+        }
     }
 
     public Map<String, String> attach(String key, Object value) {
-        if (this.attach == null) this.attach = new TreeMap<>();
+        if (this.attach == null) {
+            this.attach = new TreeMap<>();
+        }
         this.attach.put(key, String.valueOf(value));
         return this.attach;
     }
@@ -184,7 +197,9 @@ public class PayRefundRequest extends PayRequest {
 
     @Deprecated
     public Map<String, String> add(String key, String value) {
-        if (this.attach == null) this.attach = new TreeMap<>();
+        if (this.attach == null) {
+            this.attach = new TreeMap<>();
+        }
         this.attach.put(key, value);
         return this.attach;
     }

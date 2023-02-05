@@ -545,7 +545,7 @@ public final class UnionPayService extends AbstractPayService {
             signature.update(Utility.binToHexString(digest).getBytes(StandardCharsets.UTF_8));
             return URLEncoder.encode(Base64.getEncoder().encodeToString(signature.sign()), StandardCharsets.UTF_8);
         } catch (Exception ex) {
-            throw new RuntimeException(ex);
+            throw new RedkaleException(ex);
         }
     }
 

@@ -568,7 +568,7 @@ public final class AliPayService extends AbstractPayService {
             signature.update(joinMap(map).getBytes(((AliPayElement) element).charset));
             return Base64.getEncoder().encodeToString(signature.sign());
         } catch (Exception ex) {
-            throw new RuntimeException(ex);
+            throw new RedkaleException(ex);
         }
     }
 

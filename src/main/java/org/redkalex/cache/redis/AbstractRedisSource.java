@@ -53,7 +53,7 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
                     RedkaleClassLoader.putReflectionPublicConstructors(cryptClass, cryptClass.getName());
                     this.cryptor = cryptClass.getConstructor().newInstance();
                 } catch (ReflectiveOperationException e) {
-                    throw new RuntimeException(e);
+                    throw new RedkaleException(e);
                 }
             }
         }

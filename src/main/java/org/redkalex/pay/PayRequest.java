@@ -6,7 +6,8 @@
 package org.redkalex.pay;
 
 import org.redkale.convert.ConvertDisabled;
-import org.redkale.convert.json.*;
+import org.redkale.convert.json.JsonConvert;
+import org.redkale.util.RedkaleException;
 
 /**
  *
@@ -37,11 +38,17 @@ public class PayRequest {
     }
 
     public void checkVaild() {
-        if (this.payType < 1) throw new RuntimeException("payType is illegal");
-        if (this.payWay < 1) throw new RuntimeException("payWay is illegal");
+        if (this.payType < 1) {
+            throw new RedkaleException("payType is illegal");
+        }
+        if (this.payWay < 1) {
+            throw new RedkaleException("payWay is illegal");
+        }
         //只有一个支付配置时无需提供appid
-        //if (this.payType != Pays.PAYTYPE_UNION && (this.appid == null || this.appid.isEmpty())) throw new RuntimeException("appid is illegal");
-        if (this.payno == null || this.payno.isEmpty()) throw new RuntimeException("payno is illegal");
+        //if (this.payType != Pays.PAYTYPE_UNION && (this.appid == null || this.appid.isEmpty())) throw new RedkaleException("appid is illegal");
+        if (this.payno == null || this.payno.isEmpty()) {
+            throw new RedkaleException("payno is illegal");
+        }
     }
 
     @Override

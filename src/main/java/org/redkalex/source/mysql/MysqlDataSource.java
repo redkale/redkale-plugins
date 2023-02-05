@@ -30,7 +30,7 @@ import org.redkale.util.*;
 @ResourceType(DataSource.class)
 public class MysqlDataSource extends AbstractDataSqlSource {
 
-    static final boolean debug = false; //System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
+    static boolean debug = false; //System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
 
     protected MyClient readPool;
 

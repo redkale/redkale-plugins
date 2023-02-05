@@ -11,11 +11,11 @@ import java.net.http.HttpClient;
 import java.nio.charset.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.*;
+import java.util.logging.Logger;
 import java.util.stream.*;
 import org.redkale.annotation.Comment;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.service.*;
+import org.redkale.service.Service;
 import org.redkale.util.*;
 
 /**
@@ -94,7 +94,7 @@ public abstract class AbstractPayService implements Service {
         try {
             return Utility.remoteHttpContent("POST", url, 10_000, null, body).toString(StandardCharsets.UTF_8);
         } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            throw new RedkaleException(ex);
         }
     }
 
@@ -102,7 +102,7 @@ public abstract class AbstractPayService implements Service {
         try {
             return Utility.remoteHttpContent("POST", url, 10_000, null, body).toString(charset.name());
         } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            throw new RedkaleException(ex);
         }
     }
 

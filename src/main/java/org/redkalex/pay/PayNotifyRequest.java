@@ -8,6 +8,7 @@ package org.redkalex.pay;
 import java.util.*;
 import org.redkale.convert.ConvertDisabled;
 import org.redkale.convert.json.JsonFactory;
+import org.redkale.util.RedkaleException;
 
 /**
  *
@@ -58,7 +59,9 @@ public class PayNotifyRequest {
         final TreeMap<String, String> map = new TreeMap<>(params);
         List<String> emptyKeys = new ArrayList<>();
         for (Map.Entry<String, String> en : map.entrySet()) { //去掉空值的参数
-            if (en.getValue().isEmpty()) emptyKeys.add(en.getKey());
+            if (en.getValue().isEmpty()) {
+                emptyKeys.add(en.getKey());
+            }
         }
         emptyKeys.forEach(x -> map.remove(x));
         this.attach = map;
@@ -66,13 +69,21 @@ public class PayNotifyRequest {
     }
 
     public void checkVaild() {
-        if (this.payType < 1) throw new RuntimeException("payType is illegal");
-        if (this.payType == Pays.PAYTYPE_ALIPAY && (this.appid == null || this.appid.isEmpty())) throw new RuntimeException("appid is illegal");
-        if ((this.body == null || this.body.isEmpty()) && (this.attach == null || this.attach.isEmpty())) throw new RuntimeException("text and attach both is empty");
+        if (this.payType < 1) {
+            throw new RedkaleException("payType is illegal");
+        }
+        if (this.payType == Pays.PAYTYPE_ALIPAY && (this.appid == null || this.appid.isEmpty())) {
+            throw new RedkaleException("appid is illegal");
+        }
+        if ((this.body == null || this.body.isEmpty()) && (this.attach == null || this.attach.isEmpty())) {
+            throw new RedkaleException("text and attach both is empty");
+        }
     }
 
     public PayNotifyRequest addAttach(String key, Object value) {
-        if (this.attach == null) this.attach = new TreeMap<>();
+        if (this.attach == null) {
+            this.attach = new TreeMap<>();
+        }
         this.attach.put(key, String.valueOf(value));
         return this;
     }

@@ -7,6 +7,7 @@ package org.redkalex.pay;
 
 import java.util.*;
 import org.redkale.convert.ConvertDisabled;
+import org.redkale.util.RedkaleException;
 
 /**
  *
@@ -27,12 +28,18 @@ public class PayCloseRequest extends PayRequest {
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.payMoney < 1) throw new RuntimeException("payMoney is illegal");
-        if (this.thirdPayno == null || this.thirdPayno.isEmpty()) throw new RuntimeException("thirdPayno is illegal");
+        if (this.payMoney < 1) {
+            throw new RedkaleException("payMoney is illegal");
+        }
+        if (this.thirdPayno == null || this.thirdPayno.isEmpty()) {
+            throw new RedkaleException("thirdPayno is illegal");
+        }
     }
 
     public Map<String, String> attach(String key, Object value) {
-        if (this.attach == null) this.attach = new TreeMap<>();
+        if (this.attach == null) {
+            this.attach = new TreeMap<>();
+        }
         this.attach.put(key, String.valueOf(value));
         return this.attach;
     }
@@ -76,7 +83,7 @@ public class PayCloseRequest extends PayRequest {
     public void setAttach(Map<String, String> attach) {
         this.attach = attach;
     }
-    
+
     @Deprecated
     @ConvertDisabled
     public long getPaymoney() {

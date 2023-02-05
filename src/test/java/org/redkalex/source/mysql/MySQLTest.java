@@ -14,7 +14,7 @@ import java.util.stream.*;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.net.AsyncIOGroup;
+import org.redkale.net.*;
 import org.redkale.persistence.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
@@ -36,7 +36,7 @@ public class MySQLTest {
 
         Properties prop = new Properties();
         prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.setProperty("redkale.datasource[].maxconns", "1");
+        prop.setProperty("redkale.datasource[].maxconns", "10");
         prop.setProperty("redkale.datasource[].table-autoddl", "true");
         prop.setProperty("redkale.datasource[].user", "root");
         prop.setProperty("redkale.datasource[].password", "");
@@ -44,8 +44,9 @@ public class MySQLTest {
         if (VertxSqlDataSource.class.isAssignableFrom(AbstractDataSqlSource.class)) {
             return;
         }
-
+        ExecutorService workExecutor = WorkThread.createExecutor(20, "Thread-%s");
         MysqlDataSource source = new MysqlDataSource();
+        //MysqlDataSource.debug = true;
         //DataJdbcSource source = new DataJdbcSource();
         factory.inject(source);
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
@@ -72,12 +73,31 @@ public class MySQLTest {
 
             IntStream ids = IntStream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
             System.out.println("组合操作: " + source.findsListAsync(World.class, ids.boxed()).thenCompose(words -> source.updateAsync(words.toArray()).thenApply(v -> words)).join());
-
             System.out.println(source.queryList(Fortune.class));
+            System.out.println();
+            System.out.println();
+            System.out.println();
+            
             if (true) {
+                MysqlDataSource.debug = true;
+                CountDownLatch cdl = new CountDownLatch(50);
+                for (int i = 0; i < cdl.getCount(); i++) {
+                    workExecutor.submit(() -> {
+                        int size = 20;
+                        try {
+                            IntStream ii = ThreadLocalRandom.current().ints(size, 1, 10001);
+                            source.findsListAsync(World.class, ii.boxed()).thenCompose(words -> source.updateAsync(words.toArray()).thenApply(v -> words)).join();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            cdl.countDown();
+                        }
+                    });
+                }
+                cdl.await();
                 return;
             }
-            
+
             DayRecord record1 = new DayRecord();
             record1.setCreateTime(System.currentTimeMillis());
             record1.setContent("这是内容1 " + Utility.formatTime(record1.getCreateTime()));
@@ -235,7 +255,7 @@ public class MySQLTest {
         source.close();
         System.out.println("---------------- 全部执行完毕 ----------------");
     }
-    
+
     protected static int randomId() {
         return ThreadLocalRandom.current().nextInt(10000) + 1;
     }

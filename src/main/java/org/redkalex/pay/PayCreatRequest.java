@@ -7,7 +7,7 @@ package org.redkalex.pay;
 
 import java.util.*;
 import org.redkale.convert.ConvertDisabled;
-import org.redkale.util.Reproduce;
+import org.redkale.util.*;
 
 /**
  *
@@ -40,16 +40,30 @@ public class PayCreatRequest extends PayRequest {
     @Override
     public void checkVaild() {
         super.checkVaild();
-        if (this.payMoney < 1) throw new RuntimeException("payMoney is illegal");
-        if (this.payTitle == null || this.payTitle.isEmpty()) throw new RuntimeException("payTitle is illegal");
-        if (this.payBody == null || this.payBody.isEmpty()) throw new RuntimeException("payBody is illegal");
-        if (this.clientAddr == null || this.clientAddr.isEmpty()) throw new RuntimeException("clientAddr is illegal");
-        if (this.payTimeout < 300) throw new RuntimeException("payTimeout cannot less 300 seconds");
-        if (this.payTimeout > 24 * 60 * 60) throw new RuntimeException("payTimeout cannot greater 1 day");
+        if (this.payMoney < 1) {
+            throw new RedkaleException("payMoney is illegal");
+        }
+        if (this.payTitle == null || this.payTitle.isEmpty()) {
+            throw new RedkaleException("payTitle is illegal");
+        }
+        if (this.payBody == null || this.payBody.isEmpty()) {
+            throw new RedkaleException("payBody is illegal");
+        }
+        if (this.clientAddr == null || this.clientAddr.isEmpty()) {
+            throw new RedkaleException("clientAddr is illegal");
+        }
+        if (this.payTimeout < 300) {
+            throw new RedkaleException("payTimeout cannot less 300 seconds");
+        }
+        if (this.payTimeout > 24 * 60 * 60) {
+            throw new RedkaleException("payTimeout cannot greater 1 day");
+        }
     }
 
     public Map<String, String> attach(String key, Object value) {
-        if (this.attach == null) this.attach = new TreeMap<>();
+        if (this.attach == null) {
+            this.attach = new TreeMap<>();
+        }
         this.attach.put(key, String.valueOf(value));
         return this.attach;
     }
@@ -120,7 +134,9 @@ public class PayCreatRequest extends PayRequest {
 
     @Deprecated
     public Map<String, String> add(String key, String value) {
-        if (this.attach == null) this.attach = new TreeMap<>();
+        if (this.attach == null) {
+            this.attach = new TreeMap<>();
+        }
         this.attach.put(key, value);
         return this.attach;
     }

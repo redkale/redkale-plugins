@@ -287,7 +287,7 @@ public final class WeiXinMPService implements Service {
     private String verifyMPURL0(String mptoken, String msgSignature, String timeStamp, String nonce, String echoStr) {
         String signature = sha1(mptoken, timeStamp, nonce);
         if (!signature.equals(msgSignature)) {
-            throw new RuntimeException("signature verification error");
+            throw new RedkaleException("signature verification error");
         }
         return echoStr;
     }
@@ -306,7 +306,7 @@ public final class WeiXinMPService implements Service {
             for (String s : strings) md.update(s.getBytes());
             return Utility.binToHexString(md.digest());
         } catch (Exception e) {
-            throw new RuntimeException("SHA encryption to generate signature failure", e);
+            throw new RedkaleException("SHA encryption to generate signature failure", e);
         }
     }
 

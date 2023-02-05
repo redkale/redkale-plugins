@@ -312,7 +312,7 @@ public final class OppoPayService extends AbstractPayService {
             byte[] signed = signature.sign();
             return Utility.binToHexString(Base64.getEncoder().encode(signed));
         } catch (Exception ex) {
-            throw new RuntimeException(ex);
+            throw new RedkaleException(ex);
         }
     }
 

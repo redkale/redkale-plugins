@@ -323,7 +323,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> msetAsync(final Object... keyVals) {
         if (keyVals.length % 2 != 0) {
-            throw new RuntimeException("key value must be paired");
+            throw new RedkaleException("key value must be paired");
         }
         byte[][] bs = new byte[keyVals.length][];
         for (int i = 0; i < keyVals.length; i += 2) {
