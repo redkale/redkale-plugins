@@ -68,8 +68,8 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
     }
 
     @Override
-    protected CompletableFuture<PgClientConnection> connect(final ChannelContext context) {
-        return super.connect(context);
+    protected CompletableFuture<PgClientConnection> connect() {
+        return super.connect();
     }
 
     @Override

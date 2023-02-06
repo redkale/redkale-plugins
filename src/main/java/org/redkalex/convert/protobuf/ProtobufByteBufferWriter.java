@@ -33,6 +33,14 @@ public class ProtobufByteBufferWriter extends ProtobufWriter {
     }
 
     @Override
+    protected boolean recycle() {
+        super.recycle();
+        this.buffers = null;
+        this.index = 0;
+        return false;
+    }
+
+    @Override
     public ByteBuffer[] toBuffers() {
         if (buffers == null) return new ByteBuffer[0];
         for (int i = index; i < this.buffers.length; i++) {
@@ -124,15 +132,6 @@ public class ProtobufByteBufferWriter extends ProtobufWriter {
         expand(1);
         this.buffers[index].put(ch);
         count++;
-    }
-
-    @Override
-    protected boolean recycle() {
-        super.recycle();
-        this.index = 0;
-        this.specify = null;
-        this.buffers = null;
-        return false;
     }
 
     @Override

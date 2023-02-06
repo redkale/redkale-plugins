@@ -60,8 +60,8 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
     }
 
     @Override
-    protected CompletableFuture<MyClientConnection> connect(final ChannelContext context) {
-        return super.connect(context);
+    protected CompletableFuture<MyClientConnection> connect() {
+        return super.connect();
     }
 
     @Override

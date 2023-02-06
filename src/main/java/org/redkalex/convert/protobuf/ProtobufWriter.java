@@ -28,7 +28,7 @@ public class ProtobufWriter extends Writer implements ByteTuple {
 
     protected boolean tiny;
 
-    protected int initoffset;
+    protected int initOffset;
 
     protected boolean enumtostring;
 
@@ -41,7 +41,9 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     protected ProtobufWriter(ProtobufWriter parent) {
         this();
         this.parent = parent;
-        if (parent != null) this.enumtostring = parent.enumtostring;
+        if (parent != null) {
+            this.enumtostring = parent.enumtostring;
+        }
     }
 
     protected ProtobufWriter(byte[] bs) {
@@ -49,10 +51,14 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     }
 
     protected ProtobufWriter configFieldFunc(Writer writer) {
-        if (writer == null) return this;
+        if (writer == null) {
+            return this;
+        }
         ProtobufWriter out = (ProtobufWriter) writer;
+        this.mapFieldFunc = out.mapFieldFunc;
         this.objFieldFunc = out.objFieldFunc;
         this.objExtFunc = out.objExtFunc;
+        this.tiny = out.tiny;
         this.enumtostring = out.enumtostring;
         return this;
     }
@@ -71,13 +77,24 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     }
 
     @Override
+    protected boolean recycle() {
+        super.recycle();
+        this.count = 0;
+        this.initOffset = 0;
+        if (this.content.length > defaultSize) {
+            this.content = new byte[defaultSize];
+        }
+        return true;
+    }
+
+    @Override
     public byte[] content() {
         return content;
     }
 
     @Override
     public int offset() {
-        return initoffset;
+        return initOffset;
     }
 
     @Override
@@ -112,7 +129,9 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     }
 
     public byte[] toArray() {
-        if (count == content.length) return content;
+        if (count == content.length) {
+            return content;
+        }
         byte[] newdata = new byte[count];
         System.arraycopy(content, 0, newdata, 0, count);
         return newdata;
@@ -135,7 +154,9 @@ public class ProtobufWriter extends Writer implements ByteTuple {
 
     protected int expand(int len) {
         int newcount = count + len;
-        if (newcount <= content.length) return 0;
+        if (newcount <= content.length) {
+            return 0;
+        }
         byte[] newdata = new byte[Math.max(content.length * 3 / 2, newcount)];
         System.arraycopy(content, 0, newdata, 0, count);
         this.content = newdata;
@@ -159,20 +180,8 @@ public class ProtobufWriter extends Writer implements ByteTuple {
 
     public ProtobufWriter clear() {
         this.count = 0;
-        this.initoffset = 0;
+        this.initOffset = 0;
         return this;
-    }
-
-    @Override
-    protected boolean recycle() {
-        super.recycle();
-        this.count = 0;
-        this.initoffset = 0;
-        this.specify = null;
-        if (this.content.length > defaultSize) {
-            this.content = new byte[defaultSize];
-        }
-        return true;
     }
 
     @Override
@@ -410,28 +419,54 @@ public class ProtobufWriter extends Writer implements ByteTuple {
         } else {
             value = objFieldFunc.apply(member.getAttribute(), obj);
         }
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
         if (tiny()) {
             if (member.isStringType()) {
-                if (((CharSequence) value).length() == 0) return;
+                if (((CharSequence) value).length() == 0) {
+                    return;
+                }
             } else if (member.isBoolType()) {
-                if (!((Boolean) value)) return;
+                if (!((Boolean) value)) {
+                    return;
+                }
             }
         }
         Type mtype = member.getAttribute().type();
-        if (mtype == boolean[].class && ((boolean[]) value).length < 1) return;
-        if (mtype == byte[].class && ((byte[]) value).length < 1) return;
-        if (mtype == short[].class && ((short[]) value).length < 1) return;
-        if (mtype == char[].class && ((char[]) value).length < 1) return;
-        if (mtype == int[].class && ((int[]) value).length < 1) return;
-        if (mtype == float[].class && ((float[]) value).length < 1) return;
-        if (mtype == long[].class && ((long[]) value).length < 1) return;
-        if (mtype == double[].class && ((double[]) value).length < 1) return;
+        if (mtype == boolean[].class && ((boolean[]) value).length < 1) {
+            return;
+        }
+        if (mtype == byte[].class && ((byte[]) value).length < 1) {
+            return;
+        }
+        if (mtype == short[].class && ((short[]) value).length < 1) {
+            return;
+        }
+        if (mtype == char[].class && ((char[]) value).length < 1) {
+            return;
+        }
+        if (mtype == int[].class && ((int[]) value).length < 1) {
+            return;
+        }
+        if (mtype == float[].class && ((float[]) value).length < 1) {
+            return;
+        }
+        if (mtype == long[].class && ((long[]) value).length < 1) {
+            return;
+        }
+        if (mtype == double[].class && ((double[]) value).length < 1) {
+            return;
+        }
 
         Encodeable encoder = member.getEncoder();
-        if (encoder == null) return;
+        if (encoder == null) {
+            return;
+        }
         if (encoder instanceof MapEncoder) {
-            if (!((Map) value).isEmpty()) ((MapEncoder) encoder).convertTo(this, member, (Map) value);
+            if (!((Map) value).isEmpty()) {
+                ((MapEncoder) encoder).convertTo(this, member, (Map) value);
+            }
         } else if (encoder instanceof ProtobufArrayEncoder) {
             ProtobufArrayEncoder arrayEncoder = (ProtobufArrayEncoder) encoder;
             if (arrayEncoder.simple) {
@@ -493,7 +528,9 @@ public class ProtobufWriter extends Writer implements ByteTuple {
         if (writeArrayB(values.length, null, null, values) < 0) {
             boolean flag = false;
             for (byte v : values) {
-                if (flag) writeArrayMark();
+                if (flag) {
+                    writeArrayMark();
+                }
                 writeByte(v);
                 flag = true;
             }
@@ -545,7 +582,9 @@ public class ProtobufWriter extends Writer implements ByteTuple {
 
     @Override
     public void writeWrapper(StringWrapper value) {
-        if (value != null) writeString(value.getValue());
+        if (value != null) {
+            writeString(value.getValue());
+        }
     }
 
     public static byte[] uint32(int value) {

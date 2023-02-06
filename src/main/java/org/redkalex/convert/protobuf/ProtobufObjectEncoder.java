@@ -27,7 +27,7 @@ public class ProtobufObjectEncoder<T> extends ObjectEncoder<ProtobufWriter, T> {
 
     @Override
     protected ProtobufWriter objectWriter(ProtobufWriter out, T value) {
-        if (out.count() > out.initoffset) return new ProtobufWriter(out).configFieldFunc(out);
+        if (out.count() > out.initOffset) return new ProtobufWriter(out).configFieldFunc(out);
         return out; 
     }
 }

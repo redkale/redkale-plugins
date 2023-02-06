@@ -34,7 +34,8 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
         return new RedisCacheConnection(this, index, channel);
     }
 
-    CompletableFuture<RedisCacheConnection> pollConnection() {
-        return (CompletableFuture) super.connect(null);
+    @Override
+    protected CompletableFuture<RedisCacheConnection> connect() {
+        return super.connect();
     }
 }
