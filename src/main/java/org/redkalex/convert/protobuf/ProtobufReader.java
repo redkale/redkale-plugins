@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import org.redkale.convert.*;
-import org.redkale.util.*;
+import org.redkale.util.ObjectPool;
 
 /**
  *
@@ -48,6 +48,11 @@ public class ProtobufReader extends Reader {
         return this;
     }
 
+    @Override
+    public void prepare(byte[] bytes) {
+        setBytes(bytes);
+    }
+
     public final void setBytes(byte[] bytes) {
         if (bytes == null) {
             this.position = 0;
@@ -75,12 +80,15 @@ public class ProtobufReader extends Reader {
         return true;
     }
 
-    public void close() {
+    public ProtobufReader clear() {
         this.recycle();
+        return this;
     }
 
     public byte[] remainBytes() {
-        if (this.position >= this.content.length) return new byte[0];
+        if (this.position >= this.content.length) {
+            return new byte[0];
+        }
         return Arrays.copyOfRange(this.content, this.position + 1, this.content.length);
     }
 
@@ -91,7 +99,9 @@ public class ProtobufReader extends Reader {
     @SuppressWarnings("unchecked")
     public final void skipValue() {
         int tag = readTag();
-        if (tag == 0) return;
+        if (tag == 0) {
+            return;
+        }
         switch (tag & 0x7) {
             case 0:
                 readRawVarint32();
@@ -138,9 +148,13 @@ public class ProtobufReader extends Reader {
      */
     @Override
     public final int readArrayB(DeMember member, byte[] typevals, Decodeable componentDecoder) {
-        if (member == null || componentDecoder == null) return Reader.SIGN_NOLENBUTBYTES;
+        if (member == null || componentDecoder == null) {
+            return Reader.SIGN_NOLENBUTBYTES;
+        }
         Type type = componentDecoder.getType();
-        if (!(type instanceof Class)) return Reader.SIGN_NOLENBUTBYTES;
+        if (!(type instanceof Class)) {
+            return Reader.SIGN_NOLENBUTBYTES;
+        }
         Class clazz = (Class) type;
         if (clazz.isPrimitive() || clazz == Boolean.class || clazz == Byte.class
             || clazz == Short.class || clazz == Character.class
@@ -171,17 +185,25 @@ public class ProtobufReader extends Reader {
 
     @Override
     public final int readMemberContentLength(DeMember member, Decodeable decoder) {
-        if (member == null && decoder == null) return -1; //为byte[]
+        if (member == null && decoder == null) {
+            return -1; //为byte[]
+        }
         if (member != null) {
             if (member.getDecoder() instanceof ProtobufArrayDecoder) {
                 ProtobufArrayDecoder pdecoder = (ProtobufArrayDecoder) member.getDecoder();
-                if (pdecoder.simple) return readRawVarint32();
+                if (pdecoder.simple) {
+                    return readRawVarint32();
+                }
             } else if (member.getDecoder() instanceof ProtobufCollectionDecoder) {
                 ProtobufCollectionDecoder pdecoder = (ProtobufCollectionDecoder) member.getDecoder();
-                if (pdecoder.simple) return readRawVarint32();
+                if (pdecoder.simple) {
+                    return readRawVarint32();
+                }
             } else if (member.getDecoder() instanceof ProtobufStreamDecoder) {
                 ProtobufStreamDecoder pdecoder = (ProtobufStreamDecoder) member.getDecoder();
-                if (pdecoder.simple) return readRawVarint32();
+                if (pdecoder.simple) {
+                    return readRawVarint32();
+                }
             }
             return -1;
         }
@@ -305,7 +327,9 @@ public class ProtobufReader extends Reader {
         fastpath:
         {
             int tempPos = this.position;
-            if ((tempPos + 1) == content.length) break fastpath;
+            if ((tempPos + 1) == content.length) {
+                break fastpath;
+            }
 
             int x;
             if ((x = content[++tempPos]) >= 0) {
@@ -342,7 +366,9 @@ public class ProtobufReader extends Reader {
         fastpath:
         {
             int tempPos = this.position;
-            if ((tempPos + 1) == content.length) break fastpath;
+            if ((tempPos + 1) == content.length) {
+                break fastpath;
+            }
 
             long x;
             int y;
@@ -398,7 +424,9 @@ public class ProtobufReader extends Reader {
         for (int shift = 0; shift < 64; shift += 7) {
             final byte b = content[++this.position];
             result |= (long) (b & 0x7F) << shift;
-            if ((b & 0x80) == 0) return result;
+            if ((b & 0x80) == 0) {
+                return result;
+            }
         }
         throw new ConvertException("readRawVarint64SlowPath error");
     }
