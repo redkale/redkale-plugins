@@ -485,6 +485,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         return (T) decoder.convertFrom(new ProtobufByteBufferReader(mask, buffers));
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public <T> T convertFrom(final Type type, final ProtobufReader reader) {
         if (type == null) return null;
