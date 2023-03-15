@@ -5,18 +5,18 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
+import java.io.*;
+import java.nio.*;
+import java.nio.charset.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.time.*;
 import java.time.format.*;
 import static java.time.format.DateTimeFormatter.*;
 import java.time.temporal.*;
-import java.util.Locale;
+import java.util.*;
 import java.util.concurrent.atomic.*;
-import org.redkale.convert.json.JsonConvert;
-import org.redkale.source.EntityInfo;
+import org.redkale.convert.json.*;
+import org.redkale.source.*;
 import org.redkale.util.*;
 
 /**
@@ -207,8 +207,20 @@ public abstract class PgsqlFormatter {
 
     // 294277-01-09 04:00:54.775807
     static final LocalDateTime LDT_PLUS_INFINITY = LOCAL_DATE_TIME_EPOCH.plus(Long.MAX_VALUE, ChronoUnit.MICROS);
-    
-    // 4714-11-24 00:00:00 BC
-    static final LocalDateTime LDT_MINUS_INFINITY = LocalDateTime.parse("4714-11-24 00:00:00 BC", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss G", Locale.ROOT));
 
+    // 4714-11-24 00:00:00 BC   
+    static final LocalDateTime LDT_MINUS_INFINITY;
+
+    static {
+        LocalDateTime min = LOCAL_DATE_TIME_EPOCH.plus(Long.MIN_VALUE, ChronoUnit.MICROS);
+        try {
+            //native-image  graalvm-ce:ol9-java17-22.3.0-b2 会报错  
+            //Caused by: java.time.format.DateTimeParseException: Text '4714-11-24 00:00:00 BC' could not be parsed at index 20
+            //	at java.base@17.0.5/java.time.format.DateTimeFormatter.parseResolved0(DateTimeFormatter.java:2052)
+            //	at java.base@17.0.5/java.time.format.DateTimeFormatter.parse(DateTimeFormatter.java:1954)
+            min = LocalDateTime.parse("4714-11-24 00:00:00 BC", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss G", Locale.ROOT));
+        } catch (Exception e) {
+        }
+        LDT_MINUS_INFINITY = min;
+    }
 }
