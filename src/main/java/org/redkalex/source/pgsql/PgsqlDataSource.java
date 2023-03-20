@@ -195,7 +195,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         if ((prepareInfos == null || prepareInfos.size() < 2) && pool.cachePreparedStatements()) {
             String sql = info.getInsertDollarPrepareSQL(entitys[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            return pool.connect().thenCompose(conn -> {
+            return pool.connect(sql).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_INSERT, PgExtendMode.INSERT_ENTITY, sql, 0, objs);
                 Function<PgResultSet, Integer> transfer = dataset -> {
@@ -296,7 +296,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         if (info.getTableStrategy() == null && pool.cachePreparedStatements()) {
             String sql = caseSql == null ? info.getUpdateDollarPrepareSQL(values[0]) : caseSql;
             WorkThread workThread = WorkThread.currWorkThread();
-            return pool.connect().thenCompose(conn -> {
+            return pool.connect(sql).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, caseSql == null ? PgExtendMode.UPDATE_ENTITY : PgExtendMode.UPCASE_ENTITY, sql, 0, objs);
                 Function<PgResultSet, Integer> transfer = dataset -> {
@@ -377,7 +377,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindDollarPrepareSQL(pk);
             WorkThread workThread = WorkThread.currWorkThread();
-            return pool.connect().thenCompose(conn -> {
+            return pool.connect(sql).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, pk);
                 Function<PgResultSet, T> transfer = dataset -> {
@@ -410,7 +410,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindsDollarPrepareSQL(pks[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            return pool.connect().thenCompose(conn -> {
+            return pool.connect(sql).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FINDS_ENTITY, sql, 0, pks);
                 Function<PgResultSet, T[]> transfer = dataset -> {
@@ -441,7 +441,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         if (info.getTableStrategy() == null && pool.cachePreparedStatements()) {
             String sql = info.getFindsDollarPrepareSQL(ids[0]);
             WorkThread workThread = WorkThread.currWorkThread();
-            return pool.connect().thenCompose(conn -> {
+            return pool.connect(sql).thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FINDS_ENTITY, sql, 0, ids);
                 Function<PgResultSet, List<T>> transfer = dataset -> {
@@ -508,7 +508,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currWorkThread();
-                return pool.connect().thenCompose(conn -> {
+                return pool.connect(listSql).thenCompose(conn -> {
                     PgReqExtended req = conn.pollReqExtended(workThread, info);
                     req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, listSql, 0);
                     Function<PgResultSet, Sheet<T>> transfer = dataset -> {
@@ -790,18 +790,18 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             return pool.writeChannel(conn, req);
         };
         if (info == null || (info.getTableStrategy() == null && !autoddl())) {
-            return pool.connect().thenCompose(futureFunc).thenApply(g -> {
+            return pool.connect(null).thenCompose(futureFunc).thenApply(g -> {
                 slowLog(s, sqls);
                 return g.getUpdateEffectCount();
             });
         }
         if (insert) {
-            return thenApplyInsertStrategy(info, pool.connect().thenCompose(futureFunc), reqRef, connRef, values).thenApply(g -> {
+            return thenApplyInsertStrategy(info, pool.connect(null).thenCompose(futureFunc), reqRef, connRef, values).thenApply(g -> {
                 slowLog(s, sqls);
                 return g.getUpdateEffectCount();
             });
         }
-        return pool.connect().thenCompose(conn -> thenApplyQueryUpdateStrategy(info, conn, futureFunc)).thenApply(g -> {
+        return pool.connect(null).thenCompose(conn -> thenApplyQueryUpdateStrategy(info, conn, futureFunc)).thenApply(g -> {
             slowLog(s, sqls);
             return g.getUpdateEffectCount();
         });
@@ -811,7 +811,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     protected <T> CompletableFuture<PgResultSet> executeQuery(final EntityInfo<T> info, final String sql) {
         final PgClient pool = readPool();
         WorkThread workThread = WorkThread.currWorkThread();
-        return pool.connect().thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
+        return pool.connect(null).thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
             PgReqQuery req = conn.pollReqQuery(workThread, info);
             req.prepare(sql);
             return pool.writeChannel(conn, req);
@@ -824,7 +824,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();
-        CompletableFuture<PgResultSet> future = pool.connect().thenCompose(conn -> {
+        CompletableFuture<PgResultSet> future = pool.connect(null).thenCompose(conn -> {
             PgReqUpdate req = conn.pollReqUpdate(workThread, null);
             return pool.writeChannel(conn, req.prepare(sql));
         });
@@ -842,7 +842,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         }
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
-        CompletableFuture<PgResultSet> future = pool.connect().thenCompose(conn -> {
+        CompletableFuture<PgResultSet> future = pool.connect(null).thenCompose(conn -> {
             PgReqBatch req = new PgReqBatch();
             return pool.writeChannel(conn, req.prepare(sqls));
         });

@@ -23,6 +23,8 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
 
     protected static final ConcurrentHashMap<String, Long> extendedStatementIndexMap = new ConcurrentHashMap();
 
+    protected final ConcurrentHashMap<String, PgClientConnection> prepareSqlConnections = new ConcurrentHashMap();
+
     protected final boolean cachePreparedStatements;
 
     protected final boolean autoddl;
@@ -67,9 +69,22 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
         return super.writeChannel(conn, request, respTransfer);
     }
 
-    @Override
-    protected CompletableFuture<PgClientConnection> connect() {
-        return super.connect();
+    protected CompletableFuture<PgClientConnection> connect(final String prepareSQL) {
+        if (prepareSQL == null) {
+            return super.connect();
+        } else {
+            PgClientConnection conn = prepareSqlConnections.get(prepareSQL);
+            if (conn != null && conn.isOpen()) {
+                return CompletableFuture.completedFuture(conn);
+            }
+            CompletableFuture<PgClientConnection> future = super.connect();
+            future.whenComplete((c, t) -> {
+                if (t == null && c != null) {
+                    prepareSqlConnections.put(prepareSQL, c);
+                }
+            });
+            return future;
+        }
     }
 
     @Override
