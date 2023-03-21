@@ -69,22 +69,9 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
         return super.writeChannel(conn, request, respTransfer);
     }
 
-    protected CompletableFuture<PgClientConnection> connect(final String prepareSQL) {
-        if (prepareSQL == null) {
-            return super.connect();
-        } else {
-            PgClientConnection conn = prepareSqlConnections.get(prepareSQL);
-            if (conn != null && conn.isOpen()) {
-                return CompletableFuture.completedFuture(conn);
-            }
-            CompletableFuture<PgClientConnection> future = super.connect();
-            future.whenComplete((c, t) -> {
-                if (t == null && c != null) {
-                    prepareSqlConnections.put(prepareSQL, c);
-                }
-            });
-            return future;
-        }
+    @Override
+    protected CompletableFuture<PgClientConnection> connect() {
+        return super.connect();
     }
 
     @Override
