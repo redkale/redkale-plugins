@@ -55,11 +55,16 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected ScheduledFuture taskFuture4;
 
+    protected ScheduledFuture taskFuture5;
+
     //可能被HttpMessageClient用到的服务 key: serviceName
-    protected final ConcurrentHashMap<String, Collection<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
+    protected final ConcurrentHashMap<String, Set<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
+
+    //可能被sncp用到的服务 key: serviceName
+    protected final ConcurrentHashMap<String, Set<InetSocketAddress>> sncpAddressMap = new ConcurrentHashMap<>();
 
     //可能被mqtp用到的服务 key: serviceName
-    protected final ConcurrentHashMap<String, Collection<InetSocketAddress>> mqtpAddressMap = new ConcurrentHashMap<>();
+    protected final ConcurrentHashMap<String, Set<InetSocketAddress>> mqtpAddressMap = new ConcurrentHashMap<>();
 
     @Override
     public void init(ResourceFactory factory, AnyValue config) {
@@ -146,25 +151,54 @@ public class ConsulClusterAgent extends ClusterAgent {
             this.taskFuture2.cancel(true);
         }
         this.taskFuture2 = this.scheduler.scheduleAtFixedRate(() -> {
-            reloadMqtpAddressHealth();
+            reloadSncpAddressHealth();
         }, 88 * 2, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
         if (this.taskFuture3 != null) {
-            this.taskFuture4.cancel(true);
+            this.taskFuture3.cancel(true);
         }
         this.taskFuture3 = this.scheduler.scheduleAtFixedRate(() -> {
-            reloadHttpAddressHealth();
-        }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+            reloadMqtpAddressHealth();
+        }, 88 * 2, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
         if (this.taskFuture4 != null) {
             this.taskFuture4.cancel(true);
         }
         this.taskFuture4 = this.scheduler.scheduleAtFixedRate(() -> {
+            reloadHttpAddressHealth();
+        }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+
+        if (this.taskFuture5 != null) {
+            this.taskFuture5.cancel(true);
+        }
+        this.taskFuture5 = this.scheduler.scheduleAtFixedRate(() -> {
             remoteEntrys.values().stream().filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol)).forEach(entry -> {
-                updateSncpTransport(entry);
+                updateSncpAddress(entry);
             });
         }, 188 * 4, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
+    }
+
+    protected void reloadSncpAddressHealth() {
+        try {
+            String content = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/agent/services", StandardCharsets.UTF_8, httpHeaders);
+            final Map<String, ServiceEntry> map = JsonConvert.root().convertFrom(MAP_STRING_SERVICEENTRY, content);
+            Set<String> sncpkeys = new HashSet<>();
+            map.forEach((key, en) -> {
+                if (en.Service.startsWith("sncp:")) {
+                    sncpkeys.add(en.Service);
+                }
+            });
+            sncpkeys.forEach(serviceName -> {
+                try {
+                    this.sncpAddressMap.put(serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "reloadSncpAddressHealth check " + serviceName + " error", e);
+                }
+            });
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "reloadSncpAddressHealth check error", ex);
+        }
     }
 
     protected void reloadMqtpAddressHealth() {
@@ -181,11 +215,11 @@ public class ConsulClusterAgent extends ClusterAgent {
                 try {
                     this.mqtpAddressMap.put(serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
                 } catch (Exception e) {
-                    logger.log(Level.SEVERE, "loadMqtpAddressHealth check " + serviceName + " error", e);
+                    logger.log(Level.SEVERE, "reloadMqtpAddressHealth check " + serviceName + " error", e);
                 }
             });
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, "loadMqtpAddressHealth check error", ex);
+            logger.log(Level.SEVERE, "reloadMqtpAddressHealth check error", ex);
         }
     }
 
@@ -195,11 +229,11 @@ public class ConsulClusterAgent extends ClusterAgent {
                 try {
                     this.httpAddressMap.put(serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
                 } catch (Exception e) {
-                    logger.log(Level.SEVERE, "checkHttpAddressHealth check " + serviceName + " error", e);
+                    logger.log(Level.SEVERE, "reloadHttpAddressHealth check " + serviceName + " error", e);
                 }
             });
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, "checkHttpAddressHealth check error", ex);
+            logger.log(Level.SEVERE, "reloadHttpAddressHealth check error", ex);
         }
     }
 
@@ -215,9 +249,22 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
     }
 
+    @Override //获取SNCP远程服务的可用ip列表
+    public CompletableFuture<Set<InetSocketAddress>> querySncpAddress(String protocol, String module, String resname) {
+        final String serviceName = generateSncpServiceName(protocol, module, resname);
+        Set<InetSocketAddress> rs = sncpAddressMap.get(serviceName);
+        if (rs != null) {
+            return CompletableFuture.completedFuture(rs);
+        }
+        return queryAddress(serviceName).thenApply(t -> {
+            sncpAddressMap.put(serviceName, t);
+            return t;
+        });
+    }
+
     @Override //获取MQTP的HTTP远程服务的可用ip列表, key = serviceName的后半段
-    public CompletableFuture<Map<String, Collection<InetSocketAddress>>> queryMqtpAddress(String protocol, String module, String resname) {
-        final Map<String, Collection<InetSocketAddress>> rsmap = new ConcurrentHashMap<>();
+    public CompletableFuture<Map<String, Set<InetSocketAddress>>> queryMqtpAddress(String protocol, String module, String resname) {
+        final Map<String, Set<InetSocketAddress>> rsmap = new ConcurrentHashMap<>();
         final String serviceNamePrefix = generateHttpServiceName(protocol, module, null) + ":";
         mqtpAddressMap.keySet().stream().filter(k -> k.startsWith(serviceNamePrefix))
             .forEach(sn -> rsmap.put(sn.substring(serviceNamePrefix.length()), mqtpAddressMap.get(sn)));
@@ -225,9 +272,9 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     @Override //获取HTTP远程服务的可用ip列表
-    public CompletableFuture<Collection<InetSocketAddress>> queryHttpAddress(String protocol, String module, String resname) {
+    public CompletableFuture<Set<InetSocketAddress>> queryHttpAddress(String protocol, String module, String resname) {
         final String serviceName = generateHttpServiceName(protocol, module, resname);
-        Collection<InetSocketAddress> rs = httpAddressMap.get(serviceName);
+        Set<InetSocketAddress> rs = httpAddressMap.get(serviceName);
         if (rs != null) {
             return CompletableFuture.completedFuture(rs);
         }
@@ -238,11 +285,11 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     @Override
-    protected CompletableFuture<Collection<InetSocketAddress>> queryAddress(final ClusterEntry entry) {
+    protected CompletableFuture<Set<InetSocketAddress>> queryAddress(final ClusterEntry entry) {
         return queryAddress(entry.serviceName);
     }
 
-    private CompletableFuture<Collection<InetSocketAddress>> queryAddress(final String serviceName) {
+    private CompletableFuture<Set<InetSocketAddress>> queryAddress(final String serviceName) {
         final HttpClient client = (HttpClient) httpClient;
         String url = this.apiUrl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
         HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
