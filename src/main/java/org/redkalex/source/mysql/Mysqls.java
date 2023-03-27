@@ -285,7 +285,9 @@ class Mysqls {
             buffer.put((byte) 254);
             writeLong(buffer, length);
         }
-        if (src.length > 0) buffer.put(src);
+        if (src.length > 0) {
+            buffer.put(src);
+        }
     }
 
     protected static void writeWithLength(ByteArray buffer, byte[] src, byte nullValue) {
@@ -351,8 +353,12 @@ class Mysqls {
 
     protected static byte[] readBytesWithLength(ByteBuffer buffer) {
         int length = (int) readLength(buffer);
-        if (length == -1) return null;
-        if (length <= 0) return new byte[0];
+        if (length == -1) {
+            return null;
+        }
+        if (length <= 0) {
+            return new byte[0];
+        }
         byte[] bs = new byte[length];
         buffer.get(bs);
         return bs;
@@ -360,19 +366,27 @@ class Mysqls {
 
     protected static String readUTF8StringWithLength(ByteBuffer buffer) {
         int length = (int) readLength(buffer);
-        if (length == -1) return null;
-        if (length <= 0) return "";
+        if (length == -1) {
+            return null;
+        }
+        if (length <= 0) {
+            return "";
+        }
         byte[] bs = new byte[length];
         buffer.get(bs);
         return new String(bs, StandardCharsets.UTF_8);
     }
 
     protected static String readUTF8StringWithTerm(ByteBuffer buffer, ByteArray array, int limit) {
-        if (limit == 0) return "";
+        if (limit == 0) {
+            return "";
+        }
         array.clear();
         while (limit > 0) {
             byte b = buffer.get();
-            if (b == 0) break;
+            if (b == 0) {
+                break;
+            }
             array.put(b);
             limit--;
         }
@@ -389,7 +403,9 @@ class Mysqls {
         array.clear();
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
             array.put(c);
-            if (!buffer.hasRemaining()) break;
+            if (!buffer.hasRemaining()) {
+                break;
+            }
         }
         return array.getBytes();
     }
@@ -406,7 +422,9 @@ class Mysqls {
         array.clear();
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
             array.put(c);
-            if (!buffer.hasRemaining()) break;
+            if (!buffer.hasRemaining()) {
+                break;
+            }
         }
         return array.toString(StandardCharsets.US_ASCII);
     }
@@ -418,7 +436,9 @@ class Mysqls {
     }
 
     protected static byte[] scramble411(String password, byte[] seeds) {
-        if (password == null || password.isEmpty()) return null;
+        if (password == null || password.isEmpty()) {
+            return null;
+        }
         MessageDigest md = null;
         try {
             md = MessageDigest.getInstance("SHA-1");
@@ -443,7 +463,9 @@ class Mysqls {
     }
 
     protected static byte[] scrambleCachingSha2(String password, byte[] seeds) {
-        if (password == null || password.isEmpty()) return null;
+        if (password == null || password.isEmpty()) {
+            return null;
+        }
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] passwordBytes = password.getBytes();

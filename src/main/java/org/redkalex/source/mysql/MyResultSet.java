@@ -101,7 +101,7 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{\"rowDesc\":" + rowDesc + ", \"rowTable\":" + (request == null || request.info == null ? null : request.info.getOriginTable()) + ", \"rowData_size\":" + (rowData == null ? -1 : rowData.size()) + ", \"updateEffectCount\":" + updateEffectCount + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{\"rowDesc\":" + rowDesc + ", \"rowTable\":" + (request == null || request.info == null ? null : request.info.getOriginTable()) + ", \"rowDataSize\":" + (rowData == null ? -1 : rowData.size()) + ", \"updateEffectCount\":" + updateEffectCount + "}";
     }
 
     public MyResultSet increUpdateEffectCount(int c) {
@@ -110,7 +110,9 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
     }
 
     public MyResultSet increBatchEffectCount(int length, int c) {
-        if (batchEffectCounts == null) batchEffectCounts = new int[length];
+        if (batchEffectCounts == null) {
+            batchEffectCounts = new int[length];
+        }
         batchEffectCounts[effectRespCount] = c;
         return this;
     }
@@ -130,7 +132,9 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
 
     @Override
     public boolean next() {
-        if (this.rowData.isEmpty()) return false;
+        if (this.rowData.isEmpty()) {
+            return false;
+        }
         if (++this.rowIndex < this.rowData.size()) {
             this.currRow = this.rowData.get(this.rowIndex);
             return true;
@@ -155,7 +159,9 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
     }
 
     private Map<String, Integer> colmap() {
-        if (colmap != null) return colmap;
+        if (colmap != null) {
+            return colmap;
+        }
         colmap = new HashMap<>();
         int i = -1;
         for (MyRowColumn col : this.rowDesc.getColumns()) {

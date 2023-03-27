@@ -82,12 +82,16 @@ public class MyReqExtended extends MyClientRequest {
         Logger logger = myconn.logger();
         if (prepared.get()) {
             this.sendPrepare = false; //此对象会复用，第二次调用
-            if (MysqlDataSource.debug) logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writeBind: " + this);
+            if (MysqlDataSource.debug) {
+                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writeBind: " + this);
+            }
             writeBind(myconn, array);
         } else {
             this.sendPrepare = true;
             prepared.set(true);
-            if (MysqlDataSource.debug) logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writePrepare: " + this);
+            if (MysqlDataSource.debug) {
+                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writePrepare: " + this);
+            }
             writePrepare(myconn, array);
         }
     }
@@ -155,7 +159,9 @@ public class MyReqExtended extends MyClientRequest {
             for (int i = 0; i < numOfParams; i++) {
                 Object param = params[i];
                 int t = MysqlType.getTypeFromObject(param);
-                if (param == null) continue;
+                if (param == null) {
+                    continue;
+                }
                 MysqlType.writePrepareParam(array, t, param);
             }
         }

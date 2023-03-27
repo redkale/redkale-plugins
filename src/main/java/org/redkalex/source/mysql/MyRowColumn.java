@@ -44,7 +44,9 @@ public class MyRowColumn {
     public boolean unsign;
 
     public Serializable getObject(byte[] bs) {
-        if (bs == null) return null;
+        if (bs == null) {
+            return null;
+        }
         final int mytype = type;
         if (mytype == FIELD_TYPE_BIT) {
             return bs[0];

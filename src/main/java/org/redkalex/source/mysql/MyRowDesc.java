@@ -28,7 +28,9 @@ public class MyRowDesc {
     }
 
     public int length() {
-        if (columns == null) return -1;
+        if (columns == null) {
+            return -1;
+        }
         return columns.length;
     }
 

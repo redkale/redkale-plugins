@@ -378,8 +378,12 @@ public class MysqlType {
     }
 
     public static <T> byte[] formatPrepareParam(EntityInfo<T> info, Attribute<T, Serializable> attr, Object param) {
-        if (param == null && info.isNotNullJson(attr)) return new byte[0];
-        if (param == null) return null;
+        if (param == null && info.isNotNullJson(attr)) {
+            return new byte[0];
+        }
+        if (param == null) {
+            return null;
+        }
         if (param instanceof CharSequence) {
             return param.toString().getBytes(StandardCharsets.UTF_8);
         }
@@ -399,7 +403,9 @@ public class MysqlType {
         }
         if (!(param instanceof Number) && !(param instanceof CharSequence) && !(param instanceof java.util.Date)
             && !param.getClass().getName().startsWith("java.sql.") && !param.getClass().getName().startsWith("java.time.")) {
-            if (attr == null) return info.getJsonConvert().convertTo(param).getBytes(StandardCharsets.UTF_8);
+            if (attr == null) {
+                return info.getJsonConvert().convertTo(param).getBytes(StandardCharsets.UTF_8);
+            }
             return info.getJsonConvert().convertTo(attr.genericType(), param).getBytes(StandardCharsets.UTF_8);
         }
         return String.valueOf(param).getBytes(StandardCharsets.UTF_8);

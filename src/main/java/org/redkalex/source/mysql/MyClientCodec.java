@@ -46,7 +46,7 @@ public class MyClientCodec extends ClientCodec<MyClientRequest, MyResultSet> {
         return recyclableArray;
     }
 
-    @Override 
+    @Override
     public void decodeMessages(final ByteBuffer realbuf, ByteArray array) {
         MyClientConnection conn = (MyClientConnection) connection;
         if (!realbuf.hasRemaining()) {

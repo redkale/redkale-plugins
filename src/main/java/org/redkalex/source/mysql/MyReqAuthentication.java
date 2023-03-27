@@ -40,7 +40,9 @@ public class MyReqAuthentication extends MyClientRequest {
 
     // 参考包: com.mysql.cj.protocol.a.authentication
     private byte[] formatPassword(final String password) {
-        if (password == null || password.isEmpty()) return null;
+        if (password == null || password.isEmpty()) {
+            return null;
+        }
         byte[] seed = Utility.append(handshake.seed, handshake.seed2);
         if ("caching_sha2_password".equals(handshake.authPluginName)) {
             return Mysqls.scrambleCachingSha2(password, seed);
@@ -111,7 +113,9 @@ public class MyReqAuthentication extends MyClientRequest {
             Mysqls.writeWithLength(array, attrsArray.getBytes());
         }
         Mysqls.writeUB3(array, startPos, array.length() - startPos - 4);
-        if (MysqlDataSource.debug) MyClientCodec.logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 发送 MyReqAuthentication length=" + array.length());
+        if (MysqlDataSource.debug) {
+            MyClientCodec.logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 发送 MyReqAuthentication length=" + array.length());
+        }
     }
 
     private int getClientCapabilities() {
@@ -161,7 +165,9 @@ public class MyReqAuthentication extends MyClientRequest {
             Mysqls.writeUB3(array, scrambledPassword.length);
             array.putByte(3);
             array.put(scrambledPassword);
-            if (MysqlDataSource.debug) MyClientCodec.logger.log(Level.FINEST, Utility.nowMillis() + ": " + conn + ", 发送 MyReqAuthSwitch length=" + array.length());
+            if (MysqlDataSource.debug) {
+                MyClientCodec.logger.log(Level.FINEST, Utility.nowMillis() + ": " + conn + ", 发送 MyReqAuthSwitch length=" + array.length());
+            }
         }
 
     }

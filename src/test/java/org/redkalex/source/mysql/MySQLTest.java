@@ -46,7 +46,7 @@ public class MySQLTest {
         }
         ExecutorService workExecutor = WorkThread.createExecutor(20, "Thread-%s");
         MysqlDataSource source = new MysqlDataSource();
-        //MysqlDataSource.debug = true;
+        MysqlDataSource.debug = true;
         //DataJdbcSource source = new DataJdbcSource();
         factory.inject(source);
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
@@ -56,6 +56,7 @@ public class MySQLTest {
         //System.out.println("执行结果: " + source.directExecute("SET NAMES UTF8MB4"));
         if (true) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
+            System.out.println("执行结果: " + source.directExecute("UPDATE World set id =0 where id =0"));
             System.out.println("随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
             System.out.println("随机获取World记录2: " + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId())).join());
             System.out.println("随机获取World记录3: " + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId()).join()));
@@ -77,7 +78,7 @@ public class MySQLTest {
             System.out.println();
             System.out.println();
             System.out.println();
-            
+
             if (true) {
                 MysqlDataSource.debug = true;
                 CountDownLatch cdl = new CountDownLatch(50);
