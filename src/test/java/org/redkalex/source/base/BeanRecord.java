@@ -81,8 +81,13 @@ public class BeanRecord {
 
         @Override
         public String[] getTables(String table, FilterNode node) {
+            if (node == null) {
+                return new String[]{table};
+            }
             Object time = node.findValue("createTime");
-            if (time == null) time = node.findValue("#createTime");
+            if (time == null) {
+                time = node.findValue("#createTime");
+            }
             if (time instanceof Long) {
                 return new String[]{getSingleTable(table, (Long) time)};
             }

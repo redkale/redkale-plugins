@@ -3,10 +3,10 @@
 package org.redkalex.source.mysql;
 
 import java.util.Properties;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.util.*;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_IOGROUP;
 
 /**
  *
@@ -20,7 +20,7 @@ public class MySourceTest {
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
-        factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
+        factory.register(RESNAME_APP_CLIENT_IOGROUP, asyncGroup);
 
         Properties prop = new Properties();
         prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8");

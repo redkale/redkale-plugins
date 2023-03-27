@@ -11,7 +11,6 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.json.*;
 import org.redkale.net.AsyncIOGroup;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
@@ -19,6 +18,7 @@ import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODE;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_URL;
 import org.redkale.source.*;
 import org.redkale.util.*;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_IOGROUP;
 
 /**
  *
@@ -483,7 +483,7 @@ public abstract class RedisAbstractTest {
         {
             final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
             asyncGroup.start();
-            factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
+            factory.register(RESNAME_APP_CLIENT_IOGROUP, asyncGroup);
 
             RedisCacheSource source = new RedisCacheSource();
             factory.inject(source);
