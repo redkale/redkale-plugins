@@ -17,7 +17,6 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
 
     public RedisCacheClient(String name, AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, RedisCacheReqAuth authReq, RedisCacheReqDB dbReq) {
         super(name, group, true, address, maxConns, maxPipelines, () -> new RedisCacheReqPing(), () -> new RedisCacheReqClose(), null); //maxConns
-        this.connectionContextName = "redkalex-redis-client-connection-" + key;
         if (authReq != null || dbReq != null) {
             if (authReq != null && dbReq != null) {
                 this.authenticate = conn -> writeChannel(conn, authReq).thenCompose(v -> writeChannel(conn, dbReq)).thenApply(v -> conn);

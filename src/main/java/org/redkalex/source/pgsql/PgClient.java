@@ -33,7 +33,6 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
     public PgClient(String name, AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, boolean autoddl, final Properties prop, final SourceUrlInfo info) {
         super(name, group, true, address, maxConns, maxPipelines, () -> new PgReqPing(), () -> new PgReqClose(), null); //maxConns
         this.autoddl = autoddl;
-        this.connectionContextName = "redkalex-pgsql-client-connection-" + key;
         this.authenticate = conn -> writeChannel(conn, new PgReqAuthentication(info)).thenCompose((PgResultSet rs0) -> {
             PgRespAuthResultSet rs = (PgRespAuthResultSet) rs0;
             if (rs.isAuthOK()) {

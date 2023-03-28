@@ -5,11 +5,11 @@
  */
 package org.redkalex.cache.redis;
 
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.json.JsonFactory;
 import org.redkale.net.AsyncIOGroup;
 import static org.redkale.source.AbstractCacheSource.*;
 import org.redkale.util.*;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_IOGROUP;
 
 /**
  *
@@ -23,7 +23,7 @@ public class RedisCacheSourceTest extends RedisAbstractTest {
         final ResourceFactory factory = ResourceFactory.create();
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         asyncGroup.start();
-        factory.register(RESNAME_APP_CLIENT_IOGROUP, asyncGroup);
+        factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         RedisCacheSource source = new RedisCacheSource();
         factory.inject(source);

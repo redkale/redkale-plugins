@@ -15,6 +15,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.BiConsumer;
 import java.util.stream.*;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingBaseHandler;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.*;
@@ -23,7 +24,6 @@ import org.redkale.persistence.*;
 import static org.redkale.source.AbstractDataSource.DATA_SOURCE_MAXCONNS;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_IOGROUP;
 
 /**
  *
@@ -53,7 +53,7 @@ public class PgSQLTest {
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
-        factory.register(RESNAME_APP_CLIENT_IOGROUP, asyncGroup);
+        factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         final PgsqlDataSource source = new PgsqlDataSource();
         PgsqlDataSource.debug = true;

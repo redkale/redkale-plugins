@@ -17,6 +17,7 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import static org.redkale.boot.Application.RESNAME_APP_EXECUTOR;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
@@ -25,7 +26,6 @@ import org.redkale.net.client.ClientAddress;
 import org.redkale.service.Local;
 import org.redkale.source.CacheSource;
 import org.redkale.util.*;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_IOGROUP;
 
 /**
  * 详情见: https://redkale.org
@@ -56,7 +56,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    @Resource(name = RESNAME_APP_CLIENT_IOGROUP, required = false)
+    @Resource(name = RESNAME_APP_CLIENT_ASYNCGROUP, required = false)
     protected AsyncGroup clientAsyncGroup;
 
     //配置<executor threads="0"> APP_EXECUTOR资源为null
