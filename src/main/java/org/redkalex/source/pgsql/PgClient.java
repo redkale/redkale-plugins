@@ -68,6 +68,10 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
         return super.writeChannel(conn, request, respTransfer);
     }
 
+    protected boolean isThreadLocalConnMode() {
+        return true;
+    }
+
     @Override
     protected CompletableFuture<PgClientConnection> connect() {
         return super.connect();
