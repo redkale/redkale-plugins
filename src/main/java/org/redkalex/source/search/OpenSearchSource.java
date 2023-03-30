@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.IntFunction;
 import java.util.logging.*;
 import java.util.stream.*;
 import org.redkale.annotation.AutoLoad;
@@ -39,6 +40,8 @@ import org.redkale.util.*;
 public final class OpenSearchSource extends AbstractService implements SearchSource, AutoCloseable, Resourcable {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+
+    protected final IntFunction<Serializable[]> serialArrayFunc = Utility.serialArrayFunc();
 
     //key: table, 不能是class，因为存在分表的情况
     protected final ConcurrentHashMap<String, Object> checkedIndexClasses = new ConcurrentHashMap();
@@ -1161,7 +1164,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        Serializable[] ids = pks.toArray(v -> new Serializable[v]);
+        Serializable[] ids = pks.toArray(serialArrayFunc);
         return queryListAsync(info.getType(), null, null, FilterNode.create(info.getPrimary().field(), FilterExpress.IN, ids));
     }
 

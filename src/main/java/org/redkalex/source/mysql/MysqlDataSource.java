@@ -431,7 +431,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final java.util.stream.Stream<D> pks) {
         final long s = System.currentTimeMillis();
         final EntityInfo<T> info = loadEntityInfo(clazz);
-        Serializable[] ids = pks.toArray(v -> new Serializable[v]);
+        Serializable[] ids = pks.toArray(serialArrayFunc);
         MyClient pool = readPool();
         if (info.getTableStrategy() == null && pool.cachePreparedStatements()) {
             String sql = info.getFindQuestionPrepareSQL(ids[0]);

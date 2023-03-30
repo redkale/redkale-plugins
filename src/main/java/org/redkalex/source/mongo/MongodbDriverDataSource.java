@@ -1084,7 +1084,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     @Override
     public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
         final EntityInfo<T> info = loadEntityInfo(clazz);
-        Serializable[] ids = pks.toArray(v -> new Serializable[v]);
+        Serializable[] ids = pks.toArray(serialArrayFunc); 
         return queryListAsync(info.getType(), null, null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
     }
 
