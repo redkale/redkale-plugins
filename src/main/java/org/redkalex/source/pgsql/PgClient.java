@@ -73,11 +73,6 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
     }
 
     @Override
-    protected CompletableFuture<PgClientConnection> connect() {
-        return super.connect();
-    }
-
-    @Override
     protected void handlePingResult(PgClientConnection conn, PgResultSet result) {
         if (result != null) {
             result.close();

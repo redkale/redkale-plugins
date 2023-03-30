@@ -5,7 +5,6 @@
  */
 package org.redkalex.cache.redis;
 
-import java.util.concurrent.CompletableFuture;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 
@@ -33,8 +32,4 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
         return new RedisCacheConnection(this, index, channel);
     }
 
-    @Override
-    protected CompletableFuture<RedisCacheConnection> connect() {
-        return super.connect();
-    }
 }

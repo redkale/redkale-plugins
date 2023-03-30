@@ -59,11 +59,6 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
     }
 
     @Override
-    protected CompletableFuture<MyClientConnection> connect() {
-        return super.connect();
-    }
-
-    @Override
     protected void handlePingResult(MyClientConnection conn, MyResultSet result) {
         if (result != null) {
             result.close();
