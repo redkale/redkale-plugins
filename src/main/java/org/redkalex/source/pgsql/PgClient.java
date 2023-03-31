@@ -68,10 +68,6 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
         return super.writeChannel(conn, request, respTransfer);
     }
 
-    protected boolean isThreadLocalConnMode() {
-        return true;
-    }
-
     @Override
     protected void handlePingResult(PgClientConnection conn, PgResultSet result) {
         if (result != null) {
