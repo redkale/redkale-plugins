@@ -4,7 +4,7 @@
 package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
-import java.util.Objects;
+import java.util.*;
 import java.util.logging.Level;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
@@ -194,6 +194,52 @@ public class PgReqExtended extends PgClientRequest {
                 logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", PARSE, DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
         }
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 71 * hash + this.type;
+        hash = 71 * hash + Objects.hashCode(this.sql);
+        hash = 71 * hash + Objects.hashCode(this.mode);
+        hash = 71 * hash + (this.sendPrepare ? 1 : 0);
+        hash = 71 * hash + this.fetchSize;
+        hash = 71 * hash + Arrays.deepHashCode(this.paramValues);
+        hash = 71 * hash + Arrays.deepHashCode(this.pkValues);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final PgReqExtended other = (PgReqExtended) obj;
+        if (this.type != other.type) {
+            return false;
+        }
+        if (this.mode != other.mode) {
+            return false;
+        }
+        if (this.sendPrepare != other.sendPrepare) {
+            return false;
+        }
+        if (this.fetchSize != other.fetchSize) {
+            return false;
+        }
+        if (!Objects.equals(this.sql, other.sql)) {
+            return false;
+        }
+        if (!Arrays.deepEquals(this.paramValues, other.paramValues)) {
+            return false;
+        }
+        return Arrays.deepEquals(this.pkValues, other.pkValues);
     }
 
     public static enum PgReqExtendMode {

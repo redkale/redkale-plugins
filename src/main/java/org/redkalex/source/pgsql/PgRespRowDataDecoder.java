@@ -38,6 +38,7 @@ public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
             }
             return new PgRowData(byteValues, null);
         }
+        PgPrepareDesc.PgExtendMode mode = prepareDesc.mode();
         //binary
         PgColumnFormat[] formats = prepareDesc.resultFormats();
         Attribute[] attrs = prepareDesc.resultAttrs();
@@ -46,13 +47,13 @@ public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
             realValues[i] = formats[i].decoder().decode(buffer, array, attrs[i], buffer.getInt());
         }
         EntityInfo info = request.info;
-        if (prepareDesc.mode() == FIND_ENTITY) {
+        if (mode == FIND_ENTITY) {
             dataset.oneEntity = info.getFullEntityValue(realValues);
             return PgRowData.NIL;
-        } else if (prepareDesc.mode() == FINDS_ENTITY) {
+        } else if (mode == FINDS_ENTITY) {
             dataset.addEntity(info.getFullEntityValue(realValues));
             return PgRowData.NIL;
-        } else if (prepareDesc.mode() == LISTALL_ENTITY) {
+        } else if (mode == LISTALL_ENTITY) {
             dataset.addEntity(info.getFullEntityValue(realValues));
             return PgRowData.NIL;
         } else {

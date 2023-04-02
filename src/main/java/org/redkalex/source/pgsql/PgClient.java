@@ -8,7 +8,7 @@ package org.redkalex.source.pgsql;
 import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.source.AbstractDataSource.SourceUrlInfo;
@@ -64,7 +64,7 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
     }
 
     @Override
-    protected <T> CompletableFuture<T> writeChannel(ClientConnection conn, PgClientRequest request, Function< PgResultSet, T> respTransfer) {
+    protected <T> CompletableFuture<T> writeChannel(ClientConnection conn, PgClientRequest request, BiFunction<PgClientConnection, PgResultSet, T> respTransfer) {
         return super.writeChannel(conn, request, respTransfer);
     }
 

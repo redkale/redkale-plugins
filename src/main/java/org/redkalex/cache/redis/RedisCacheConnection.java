@@ -6,7 +6,7 @@
 package org.redkalex.cache.redis;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 
@@ -29,7 +29,7 @@ public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, Re
         return super.writeChannel(request);
     }
 
-    protected <T> CompletableFuture<T> writeRequest(RedisCacheRequest request, Function<RedisCacheResult, T> respTransfer) {
+    protected <T> CompletableFuture<T> writeRequest(RedisCacheRequest request, BiFunction<RedisCacheConnection, RedisCacheResult, T> respTransfer) {
         return super.writeChannel(request, respTransfer);
     }
 
