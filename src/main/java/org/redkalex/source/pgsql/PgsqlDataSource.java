@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.*;
+import java.util.function.Function;
 import java.util.logging.Level;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
@@ -198,9 +198,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_INSERT, PgExtendMode.INSERT_ENTITY, sql, 0, objs);
-                BiFunction<PgClientConnection, PgResultSet, Integer> transfer = (connection, dataset) -> {
+                Function<PgResultSet, Integer> transfer = dataset -> {
                     int rs = dataset.getUpdateEffectCount();
-                    connection.offerResultSet(req, dataset);
+                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -299,9 +299,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, caseSql == null ? PgExtendMode.UPDATE_ENTITY : PgExtendMode.UPCASE_ENTITY, sql, 0, objs);
-                BiFunction<PgClientConnection, PgResultSet, Integer> transfer = (connection, dataset) -> {
+                Function<PgResultSet, Integer> transfer = dataset -> {
                     int rs = dataset.getUpdateEffectCount();
-                    connection.offerResultSet(req, dataset);
+                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -380,9 +380,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, pk);
-                BiFunction<PgClientConnection, PgResultSet, T> transfer = (connection, dataset) -> {
+                Function<PgResultSet, T> transfer = dataset -> {
                     T rs = (T) dataset.oneEntity;
-                    connection.offerResultSet(req, dataset);
+                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -411,9 +411,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FINDS_ENTITY, sql, 0, pks);
-                BiFunction<PgClientConnection, PgResultSet, T[]> transfer = (connection, dataset) -> {
+                Function<PgResultSet, T[]> transfer = dataset -> {
                     T[] rs = dataset.listEntity == null ? info.getArrayer().apply(pks.length) : dataset.listEntity.toArray(info.getArrayer());
-                    connection.offerResultSet(req, dataset);
+                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -436,9 +436,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, info);
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FINDS_ENTITY, sql, 0, ids);
-                BiFunction<PgClientConnection, PgResultSet, List<T>> transfer = (connection, dataset) -> {
+                Function<PgResultSet, List<T>> transfer = dataset -> {
                     List<T> rs = dataset.listEntity == null ? new ArrayList<>() : (List) dataset.listEntity;
-                    connection.offerResultSet(req, dataset);
+                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -497,9 +497,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 return pool.connect().thenCompose(conn -> {
                     PgReqExtended req = conn.pollReqExtended(workThread, info);
                     req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, listSql, 0);
-                    BiFunction<PgClientConnection, PgResultSet, Sheet<T>> transfer = (connection, dataset) -> {
+                    Function<PgResultSet, Sheet<T>> transfer = dataset -> {
                         List<T> rs = dataset.listEntity == null ? new ArrayList<>() : (List) dataset.listEntity;
-                        connection.offerResultSet(req, dataset);
+                        conn.offerResultSet(req, dataset);
                         slowLog(s, listSql);
                         return Sheet.asSheet(rs);
                     };
