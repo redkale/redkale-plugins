@@ -20,7 +20,7 @@ import org.redkale.util.Traces;
  *
  * @author zhangjx
  */
-public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
+public class KafkaMessageClientConsumer extends MessageClientConsumer implements Runnable {
 
     protected Properties config;
 
@@ -42,7 +42,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
 
     protected final Condition resumeCondition = resumeLock.newCondition();
 
-    public KafkaMessageConsumer(MessageAgent agent, String[] topics, String group,
+    public KafkaMessageClientConsumer(MessageAgent agent, String[] topics, String group,
         MessageProcessor processor, String servers, Properties consumerConfig) {
         super(agent, topics, group, processor);
         final Properties props = new Properties();
@@ -84,7 +84,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
         }
         this.startFuture.complete(null);
         if (logger.isLoggable(Level.FINE)) {
-            logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuped");
+            logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuped");
         }
 
         try {
@@ -192,17 +192,17 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
             if (this.closeFuture != null) {
                 this.closeFuture.complete(null);
                 if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
+                    logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
                 }
             }
         } catch (Throwable t) {
             if (this.closeFuture != null && !this.closeFuture.isDone()) {
                 this.closeFuture.complete(null);
                 if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
+                    logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
                 }
             }
-            logger.log(Level.SEVERE, MessageConsumer.class.getSimpleName() + "(" + Arrays.toString(this.topics) + ") occur error", t);
+            logger.log(Level.SEVERE, MessageClientConsumer.class.getSimpleName() + "(" + Arrays.toString(this.topics) + ") occur error", t);
         }
     }
 
@@ -217,7 +217,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
             this.thread.setName("MQ-" + consumerid + "-Thread");
             this.startFuture = new CompletableFuture<>();
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuping");
+                logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuping");
             }
             this.thread.start();
             return this.startFuture;
@@ -238,7 +238,7 @@ public class KafkaMessageConsumer extends MessageConsumer implements Runnable {
             }
             this.closeFuture = new CompletableFuture<>();
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, MessageConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdownling");
+                logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdownling");
             }
             this.closed = true;
             resumeLock.lock();

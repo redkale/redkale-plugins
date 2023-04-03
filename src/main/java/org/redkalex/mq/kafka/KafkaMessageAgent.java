@@ -106,8 +106,8 @@ public class KafkaMessageAgent extends MessageAgent {
                 this.reconnectFuture.cancel(true);
                 this.reconnectFuture = null;
             }
-            this.getAllMessageConsumer().forEach(c -> ((KafkaMessageConsumer) c).retryConnect());
-            this.getAllMessageProducer().forEach(c -> ((KafkaMessageProducer) c).retryConnect());
+            this.getMessageClientConsumers().forEach(c -> ((KafkaMessageClientConsumer) c).retryConnect());
+            this.getMessageClientProducers().forEach(c -> ((KafkaMessageClientProducer) c).retryConnect());
         }
     }
 
@@ -187,13 +187,13 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override //创建指定topic的消费处理器
-    public MessageConsumer createConsumer(String[] topics, String consumerid, MessageProcessor processor) {
-        return new KafkaMessageConsumer(this, topics, consumerid, processor, servers, this.consumerConfig);
+    public MessageClientConsumer createMessageClientConsumer(String[] topics, String consumerid, MessageProcessor processor) {
+        return new KafkaMessageClientConsumer(this, topics, consumerid, processor, servers, this.consumerConfig);
     }
 
     @Override //创建指定topic的生产处理器
-    protected MessageProducer createProducer(String name) {
-        return new KafkaMessageProducer(name, this, servers, this.partitions, this.producerConfig);
+    protected MessageClientProducer createMessageClientProducer(String name) {
+        return new KafkaMessageClientProducer(name, this, servers, this.partitions, this.producerConfig);
     }
 
 }
