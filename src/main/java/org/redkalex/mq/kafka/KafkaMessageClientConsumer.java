@@ -43,7 +43,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
     protected final Condition resumeCondition = resumeLock.newCondition();
 
     public KafkaMessageClientConsumer(MessageAgent agent, String[] topics, String group,
-        MessageProcessor processor, String servers, Properties consumerConfig) {
+        MessageClientProcessor processor, String servers, Properties consumerConfig) {
         super(agent, topics, group, processor);
         final Properties props = new Properties();
         props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerid);
@@ -98,7 +98,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     });
                     long ce = System.currentTimeMillis() - cs;
                     if (logger.isLoggable(Level.FINEST) && ce > 100) {
-                        logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
+                        logger.log(Level.FINEST, MessageClientProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
                     }
                 }
                 long s = System.currentTimeMillis();
@@ -114,10 +114,10 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     processor.commit();
                     long e = System.currentTimeMillis() - s;
                     if (logger.isLoggable(Level.FINEST) && e > 10) {
-                        logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
+                        logger.log(Level.FINEST, MessageClientProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
                     }
                 } catch (Throwable e) {
-                    logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
+                    logger.log(Level.SEVERE, MessageClientProcessor.class.getSimpleName() + " process " + msg + " error", e);
                 }
             }
             ConsumerRecords<String, MessageRecord> records;
@@ -157,7 +157,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     });
                     long ce = System.currentTimeMillis() - cs;
                     if (logger.isLoggable(Level.FINEST) && ce > 100) {
-                        logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
+                        logger.log(Level.FINEST, MessageClientProcessor.class.getSimpleName() + " processor async commit in " + ce + "ms");
                     }
                 }
                 long s = System.currentTimeMillis();
@@ -172,10 +172,10 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     processor.commit();
                     long e = System.currentTimeMillis() - s;
                     if (logger.isLoggable(Level.FINEST) && e > 10) {
-                        logger.log(Level.FINEST, MessageProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
+                        logger.log(Level.FINEST, MessageClientProcessor.class.getSimpleName() + Arrays.toString(this.topics) + " processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
                     }
                 } catch (Throwable e) {
-                    logger.log(Level.SEVERE, MessageProcessor.class.getSimpleName() + " process " + msg + " error", e);
+                    logger.log(Level.SEVERE, MessageClientProcessor.class.getSimpleName() + " process " + msg + " error", e);
                 }
                 long e = System.currentTimeMillis() - s;
                 if (e > 1000 && logger.isLoggable(Level.FINE)) {
