@@ -14,10 +14,6 @@ import org.redkale.util.ByteArray;
  */
 public class PgRespCountDecoder extends PgRespDecoder<Integer> {
 
-    private static final String END0 = " 0";
-
-    private static final String END1 = " 1";
-
     public static final PgRespCountDecoder instance = new PgRespCountDecoder();
 
     private PgRespCountDecoder() {

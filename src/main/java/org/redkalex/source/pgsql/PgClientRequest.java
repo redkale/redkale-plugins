@@ -64,11 +64,10 @@ public abstract class PgClientRequest extends ClientRequest {
 
     @Override
     protected boolean recycle() {
-        boolean rs = super.recycle();
-        return rs;
+        return super.recycle();
     }
 
-    protected void writeExecute(ByteArray array, int fetchSize) { // EXECUTE
+    protected final void writeExecute(ByteArray array, int fetchSize) { // EXECUTE
         if (fetchSize < 1) {
             array.put(EXECUTE_BYTES);
         } else {
@@ -79,7 +78,7 @@ public abstract class PgClientRequest extends ClientRequest {
         }
     }
 
-    protected void writeSync(ByteArray array) { // SYNC
+    protected final void writeSync(ByteArray array) { // SYNC
         array.put(SYNC_BYTES);
         this.syncCount++;
     }

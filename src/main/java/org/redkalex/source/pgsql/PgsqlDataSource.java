@@ -178,6 +178,11 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     }
 
     @Override
+    public CompletableFuture<Integer> batchAsync(final DataBatch batch) {
+        return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
+    }
+    
+    @Override
     protected <T> CompletableFuture<Integer> insertDBAsync(EntityInfo<T> info, T... entitys) {
         final long s = System.currentTimeMillis();
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();

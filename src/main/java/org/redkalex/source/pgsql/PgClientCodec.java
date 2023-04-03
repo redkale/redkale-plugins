@@ -420,7 +420,6 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
     }
 
     protected static String readUTF8String(ByteBuffer buffer, ByteArray array) {
-        int i = 0;
         array.clear();
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
             array.put(c);
@@ -432,7 +431,6 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
     }
 
     protected static String readUTF8Base64String(ByteBuffer buffer, ByteArray array) {
-        int i = 0;
         array.clear();
         for (byte c = buffer.get(); c != 0; c = buffer.get()) {
             array.put(c);
