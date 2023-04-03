@@ -4,6 +4,7 @@
 package org.redkalex.source.mysql;
 
 import java.util.Properties;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
@@ -80,15 +81,68 @@ public class MySQLJdbcTest {
         try {
             System.out.println("执行批量操作结果: " + source.batch(batch));
         } catch (Exception e) {
+            e.printStackTrace();
             exception = e;
         }
         Assertions.assertTrue(exception == null);
         r2 = source.find(OneRecord.class, record2.getRecordid());
         Assertions.assertTrue("这是内容2XX".equals(r2.getContent()));
+        r2 = source.findAsync(OneRecord.class, record2.getRecordid()).join();
+        Assertions.assertTrue("这是内容2XX".equals(r2.getContent()));
+        System.out.println(source.queryList(OneRecord.class));
+        System.out.println(source.findsListAsync(OneRecord.class, Stream.of("11", record2.getRecordid())).join());
+        System.out.println(source.findsList(OneRecord.class, Stream.of("11", record2.getRecordid())));
+
+        TwoIntRecord t1 = new TwoIntRecord();
+        t1.setId(1);
+        t1.setRandomNumber(1);
+        TwoIntRecord t2 = new TwoIntRecord();
+        t2.setId(2);
+        t2.setRandomNumber(2);
+        TwoIntRecord t3 = new TwoIntRecord();
+        t3.setId(3);
+        t3.setRandomNumber(3);
+        source.clearTable(TwoIntRecord.class);
+        source.insert(t1, t2, t3);
+
+        t1.setRandomNumber(11);
+        t2.setRandomNumber(22);
+        t3.setRandomNumber(33);
+        source.update(t1, t2, t3);
 
         System.out.println("---------------- 准备关闭DataSource ----------------");
         source.close();
         System.out.println("---------------- 全部执行完毕 ----------------");
+    }
+
+    @Entity
+    public static class TwoIntRecord {
+
+        @Id
+        private int id;
+
+        private int randomNumber;
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public int getRandomNumber() {
+            return randomNumber;
+        }
+
+        public void setRandomNumber(int randomNumber) {
+            this.randomNumber = randomNumber;
+        }
+
+        @Override
+        public String toString() {
+            return JsonConvert.root().convertTo(this);
+        }
     }
 
     @Entity
