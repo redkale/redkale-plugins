@@ -115,6 +115,16 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     }
 
     @Override
+    protected int readMaxConns() {
+        return Utility.cpus();
+    }
+
+    @Override
+    protected int writeMaxConns() {
+        return Utility.cpus();
+    }
+
+    @Override
     public void destroy(AnyValue config) {
         if (readPool != null) {
             readPool.close();

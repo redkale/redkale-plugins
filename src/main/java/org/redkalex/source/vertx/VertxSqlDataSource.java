@@ -119,6 +119,16 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         }
     }
 
+    @Override
+    protected int readMaxConns() {
+        return readPoolOptions.getMaxSize();
+    }
+
+    @Override
+    protected int writeMaxConns() {
+        return writePoolOptions.getMaxSize();
+    }
+
     protected Pool readPool() {
         return readThreadPool;
     }

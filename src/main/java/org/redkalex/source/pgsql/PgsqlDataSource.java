@@ -118,6 +118,16 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     }
 
     @Override
+    protected int readMaxConns() {
+        return Utility.cpus();
+    }
+
+    @Override
+    protected int writeMaxConns() {
+        return Utility.cpus();
+    }
+
+    @Override
     public void destroy(AnyValue config) {
         if (readPool != null) {
             readPool.close();
@@ -181,7 +191,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     public CompletableFuture<Integer> batchAsync(final DataBatch batch) {
         return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
     }
-    
+
     @Override
     protected <T> CompletableFuture<Integer> insertDBAsync(EntityInfo<T> info, T... entitys) {
         final long s = System.currentTimeMillis();
