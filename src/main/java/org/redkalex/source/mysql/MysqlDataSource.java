@@ -116,12 +116,12 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected int readMaxConns() {
-        return Utility.cpus();
+        return readPool.getMaxConns();
     }
 
     @Override
     protected int writeMaxConns() {
-        return Utility.cpus();
+        return writePool.getMaxConns();
     }
 
     @Override
