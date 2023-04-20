@@ -52,11 +52,11 @@ public class MySQLTest {
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println("---------");
         Function<DataResultSet, String> func = set -> set.next() ? ("" + set.getObject(1)) : null;
-        //System.out.println("查询结果: " + source.directQuery("SHOW TABLES", func));
-        //System.out.println("执行结果: " + source.directExecute("SET NAMES UTF8MB4"));
+        //System.out.println("查询结果: " + source.nativeQuery("SHOW TABLES", func));
+        //System.out.println("执行结果: " + source.nativeExecute("SET NAMES UTF8MB4"));
         if (true) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
-            System.out.println("执行结果: " + source.directExecute("UPDATE World set id =0 where id =0"));
+            System.out.println("执行结果: " + source.nativeExecute("UPDATE World set id =0 where id =0"));
             System.out.println("随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
             System.out.println("随机获取World记录2: " + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId())).join());
             System.out.println("随机获取World记录3: " + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId()).join()));
@@ -186,7 +186,7 @@ public class MySQLTest {
         List<Integer> list2 = List.of(3);
         System.out.println(Arrays.toString(source.finds(World.class, list2.stream())));
 
-        int[] cs = source.directExecute("update world set randomNumber =11 where id =2", "update world set randomNumber =11 where id =-1");
+        int[] cs = source.nativeExecute("update world set randomNumber =11 where id =2", "update world set randomNumber =11 where id =-1");
         System.out.println("批量处理结果: " + Arrays.toString(cs));
 
         //if (true) return;

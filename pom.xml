@@ -35,7 +35,7 @@
         <nacos-client.version>2.1.2</nacos-client.version>
         <flink.version>1.16.0</flink.version>
         <mysql.version>8.0.32</mysql.version>
-        <postgresql.version>42.5.1</postgresql.version>
+        <postgresql.version>42.5.2</postgresql.version>
     </properties>
 
     <dependencies>

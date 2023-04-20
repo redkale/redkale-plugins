@@ -671,13 +671,13 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int directExecute(String sql) {
+    public int nativeExecute(String sql) {
         return executeUpdate(null, new String[]{sql}, null, 0, false, null, null).join();
     }
 
     @Local
     @Override
-    public int[] directExecute(final String... sqls) {
+    public int[] nativeExecute(final String... sqls) {
         final long s = System.currentTimeMillis();
         final int[] rs = new int[sqls.length];
         writePool().withTransaction(conn -> {
@@ -698,7 +698,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public <V> V directQuery(String sql, Function<DataResultSet, V> handler) {
+    public <V> V nativeQuery(String sql, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
         return queryResultSet(null, sql).thenApply((VertxResultSet set) -> {
             slowLog(s, sql);
