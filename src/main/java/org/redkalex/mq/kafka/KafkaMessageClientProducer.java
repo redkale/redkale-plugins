@@ -41,8 +41,8 @@ public class KafkaMessageClientProducer extends MessageClientProducer implements
 
     private final ReentrantLock startCloseLock = new ReentrantLock();
 
-    public KafkaMessageClientProducer(String name, MessageAgent messageAgent, String servers, int partitions, Properties producerConfig) {
-        super(name, messageAgent.getLogger());
+    public KafkaMessageClientProducer(String producerName, MessageAgent messageAgent, String servers, int partitions, Properties producerConfig) {
+        super(producerName, messageAgent.getLogger());
         this.partitions = partitions;
         Objects.requireNonNull(messageAgent);
         this.messageAgent = messageAgent;

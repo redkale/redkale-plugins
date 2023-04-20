@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.stream.*;
 import org.redkale.annotation.Comment;
+import org.redkale.annotation.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Service;
 import org.redkale.util.*;
@@ -25,6 +26,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
+@Component
 @Comment("支付服务抽象类")
 public abstract class AbstractPayService implements Service {
 

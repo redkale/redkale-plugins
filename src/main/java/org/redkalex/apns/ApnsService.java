@@ -29,6 +29,7 @@ import org.redkale.util.*;
  * @author zhangjx
  */
 @Local
+@Component
 @AutoLoad(false)
 public final class ApnsService implements Service {
 

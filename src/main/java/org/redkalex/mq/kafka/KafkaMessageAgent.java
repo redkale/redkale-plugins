@@ -192,8 +192,8 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override //创建指定topic的生产处理器
-    protected MessageClientProducer createMessageClientProducer(String name) {
-        return new KafkaMessageClientProducer(name, this, servers, this.partitions, this.producerConfig);
+    protected MessageClientProducer createMessageClientProducer(String producerName) {
+        return new KafkaMessageClientProducer(producerName, this, servers, this.partitions, this.producerConfig);
     }
 
 }

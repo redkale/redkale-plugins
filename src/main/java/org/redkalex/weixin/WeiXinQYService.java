@@ -32,6 +32,7 @@ import static org.redkale.util.Utility.*;
  * @author zhangjx
  */
 @Local
+@Component
 @AutoLoad(false)
 public final class WeiXinQYService implements Service {
 

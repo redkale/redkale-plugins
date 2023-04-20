@@ -31,6 +31,7 @@ import static org.redkale.util.Utility.getHttpContentAsync;
  * @author zhangjx
  */
 @Local
+@Component
 @AutoLoad(false)
 public final class WeiXinMPService implements Service {
 
