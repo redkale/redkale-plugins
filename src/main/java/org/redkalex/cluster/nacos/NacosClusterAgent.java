@@ -60,8 +60,8 @@ public class NacosClusterAgent extends ClusterAgent {
     protected final ConcurrentHashMap<String, Set<InetSocketAddress>> mqtpAddressMap = new ConcurrentHashMap<>();
 
     @Override
-    public void init(ResourceFactory factory, AnyValue config) {
-        super.init(factory, config);
+    public void init(AnyValue config) {
+        super.init(config);
 
         this.apiUrl = config.getValue("apiurl");
         if (this.apiUrl.endsWith("/")) {
