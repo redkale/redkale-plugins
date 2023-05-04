@@ -28,11 +28,11 @@ public class PgReqUpdate extends PgClientRequest {
     protected Object[][] paramValues;
 
     public <T> PgReqUpdate prepare(String sql) {
-        prepare(sql, 0, null);
+        prepare(sql, 0, null, null);
         return this;
     }
 
-    public <T> PgReqUpdate prepare(String sql, int fetchSize, final Attribute<T, Serializable>[] paramAttrs, final Object[]... paramValues) {
+    public <T> PgReqUpdate prepare(String sql, int fetchSize, final Attribute<T, Serializable>[] paramAttrs, final Object[][] paramValues) {
         super.prepare();
         this.sql = sql;
         this.fetchSize = fetchSize;

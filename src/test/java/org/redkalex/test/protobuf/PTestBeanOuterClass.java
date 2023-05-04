@@ -251,7 +251,7 @@ public final class PTestBeanOuterClass {
       floats_ = java.util.Collections.emptyList();
       longs_ = java.util.Collections.emptyList();
       doubles_ = java.util.Collections.emptyList();
-      strings_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      strings_ = com.google.protobuf.LazyStringArrayList.emptyList();
       id_ = 0;
       name_ = "";
       email_ = "";
@@ -2665,7 +2665,7 @@ public final class PTestBeanOuterClass {
         bitField0_ = (bitField0_ & ~0x00000040);
         doubles_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000080);
-        strings_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        strings_ = com.google.protobuf.LazyStringArrayList.emptyList();
         bitField0_ = (bitField0_ & ~0x00000100);
         id_ = 0;
 
@@ -3675,7 +3675,7 @@ public final class PTestBeanOuterClass {
         return this;
       }
 
-      private com.google.protobuf.LazyStringList strings_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private com.google.protobuf.LazyStringList strings_ = com.google.protobuf.LazyStringArrayList.emptyList();
       private void ensureStringsIsMutable() {
         if (!((bitField0_ & 0x00000100) == 0x00000100)) {
           strings_ = new com.google.protobuf.LazyStringArrayList(strings_);
@@ -3749,7 +3749,7 @@ public final class PTestBeanOuterClass {
        * <code>repeated string strings = 9;</code>
        */
       public Builder clearStrings() {
-        strings_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        strings_ = com.google.protobuf.LazyStringArrayList.emptyList();
         bitField0_ = (bitField0_ & ~0x00000100);
         onChanged();
         return this;

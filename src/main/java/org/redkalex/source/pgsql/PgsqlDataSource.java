@@ -238,7 +238,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 }
             }
         }
-        return executeUpdate(info, sqls, null, fetchSize(flipper), false, null);
+        return executeUpdate(info, sqls, null, fetchSize(flipper), false, null, null);
     }
 
     @Override
@@ -252,15 +252,15 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 }
             }
         }
-        return executeUpdate(info, sqls, null, 0, false, null);
+        return executeUpdate(info, sqls, null, 0, false, null, null);
     }
 
     @Override
     protected <T> CompletableFuture<Integer> createTableDBAsync(EntityInfo<T> info, String copyTableSql, final Serializable pk, String... sqls) {
         if (copyTableSql == null) {
-            return executeUpdate(info, sqls, null, 0, false, null);
+            return executeUpdate(info, sqls, null, 0, false, null, null);
         } else {
-            return executeUpdate(info, new String[]{copyTableSql}, null, 0, false, null);
+            return executeUpdate(info, new String[]{copyTableSql}, null, 0, false, null, null);
         }
     }
 
@@ -275,7 +275,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 }
             }
         }
-        return executeUpdate(info, sqls, null, 0, false, null);
+        return executeUpdate(info, sqls, null, 0, false, null, null);
     }
 
     @Override
@@ -766,7 +766,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         return rs;
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String[] sqls, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
+    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String[] sqls, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final Object[][] parameters) {
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currWorkThread();

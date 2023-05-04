@@ -20,22 +20,22 @@
         <maven-surefire-plugin.version>3.0.0</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.0.0</maven-failsafe-plugin.version>
 
-        <netty.version>4.1.82.Final</netty.version>
+        <netty.version>4.1.92.Final</netty.version>
         <enjoy.version>5.0.3</enjoy.version>
-        <freemarker.version>2.3.31</freemarker.version>
-        <slf4j.version>2.0.6</slf4j.version>
-        <kafka.version>3.3.1</kafka.version>
-        <redisson.version>3.17.7</redisson.version>
-        <lettuce.version>6.2.0.RELEASE</lettuce.version>
+        <freemarker.version>2.3.32</freemarker.version>
+        <slf4j.version>2.0.7</slf4j.version>
+        <kafka.version>3.4.0</kafka.version>
+        <redisson.version>3.21.0</redisson.version>
+        <lettuce.version>6.2.4.RELEASE</lettuce.version>
         <vertx-redis.version>4.3.4</vertx-redis.version>
         <vertx-sql.version>4.3.4</vertx-sql.version>
-        <mongodb.version>4.7.1</mongodb.version>
-        <protobuf.version>3.21.7</protobuf.version>
-        <apollo-client.version>2.0.1</apollo-client.version>
-        <nacos-client.version>2.1.2</nacos-client.version>
+        <mongodb.version>4.9.1</mongodb.version>
+        <protobuf.version>3.22.3</protobuf.version>
+        <apollo-client.version>2.1.0</apollo-client.version>
+        <nacos-client.version>2.2.2</nacos-client.version>
         <flink.version>1.16.0</flink.version>
-        <mysql.version>8.0.32</mysql.version>
-        <postgresql.version>42.5.2</postgresql.version>
+        <mysql.version>8.0.33</mysql.version>
+        <postgresql.version>42.6.0</postgresql.version>
     </properties>
 
     <dependencies>
@@ -283,6 +283,7 @@
                     <compilerArgs>
                         <arg>-parameters</arg>
                     </compilerArgs>
+                    <showDeprecation>true</showDeprecation>
                 </configuration>   
             </plugin>
            
