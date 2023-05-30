@@ -28,7 +28,7 @@ public abstract class RedisAbstractTest {
 
     protected static void run(CacheSource source, boolean press) throws Exception {
         System.out.println("------------------------------------");
-        source.del("stritem1", "stritem2");
+        source.del("stritem1", "stritem2", "stritem1x");
         source.setString("stritem1", "value1");
         source.setString("stritem2", "value2");
 
@@ -44,6 +44,14 @@ public abstract class RedisAbstractTest {
         System.out.println("[有值] MGET : " + Arrays.toString(array));
         Assertions.assertTrue(Utility.equalsElement(array, new String[]{"value1", "value2"}));
 
+        Assertions.assertFalse(source.persist("stritem1"));
+        Assertions.assertTrue(source.rename("stritem1", "stritem1x"));
+        Assertions.assertEquals("value1", source.getString("stritem1x")); 
+        Assertions.assertEquals(null, source.getString("stritem1")); 
+        Assertions.assertFalse(source.renamenx("stritem1x", "stritem2"));
+        Assertions.assertEquals("value2", source.getString("stritem2")); 
+        Assertions.assertTrue(source.renamenx("stritem1x", "stritem1"));
+        
         source.del("intitem1", "intitem2");
         source.setLong("intitem1", 333);
         source.setLong("intitem2", 444);

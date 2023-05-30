@@ -673,6 +673,47 @@ public class RedissionCacheSource extends AbstractRedisSource {
         client.getBucket(key).expire(Duration.ofSeconds(expireSeconds));
     }
 
+    //--------------------- persist ------------------------------    
+    @Override
+    public CompletableFuture<Boolean> persistAsync(String key) {
+        return completableFuture(client.getBucket(key).clearExpireAsync());
+    }
+
+    @Override
+    public boolean persist(String key) {
+        return client.getBucket(key).clearExpire();
+    }
+
+    //--------------------- rename ------------------------------    
+    @Override
+    public CompletableFuture<Boolean> renameAsync(String oldKey, String newKey) {
+        return completableFuture(client.getBucket(oldKey).renameAsync(newKey).handle((v, t) -> t == null));
+    }
+
+    @Override
+    public boolean rename(String oldKey, String newKey) {
+        try {
+            client.getBucket(oldKey).rename(newKey);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public CompletableFuture<Boolean> renamenxAsync(String oldKey, String newKey) {
+        return completableFuture(client.getBucket(oldKey).renamenxAsync(newKey));
+    }
+
+    @Override
+    public boolean renamenx(String oldKey, String newKey) {
+        try {
+            return client.getBucket(oldKey).renamenx(newKey);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     //--------------------- del ------------------------------    
     @Override
     public CompletableFuture<Integer> delAsync(String... keys) {
@@ -924,10 +965,16 @@ public class RedissionCacheSource extends AbstractRedisSource {
             if (index >= offset + limit) {
                 break;
             }
-            String field = it.next();
-            byte[] bs = map.get(field);
+            Object field = it.next();
+            if (field == null) {
+                continue;
+            }
+            if (field instanceof byte[]) {
+                field = new String((byte[]) field, StandardCharsets.UTF_8);
+            }
+            byte[] bs = map.get(field.toString());
             if (bs != null) {
-                rs.put(field, decryptValue(key, cryptor, type, bs));
+                rs.put(field.toString(), decryptValue(key, cryptor, type, bs));
             }
         }
         return rs;

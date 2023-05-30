@@ -572,6 +572,38 @@ public final class RedisCacheSource extends AbstractRedisSource {
         expireAsync(key, expireSeconds).join();
     }
 
+    //--------------------- persist ------------------------------    
+    @Override
+    public CompletableFuture<Boolean> persistAsync(String key) {
+        return sendAsync("PERSIST", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBoolValue());
+    }
+
+    @Override
+    public boolean persist(String key) {
+        return persistAsync(key).join();
+    }
+
+    //--------------------- rename ------------------------------    
+    @Override
+    public CompletableFuture<Boolean> renameAsync(String oldKey, String newKey) {
+        return sendAsync("RENAME", oldKey, oldKey.getBytes(StandardCharsets.UTF_8), newKey.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBoolValue());
+    }
+
+    @Override
+    public boolean rename(String oldKey, String newKey) {
+        return renameAsync(oldKey, newKey).join();
+    }
+
+    @Override
+    public CompletableFuture<Boolean> renamenxAsync(String oldKey, String newKey) {
+        return sendAsync("RENAMENX", oldKey, oldKey.getBytes(StandardCharsets.UTF_8), newKey.getBytes(StandardCharsets.UTF_8)).thenApply(v -> v.getBoolValue());
+    }
+
+    @Override
+    public boolean renamenx(String oldKey, String newKey) {
+        return renamenxAsync(oldKey, newKey).join();
+    }
+
     //--------------------- del ------------------------------    
     @Override
     public CompletableFuture<Integer> delAsync(String... keys) {

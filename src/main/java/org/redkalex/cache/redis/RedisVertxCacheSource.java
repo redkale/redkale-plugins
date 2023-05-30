@@ -668,6 +668,38 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         expireAsync(key, expireSeconds).join();
     }
 
+    //--------------------- persist ------------------------------    
+    @Override
+    public CompletableFuture<Boolean> persistAsync(String key) {
+        return sendAsync(Command.PERSIST, key).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
+    }
+
+    @Override
+    public boolean persist(String key) {
+        return persistAsync(key).join();
+    }
+
+    //--------------------- rename ------------------------------    
+    @Override
+    public CompletableFuture<Boolean> renameAsync(String oldKey, String newKey) {
+        return sendAsync(Command.RENAME, oldKey, newKey).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
+    }
+
+    @Override
+    public boolean rename(String oldKey, String newKey) {
+        return renameAsync(oldKey, newKey).join();
+    }
+
+    @Override
+    public CompletableFuture<Boolean> renamenxAsync(String oldKey, String newKey) {
+        return sendAsync(Command.RENAMENX, oldKey, newKey).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
+    }
+
+    @Override
+    public boolean renamenx(String oldKey, String newKey) {
+        return renamenxAsync(oldKey, newKey).join();
+    }
+
     //--------------------- del ------------------------------    
     @Override
     public CompletableFuture<Integer> delAsync(String... keys) {

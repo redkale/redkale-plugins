@@ -897,6 +897,53 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         releaseBytesCommand(command);
     }
 
+//    //--------------------- persist ------------------------------    
+    @Override
+    public CompletableFuture<Boolean> persistAsync(String key) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.persist(key));
+        });
+    }
+
+    @Override
+    public boolean persist(String key) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        boolean rs = command.persist(key);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
+//    //--------------------- rename ------------------------------    
+    @Override
+    public CompletableFuture<Boolean> renameAsync(String oldKey, String newKey) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.rename(oldKey, newKey).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
+        });
+    }
+
+    @Override
+    public boolean rename(String oldKey, String newKey) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        String r = command.rename(oldKey, newKey);
+        releaseBytesCommand(command);
+        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> renamenxAsync(String oldKey, String newKey) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.renamenx(oldKey, newKey));
+        });
+    }
+
+    @Override
+    public boolean renamenx(String oldKey, String newKey) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        Boolean rs = command.renamenx(oldKey, newKey);
+        releaseBytesCommand(command);
+        return rs;
+    }
+
 //    //--------------------- del ------------------------------    
     @Override
     public CompletableFuture<Integer> delAsync(String... keys) {

@@ -50,6 +50,14 @@ public class RedisCacheResult {
         if ("OK".equals(val)) {
             return true;
         }
+        if (val.isEmpty()) {
+            return false;
+        }
+        for (char ch : val.toCharArray()) {
+            if (!Character.isDigit(ch)) {
+                return false;
+            }
+        }
         return Integer.parseInt(val) > 0;
     }
 
@@ -64,16 +72,16 @@ public class RedisCacheResult {
         return val;
     }
 
-    public Double getDoubleValue(Double defvalue) {
-        return frameValue == null ? defvalue : Double.parseDouble(new String(frameValue, StandardCharsets.UTF_8));
+    public Double getDoubleValue(Double defValue) {
+        return frameValue == null ? defValue : Double.parseDouble(new String(frameValue, StandardCharsets.UTF_8));
     }
 
-    public Long getLongValue(Long defvalue) {
-        return frameValue == null ? defvalue : Long.parseLong(new String(frameValue, StandardCharsets.UTF_8));
+    public Long getLongValue(Long defValue) {
+        return frameValue == null ? defValue : Long.parseLong(new String(frameValue, StandardCharsets.UTF_8));
     }
 
-    public Integer getIntValue(Integer defvalue) {
-        return frameValue == null ? defvalue : Integer.parseInt(new String(frameValue, StandardCharsets.UTF_8));
+    public Integer getIntValue(Integer defValue) {
+        return frameValue == null ? defValue : Integer.parseInt(new String(frameValue, StandardCharsets.UTF_8));
     }
 
     public <T> T getObjectValue(String key, RedisCryptor cryptor, Type type) {
