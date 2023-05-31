@@ -46,12 +46,12 @@ public abstract class RedisAbstractTest {
 
         Assertions.assertFalse(source.persist("stritem1"));
         Assertions.assertTrue(source.rename("stritem1", "stritem1x"));
-        Assertions.assertEquals("value1", source.getString("stritem1x")); 
-        Assertions.assertEquals(null, source.getString("stritem1")); 
+        Assertions.assertEquals("value1", source.getString("stritem1x"));
+        Assertions.assertEquals(null, source.getString("stritem1"));
         Assertions.assertFalse(source.renamenx("stritem1x", "stritem2"));
-        Assertions.assertEquals("value2", source.getString("stritem2")); 
+        Assertions.assertEquals("value2", source.getString("stritem2"));
         Assertions.assertTrue(source.renamenx("stritem1x", "stritem1"));
-        
+
         source.del("intitem1", "intitem2");
         source.setLong("intitem1", 333);
         source.setLong("intitem2", 444);
@@ -271,6 +271,22 @@ public abstract class RedisAbstractTest {
         byte[] bs = source.getBytes("byteskey");
         System.out.println("byteskey 值 : " + Arrays.toString(bs));
         Assertions.assertEquals(Arrays.toString(new byte[]{1, 2, 3}), Arrays.toString(bs));
+
+        source.del("hmapall");
+        source.hmset("hmapall", Utility.ofMap("k1", "111", "k2", "222"));
+        Assertions.assertEquals(List.of("111", "222"), source.hvals("hmapall", String.class));
+        Assertions.assertEquals(List.of("111", "222"), source.hvalsString("hmapall"));
+        Assertions.assertEquals(List.of(111L, 222L), source.hvalsLong("hmapall"));
+        Assertions.assertEquals(List.of("111", "222"), source.hvalsAsync("hmapall", String.class).join());
+        Assertions.assertEquals(List.of("111", "222"), source.hvalsStringAsync("hmapall").join());
+        Assertions.assertEquals(List.of(111L, 222L), source.hvalsLongAsync("hmapall").join());
+        Assertions.assertEquals(Utility.ofMap("k1", "111", "k2", "222"), source.hgetall("hmapall", String.class));
+        Assertions.assertEquals(Utility.ofMap("k1", "111", "k2", "222"), source.hgetallString("hmapall"));
+        Assertions.assertEquals(JsonConvert.root().convertTo(Utility.ofMap("k1", 111L, "k2", 222L)), JsonConvert.root().convertTo(source.hgetallLong("hmapall")));
+        Assertions.assertEquals(JsonConvert.root().convertTo(Utility.ofMap("k1", "111", "k2", "222")), JsonConvert.root().convertTo(source.hgetallAsync("hmapall", String.class).join()));
+        Assertions.assertEquals(JsonConvert.root().convertTo(Utility.ofMap("k1", "111", "k2", "222")), JsonConvert.root().convertTo(source.hgetallStringAsync("hmapall").join()));
+        Assertions.assertEquals(JsonConvert.root().convertTo(Utility.ofMap("k1", 111L, "k2", 222L)), JsonConvert.root().convertTo(source.hgetallLongAsync("hmapall").join()));
+
         //h
         source.del("hmap");
         source.hincr("hmap", "key1");
@@ -311,21 +327,21 @@ public abstract class RedisAbstractTest {
         source.hincrby("hmaplong", "key1", 10);
         source.hsetLong("hmaplong", "key2", 30);
 
-        Map<String, Long> longmap = source.hmap("hmaplong", long.class, 0, 10);
+        Map<String, Long> longmap = source.hscan("hmaplong", long.class, 0, 10);
         System.out.println("hmaplong.所有两值 : " + longmap);
         Assertions.assertEquals(longmap.toString(), Utility.ofMap("key1", 10, "key2", 30).toString());
 
         source.del("hmapstr");
         source.hsetString("hmapstr", "key1", "str10");
         source.hsetString("hmapstr", "key2", null);
-        map = source.hmap("hmapstr", String.class, 0, 10);
+        map = source.hscan("hmapstr", String.class, 0, 10);
         System.out.println("hmapstr.所有一值 : " + map);
         Assertions.assertEquals(map.toString(), Utility.ofMap("key1", "str10").toString());
 
         source.del("hmapstrmap");
         source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
         source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
-        map = source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*");
+        map = source.hscan("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*");
         System.out.println("hmapstrmap.无值 : " + map);
         Assertions.assertEquals(map.toString(), Utility.ofMap().toString());
 
@@ -409,6 +425,7 @@ public abstract class RedisAbstractTest {
         source.del("300");
         source.del("stringmap");
         source.del("hmap");
+        source.del("hmapall");
         source.del("hmaplong");
         source.del("hmapstr");
         source.del("hmapstrmap");

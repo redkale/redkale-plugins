@@ -1266,7 +1266,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit, String pattern) {
+    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit, String pattern) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         ScanArgs args = ScanArgs.Builder.limit(limit);
         if (pattern != null) {
@@ -1280,8 +1280,8 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit) {
-        return hmap(key, type, offset, limit, null);
+    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit) {
+        return hscan(key, type, offset, limit, null);
     }
 
     @Override
@@ -1901,12 +1901,12 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(String key, Type type, int offset, int limit) {
-        return hmapAsync(key, type, offset, limit, null);
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(String key, Type type, int offset, int limit) {
+        return hscanAsync(key, type, offset, limit, null);
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(String key, Type type, int offset, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(String key, Type type, int offset, int limit, String pattern) {
         return connectBytesAsync().thenCompose(command -> {
             ScanArgs args = ScanArgs.Builder.limit(limit);
             if (pattern != null) {
@@ -1970,6 +1970,96 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                 return map;
             }));
         });
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, T>> hgetallAsync(String key, final Type type) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.hgetall(key).thenApply((Map<String, byte[]> rs) -> {
+                Map<String, T> map = new LinkedHashMap(rs.size());
+                rs.forEach((k, v) -> {
+                    map.put(k, decryptValue(k, cryptor, type, v));
+                });
+                return map;
+            }));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Map<String, String>> hgetallStringAsync(String key) {
+        return hgetallAsync(key, String.class);
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Long>> hgetallLongAsync(String key) {
+        return hgetallAsync(key, Long.class);
+    }
+
+    @Override
+    public <T> Map<String, T> hgetall(String key, final Type type) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        Map<String, byte[]> rs = command.hgetall(key);
+        releaseBytesCommand(command);
+        Map<String, T> map = new LinkedHashMap(rs.size());
+        rs.forEach((k, v) -> {
+            map.put(k, decryptValue(k, cryptor, type, v));
+        });
+        return map;
+    }
+
+    @Override
+    public Map<String, String> hgetallString(String key) {
+        return hgetall(key, String.class);
+    }
+
+    @Override
+    public Map<String, Long> hgetallLong(String key) {
+        return hgetall(key, Long.class);
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> hvalsAsync(String key, final Type type) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.hvals(key).thenApply((List<byte[]> rs) -> {
+                List< T> list = new ArrayList<>(rs.size());
+                rs.forEach(v -> {
+                    list.add(decryptValue(key, cryptor, type, v));
+                });
+                return list;
+            }));
+        });
+    }
+
+    @Override
+    public CompletableFuture<List< String>> hvalsStringAsync(String key) {
+        return hvalsAsync(key, String.class);
+    }
+
+    @Override
+    public CompletableFuture<List< Long>> hvalsLongAsync(String key) {
+        return hvalsAsync(key, Long.class);
+    }
+
+    @Override
+    public <T> List<T> hvals(String key, final Type type) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        List< byte[]> rs = command.hvals(key);
+        releaseBytesCommand(command);
+        List< T> list = new ArrayList<>(rs.size());
+        rs.forEach(v -> {
+            list.add(decryptValue(key, cryptor, type, v));
+        });
+        return list;
+    }
+
+    @Override
+    public List< String> hvalsString(String key) {
+        return hvals(key, String.class);
+    }
+
+    @Override
+    public List< Long> hvalsLong(String key) {
+        return hvals(key, Long.class);
     }
 
     @Override
@@ -2331,6 +2421,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
@@ -2351,12 +2442,16 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
+    //-------------------------- 过期方法 ----------------------------------
+    
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
         return getLongCollectionAsync(connectStringAsync(), key);
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(boolean set, String... keys) {
         return connectStringAsync().thenCompose(command -> {
             final Map<String, Collection<Long>> map = new LinkedHashMap<>();
@@ -2396,6 +2491,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
@@ -2404,6 +2500,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(boolean set, String... keys) {
         return connectStringAsync().thenCompose(command -> {
             final Map<String, Collection<String>> map = new LinkedHashMap<>();
@@ -2443,6 +2540,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<String>> getexStringCollectionAsync(String key, int expireSeconds) {
         return connectStringAsync().thenCompose(command -> {
             return completableStringFuture(key, null, command, command.expire(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(command, key)));
@@ -2450,6 +2548,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> Collection<T> getCollection(String key, final Type componentType) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         Collection<T> rs = getCollection(command, key, componentType);
@@ -2458,6 +2557,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         final Map<String, Collection<T>> map = new LinkedHashMap<>();
@@ -2475,6 +2575,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public int getCollectionSize(String key) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         final String type = command.type(key);
@@ -2489,6 +2590,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         command.expire(key, Duration.ofSeconds(expireSeconds));
@@ -2498,6 +2600,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public String[] getStringArray(final String... keys) {
         final RedisClusterCommands<String, String> command = connectString();
         List<KeyValue<String, String>> rs = command.mget(keys);
@@ -2517,6 +2620,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Collection<String> getStringCollection(String key) {
         final RedisClusterCommands<String, String> command = connectString();
         Collection<String> rs = getStringCollection(command, key);
@@ -2525,6 +2629,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
         final RedisClusterCommands<String, String> command = connectString();
         final Map<String, Collection<String>> map = new LinkedHashMap<>();
@@ -2542,6 +2647,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Collection<String> getexStringCollection(String key, final int expireSeconds) {
         final RedisClusterCommands<String, String> command = connectString();
         command.expire(key, expireSeconds);
@@ -2551,6 +2657,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Long[] getLongArray(String... keys) {
         final RedisClusterCommands<String, String> command = connectString();
         List<KeyValue<String, String>> rs = command.mget(keys);
@@ -2570,6 +2677,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Collection<Long> getLongCollection(String key) {
         final RedisClusterCommands<String, String> command = connectString();
         Collection<Long> rs = getLongCollection(command, key);
@@ -2577,6 +2685,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return rs;
     }
 
+    @Deprecated(since = "2.8.0")
     protected Collection<Long> getLongCollection(final RedisClusterCommands<String, String> command, String key) {
         final String type = command.type(key);
         Collection<Long> rs;
@@ -2590,6 +2699,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Map<String, Collection<Long>> getLongCollectionMap(boolean set, String... keys) {
         final RedisClusterCommands<String, String> command = connectString();
         final Map<String, Collection<Long>> map = new LinkedHashMap<>();
@@ -2607,6 +2717,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Collection<Long> getexLongCollection(String key, int expireSeconds) {
         final RedisClusterCommands<String, String> command = connectString();
         command.expire(key, expireSeconds);
@@ -2615,6 +2726,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
         return connectStringAsync().thenCompose(command -> {
             return completableStringFuture(null, null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
@@ -2635,6 +2747,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.expire(key, expireSeconds).thenCompose(v -> getCollectionAsync(command, key, componentType)));
@@ -2642,6 +2755,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
             return getCollectionAsync(command, key, componentType);
@@ -2649,6 +2763,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(boolean set, Type componentType, String... keys) {
         return connectBytesAsync().thenCompose(command -> {
             final Map<String, Collection<T>> map = new LinkedHashMap<>();
@@ -2688,6 +2803,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.type(key).thenCompose(type -> {
@@ -2701,6 +2817,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
         return getStringCollectionAsync(connectStringAsync(), key);
     }

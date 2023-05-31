@@ -6,6 +6,7 @@
 package org.redkalex.cache.redis;
 
 import java.lang.reflect.Type;
+import java.math.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.redkale.convert.json.JsonConvert;
@@ -140,11 +141,17 @@ public class RedisCacheResult {
             }
             return (T) val;
         }
-        if (type == boolean.class || type == Boolean.class) {
-            return (T) (Boolean) "t".equalsIgnoreCase(new String(frames, StandardCharsets.UTF_8));
-        }
         if (type == long.class || type == Long.class) {
             return (T) (Long) Long.parseLong(new String(frames, StandardCharsets.UTF_8));
+        }
+        if (type == BigInteger.class) {
+            return (T) new BigInteger(new String(frames, StandardCharsets.UTF_8));
+        }
+        if (type == BigDecimal.class) {
+            return (T) new BigDecimal(new String(frames, StandardCharsets.UTF_8));
+        }
+        if (type == boolean.class || type == Boolean.class) {
+            return (T) (Boolean) "t".equalsIgnoreCase(new String(frames, StandardCharsets.UTF_8));
         }
         if (type == double.class || type == Double.class) {
             return (T) (Double) Double.parseDouble(new String(frames, StandardCharsets.UTF_8));

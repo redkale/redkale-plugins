@@ -259,6 +259,22 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return (T) JsonConvert.root().convertFrom(type, decryptValue(key, cryptor, bs));
     }
 
+    protected <T> T getObjectValue(String key, RedisCryptor cryptor, byte[] bs, Type type) {
+        if (bs == null) {
+            return null;
+        }
+        if (type == byte[].class) {
+            return (T) bs;
+        }
+        if (type == String.class) {
+            return (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8));
+        }
+        if (type == long.class || type == Long.class) {
+            return (T) (Long) Long.parseLong(new String(bs, StandardCharsets.UTF_8));
+        }
+        return (T) JsonConvert.root().convertFrom(type, decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)));
+    }
+
     protected <T> T getObjectValue(String key, RedisCryptor cryptor, Response resp, Type type) {
         return getObjectValue(key, cryptor, resp == null ? null : resp.toString(StandardCharsets.UTF_8), type);
     }
@@ -275,25 +291,35 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return list;
     }
 
-    protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Response gresp, Type type) {
+    protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Response gresp, boolean asMap, Type type) {
         int gsize = gresp.size();
         if (gsize == 0) {
             return new LinkedHashMap<>();
         }
         Map<String, T> map = new LinkedHashMap<>();
-        //resp.tostring = [0, [key1, 10, key2, 30]]
-        for (int j = 0; j < gsize; j++) {
-            Response resp = gresp.get(j);
-            if (resp.type() != ResponseType.MULTI) {
-                continue;
-            }
-            int size = resp.size();
-            for (int i = 0; i < size; i += 2) {
-                String bs1 = resp.get(i).toString(StandardCharsets.UTF_8);
-                String bs2 = resp.get(i + 1).toString(StandardCharsets.UTF_8);
-                T val = getObjectValue(key, cryptor, bs2, type);
+        if (asMap) {
+            for (String field : gresp.getKeys()) {
+                Response resp = gresp.get(field);
+                T val = getObjectValue(key, cryptor, resp.toBytes(), type);
                 if (val != null) {
-                    map.put(getObjectValue(key, cryptor, bs1, String.class).toString(), val);
+                    map.put(field, val);
+                }
+            }
+        } else {
+            //resp.tostring = [0, [key1, 10, key2, 30]]
+            for (int j = 0; j < gsize; j++) {
+                Response resp = gresp.get(j);
+                if (resp.type() != ResponseType.MULTI) {
+                    continue;
+                }
+                int size = resp.size();
+                for (int i = 0; i < size; i += 2) {
+                    String bs1 = resp.get(i).toString(StandardCharsets.UTF_8);
+                    String bs2 = resp.get(i + 1).toString(StandardCharsets.UTF_8);
+                    T val = getObjectValue(key, cryptor, bs2, type);
+                    if (val != null) {
+                        map.put(getObjectValue(key, cryptor, bs1, String.class).toString(), val);
+                    }
                 }
             }
         }
@@ -864,13 +890,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit, String pattern) {
-        return (Map) hmapAsync(key, type, offset, limit, pattern).join();
+    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit, String pattern) {
+        return (Map) hscanAsync(key, type, offset, limit, pattern).join();
     }
 
     @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, int offset, int limit) {
-        return (Map) hmapAsync(key, type, offset, limit).join();
+    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit) {
+        return (Map) hscanAsync(key, type, offset, limit).join();
     }
 
     @Override
@@ -1030,12 +1056,12 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, int offset, int limit) {
-        return hmapAsync(key, type, offset, limit, null);
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, int offset, int limit) {
+        return hscanAsync(key, type, offset, limit, null);
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, int offset, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, int offset, int limit, String pattern) {
         String[] args = new String[pattern == null || pattern.isEmpty() ? 4 : 6];
         int index = -1;
         args[++index] = key;
@@ -1046,7 +1072,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         }
         args[++index] = "COUNT";
         args[++index] = String.valueOf(limit);
-        return sendAsync(Command.HSCAN, args).thenApply(v -> getMapValue(key, cryptor, v, type));
+        return sendAsync(Command.HSCAN, args).thenApply(v -> getMapValue(key, cryptor, v, false, type));
     }
 
     @Override
@@ -1062,6 +1088,66 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Long> hgetLongAsync(final String key, final String field, long defValue) {
         return sendAsync(Command.HGET, key, field).thenApply(v -> getLongValue(v, defValue));
+    }
+
+    @Override
+    public <T> CompletableFuture<Map<String, T>> hgetallAsync(final String key, final Type type) {
+        return sendAsync(Command.HGETALL, key).thenApply(v -> getMapValue(key, cryptor, v, true, type));
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> hvalsAsync(final String key, final Type type) {
+        return sendAsync(Command.HVALS, key).thenApply(v -> (List) getCollectionValue(key, cryptor, v, false, type));
+    }
+
+    @Override
+    public CompletableFuture<Map<String, String>> hgetallStringAsync(final String key) {
+        return hgetallAsync(key, String.class);
+    }
+
+    @Override
+    public CompletableFuture<List<String>> hvalsStringAsync(final String key) {
+        return hvalsAsync(key, String.class);
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Long>> hgetallLongAsync(final String key) {
+        return hgetallAsync(key, Long.class);
+    }
+
+    @Override
+    public CompletableFuture<List<Long>> hvalsLongAsync(final String key) {
+        return hvalsAsync(key, Long.class);
+    }
+
+    @Override
+    public <T> Map<String, T> hgetall(final String key, final Type type) {
+        return (Map) hgetallAsync(key, type).join();
+    }
+
+    @Override
+    public <T> List<T> hvals(final String key, final Type type) {
+        return (List) hvalsAsync(key, type).join();
+    }
+
+    @Override
+    public Map<String, String> hgetallString(final String key) {
+        return hgetallStringAsync(key).join();
+    }
+
+    @Override
+    public List<String> hvalsString(final String key) {
+        return hvalsStringAsync(key).join();
+    }
+
+    @Override
+    public Map<String, Long> hgetallLong(final String key) {
+        return hgetallLongAsync(key).join();
+    }
+
+    @Override
+    public List<Long> hvalsLong(final String key) {
+        return hvalsLongAsync(key).join();
     }
 
     //--------------------- collection ------------------------------  
@@ -1566,7 +1652,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.DBSIZE).thenApply(v -> getLongValue(v, 0L));
     }
 
+    //-------------------------- 过期方法 ----------------------------------
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
         return sendAsync(Command.TYPE, key).thenCompose(t -> {
             String type = t.toString();
@@ -1579,6 +1667,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(final boolean set, String... keys) {
         final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<String>> map = new LinkedHashMap<>();
@@ -1609,26 +1698,31 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> Collection<T> getCollection(String key, final Type componentType) {
         return (Collection) getCollectionAsync(key, componentType).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Long[] getLongArray(final String... keys) {
         return getLongArrayAsync(keys).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public String[] getStringArray(final String... keys) {
         return getStringArrayAsync(keys).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
         return (Map) getCollectionMapAsync(set, componentType, keys).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
         return sendAsync(Command.TYPE, key).thenCompose(t -> {
             String type = t.toString();
@@ -1640,11 +1734,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public int getCollectionSize(String key) {
         return getCollectionSizeAsync(key).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return sendAsync(Command.TYPE, key).thenCompose(t -> {
             String type = t.toString();
@@ -1657,6 +1753,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
         return sendAsync(Command.MGET, keys).thenApply(v -> {
             List list = (List) getCollectionValue(null, null, v, false, long.class);
@@ -1670,6 +1767,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<String[]> getStringArrayAsync(String... keys) {
         return sendAsync(Command.MGET, keys).thenApply(v -> {
             List list = (List) getCollectionValue(keys[0], cryptor, v, false, String.class);
@@ -1683,6 +1781,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<T>> map = new LinkedHashMap<>();
@@ -1716,16 +1815,19 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Collection<String> getStringCollection(String key) {
         return getStringCollectionAsync(key).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
         return getStringCollectionMapAsync(set, keys).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
         return sendAsync(Command.TYPE, key).thenCompose(t -> {
             String type = t.toString();
@@ -1738,6 +1840,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(final boolean set, String... keys) {
         final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<Long>> map = new LinkedHashMap<>();
@@ -1768,42 +1871,50 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Collection<Long> getLongCollection(String key) {
         return getLongCollectionAsync(key).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Map<String, Collection<Long>> getLongCollectionMap(final boolean set, String... keys) {
         return getLongCollectionMapAsync(set, keys).join();
     }
 
     //--------------------- getexCollection ------------------------------  
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
         return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
         return (Collection) getexCollectionAsync(key, expireSeconds, componentType).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<String>> getexStringCollectionAsync(String key, int expireSeconds) {
         return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getStringCollectionAsync(key));
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Collection<String> getexStringCollection(String key, final int expireSeconds) {
         return getexStringCollectionAsync(key, expireSeconds).join();
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
         return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
     }
 
     @Override
+    @Deprecated(since = "2.8.0")
     public Collection<Long> getexLongCollection(String key, final int expireSeconds) {
         return getexLongCollectionAsync(key, expireSeconds).join();
     }

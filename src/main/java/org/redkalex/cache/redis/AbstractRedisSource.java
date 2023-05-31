@@ -44,7 +44,9 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
         this.config = conf;
         super.init(conf);
         this.name = conf.getValue("name", "");
-        if (this.convert == null) this.convert = this.defaultConvert;
+        if (this.convert == null) {
+            this.convert = this.defaultConvert;
+        }
         if (conf != null) {
             String cryptStr = conf.getValue(CACHE_SOURCE_CRYPTOR, "").trim();
             if (!cryptStr.isEmpty()) {
@@ -92,12 +94,19 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     }
 
     protected <T> T decryptValue(String key, RedisCryptor cryptor, Convert c, Type type, byte[] bs) {
-        if (bs == null) return null;
-        if (type == byte[].class) return (T) bs;
+        if (bs == null) {
+            return null;
+        }
+        if (type == byte[].class) {
+            return (T) bs;
+        }
         if (cryptor == null || (type instanceof Class && (((Class) type).isPrimitive() || Number.class.isAssignableFrom((Class) type)))) {
             return (T) (c == null ? this.convert : c).convertFrom(type, bs);
         }
         String deval = cryptor.decrypt(key, new String(bs, StandardCharsets.UTF_8));
+        if (type == String.class) {
+            return (T) deval;
+        }
         return deval == null ? null : (T) (c == null ? this.convert : c).convertFrom(type, deval.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -110,7 +119,9 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     }
 
     protected <T> byte[] encryptValue(String key, RedisCryptor cryptor, Type type, Convert c, T value) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         Type t = type == null ? value.getClass() : type;
         if (cryptor == null && type == String.class) {
             return value.toString().getBytes(StandardCharsets.UTF_8);
@@ -119,7 +130,9 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     }
 
     protected byte[] encryptValue(String key, RedisCryptor cryptor, Type type, byte[] bs) {
-        if (bs == null) return null;
+        if (bs == null) {
+            return null;
+        }
         if (cryptor == null || (type instanceof Class && (((Class) type).isPrimitive() || Number.class.isAssignableFrom((Class) type)))) {
             return bs;
         }
