@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import org.redkale.annotation.AutoLoad;
@@ -1266,22 +1267,23 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit, String pattern) {
+    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         ScanArgs args = ScanArgs.Builder.limit(limit);
         if (pattern != null) {
             args = args.match(pattern);
         }
-        MapScanCursor<String, byte[]> rs = command.hscan(key, new ScanCursor(String.valueOf(offset), false), args);
+        MapScanCursor<String, byte[]> rs = command.hscan(key, new ScanCursor(cursor.toString(), false), args);
         releaseBytesCommand(command);
         final Map<String, T> map = new LinkedHashMap<>();
         rs.getMap().forEach((k, v) -> map.put(k, decryptValue(key, cryptor, type, v)));
+        cursor.set(Integer.parseInt(rs.getCursor()));
         return map;
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit) {
-        return hscan(key, type, offset, limit, null);
+    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit) {
+        return hmap(key, type, cursor, limit, null);
     }
 
     @Override
@@ -1901,20 +1903,24 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(String key, Type type, int offset, int limit) {
-        return hscanAsync(key, type, offset, limit, null);
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(String key, Type type, AtomicInteger cursor, int limit) {
+        return hmapAsync(key, type, cursor, limit, null);
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(String key, Type type, int offset, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(String key, Type type, AtomicInteger cursor, int limit, String pattern) {
         return connectBytesAsync().thenCompose(command -> {
-            ScanArgs args = ScanArgs.Builder.limit(limit);
-            if (pattern != null) {
+            ScanArgs args = new ScanArgs();
+            if (pattern != null && !pattern.isEmpty()) {
                 args = args.match(pattern);
             }
-            return completableBytesFuture(command, command.hscan(key, new ScanCursor(String.valueOf(offset), false), args).thenApply((MapScanCursor<String, byte[]> rs) -> {
+            if (limit > 0) {
+                args = args.limit(limit);
+            }
+            return completableBytesFuture(command, command.hscan(key, new ScanCursor(cursor.toString(), false), args).thenApply((MapScanCursor<String, byte[]> rs) -> {
                 final Map<String, T> map = new LinkedHashMap<>();
                 rs.getMap().forEach((k, v) -> map.put(k, v == null ? null : decryptValue(key, cryptor, type, v)));
+                cursor.set(Integer.parseInt(rs.getCursor()));
                 return map;
             }));
         });
@@ -2443,7 +2449,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     //-------------------------- 过期方法 ----------------------------------
-    
     @Override
     @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {

@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import java.util.stream.Collectors;
@@ -931,9 +932,15 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit, String pattern) {
+    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit) {
+        return hmap(key, type, cursor, limit, null);
+    }
+
+    @Override
+    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        Iterator<String> it = map.keySet(pattern, offset + limit).iterator();
+        final int offset = cursor.get();
+        Iterator<String> it = (pattern == null || pattern.isEmpty() ? map.keySet(offset + limit) : map.keySet(pattern, offset + limit)).iterator();
         final Map<String, T> rs = new LinkedHashMap<>();
         int index = -1;
         while (it.hasNext()) {
@@ -947,34 +954,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
             byte[] bs = map.get(field);
             if (bs != null) {
                 rs.put(field, decryptValue(key, cryptor, type, bs));
-            }
-        }
-        return rs;
-    }
-
-    @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit) {
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        Iterator<String> it = map.keySet(offset + limit).iterator();
-        final Map<String, T> rs = new LinkedHashMap<>();
-        int index = -1;
-        while (it.hasNext()) {
-            if (++index < offset) {
-                continue;
-            }
-            if (index >= offset + limit) {
-                break;
-            }
-            Object field = it.next();
-            if (field == null) {
-                continue;
-            }
-            if (field instanceof byte[]) {
-                field = new String((byte[]) field, StandardCharsets.UTF_8);
-            }
-            byte[] bs = map.get(field.toString());
-            if (bs != null) {
-                rs.put(field.toString(), decryptValue(key, cryptor, type, bs));
             }
         }
         return rs;
@@ -1146,43 +1125,24 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, int offset, int limit) {
-        return CompletableFuture.supplyAsync(() -> {
-            RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-
-            Iterator<String> it = map.keySet(offset + limit).iterator();
-            final Map<String, T> rs = new LinkedHashMap<>();
-            int index = -1;
-            while (it.hasNext()) {
-                if (++index < offset) {
-                    continue;
-                }
-                if (index >= offset + limit) {
-                    break;
-                }
-                String field = it.next();
-                byte[] bs = map.get(field);
-                if (bs != null) {
-                    rs.put(field, decryptValue(key, cryptor, type, bs));
-                }
-            }
-            return rs;
-        });
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit) {
+        return hmapAsync(key, type, cursor, limit, null);
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, int offset, int limit, String pattern) {
-        return CompletableFuture.supplyAsync(() -> {
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+        final int offset = cursor.get();
+        final int end = offset + (limit > 0 ? limit : 0);
+        return supplyAsync(() -> {
             RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-
-            Iterator<String> it = map.keySet(pattern, offset + limit).iterator();
+            Iterator<String> it = ((pattern == null || pattern.isEmpty()) ? map.keySet(end) : map.keySet(pattern, end)).iterator();
             final Map<String, T> rs = new LinkedHashMap<>();
             int index = -1;
             while (it.hasNext()) {
                 if (++index < offset) {
                     continue;
                 }
-                if (index >= offset + limit) {
+                if (index >= end) {
                     break;
                 }
                 String field = it.next();
@@ -1886,7 +1846,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
-        return CompletableFuture.supplyAsync(() -> keys(pattern));
+        return supplyAsync(() -> keys(pattern));
     }
 
     //--------------------- dbsize ------------------------------  

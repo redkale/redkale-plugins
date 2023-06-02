@@ -44,6 +44,8 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
 
     protected byte frameType;
 
+    protected byte[] frameCursor;
+
     protected byte[] frameValue;  //(不包含CRLF)
 
     protected List<byte[]> frameList;  //(不包含CRLF)
@@ -144,6 +146,9 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                     if (sign == TYPE_ARRAY) { //数组中嵌套数组，目前有 HSCAN
                         frameValue = null;
                         if (frameList != null) {
+                            if (frameList.size() == 1) {
+                                frameCursor = frameList.get(0);
+                            }
                             frameList.clear();
                         }
                         clearHalfFrame();
@@ -198,7 +203,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         halfFrameBytes = null;
     }
 
-    @Override 
+    @Override
     public void decodeMessages(ByteBuffer realbuf, ByteArray array) {
         RedisCacheConnection conn = (RedisCacheConnection) connection;
         if (!realbuf.hasRemaining()) {
@@ -221,9 +226,10 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
             if (frameType == TYPE_ERROR) {
                 addMessage(request, new RuntimeException(new String(frameValue, StandardCharsets.UTF_8)));
             } else {
-                addMessage(request, conn.pollResultSet(request).prepare(frameType, frameValue, frameList));
+                addMessage(request, conn.pollResultSet(request).prepare(frameType, frameCursor, frameValue, frameList));
             }
             frameType = 0;
+            frameCursor = null;
             frameValue = null;
             frameList = null;
             halfFrameCmd = 0;

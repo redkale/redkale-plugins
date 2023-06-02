@@ -11,6 +11,7 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import org.redkale.annotation.AutoLoad;
@@ -779,13 +780,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit, String pattern) {
-        return (Map) hscanAsync(key, type, offset, limit, pattern).join();
+    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+        return (Map) hmapAsync(key, type, cursor, limit, pattern).join();
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit) {
-        return (Map) hscanAsync(key, type, offset, limit).join();
+    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit) {
+        return (Map) hmapAsync(key, type, cursor, limit).join();
     }
 
     @Override
@@ -947,23 +948,36 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, int offset, int limit) {
-        return hscanAsync(key, type, offset, limit, null);
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit) {
+        return hmapAsync(key, type, cursor, limit, null);
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, int offset, int limit, String pattern) {
-        byte[][] bs = new byte[pattern == null || pattern.isEmpty() ? 4 : 6][limit];
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+        int c = 2;
+        if (pattern != null && !pattern.isEmpty()) {
+            c += 2;
+        }
+        if (limit > 0) {
+            c += 2;
+        }
+        byte[][] bs = new byte[c][];
         int index = -1;
         bs[++index] = key.getBytes(StandardCharsets.UTF_8);
-        bs[++index] = String.valueOf(offset).getBytes(StandardCharsets.UTF_8);
+        bs[++index] = cursor.toString().getBytes(StandardCharsets.UTF_8);
         if (pattern != null && !pattern.isEmpty()) {
             bs[++index] = "MATCH".getBytes(StandardCharsets.UTF_8);
             bs[++index] = pattern.getBytes(StandardCharsets.UTF_8);
         }
-        bs[++index] = "COUNT".getBytes(StandardCharsets.UTF_8);
-        bs[++index] = String.valueOf(limit).getBytes(StandardCharsets.UTF_8);
-        return sendAsync("HSCAN", key, bs).thenApply(v -> v.getMapValue(key, cryptor, type));
+        if (limit > 0) {
+            bs[++index] = "COUNT".getBytes(StandardCharsets.UTF_8);
+            bs[++index] = String.valueOf(limit).getBytes(StandardCharsets.UTF_8);
+        }
+        return sendAsync("HSCAN", key, bs).thenApply(v -> {
+            Map map = v.getMapValue(key, cryptor, type);
+            cursor.set(v.getCursor());
+            return map;
+        });
     }
 
     @Override
@@ -1617,7 +1631,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     //-------------------------- 过期方法 ----------------------------------
-    
     @Override
     @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {

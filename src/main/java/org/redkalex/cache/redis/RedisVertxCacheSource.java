@@ -11,6 +11,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import org.redkale.annotation.AutoLoad;
@@ -291,7 +292,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return list;
     }
 
-    protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Response gresp, boolean asMap, Type type) {
+    protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Response gresp, AtomicInteger cursor, Type type) {
+        boolean asMap = cursor == null;
         int gsize = gresp.size();
         if (gsize == 0) {
             return new LinkedHashMap<>();
@@ -310,6 +312,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             for (int j = 0; j < gsize; j++) {
                 Response resp = gresp.get(j);
                 if (resp.type() != ResponseType.MULTI) {
+                    cursor.set(Integer.parseInt(new String(resp.toBytes())));
                     continue;
                 }
                 int size = resp.size();
@@ -890,13 +893,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit, String pattern) {
-        return (Map) hscanAsync(key, type, offset, limit, pattern).join();
+    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+        return (Map) hmapAsync(key, type, cursor, limit, pattern).join();
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, int offset, int limit) {
-        return (Map) hscanAsync(key, type, offset, limit).join();
+    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit) {
+        return (Map) hmapAsync(key, type, cursor, limit).join();
     }
 
     @Override
@@ -1056,23 +1059,25 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, int offset, int limit) {
-        return hscanAsync(key, type, offset, limit, null);
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit) {
+        return hmapAsync(key, type, cursor, limit, null);
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, int offset, int limit, String pattern) {
-        String[] args = new String[pattern == null || pattern.isEmpty() ? 4 : 6];
+    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+        String[] args = new String[pattern == null || pattern.isEmpty() ? (limit > 0 ? 4 : 2) : (limit > 0 ? 6 : 4)];
         int index = -1;
         args[++index] = key;
-        args[++index] = String.valueOf(offset);
+        args[++index] = cursor.toString();
         if (pattern != null && !pattern.isEmpty()) {
             args[++index] = "MATCH";
             args[++index] = pattern;
         }
-        args[++index] = "COUNT";
-        args[++index] = String.valueOf(limit);
-        return sendAsync(Command.HSCAN, args).thenApply(v -> getMapValue(key, cryptor, v, false, type));
+        if (limit > 0) {
+            args[++index] = "COUNT";
+            args[++index] = String.valueOf(limit);
+        }
+        return sendAsync(Command.HSCAN, args).thenApply(v -> getMapValue(key, cryptor, v, cursor, type));
     }
 
     @Override
@@ -1092,7 +1097,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Map<String, T>> hgetallAsync(final String key, final Type type) {
-        return sendAsync(Command.HGETALL, key).thenApply(v -> getMapValue(key, cryptor, v, true, type));
+        return sendAsync(Command.HGETALL, key).thenApply(v -> getMapValue(key, cryptor, v, null, type));
     }
 
     @Override

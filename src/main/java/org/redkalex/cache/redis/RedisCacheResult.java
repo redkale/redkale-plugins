@@ -24,12 +24,15 @@ public class RedisCacheResult {
     //*   数组
     protected byte frameType;
 
+    protected byte[] frameCursor;
+
     protected byte[] frameValue;  //(不包含CRLF)
 
     protected List<byte[]> frameList;  //(不包含CRLF)
 
-    public RedisCacheResult prepare(byte byteType, byte[] val, List<byte[]> bytesList) {
+    public RedisCacheResult prepare(byte byteType, byte[] frameCursor, byte[] val, List<byte[]> bytesList) {
         this.frameType = byteType;
+        this.frameCursor = frameCursor;
         this.frameValue = val;
         this.frameList = bytesList;
         return this;
@@ -41,6 +44,14 @@ public class RedisCacheResult {
 
     public byte[] getFrameValue() {
         return frameValue;
+    }
+
+    public int getCursor() {
+        if (frameCursor == null || frameCursor.length < 1) {
+            return -1;
+        } else {
+            return Integer.parseInt(new String(frameCursor));
+        }
     }
 
     public Boolean getBoolValue() {

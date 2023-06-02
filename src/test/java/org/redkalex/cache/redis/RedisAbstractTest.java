@@ -203,7 +203,7 @@ public abstract class RedisAbstractTest {
             }
         });
         mapcol.putAll(news);
-        Assertions.assertEquals(mapcol.toString(), Utility.ofMap("sets3", List.of("setvals2"), "sets4", List.of("setvals1", "setvals2")).toString());
+        Assertions.assertEquals(Utility.ofMap("sets3", List.of("setvals2"), "sets4", List.of("setvals1", "setvals2")).toString(), mapcol.toString());
 
         System.out.println("------------------------------------");
         InetSocketAddress addr88 = new InetSocketAddress("127.0.0.1", 7788);
@@ -251,7 +251,7 @@ public abstract class RedisAbstractTest {
             }
         });
         mapcol.putAll(news2);
-        Assertions.assertEquals(mapcol.toString(), Utility.ofMap("myaddrs", List.of(addr99), "myaddrs2", List.of(addr88, addr99)).toString());
+        Assertions.assertEquals(Utility.ofMap("myaddrs", List.of(addr99), "myaddrs2", List.of(addr88, addr99)).toString(), mapcol.toString());
 
         System.out.println("------------------------------------");
         source.del("myaddrs");
@@ -264,7 +264,7 @@ public abstract class RedisAbstractTest {
 
         map = source.get("mapvals", mapType);
         System.out.println("mapvals:  " + map);
-        Assertions.assertEquals(map.toString(), Utility.ofMap("a", 1, "b", 2).toString());
+        Assertions.assertEquals(Utility.ofMap("a", 1, "b", 2).toString(), map.toString());
 
         source.del("byteskey");
         source.setBytes("byteskey", new byte[]{1, 2, 3});
@@ -299,7 +299,7 @@ public abstract class RedisAbstractTest {
 
         map = source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING);
         System.out.println("hmap.sm 值 : " + map);
-        Assertions.assertEquals(map.toString(), Utility.ofMap("a", "aa", "b", "bb").toString());
+        Assertions.assertEquals(Utility.ofMap("a", "aa", "b", "bb").toString(), map.toString());
 
         col = source.hmget("hmap", String.class, "key1", "key2", "key3");
         System.out.println("hmap.[key1,key2,key3] 值 : " + col);
@@ -326,24 +326,46 @@ public abstract class RedisAbstractTest {
         source.del("hmaplong");
         source.hincrby("hmaplong", "key1", 10);
         source.hsetLong("hmaplong", "key2", 30);
-
-        Map<String, Long> longmap = source.hscan("hmaplong", long.class, 0, 10);
+        AtomicInteger cursor = new AtomicInteger();
+        Map<String, Long> longmap = source.hmap("hmaplong", long.class, cursor, 10);
         System.out.println("hmaplong.所有两值 : " + longmap);
-        Assertions.assertEquals(longmap.toString(), Utility.ofMap("key1", 10, "key2", 30).toString());
+        Assertions.assertEquals(Utility.ofMap("key1", 10, "key2", 30).toString(), longmap.toString());
 
         source.del("hmapstr");
         source.hsetString("hmapstr", "key1", "str10");
         source.hsetString("hmapstr", "key2", null);
-        map = source.hscan("hmapstr", String.class, 0, 10);
+        cursor = new AtomicInteger();
+        map = source.hmap("hmapstr", String.class, cursor, 10);
         System.out.println("hmapstr.所有一值 : " + map);
-        Assertions.assertEquals(map.toString(), Utility.ofMap("key1", "str10").toString());
+        Assertions.assertEquals(Utility.ofMap("key1", "str10").toString(), map.toString());
 
         source.del("hmapstrmap");
         source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
         source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
-        map = source.hscan("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, 0, 10, "key2*");
+        cursor = new AtomicInteger();
+        map = source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, cursor, 10, "key2*");
         System.out.println("hmapstrmap.无值 : " + map);
-        Assertions.assertEquals(map.toString(), Utility.ofMap().toString());
+        Assertions.assertEquals(Utility.ofMap().toString(), map.toString());
+
+        source.del("hmap");
+        String vpref = "v";
+        int ccc = 600;
+        for (int i = 101; i <= ccc + 100; i++) {
+            source.hmset("hmap", "k" + i, vpref + i);
+        }
+        cursor = new AtomicInteger();
+        Map<String, String> smap = source.hmap("hmap", String.class, cursor, 5);
+        System.out.println("hmap.hscan 长度 : " + smap.size() + ", cursor: " + cursor + ", 内容: " + smap);
+        //smap.size 是不确定的，可能是全量，也可能比5多，也可能比5少
+        Assertions.assertFalse(smap.isEmpty());
+        if (smap.size() == ccc) {
+            Assertions.assertTrue(cursor.get() == 0);
+        } else {
+            Assertions.assertTrue(cursor.get() > 0);
+        }
+        cursor = new AtomicInteger();
+        smap = (Map) source.hmapAsync("hmap", String.class, cursor, 5).join();
+        Assertions.assertFalse(smap.isEmpty());
 
         source.del("popset");
         source.saddString("popset", "111");
@@ -376,28 +398,28 @@ public abstract class RedisAbstractTest {
         Thread.sleep(1100);
         Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "haha"));
         Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehe"));
-        Assertions.assertEquals(source.getString("nxexkey1"), "haha");
+        Assertions.assertEquals("haha", source.getString("nxexkey1"));
         source.del("nxexkey1");
         Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 1111));
         Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 2222));
         Thread.sleep(1100);
         Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 111));
         Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 222));
-        Assertions.assertEquals(source.getLong("nxexkey1", 0L), 111L);
+        Assertions.assertEquals(111L, source.getLong("nxexkey1", 0L));
         source.del("nxexkey1");
         Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1, 1}));
         Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2, 2}));
         Thread.sleep(1100);
         Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1}));
         Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2}));
-        Assertions.assertEquals(Arrays.toString(source.getBytes("nxexkey1")), Arrays.toString(new byte[]{1}));
+        Assertions.assertEquals(Arrays.toString(new byte[]{1}), Arrays.toString(source.getBytes("nxexkey1")));
         source.del("nxexkey1");
         Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
         Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
         Thread.sleep(1100);
         Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
         Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
-        Assertions.assertEquals(source.get("nxexkey1", InetSocketAddress.class).toString(), addr88.toString());
+        Assertions.assertEquals(addr88.toString(), source.get("nxexkey1", InetSocketAddress.class).toString());
 
         long dbsize = source.dbsize();
         System.out.println("keys总数量 : " + dbsize);
