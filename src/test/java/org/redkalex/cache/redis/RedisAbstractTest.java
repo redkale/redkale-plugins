@@ -327,7 +327,7 @@ public abstract class RedisAbstractTest {
         source.hincrby("hmaplong", "key1", 10);
         source.hsetLong("hmaplong", "key2", 30);
         AtomicInteger cursor = new AtomicInteger();
-        Map<String, Long> longmap = source.hmap("hmaplong", long.class, cursor, 10);
+        Map<String, Long> longmap = source.hscan("hmaplong", long.class, cursor, 10);
         System.out.println("hmaplong.所有两值 : " + longmap);
         Assertions.assertEquals(Utility.ofMap("key1", 10, "key2", 30).toString(), longmap.toString());
 
@@ -335,7 +335,7 @@ public abstract class RedisAbstractTest {
         source.hsetString("hmapstr", "key1", "str10");
         source.hsetString("hmapstr", "key2", null);
         cursor = new AtomicInteger();
-        map = source.hmap("hmapstr", String.class, cursor, 10);
+        map = source.hscan("hmapstr", String.class, cursor, 10);
         System.out.println("hmapstr.所有一值 : " + map);
         Assertions.assertEquals(Utility.ofMap("key1", "str10").toString(), map.toString());
 
@@ -343,7 +343,7 @@ public abstract class RedisAbstractTest {
         source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
         source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
         cursor = new AtomicInteger();
-        map = source.hmap("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, cursor, 10, "key2*");
+        map = source.hscan("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, cursor, 10, "key2*");
         System.out.println("hmapstrmap.无值 : " + map);
         Assertions.assertEquals(Utility.ofMap().toString(), map.toString());
 
@@ -354,7 +354,7 @@ public abstract class RedisAbstractTest {
             source.hmset("hmap", "k" + i, vpref + i);
         }
         cursor = new AtomicInteger();
-        Map<String, String> smap = source.hmap("hmap", String.class, cursor, 5);
+        Map<String, String> smap = source.hscan("hmap", String.class, cursor, 5);
         System.out.println("hmap.hscan 长度 : " + smap.size() + ", cursor: " + cursor + ", 内容: " + smap);
         //smap.size 是不确定的，可能是全量，也可能比5多，也可能比5少
         Assertions.assertFalse(smap.isEmpty());
@@ -364,7 +364,7 @@ public abstract class RedisAbstractTest {
             Assertions.assertTrue(cursor.get() > 0);
         }
         cursor = new AtomicInteger();
-        smap = (Map) source.hmapAsync("hmap", String.class, cursor, 5).join();
+        smap = (Map) source.hscanAsync("hmap", String.class, cursor, 5).join();
         Assertions.assertFalse(smap.isEmpty());
 
         source.del("popset");
@@ -391,6 +391,15 @@ public abstract class RedisAbstractTest {
         System.out.println("SPOP两个元素：" + source.spopLong("popset", 2));
         System.out.println("SPOP五个元素：" + source.spopLong("popset", 5));
         System.out.println("SPOP一个元素：" + source.spopLong("popset"));
+
+        cursor = new AtomicInteger();
+        List<String> keys = source.scan(cursor, 5);
+        System.out.println("scan 长度 : " + keys.size() + ", cursor: " + cursor + ", 内容: " + keys);
+        Assertions.assertFalse(keys.isEmpty());
+        Assertions.assertTrue(cursor.get() > 0);
+        cursor = new AtomicInteger();
+        keys = (List) source.scanAsync(cursor, 5).join();
+        Assertions.assertFalse(keys.isEmpty());
 
         source.del("nxexkey1");
         Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "hahaha"));

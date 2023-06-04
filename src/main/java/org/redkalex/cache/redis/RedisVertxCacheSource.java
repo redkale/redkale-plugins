@@ -292,6 +292,27 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return list;
     }
 
+    protected List<String> getKeysValue(Response gresp, AtomicInteger cursor) {
+        int gsize = gresp.size();
+        if (gsize == 0) {
+            return new ArrayList<>();
+        }
+        List<String> list = new ArrayList<>();
+        for (int j = 0; j < gsize; j++) {
+            Response resp = gresp.get(j);
+            if (resp.type() != ResponseType.MULTI) {
+                cursor.set(Integer.parseInt(new String(resp.toBytes())));
+                continue;
+            }
+            int size = resp.size();
+            for (int i = 0; i < size; i++) {
+                list.add(resp.get(i).toString(StandardCharsets.UTF_8));
+            }
+        }
+
+        return list;
+    }
+
     protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Response gresp, AtomicInteger cursor, Type type) {
         boolean asMap = cursor == null;
         int gsize = gresp.size();
@@ -893,13 +914,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
-        return (Map) hmapAsync(key, type, cursor, limit, pattern).join();
-    }
-
-    @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit) {
-        return (Map) hmapAsync(key, type, cursor, limit).join();
+    public <T> Map<String, T> hscan(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+        return (Map) hscanAsync(key, type, cursor, limit, pattern).join();
     }
 
     @Override
@@ -1059,12 +1075,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit) {
-        return hmapAsync(key, type, cursor, limit, null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
         String[] args = new String[pattern == null || pattern.isEmpty() ? (limit > 0 ? 4 : 2) : (limit > 0 ? 6 : 4)];
         int index = -1;
         args[++index] = key;
@@ -1572,6 +1583,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public List<String> scan(AtomicInteger cursor, int limit, String pattern) {
+        return scanAsync(cursor, limit, pattern).join();
+    }
+
+    @Override
     public byte[] getBytes(final String key) {
         return getBytesAsync(key).join();
     }
@@ -1644,6 +1660,22 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
         return sendAsync(Command.KEYS, pattern == null || pattern.isEmpty() ? "*" : pattern).thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
+        String[] args = new String[pattern == null || pattern.isEmpty() ? (limit > 0 ? 3 : 1) : (limit > 0 ? 5 : 3)];
+        int index = -1;
+        args[++index] = cursor.toString();
+        if (pattern != null && !pattern.isEmpty()) {
+            args[++index] = "MATCH";
+            args[++index] = pattern;
+        }
+        if (limit > 0) {
+            args[++index] = "COUNT";
+            args[++index] = String.valueOf(limit);
+        }
+        return sendAsync(Command.SCAN, args).thenApply(v -> getKeysValue(v, cursor));
     }
 
     //--------------------- dbsize ------------------------------  

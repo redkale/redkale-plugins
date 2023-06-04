@@ -1267,7 +1267,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> Map<String, T> hscan(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         ScanArgs args = ScanArgs.Builder.limit(limit);
         if (pattern != null) {
@@ -1282,8 +1282,17 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit) {
-        return hmap(key, type, cursor, limit, null);
+    public List<String> scan(AtomicInteger cursor, int limit, String pattern) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        ScanArgs args = ScanArgs.Builder.limit(limit);
+        if (pattern != null) {
+            args = args.match(pattern);
+        }
+        KeyScanCursor<String> rs = command.scan(new ScanCursor(cursor.toString(), false), args);
+        releaseBytesCommand(command);
+        final List<String> list = rs.getKeys();
+        cursor.set(Integer.parseInt(rs.getCursor()));
+        return list;
     }
 
     @Override
@@ -1903,12 +1912,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(String key, Type type, AtomicInteger cursor, int limit) {
-        return hmapAsync(key, type, cursor, limit, null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(String key, Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(String key, Type type, AtomicInteger cursor, int limit, String pattern) {
         return connectBytesAsync().thenCompose(command -> {
             ScanArgs args = new ScanArgs();
             if (pattern != null && !pattern.isEmpty()) {
@@ -1922,6 +1926,24 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                 rs.getMap().forEach((k, v) -> map.put(k, v == null ? null : decryptValue(key, cryptor, type, v)));
                 cursor.set(Integer.parseInt(rs.getCursor()));
                 return map;
+            }));
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
+        return connectBytesAsync().thenCompose(command -> {
+            ScanArgs args = new ScanArgs();
+            if (pattern != null && !pattern.isEmpty()) {
+                args = args.match(pattern);
+            }
+            if (limit > 0) {
+                args = args.limit(limit);
+            }
+            return completableBytesFuture(command, command.scan(new ScanCursor(cursor.toString(), false), args).thenApply((KeyScanCursor<String> rs) -> {
+                final List<String> list = rs.getKeys();
+                cursor.set(Integer.parseInt(rs.getCursor()));
+                return list;
             }));
         });
     }

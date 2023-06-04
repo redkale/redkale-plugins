@@ -780,13 +780,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
-        return (Map) hmapAsync(key, type, cursor, limit, pattern).join();
-    }
-
-    @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit) {
-        return (Map) hmapAsync(key, type, cursor, limit).join();
+    public <T> Map<String, T> hscan(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+        return (Map) hscanAsync(key, type, cursor, limit, pattern).join();
     }
 
     @Override
@@ -948,12 +943,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit) {
-        return hmapAsync(key, type, cursor, limit, null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
         int c = 2;
         if (pattern != null && !pattern.isEmpty()) {
             c += 2;
@@ -1484,6 +1474,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public List<String> scan(AtomicInteger cursor, int limit, String pattern) {
+        return scanAsync(cursor, limit, pattern).join();
+    }
+
+    @Override
     public byte[] getBytes(final String key) {
         return getBytesAsync(key).join();
     }
@@ -1528,6 +1523,33 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<List<String>> keysAsync(String pattern) {
         String key = pattern == null || pattern.isEmpty() ? "*" : pattern;
         return sendAsync("KEYS", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> (List) v.getListValue(key, cryptor, String.class));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
+        int c = 1;
+        if (pattern != null && !pattern.isEmpty()) {
+            c += 2;
+        }
+        if (limit > 0) {
+            c += 2;
+        }
+        byte[][] bs = new byte[c][];
+        int index = -1;
+        bs[++index] = cursor.toString().getBytes(StandardCharsets.UTF_8);
+        if (pattern != null && !pattern.isEmpty()) {
+            bs[++index] = "MATCH".getBytes(StandardCharsets.UTF_8);
+            bs[++index] = pattern.getBytes(StandardCharsets.UTF_8);
+        }
+        if (limit > 0) {
+            bs[++index] = "COUNT".getBytes(StandardCharsets.UTF_8);
+            bs[++index] = String.valueOf(limit).getBytes(StandardCharsets.UTF_8);
+        }
+        return sendAsync("SCAN", null, bs).thenApply(v -> {
+            List<String> list = v.getListValue(null, cryptor, String.class);
+            cursor.set(v.getCursor());
+            return list;
+        });
     }
 
     //--------------------- dbsize ------------------------------  

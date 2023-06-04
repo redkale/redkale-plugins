@@ -932,12 +932,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit) {
-        return hmap(key, type, cursor, limit, null);
-    }
-
-    @Override
-    public <T> Map<String, T> hmap(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> Map<String, T> hscan(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         final int offset = cursor.get();
         Iterator<String> it = (pattern == null || pattern.isEmpty() ? map.keySet(offset + limit) : map.keySet(pattern, offset + limit)).iterator();
@@ -1125,12 +1120,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit) {
-        return hmapAsync(key, type, cursor, limit, null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Map<String, T>> hmapAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
         final int offset = cursor.get();
         final int end = offset + (limit > 0 ? limit : 0);
         return supplyAsync(() -> {
@@ -1153,6 +1143,74 @@ public class RedissionCacheSource extends AbstractRedisSource {
             }
             return rs;
         });
+    }
+
+    @Override
+    public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
+        final int offset = cursor.get();
+        final int end = offset + (limit > 0 ? limit : 0);
+        return supplyAsync(() -> {
+            RKeys keys = client.getKeys();
+            Iterator<String> it;
+            if (pattern != null && !pattern.isEmpty()) {
+                if (limit > 0) {
+                    it = keys.getKeysByPattern(pattern, limit).iterator();
+                } else {
+                    it = keys.getKeysByPattern(pattern).iterator();
+                }
+            } else {
+                if (limit > 0) {
+                    it = keys.getKeys(limit).iterator();
+                } else {
+                    it = keys.getKeys().iterator();
+                }
+            }
+            final List<String> rs = new ArrayList<>();
+            int index = -1;
+            while (it.hasNext()) {
+                if (++index < offset) {
+                    continue;
+                }
+                if (index >= end) {
+                    break;
+                }
+                rs.add(it.next());
+            }
+            return rs;
+        });
+    }
+
+    @Override
+    public List<String> scan(AtomicInteger cursor, int limit, String pattern) {
+        final int offset = cursor.get();
+        final int end = offset + (limit > 0 ? limit : 0);
+        RKeys keys = client.getKeys();
+        Iterator<String> it;
+        if (pattern != null && !pattern.isEmpty()) {
+            if (limit > 0) {
+                it = keys.getKeysByPattern(pattern, limit).iterator();
+            } else {
+                it = keys.getKeysByPattern(pattern).iterator();
+            }
+        } else {
+            if (limit > 0) {
+                it = keys.getKeys(limit).iterator();
+            } else {
+                it = keys.getKeys().iterator();
+            }
+        }
+        final List<String> rs = new ArrayList<>();
+        int index = -1;
+        while (it.hasNext()) {
+            if (++index < offset) {
+                continue;
+            }
+            if (index >= end) {
+                break;
+            }
+            rs.add(it.next());
+        }
+        return rs;
     }
 
     @Override
