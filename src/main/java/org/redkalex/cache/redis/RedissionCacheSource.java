@@ -30,6 +30,7 @@ import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODE;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_URL;
 import org.redkale.source.CacheSource;
 import org.redkale.util.*;
+import static org.redkale.util.Utility.*;
 
 /**
  * //https://www.cnblogs.com/xiami2046/p/13934146.html
@@ -73,7 +74,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
             String password = node.getValue(CACHE_SOURCE_PASSWORD, "").trim();
             if (addr.startsWith("redis")) {
                 URI uri = URI.create(addr);
-                if (uri.getQuery() != null && !uri.getQuery().isEmpty()) {
+                if (isNotEmpty(uri.getQuery())) {
                     String[] qrys = uri.getQuery().split("&|=");
                     for (int i = 0; i < qrys.length; i += 2) {
                         if (CACHE_SOURCE_USER.equals(qrys[i])) {
@@ -935,7 +936,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> Map<String, T> hscan(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         final int offset = cursor.get();
-        Iterator<String> it = (pattern == null || pattern.isEmpty() ? map.keySet(offset + limit) : map.keySet(pattern, offset + limit)).iterator();
+        Iterator<String> it = (isEmpty(pattern) ? map.keySet(offset + limit) : map.keySet(pattern, offset + limit)).iterator();
         final Map<String, T> rs = new LinkedHashMap<>();
         int index = -1;
         while (it.hasNext()) {
@@ -1125,7 +1126,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final int end = offset + (limit > 0 ? limit : 0);
         return supplyAsync(() -> {
             RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-            Iterator<String> it = ((pattern == null || pattern.isEmpty()) ? map.keySet(end) : map.keySet(pattern, end)).iterator();
+            Iterator<String> it = ((isEmpty(pattern)) ? map.keySet(end) : map.keySet(pattern, end)).iterator();
             final Map<String, T> rs = new LinkedHashMap<>();
             int index = -1;
             while (it.hasNext()) {
@@ -1152,7 +1153,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return supplyAsync(() -> {
             RKeys keys = client.getKeys();
             Iterator<String> it;
-            if (pattern != null && !pattern.isEmpty()) {
+            if (isNotEmpty(pattern)) {
                 if (limit > 0) {
                     it = keys.getKeysByPattern(pattern, limit).iterator();
                 } else {
@@ -1186,7 +1187,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final int end = offset + (limit > 0 ? limit : 0);
         RKeys keys = client.getKeys();
         Iterator<String> it;
-        if (pattern != null && !pattern.isEmpty()) {
+        if (isNotEmpty(pattern)) {
             if (limit > 0) {
                 it = keys.getKeysByPattern(pattern, limit).iterator();
             } else {
@@ -1255,7 +1256,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
         return completableFuture((CompletionStage) client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-            if (set == null || set.isEmpty()) {
+            if (isEmpty(set)) {
                 return set;
             }
             Set<T> rs = new LinkedHashSet<>();
@@ -1274,7 +1275,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType) {
         return completableFuture((CompletionStage) client.getList(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-            if (list == null || list.isEmpty()) {
+            if (isEmpty(list)) {
                 return list;
             }
             List<T> rs = new ArrayList<>();
@@ -1412,7 +1413,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             futures[i] = completableFuture(client.getList(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                if (list == null || list.isEmpty()) {
+                if (isEmpty(list)) {
                     return list;
                 }
                 List<T> rs = new ArrayList<>();
@@ -1452,7 +1453,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
             futures[i] = completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-                if (set == null || set.isEmpty()) {
+                if (isEmpty(set)) {
                     return set;
                 }
                 Set<T> rs = new LinkedHashSet<>();
@@ -1658,7 +1659,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Set<T>> spopAsync(String key, int count, Type componentType) {
         final RSet<byte[]> bucket = client.getSet(key, ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.removeRandomAsync(count).thenApply((Set<byte[]> bslist) -> {
-            if (bslist == null || bslist.isEmpty()) {
+            if (isEmpty(bslist)) {
                 return new LinkedHashSet<T>();
             }
             Set<T> rs = new LinkedHashSet<>();
@@ -1823,7 +1824,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     //--------------------- keys ------------------------------  
     @Override
     public List<String> keys(String pattern) {
-        if (pattern == null || pattern.isEmpty()) {
+        if (isEmpty(pattern)) {
             return client.getKeys().getKeysStream().collect(Collectors.toList());
         } else {
             return client.getKeys().getKeysStreamByPattern(pattern).collect(Collectors.toList());
@@ -1904,7 +1905,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
-        if (pattern == null || pattern.isEmpty()) {
+        if (isEmpty(pattern)) {
             return client.reactive().getKeys().getKeys().collectList().toFuture();
         } else {
             return client.reactive().getKeys().getKeysByPattern(pattern).collectList().toFuture();
@@ -1994,7 +1995,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
                 futures[i] = completableFuture(client.getList(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty()) {
+                    if (isEmpty(list)) {
                         return list;
                     }
                     List<T> rs = new ArrayList<>();
@@ -2019,7 +2020,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
             for (int i = 0; i < keys.length; i++) {
                 final String key = keys[i];
                 futures[i] = completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty()) {
+                    if (isEmpty(list)) {
                         return list;
                     }
                     List<T> rs = new ArrayList<>();
@@ -2080,7 +2081,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
             if (String.valueOf(type).contains("list")) {
                 return (CompletionStage) client.getList(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty()) {
+                    if (isEmpty(list)) {
                         return list;
                     }
                     List<T> rs = new ArrayList<>();
@@ -2096,7 +2097,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
                 });
             } else {
                 return (CompletionStage) client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-                    if (set == null || set.isEmpty()) {
+                    if (isEmpty(set)) {
                         return set;
                     }
                     Set<T> rs = new LinkedHashSet<>();
@@ -2144,7 +2145,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
             if (String.valueOf(type).contains("list")) {
                 return (CompletionStage) client.getList(key, StringCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (list == null || list.isEmpty() || cryptor == null) {
+                    if (isEmpty(list) || cryptor == null) {
                         return list;
                     }
                     List<String> rs = new ArrayList<>();

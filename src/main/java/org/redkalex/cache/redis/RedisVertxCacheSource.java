@@ -23,6 +23,7 @@ import org.redkale.service.Local;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
 import org.redkale.source.CacheSource;
 import org.redkale.util.*;
+import static org.redkale.util.Utility.*;
 
 /**
  *
@@ -67,7 +68,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
                 }
             }
             URI uri = URI.create(addrstr);
-            if (uri.getQuery() != null && !uri.getQuery().isEmpty()) {
+            if (isNotEmpty(uri.getQuery())) {
                 String[] qrys = uri.getQuery().split("&|=");
                 for (int i = 0; i < qrys.length; i += 2) {
                     if (CACHE_SOURCE_MAXCONNS.equals(qrys[i])) {
@@ -505,7 +506,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Void> msetAsync(final Map map) {
-        if (map == null || map.isEmpty()) {
+        if (isEmpty(map)) {
             return CompletableFuture.completedFuture(null);
         }
         List<String> bs = new ArrayList<>();
@@ -1052,7 +1053,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Void> hmsetAsync(final String key, final Map map) {
-        if (map == null || map.isEmpty()) {
+        if (isEmpty(map)) {
             return CompletableFuture.completedFuture(null);
         }
         List<String> bs = new ArrayList<>();
@@ -1076,11 +1077,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
-        String[] args = new String[pattern == null || pattern.isEmpty() ? (limit > 0 ? 4 : 2) : (limit > 0 ? 6 : 4)];
+        String[] args = new String[isEmpty(pattern) ? (limit > 0 ? 4 : 2) : (limit > 0 ? 6 : 4)];
         int index = -1;
         args[++index] = key;
         args[++index] = cursor.toString();
-        if (pattern != null && !pattern.isEmpty()) {
+        if (!isEmpty(pattern)) {
             args[++index] = "MATCH";
             args[++index] = pattern;
         }
@@ -1659,15 +1660,15 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
-        return sendAsync(Command.KEYS, pattern == null || pattern.isEmpty() ? "*" : pattern).thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
+        return sendAsync(Command.KEYS, isEmpty(pattern) ? "*" : pattern).thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
     }
 
     @Override
     public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
-        String[] args = new String[pattern == null || pattern.isEmpty() ? (limit > 0 ? 3 : 1) : (limit > 0 ? 5 : 3)];
+        String[] args = new String[isEmpty(pattern) ? (limit > 0 ? 3 : 1) : (limit > 0 ? 5 : 3)];
         int index = -1;
         args[++index] = cursor.toString();
-        if (pattern != null && !pattern.isEmpty()) {
+        if (isNotEmpty(pattern)) {
             args[++index] = "MATCH";
             args[++index] = pattern;
         }

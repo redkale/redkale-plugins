@@ -27,6 +27,7 @@ import org.redkale.net.client.ClientAddress;
 import org.redkale.service.Local;
 import org.redkale.source.CacheSource;
 import org.redkale.util.*;
+import static org.redkale.util.Utility.*;
 
 /**
  * 详情见: https://redkale.org
@@ -90,13 +91,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
                 URI uri = URI.create(addrstr);
                 address = new InetSocketAddress(uri.getHost(), uri.getPort() > 0 ? uri.getPort() : 6379);
                 String userInfo = uri.getUserInfo();
-                if (userInfo == null || userInfo.isEmpty()) {
+                if (isEmpty(userInfo)) {
                     String authority = uri.getAuthority();
                     if (authority != null && authority.indexOf('@') > 0) {
                         userInfo = authority.substring(0, authority.indexOf('@'));
                     }
                 }
-                if (userInfo != null && !userInfo.isEmpty()) {
+                if (isNotEmpty(userInfo)) {
                     urlpwd = userInfo;
                     if (urlpwd.startsWith(":")) {
                         urlpwd = urlpwd.substring(1);
@@ -108,7 +109,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
                         }
                     }
                 }
-                if (uri.getQuery() != null && !uri.getQuery().isEmpty()) {
+                if (isNotEmpty(uri.getQuery())) {
                     String[] qrys = uri.getQuery().split("&|=");
                     for (int i = 0; i < qrys.length; i += 2) {
                         if (CACHE_SOURCE_USER.equals(qrys[i])) {
@@ -143,7 +144,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         int pipelines = conf.getIntValue(CACHE_SOURCE_PIPELINES, urlpipelines);
         RedisCacheClient old = this.client;
         this.client = new RedisCacheClient(resourceName(), ioGroup, resourceName() + "." + db, new ClientAddress(address), maxconns, pipelines,
-            password == null || password.isEmpty() ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
+            isEmpty(password) ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
         if (old != null) {
             old.close();
         }
@@ -337,7 +338,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Void> msetAsync(final Map map) {
-        if (map == null || map.isEmpty()) {
+        if (isEmpty(map)) {
             return CompletableFuture.completedFuture(null);
         }
         List<byte[]> bs = new ArrayList<>();
@@ -920,7 +921,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Void> hmsetAsync(final String key, final Map map) {
-        if (map == null || map.isEmpty()) {
+        if (isEmpty(map)) {
             return CompletableFuture.completedFuture(null);
         }
         List<byte[]> bs = new ArrayList<>();
@@ -945,7 +946,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
         int c = 2;
-        if (pattern != null && !pattern.isEmpty()) {
+        if (isNotEmpty(pattern)) {
             c += 2;
         }
         if (limit > 0) {
@@ -955,7 +956,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         int index = -1;
         bs[++index] = key.getBytes(StandardCharsets.UTF_8);
         bs[++index] = cursor.toString().getBytes(StandardCharsets.UTF_8);
-        if (pattern != null && !pattern.isEmpty()) {
+        if (isNotEmpty(pattern)) {
             bs[++index] = "MATCH".getBytes(StandardCharsets.UTF_8);
             bs[++index] = pattern.getBytes(StandardCharsets.UTF_8);
         }
@@ -1521,14 +1522,14 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
-        String key = pattern == null || pattern.isEmpty() ? "*" : pattern;
+        String key = isEmpty(pattern) ? "*" : pattern;
         return sendAsync("KEYS", key, key.getBytes(StandardCharsets.UTF_8)).thenApply(v -> (List) v.getListValue(key, cryptor, String.class));
     }
 
     @Override
     public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
         int c = 1;
-        if (pattern != null && !pattern.isEmpty()) {
+        if (isNotEmpty(pattern)) {
             c += 2;
         }
         if (limit > 0) {
@@ -1537,7 +1538,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         byte[][] bs = new byte[c][];
         int index = -1;
         bs[++index] = cursor.toString().getBytes(StandardCharsets.UTF_8);
-        if (pattern != null && !pattern.isEmpty()) {
+        if (isNotEmpty(pattern)) {
             bs[++index] = "MATCH".getBytes(StandardCharsets.UTF_8);
             bs[++index] = pattern.getBytes(StandardCharsets.UTF_8);
         }

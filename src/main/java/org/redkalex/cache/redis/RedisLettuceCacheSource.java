@@ -32,6 +32,7 @@ import org.redkale.convert.Convert;
 import org.redkale.service.Local;
 import org.redkale.source.CacheSource;
 import org.redkale.util.*;
+import static org.redkale.util.Utility.*;
 
 /**
  * 注意: 目前Lettuce连接数过小时会出现连接池频频报连接耗尽的错误，推荐使用Redission实现方式。
@@ -90,7 +91,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             String username = node.getValue(CACHE_SOURCE_USER, "").trim();
             String password = node.getValue(CACHE_SOURCE_PASSWORD, "").trim();
             URI uri = URI.create(addr);
-            if (uri.getQuery() != null && !uri.getQuery().isEmpty()) {
+            if (isNotEmpty(uri.getQuery())) {
                 String[] qrys = uri.getQuery().split("&|=");
                 for (int i = 0; i < qrys.length; i += 2) {
                     if (CACHE_SOURCE_MAXCONNS.equals(qrys[i])) {
@@ -571,7 +572,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Void> msetAsync(final Map map) {
-        if (map == null || map.isEmpty()) {
+        if (isEmpty(map)) {
             return CompletableFuture.completedFuture(null);
         }
         Map<String, byte[]> rs = new LinkedHashMap<>();
@@ -644,7 +645,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public void mset(final Map map) {
-        if (map == null || map.isEmpty()) {
+        if (isEmpty(map)) {
             return;
         }
         Map<String, byte[]> rs = new LinkedHashMap<>();
@@ -1553,7 +1554,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     @Override
     public List<String> keys(String pattern) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
-        List<String> rs = command.keys(pattern == null || pattern.isEmpty() ? "*" : pattern);
+        List<String> rs = command.keys(isEmpty(pattern) ? "*" : pattern);
         releaseBytesCommand(command);
         return rs;
     }
@@ -1573,7 +1574,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     protected Collection<String> decryptStringCollection(String key, final boolean set, Collection<String> collection) {
-        if (collection == null || collection.isEmpty() || cryptor == null) {
+        if (isEmpty(collection) || cryptor == null) {
             return collection;
         }
         if (set) {
@@ -1915,7 +1916,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Map<String, T>> hscanAsync(String key, Type type, AtomicInteger cursor, int limit, String pattern) {
         return connectBytesAsync().thenCompose(command -> {
             ScanArgs args = new ScanArgs();
-            if (pattern != null && !pattern.isEmpty()) {
+            if (isNotEmpty(pattern)) {
                 args = args.match(pattern);
             }
             if (limit > 0) {
@@ -1934,7 +1935,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
         return connectBytesAsync().thenCompose(command -> {
             ScanArgs args = new ScanArgs();
-            if (pattern != null && !pattern.isEmpty()) {
+            if (isNotEmpty(pattern)) {
                 args = args.match(pattern);
             }
             if (limit > 0) {
@@ -2275,7 +2276,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public CompletableFuture<List<String>> keysAsync(String pattern) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取key值，无需传cryptor进行解密
-            return completableStringFuture(null, null, command, command.keys(pattern == null || pattern.isEmpty() ? "*" : pattern));
+            return completableStringFuture(null, null, command, command.keys(isEmpty(pattern) ? "*" : pattern));
         });
     }
 
