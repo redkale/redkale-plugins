@@ -400,36 +400,36 @@ public abstract class RedisAbstractTest {
         cursor = new AtomicInteger();
         keys = (List) source.scanAsync(cursor, 5).join();
         Assertions.assertFalse(keys.isEmpty());
-
-        source.del("nxexkey1");
-        Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "hahaha"));
-        Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehehe"));
-        Thread.sleep(1100);
-        Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "haha"));
-        Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehe"));
-        Assertions.assertEquals("haha", source.getString("nxexkey1"));
-        source.del("nxexkey1");
-        Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 1111));
-        Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 2222));
-        Thread.sleep(1100);
-        Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 111));
-        Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 222));
-        Assertions.assertEquals(111L, source.getLong("nxexkey1", 0L));
-        source.del("nxexkey1");
-        Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1, 1}));
-        Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2, 2}));
-        Thread.sleep(1100);
-        Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1}));
-        Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2}));
-        Assertions.assertEquals(Arrays.toString(new byte[]{1}), Arrays.toString(source.getBytes("nxexkey1")));
-        source.del("nxexkey1");
-        Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
-        Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
-        Thread.sleep(1100);
-        Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
-        Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
-        Assertions.assertEquals(addr88.toString(), source.get("nxexkey1", InetSocketAddress.class).toString());
-
+        if (press) {
+            source.del("nxexkey1");
+            Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "hahaha"));
+            Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehehe"));
+            Thread.sleep(1100);
+            Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "haha"));
+            Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehe"));
+            Assertions.assertEquals("haha", source.getString("nxexkey1"));
+            source.del("nxexkey1");
+            Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 1111));
+            Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 2222));
+            Thread.sleep(1100);
+            Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 111));
+            Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 222));
+            Assertions.assertEquals(111L, source.getLong("nxexkey1", 0L));
+            source.del("nxexkey1");
+            Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1, 1}));
+            Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2, 2}));
+            Thread.sleep(1100);
+            Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1}));
+            Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2}));
+            Assertions.assertEquals(Arrays.toString(new byte[]{1}), Arrays.toString(source.getBytes("nxexkey1")));
+            source.del("nxexkey1");
+            Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
+            Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
+            Thread.sleep(1100);
+            Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
+            Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
+            Assertions.assertEquals(addr88.toString(), source.get("nxexkey1", InetSocketAddress.class).toString());
+        }
         long dbsize = source.dbsize();
         System.out.println("keys总数量 : " + dbsize);
         //清除

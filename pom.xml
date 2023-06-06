@@ -25,12 +25,12 @@
         <freemarker.version>2.3.32</freemarker.version>
         <slf4j.version>2.0.7</slf4j.version>
         <kafka.version>3.4.0</kafka.version>
-        <redisson.version>3.21.0</redisson.version>
+        <redisson.version>3.21.3</redisson.version>
         <lettuce.version>6.2.4.RELEASE</lettuce.version>
-        <vertx-redis.version>4.3.4</vertx-redis.version>
-        <vertx-sql.version>4.3.4</vertx-sql.version>
+        <vertx-redis.version>4.4.2</vertx-redis.version>
+        <vertx-sql.version>4.4.2</vertx-sql.version>
         <mongodb.version>4.9.1</mongodb.version>
-        <protobuf.version>3.22.3</protobuf.version>
+        <protobuf.version>3.23.2</protobuf.version>
         <apollo-client.version>2.1.0</apollo-client.version>
         <nacos-client.version>2.2.2</nacos-client.version>
         <flink.version>1.16.0</flink.version>

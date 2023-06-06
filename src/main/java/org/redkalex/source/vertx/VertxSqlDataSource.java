@@ -656,7 +656,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         String code = null;
         if ("postgresql".equals(dbtype())) {
             if (t instanceof io.vertx.pgclient.PgException) {
-                code = ((io.vertx.pgclient.PgException) t).getCode();
+                code = ((io.vertx.pgclient.PgException) t).getSqlState();
             }
         } else if ("mysql".equals(dbtype())) {
             if (t instanceof io.vertx.mysqlclient.MySQLException) {

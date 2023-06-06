@@ -1904,7 +1904,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
-        return supplyAsync(() -> keys(pattern));
+        if (pattern == null || pattern.isEmpty()) {
+            return client.reactive().getKeys().getKeys().collectList().toFuture();
+        } else {
+            return client.reactive().getKeys().getKeysByPattern(pattern).collectList().toFuture();
+        }
     }
 
     //--------------------- dbsize ------------------------------  
