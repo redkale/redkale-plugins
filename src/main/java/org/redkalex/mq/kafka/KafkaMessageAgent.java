@@ -45,7 +45,7 @@ public class KafkaMessageAgent extends MessageAgent {
         this.servers = config.getAnyValue("servers").getValue("value");
         AnyValue cs = config.getAnyValue("controllers");
         this.controllers = cs == null ? this.servers : cs.getValue("value", this.servers);
-        this.checkIntervals = config.getAnyValue("servers").getIntValue("checkintervals", 10);
+        this.checkIntervals = config.getAnyValue("servers").getIntValue("checkIntervals", 10);
 
         AnyValue consumerAnyValue = config.getAnyValue("consumer");
         if (consumerAnyValue != null) {

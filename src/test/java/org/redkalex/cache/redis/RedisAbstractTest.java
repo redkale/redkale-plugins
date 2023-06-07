@@ -366,6 +366,11 @@ public abstract class RedisAbstractTest {
         cursor = new AtomicInteger();
         smap = (Map) source.hscanAsync("hmap", String.class, cursor, 5).join();
         Assertions.assertFalse(smap.isEmpty());
+        if (smap.size() == ccc) {
+            Assertions.assertTrue(cursor.get() == 0);
+        } else {
+            Assertions.assertTrue(cursor.get() > 0);
+        }
 
         source.del("popset");
         source.saddString("popset", "111");

@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import org.redisson.Redisson;
 import org.redisson.api.*;
 import org.redisson.client.codec.*;
+import org.redisson.client.protocol.*;
 import org.redisson.config.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceListener;
@@ -47,6 +48,43 @@ public class RedissionCacheSource extends AbstractRedisSource {
     protected List<String> nodeAddrs;
 
     protected RedissonClient client;
+
+    protected static final Codec SCAN_CODEC = new Codec() {
+        @Override
+        public Decoder<Object> getMapValueDecoder() {
+            return ByteArrayCodec.INSTANCE.getMapValueDecoder();
+        }
+
+        @Override
+        public Encoder getMapValueEncoder() {
+            return ByteArrayCodec.INSTANCE.getMapValueEncoder();
+        }
+
+        @Override
+        public Decoder<Object> getMapKeyDecoder() {
+            return StringCodec.INSTANCE.getMapKeyDecoder();
+        }
+
+        @Override
+        public Encoder getMapKeyEncoder() {
+            return StringCodec.INSTANCE.getMapKeyEncoder();
+        }
+
+        @Override
+        public Decoder<Object> getValueDecoder() {
+            return ByteArrayCodec.INSTANCE.getMapValueDecoder();
+        }
+
+        @Override
+        public Encoder getValueEncoder() {
+            return StringCodec.INSTANCE.getValueEncoder();
+        }
+
+        @Override
+        public ClassLoader getClassLoader() {
+            return ByteArrayCodec.INSTANCE.getClassLoader();
+        }
+    };
 
     @Override
     public void init(AnyValue conf) {
@@ -934,24 +972,35 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> Map<String, T> hscan(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        final int offset = cursor.get();
-        Iterator<String> it = (isEmpty(pattern) ? map.keySet(offset + limit) : map.keySet(pattern, offset + limit)).iterator();
+        List result;
+        RScript script = client.getScript(SCAN_CODEC);
+        if (isEmpty(pattern)) {
+            if (limit > 0) {
+                String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'count', ARGV[2]);";
+                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('hscan', KEYS[1], ARGV[1]);";
+                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
+            }
+        } else {
+            if (limit > 0) {
+                String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
+                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern, String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
+                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern);
+            }
+        }
         final Map<String, T> rs = new LinkedHashMap<>();
-        int index = -1;
-        while (it.hasNext()) {
-            if (++index < offset) {
-                continue;
-            }
-            if (index >= offset + limit) {
-                break;
-            }
-            String field = it.next();
-            byte[] bs = map.get(field);
+        List<byte[]> kvs = (List) result.get(1);
+        for (int i = 0; i < kvs.size(); i += 2) {
+            String field = new String(kvs.get(i));
+            byte[] bs = kvs.get(i + 1);
             if (bs != null) {
                 rs.put(field, decryptValue(key, cryptor, type, bs));
             }
         }
+        cursor.set(Integer.parseInt(new String((byte[]) result.get(0))));
         return rs;
     }
 
@@ -1122,95 +1171,99 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
-        final int offset = cursor.get();
-        final int end = offset + (limit > 0 ? limit : 0);
-        return supplyAsync(() -> {
-            RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-            Iterator<String> it = ((isEmpty(pattern)) ? map.keySet(end) : map.keySet(pattern, end)).iterator();
+        RFuture<List> future;
+        RScript script = client.getScript(SCAN_CODEC);
+        if (isEmpty(pattern)) {
+            if (limit > 0) {
+                String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'count', ARGV[2]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('hscan', KEYS[1], ARGV[1]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
+            }
+        } else {
+            if (limit > 0) {
+                String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern, String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern);
+            }
+        }
+        return completableFuture(future.thenApply(result -> {
             final Map<String, T> rs = new LinkedHashMap<>();
-            int index = -1;
-            while (it.hasNext()) {
-                if (++index < offset) {
-                    continue;
-                }
-                if (index >= end) {
-                    break;
-                }
-                String field = it.next();
-                byte[] bs = map.get(field);
+            List<byte[]> kvs = (List) result.get(1);
+            for (int i = 0; i < kvs.size(); i += 2) {
+                String field = new String(kvs.get(i), StandardCharsets.UTF_8);
+                byte[] bs = kvs.get(i + 1);
                 if (bs != null) {
                     rs.put(field, decryptValue(key, cryptor, type, bs));
                 }
             }
+            cursor.set(Integer.parseInt(new String((byte[]) result.get(0))));
             return rs;
-        });
+        }));
     }
 
     @Override
     public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
-        final int offset = cursor.get();
-        final int end = offset + (limit > 0 ? limit : 0);
-        return supplyAsync(() -> {
-            RKeys keys = client.getKeys();
-            Iterator<String> it;
-            if (isNotEmpty(pattern)) {
-                if (limit > 0) {
-                    it = keys.getKeysByPattern(pattern, limit).iterator();
-                } else {
-                    it = keys.getKeysByPattern(pattern).iterator();
-                }
+        RFuture<List> future;
+        RScript script = client.getScript(SCAN_CODEC);
+        if (isEmpty(pattern)) {
+            if (limit > 0) {
+                String lua = "return redis.call('scan', ARGV[1], 'count', ARGV[2]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), String.valueOf(limit));
             } else {
-                if (limit > 0) {
-                    it = keys.getKeys(limit).iterator();
-                } else {
-                    it = keys.getKeys().iterator();
-                }
+                String lua = "return redis.call('scan', ARGV[1]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString());
             }
+        } else {
+            if (limit > 0) {
+                String lua = "return redis.call('scan', ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), pattern, String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('scan', ARGV[1], 'match', ARGV[2]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), pattern);
+            }
+        }
+        return completableFuture(future.thenApply(result -> {
             final List<String> rs = new ArrayList<>();
-            int index = -1;
-            while (it.hasNext()) {
-                if (++index < offset) {
-                    continue;
-                }
-                if (index >= end) {
-                    break;
-                }
-                rs.add(it.next());
+            List<byte[]> kvs = (List) result.get(1);
+            for (byte[] bs : kvs) {
+                rs.add(new String(bs, StandardCharsets.UTF_8));
             }
+            cursor.set(Integer.parseInt(new String((byte[]) result.get(0))));
             return rs;
-        });
+        }));
     }
 
     @Override
     public List<String> scan(AtomicInteger cursor, int limit, String pattern) {
-        final int offset = cursor.get();
-        final int end = offset + (limit > 0 ? limit : 0);
-        RKeys keys = client.getKeys();
-        Iterator<String> it;
-        if (isNotEmpty(pattern)) {
+        List result;
+        RScript script = client.getScript(SCAN_CODEC);
+        if (isEmpty(pattern)) {
             if (limit > 0) {
-                it = keys.getKeysByPattern(pattern, limit).iterator();
+                String lua = "return redis.call('scan', ARGV[1], 'count', ARGV[2]);";
+                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), String.valueOf(limit));
             } else {
-                it = keys.getKeysByPattern(pattern).iterator();
+                String lua = "return redis.call('scan', ARGV[1]);";
+                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString());
             }
         } else {
             if (limit > 0) {
-                it = keys.getKeys(limit).iterator();
+                String lua = "return redis.call('scan', ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
+                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), pattern, String.valueOf(limit));
             } else {
-                it = keys.getKeys().iterator();
+                String lua = "return redis.call('scan', ARGV[1], 'match', ARGV[2]);";
+                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), pattern);
             }
         }
         final List<String> rs = new ArrayList<>();
-        int index = -1;
-        while (it.hasNext()) {
-            if (++index < offset) {
-                continue;
-            }
-            if (index >= end) {
-                break;
-            }
-            rs.add(it.next());
+        List<byte[]> kvs = (List) result.get(1);
+        for (byte[] bs : kvs) {
+            rs.add(new String(bs, StandardCharsets.UTF_8));
         }
+        cursor.set(Integer.parseInt(new String((byte[]) result.get(0))));
         return rs;
     }
 
