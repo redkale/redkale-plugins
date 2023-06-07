@@ -12,6 +12,8 @@ import org.redkale.util.Utility;
  */
 public class RedisCRC16 {
 
+    private static final int MAX_SLOT = 16384;
+
     private static final int[] LOOKUP_TABLE = {0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6,
         0x70E7, 0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF, 0x1231, 0x0210, 0x3273,
         0x2252, 0x52B5, 0x4294, 0x72F7, 0x62D6, 0x9339, 0x8318, 0xB37B, 0xA35A, 0xD3BD, 0xC39C, 0xF3FF,
@@ -46,7 +48,7 @@ public class RedisCRC16 {
         return crc & 0xFFFF;
     }
 
-    public static int calcSlot(int maxSlot, byte[] key) {
+    public static int calcSlot(byte[] key) {
         if (key == null) {
             return 0;
         }
@@ -57,11 +59,10 @@ public class RedisCRC16 {
                 key = Arrays.copyOfRange(key, start + 1, end);
             }
         }
-        int result = crc16(key) % maxSlot;
-        return result;
+        return crc16(key) % MAX_SLOT;
     }
 
-    public static int calcSlot(int maxSlot, String key) {
+    public static int calcSlot(String key) {
         if (key == null) {
             return 0;
         }
@@ -72,7 +73,6 @@ public class RedisCRC16 {
                 key = key.substring(start + 1, end);
             }
         }
-        int result = crc16(key.getBytes()) % maxSlot;
-        return result;
+        return crc16(key.getBytes()) % MAX_SLOT;
     }
 }
