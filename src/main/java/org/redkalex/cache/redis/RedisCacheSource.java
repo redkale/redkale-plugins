@@ -1564,6 +1564,26 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return sendReadAsync("DBSIZE", null).thenApply(v -> v.getLongValue(0L));
     }
 
+    @Override
+    public void flushdb() {
+        flushdbAsync().join();
+    }
+
+    @Override
+    public CompletableFuture<Void> flushdbAsync() {
+        return sendReadAsync("FLUSHDB", null).thenApply(v -> null);
+    }
+
+    @Override
+    public void flushall() {
+        flushallAsync().join();
+    }
+
+    @Override
+    public CompletableFuture<Void> flushallAsync() {
+        return sendReadAsync("FLUSHALL", null).thenApply(v -> null);
+    }
+
     //--------------------- send ------------------------------  
     @Local
     public CompletableFuture<RedisCacheResult> sendReadAsync(final String command, final String key, final Serializable... args) {

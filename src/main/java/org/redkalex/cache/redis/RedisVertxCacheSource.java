@@ -1690,6 +1690,26 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.DBSIZE).thenApply(v -> getLongValue(v, 0L));
     }
 
+    @Override
+    public void flushdb() {
+        flushdbAsync().join();
+    }
+
+    @Override
+    public CompletableFuture<Void> flushdbAsync() {
+        return sendAsync(Command.FLUSHDB).thenApply(v -> null);
+    }
+
+    @Override
+    public void flushall() {
+        flushallAsync().join();
+    }
+
+    @Override
+    public CompletableFuture<Void> flushallAsync() {
+        return sendAsync(Command.FLUSHALL).thenApply(v -> null);
+    }
+
     //-------------------------- 过期方法 ----------------------------------
     @Override
     @Deprecated(since = "2.8.0")

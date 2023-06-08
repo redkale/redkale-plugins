@@ -1133,6 +1133,34 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public void flushdb() {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        command.flushdb();
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public CompletableFuture<Void> flushdbAsync() {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.flushdb());
+        });
+    }
+
+    @Override
+    public void flushall() {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        command.flushall();
+        releaseBytesCommand(command);
+    }
+
+    @Override
+    public CompletableFuture<Void> flushallAsync() {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.flushall());
+        });
+    }
+
+    @Override
     public <T> void hset(final String key, final String field, final Type type, final T value) {
         if (value == null) {
             return;

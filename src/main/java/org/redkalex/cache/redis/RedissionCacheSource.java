@@ -1976,6 +1976,26 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(client.getKeys().countAsync());
     }
 
+    @Override
+    public void flushdb() {
+        client.getKeys().flushdb();
+    }
+
+    @Override
+    public CompletableFuture<Void> flushdbAsync() {
+        return completableFuture(client.getKeys().flushdbAsync());
+    }
+
+    @Override
+    public void flushall() {
+        client.getKeys().flushall();
+    }
+
+    @Override
+    public CompletableFuture<Void> flushallAsync() {
+        return completableFuture(client.getKeys().flushallAsync());
+    }
+
     protected static class MapByteArrayCodec extends ByteArrayCodec {
 
         public static final MapByteArrayCodec instance = new MapByteArrayCodec();
