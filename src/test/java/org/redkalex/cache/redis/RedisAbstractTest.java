@@ -9,7 +9,7 @@ import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.*;
 import org.junit.jupiter.api.Assertions;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.json.*;
@@ -326,7 +326,7 @@ public abstract class RedisAbstractTest {
         source.del("hmaplong");
         source.hincrby("hmaplong", "key1", 10);
         source.hsetLong("hmaplong", "key2", 30);
-        AtomicInteger cursor = new AtomicInteger();
+        AtomicLong cursor = new AtomicLong();
         Map<String, Long> longmap = source.hscan("hmaplong", long.class, cursor, 10);
         System.out.println("hmaplong.所有两值 : " + longmap);
         Assertions.assertEquals(Utility.ofMap("key1", 10, "key2", 30).toString(), longmap.toString());
@@ -334,7 +334,7 @@ public abstract class RedisAbstractTest {
         source.del("hmapstr");
         source.hsetString("hmapstr", "key1", "str10");
         source.hsetString("hmapstr", "key2", null);
-        cursor = new AtomicInteger();
+        cursor = new AtomicLong();
         map = source.hscan("hmapstr", String.class, cursor, 10);
         System.out.println("hmapstr.所有一值 : " + map);
         Assertions.assertEquals(Utility.ofMap("key1", "str10").toString(), map.toString());
@@ -342,7 +342,7 @@ public abstract class RedisAbstractTest {
         source.del("hmapstrmap");
         source.hset("hmapstrmap", "key1", JsonConvert.TYPE_MAP_STRING_STRING, (HashMap) Utility.ofMap("ks11", "vv11"));
         source.hset("hmapstrmap", "key2", JsonConvert.TYPE_MAP_STRING_STRING, null);
-        cursor = new AtomicInteger();
+        cursor = new AtomicLong();
         map = source.hscan("hmapstrmap", JsonConvert.TYPE_MAP_STRING_STRING, cursor, 10, "key2*");
         System.out.println("hmapstrmap.无值 : " + map);
         Assertions.assertEquals(Utility.ofMap().toString(), map.toString());
@@ -353,7 +353,7 @@ public abstract class RedisAbstractTest {
         for (int i = 101; i <= ccc + 100; i++) {
             source.hmset("hmap", "k" + i, vpref + i);
         }
-        cursor = new AtomicInteger();
+        cursor = new AtomicLong();
         Map<String, String> smap = source.hscan("hmap", String.class, cursor, 5);
         System.out.println("hmap.hscan 长度 : " + smap.size() + ", cursor: " + cursor + ", 内容: " + smap);
         //smap.size 是不确定的，可能是全量，也可能比5多，也可能比5少
@@ -363,7 +363,7 @@ public abstract class RedisAbstractTest {
         } else {
             Assertions.assertTrue(cursor.get() > 0);
         }
-        cursor = new AtomicInteger();
+        cursor = new AtomicLong();
         smap = (Map) source.hscanAsync("hmap", String.class, cursor, 5).join();
         Assertions.assertFalse(smap.isEmpty());
         if (smap.size() == ccc) {
@@ -378,6 +378,25 @@ public abstract class RedisAbstractTest {
         source.saddString("popset", "333");
         source.saddString("popset", "444");
         source.saddString("popset", "555");
+
+        cursor = new AtomicLong();
+        Set<String> sset = source.sscan("popset", String.class, cursor, 3);
+        System.out.println("popset.sscan 长度 : " + sset.size() + ", cursor: " + cursor + ", 内容: " + sset);
+        //smap.size 是不确定的，可能是全量，也可能比5多，也可能比5少
+        Assertions.assertFalse(sset.isEmpty());
+        if (sset.size() == 5) {
+            Assertions.assertTrue(cursor.get() == 0);
+        } else {
+            Assertions.assertTrue(cursor.get() > 0);
+        }
+        cursor = new AtomicLong();
+        sset = (Set) source.sscanAsync("popset", String.class, cursor, 3).join();
+        Assertions.assertFalse(smap.isEmpty());
+        if (sset.size() == 5) {
+            Assertions.assertTrue(cursor.get() == 0);
+        } else {
+            Assertions.assertTrue(cursor.get() > 0);
+        }
 
         obj = source.spopString("popset");
         System.out.println("SPOP一个元素：" + obj);
@@ -397,12 +416,12 @@ public abstract class RedisAbstractTest {
         System.out.println("SPOP五个元素：" + source.spopLong("popset", 5));
         System.out.println("SPOP一个元素：" + source.spopLong("popset"));
 
-        cursor = new AtomicInteger();
+        cursor = new AtomicLong();
         List<String> keys = source.scan(cursor, 5);
         System.out.println("scan 长度 : " + keys.size() + ", cursor: " + cursor + ", 内容: " + keys);
         Assertions.assertFalse(keys.isEmpty());
         Assertions.assertTrue(cursor.get() > 0);
-        cursor = new AtomicInteger();
+        cursor = new AtomicLong();
         keys = (List) source.scanAsync(cursor, 5).join();
         Assertions.assertFalse(keys.isEmpty());
         if (press) {

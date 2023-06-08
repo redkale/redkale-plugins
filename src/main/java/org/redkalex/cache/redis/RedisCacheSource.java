@@ -11,7 +11,7 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import org.redkale.annotation.AutoLoad;
@@ -781,7 +781,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> Map<String, T> hscan(final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
         return (Map) hscanAsync(key, type, cursor, limit, pattern).join();
     }
 
@@ -944,7 +944,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
         int c = 2;
         if (isNotEmpty(pattern)) {
             c += 2;
@@ -1383,6 +1383,34 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Set< T>> sscanAsync(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
+        int c = 2;
+        if (isNotEmpty(pattern)) {
+            c += 2;
+        }
+        if (limit > 0) {
+            c += 2;
+        }
+        byte[][] bs = new byte[c][];
+        int index = -1;
+        bs[++index] = key.getBytes(StandardCharsets.UTF_8);
+        bs[++index] = cursor.toString().getBytes(StandardCharsets.UTF_8);
+        if (isNotEmpty(pattern)) {
+            bs[++index] = "MATCH".getBytes(StandardCharsets.UTF_8);
+            bs[++index] = pattern.getBytes(StandardCharsets.UTF_8);
+        }
+        if (limit > 0) {
+            bs[++index] = "COUNT".getBytes(StandardCharsets.UTF_8);
+            bs[++index] = String.valueOf(limit).getBytes(StandardCharsets.UTF_8);
+        }
+        return sendReadAsync("SSCAN", key, bs).thenApply(v -> {
+            Set set = v.getSetValue(key, cryptor, componentType);
+            cursor.set(v.getCursor());
+            return set;
+        });
+    }
+
+    @Override
     public <T> void sadd(String key, final Type componentType, T value) {
         saddAsync(key, componentType, value).join();
     }
@@ -1395,6 +1423,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public <T> Set<T> spop(String key, int count, final Type componentType) {
         return (Set) spopAsync(key, count, componentType).join();
+    }
+
+    @Override
+    public <T> Set< T> sscan(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
+        return (Set) sscanAsync(key, componentType, cursor, limit, pattern).join();
     }
 
     @Override
@@ -1475,7 +1508,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public List<String> scan(AtomicInteger cursor, int limit, String pattern) {
+    public List<String> scan(AtomicLong cursor, int limit, String pattern) {
         return scanAsync(cursor, limit, pattern).join();
     }
 
@@ -1527,7 +1560,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
+    public CompletableFuture<List<String>> scanAsync(AtomicLong cursor, int limit, String pattern) {
         int c = 1;
         if (isNotEmpty(pattern)) {
             c += 2;

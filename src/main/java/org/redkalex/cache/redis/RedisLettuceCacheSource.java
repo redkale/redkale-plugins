@@ -22,7 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import org.redkale.annotation.AutoLoad;
@@ -1296,7 +1296,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> Map<String, T> hscan(final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         ScanArgs args = ScanArgs.Builder.limit(limit);
         if (pattern != null) {
@@ -1306,12 +1306,27 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         releaseBytesCommand(command);
         final Map<String, T> map = new LinkedHashMap<>();
         rs.getMap().forEach((k, v) -> map.put(k, decryptValue(key, cryptor, type, v)));
-        cursor.set(Integer.parseInt(rs.getCursor()));
+        cursor.set(Long.parseLong(rs.getCursor()));
         return map;
     }
 
     @Override
-    public List<String> scan(AtomicInteger cursor, int limit, String pattern) {
+    public <T> Set<T> sscan(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
+        final RedisClusterCommands<String, byte[]> command = connectBytes();
+        ScanArgs args = ScanArgs.Builder.limit(limit);
+        if (pattern != null) {
+            args = args.match(pattern);
+        }
+        ValueScanCursor<byte[]> rs = command.sscan(key, new ScanCursor(cursor.toString(), false), args);
+        releaseBytesCommand(command);
+        final Set< T> set = new LinkedHashSet<>();
+        rs.getValues().forEach(v -> set.add(v == null ? null : decryptValue(key, cryptor, componentType, v)));
+        cursor.set(Long.parseLong(rs.getCursor()));
+        return set;
+    }
+
+    @Override
+    public List<String> scan(AtomicLong cursor, int limit, String pattern) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
         ScanArgs args = ScanArgs.Builder.limit(limit);
         if (pattern != null) {
@@ -1320,7 +1335,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         KeyScanCursor<String> rs = command.scan(new ScanCursor(cursor.toString(), false), args);
         releaseBytesCommand(command);
         final List<String> list = rs.getKeys();
-        cursor.set(Integer.parseInt(rs.getCursor()));
+        cursor.set(Long.parseLong(rs.getCursor()));
         return list;
     }
 
@@ -1941,7 +1956,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(String key, Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(String key, Type type, AtomicLong cursor, int limit, String pattern) {
         return connectBytesAsync().thenCompose(command -> {
             ScanArgs args = new ScanArgs();
             if (isNotEmpty(pattern)) {
@@ -1953,14 +1968,33 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             return completableBytesFuture(command, command.hscan(key, new ScanCursor(cursor.toString(), false), args).thenApply((MapScanCursor<String, byte[]> rs) -> {
                 final Map<String, T> map = new LinkedHashMap<>();
                 rs.getMap().forEach((k, v) -> map.put(k, v == null ? null : decryptValue(key, cryptor, type, v)));
-                cursor.set(Integer.parseInt(rs.getCursor()));
+                cursor.set(Long.parseLong(rs.getCursor()));
                 return map;
             }));
         });
     }
 
     @Override
-    public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
+    public <T> CompletableFuture<Set< T>> sscanAsync(String key, Type componentType, AtomicLong cursor, int limit, String pattern) {
+        return connectBytesAsync().thenCompose(command -> {
+            ScanArgs args = new ScanArgs();
+            if (isNotEmpty(pattern)) {
+                args = args.match(pattern);
+            }
+            if (limit > 0) {
+                args = args.limit(limit);
+            }
+            return completableBytesFuture(command, command.sscan(key, new ScanCursor(cursor.toString(), false), args).thenApply((ValueScanCursor<byte[]> rs) -> {
+                final Set< T> set = new LinkedHashSet<>();
+                rs.getValues().forEach(v -> set.add(v == null ? null : decryptValue(key, cryptor, componentType, v)));
+                cursor.set(Long.parseLong(rs.getCursor()));
+                return set;
+            }));
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<String>> scanAsync(AtomicLong cursor, int limit, String pattern) {
         return connectBytesAsync().thenCompose(command -> {
             ScanArgs args = new ScanArgs();
             if (isNotEmpty(pattern)) {
@@ -1971,7 +2005,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             }
             return completableBytesFuture(command, command.scan(new ScanCursor(cursor.toString(), false), args).thenApply((KeyScanCursor<String> rs) -> {
                 final List<String> list = rs.getKeys();
-                cursor.set(Integer.parseInt(rs.getCursor()));
+                cursor.set(Long.parseLong(rs.getCursor()));
                 return list;
             }));
         });

@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import java.util.stream.Collectors;
@@ -971,7 +971,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> Map<String, T> hscan(final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
         List result;
         RScript script = client.getScript(SCAN_CODEC);
         if (isEmpty(pattern)) {
@@ -1000,7 +1000,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
                 rs.put(field, decryptValue(key, cryptor, type, bs));
             }
         }
-        cursor.set(Integer.parseInt(new String((byte[]) result.get(0))));
+        cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
         return rs;
     }
 
@@ -1170,7 +1170,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicInteger cursor, int limit, String pattern) {
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
         RFuture<List> future;
         RScript script = client.getScript(SCAN_CODEC);
         if (isEmpty(pattern)) {
@@ -1200,13 +1200,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
                     rs.put(field, decryptValue(key, cryptor, type, bs));
                 }
             }
-            cursor.set(Integer.parseInt(new String((byte[]) result.get(0))));
+            cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
             return rs;
         }));
     }
 
     @Override
-    public CompletableFuture<List<String>> scanAsync(AtomicInteger cursor, int limit, String pattern) {
+    public CompletableFuture<List<String>> scanAsync(AtomicLong cursor, int limit, String pattern) {
         RFuture<List> future;
         RScript script = client.getScript(SCAN_CODEC);
         if (isEmpty(pattern)) {
@@ -1232,13 +1232,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
             for (byte[] bs : kvs) {
                 rs.add(new String(bs, StandardCharsets.UTF_8));
             }
-            cursor.set(Integer.parseInt(new String((byte[]) result.get(0))));
+            cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
             return rs;
         }));
     }
 
     @Override
-    public List<String> scan(AtomicInteger cursor, int limit, String pattern) {
+    public List<String> scan(AtomicLong cursor, int limit, String pattern) {
         List result;
         RScript script = client.getScript(SCAN_CODEC);
         if (isEmpty(pattern)) {
@@ -1263,7 +1263,69 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (byte[] bs : kvs) {
             rs.add(new String(bs, StandardCharsets.UTF_8));
         }
-        cursor.set(Integer.parseInt(new String((byte[]) result.get(0))));
+        cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
+        return rs;
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> sscanAsync(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
+        RFuture<List> future;
+        RScript script = client.getScript(SCAN_CODEC);
+        if (isEmpty(pattern)) {
+            if (limit > 0) {
+                String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'count', ARGV[2]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('sscan', KEYS[1], ARGV[1]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
+            }
+        } else {
+            if (limit > 0) {
+                String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern, String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern);
+            }
+        }
+        return completableFuture(future.thenApply(result -> {
+            final Set<T> rs = new LinkedHashSet<>();
+            List<byte[]> kvs = (List) result.get(1);
+            for (byte[] bs : kvs) {
+                rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
+            }
+            cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
+            return rs;
+        }));
+    }
+
+    @Override
+    public <T> Set<T> sscan(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
+        List result;
+        RScript script = client.getScript(SCAN_CODEC);
+        if (isEmpty(pattern)) {
+            if (limit > 0) {
+                String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'count', ARGV[2]);";
+                result = script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('sscan', KEYS[1], ARGV[1]);";
+                result = script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
+            }
+        } else {
+            if (limit > 0) {
+                String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
+                result = script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern, String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
+                result = script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern);
+            }
+        }
+        final Set<T> rs = new LinkedHashSet<>();
+        List<byte[]> kvs = (List) result.get(1);
+        for (byte[] bs : kvs) {
+            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
+        }
+        cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
         return rs;
     }
 
