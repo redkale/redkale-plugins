@@ -1388,8 +1388,8 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType) {
-        return completableFuture((CompletionStage) client.getList(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
+    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType, int start, int stop) {
+        return completableFuture((CompletionStage) client.getList(key, ByteArrayCodec.INSTANCE).rangeAsync(start, stop).thenApply(list -> {
             if (isEmpty(list)) {
                 return list;
             }
@@ -1605,8 +1605,8 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> List<T> lrange(String key, final Type componentType) {
-        return (List) lrangeAsync(key, componentType).join();
+    public <T> List<T> lrange(String key, final Type componentType, int start, int stop) {
+        return (List) lrangeAsync(key, componentType, start, stop).join();
     }
 
     @Override

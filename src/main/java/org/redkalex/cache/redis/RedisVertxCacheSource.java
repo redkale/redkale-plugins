@@ -379,6 +379,10 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return new String[]{key, "0", "-1"};
     }
 
+    protected String[] keyArgs(String key, int start, int stop) {
+        return new String[]{key, String.valueOf(start), String.valueOf(stop)};
+    }
+
     protected String formatValue(long value) {
         return String.valueOf(value);
     }
@@ -1237,8 +1241,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType) {
-        return sendAsync(Command.LRANGE, keyArgs(false, key)).thenApply(v -> (List) getCollectionValue(key, cryptor, v, false, componentType));
+    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType, int start, int stop) {
+        return sendAsync(Command.LRANGE, keyArgs(key, start, stop)).thenApply(v -> (List) getCollectionValue(key, cryptor, v, false, componentType));
     }
 
     @Override
@@ -1371,8 +1375,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> List<T> lrange(String key, final Type componentType) {
-        return (List) lrangeAsync(key, componentType).join();
+    public <T> List<T> lrange(String key, final Type componentType, int start, int stop) {
+        return (List) lrangeAsync(key, componentType, start, stop).join();
     }
 
     @Override

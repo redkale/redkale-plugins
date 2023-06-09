@@ -1407,9 +1407,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> List<T> lrange(String key, final Type componentType) {
+    public <T> List<T> lrange(String key, final Type componentType, int start, int stop) {
         final RedisClusterCommands<String, byte[]> command = connectBytes();
-        List<T> rs = formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType);
+        List<T> rs = formatCollection(key, cryptor, command.lrange(key, start, stop), convert, componentType);
         releaseBytesCommand(command);
         return rs;
     }
@@ -2161,21 +2161,10 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType) {
+    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType, int start, int stop) {
         return connectBytesAsync().thenCompose(command -> {
-            return command.lrange(key, 0, -1).thenApply(list -> formatCollection(key, cryptor, list, convert, componentType));
+            return command.lrange(key, start, stop).thenApply(list -> formatCollection(key, cryptor, list, convert, componentType));
         });
-    }
-
-    protected <T> CompletableFuture<Collection<T>> getCollectionAsync(
-        final RedisClusterAsyncCommands<String, byte[]> command, String key, final Type componentType) {
-        return completableBytesFuture(command, command.type(key).thenCompose(type -> {
-            if (type.contains("list")) {
-                return command.lrange(key, 0, -1).thenApply(list -> formatCollection(key, cryptor, list, convert, componentType));
-            } else { //set
-                return command.smembers(key).thenApply(set -> formatCollection(key, cryptor, set, convert, componentType));
-            }
-        }));
     }
 
     @Override
@@ -2834,6 +2823,18 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                 return array;
             }));
         });
+    }
+
+    @Deprecated(since = "2.8.0")
+    protected <T> CompletableFuture<Collection<T>> getCollectionAsync(
+        final RedisClusterAsyncCommands<String, byte[]> command, String key, final Type componentType) {
+        return completableBytesFuture(command, command.type(key).thenCompose(type -> {
+            if (type.contains("list")) {
+                return command.lrange(key, 0, -1).thenApply(list -> formatCollection(key, cryptor, list, convert, componentType));
+            } else { //set
+                return command.smembers(key).thenApply(set -> formatCollection(key, cryptor, set, convert, componentType));
+            }
+        }));
     }
 
     @Override

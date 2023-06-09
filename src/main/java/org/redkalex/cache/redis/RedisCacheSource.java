@@ -1052,8 +1052,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType) {
-        return sendReadAsync("LRANGE", key, keyListArgs(key)).thenApply(v -> v.getListValue(key, cryptor, componentType));
+    public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType, int start, int stop) {
+        return sendReadAsync("LRANGE", key, keyListArgs(key, start, stop)).thenApply(v -> v.getListValue(key, cryptor, componentType));
     }
 
     //--------------------- collection ------------------------------  
@@ -1219,8 +1219,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> List<T> lrange(String key, final Type componentType) {
-        return (List) lrangeAsync(key, componentType).join();
+    public <T> List<T> lrange(String key, final Type componentType, int start, int stop) {
+        return (List) lrangeAsync(key, componentType, start, stop).join();
     }
 
     @Override
@@ -1318,7 +1318,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     //--------------------- lrem ------------------------------  
     @Override
     public <T> CompletableFuture<Integer> lremAsync(String key, final Type componentType, T value) {
-        return sendReadAsync("LREM", key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> v.getIntValue(0));
+        return sendReadAsync("LREM", key, key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, formatValue(key, cryptor, componentType, value)).thenApply(v -> v.getIntValue(0));
     }
 
     @Override
@@ -1662,6 +1662,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return new byte[][]{key.getBytes(StandardCharsets.UTF_8), new byte[]{'0'}, new byte[]{'-', '1'}};
     }
 
+    private byte[][] keyListArgs(String key, int start, int stop) {
+        return new byte[][]{key.getBytes(StandardCharsets.UTF_8), String.valueOf(start).getBytes(StandardCharsets.UTF_8), String.valueOf(stop).getBytes(StandardCharsets.UTF_8)};
+    }
+
     private byte[][] keyArgs(boolean set, String key) {
         if (set) {
             return new byte[][]{key.getBytes(StandardCharsets.UTF_8)};
@@ -1685,6 +1689,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     private byte[] formatValue(String key, RedisCryptor cryptor, Object value) {
         return formatValue(key, cryptor, null, null, value);
+    }
+
+    private byte[] formatValue(String key, RedisCryptor cryptor, Type type, Object value) {
+        return formatValue(key, cryptor, (Convert) null, type, value);
     }
 
     private byte[] formatValue(String key, RedisCryptor cryptor, Convert convert0, Type type, Object value) {
