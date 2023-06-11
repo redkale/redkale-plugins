@@ -230,6 +230,25 @@ public abstract class RedisAbstractTest {
         System.out.println("sdiffstore: " + diffset);
         Assertions.assertIterableEquals(diffanswer, diffset);
 
+        source.del("sets3");
+        source.del("sets4");
+        source.del("sets5");
+        source.del("sets6");
+        source.saddString("sets3", "setvals1", "setvals2", "setvals3", "setvals4", "setvals5");
+        source.saddString("sets4", "setvals2", "setvals3", "setvals5", "setvals8");
+        source.saddString("sets5", "setvals5", "setvals6", "setvals7", "setvals8");
+        Set<String> interanswer = new TreeSet<>(Set.of("setvals5"));
+        Set<String> interset = new TreeSet<>(source.sinterString("sets3", "sets4", "sets5"));
+        System.out.println("sinter: " + interset);
+        Assertions.assertIterableEquals(interanswer, interset);
+        source.sinterstore("sets6", "sets3", "sets4", "sets5");
+        interset = new TreeSet<>(source.smembersString("sets6"));
+        System.out.println("sinterstore: " + interset);
+        Assertions.assertIterableEquals(interanswer, interset);
+        List<Boolean> ems = source.smismembers("sets3", "setvals3", "setvals33");
+        System.out.println("smismembers: " + ems);
+        Assertions.assertIterableEquals(List.of(true, false), ems);
+
         System.out.println("------------------------------------");
         InetSocketAddress addr88 = new InetSocketAddress("127.0.0.1", 7788);
         InetSocketAddress addr99 = new InetSocketAddress("127.0.0.1", 7799);

@@ -397,6 +397,11 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return bss;
     }
 
+    @Override
+    public CompletableFuture<Boolean> isOpenAsync() {
+        return CompletableFuture.completedFuture(client != null);
+    }
+
     //--------------------- exists ------------------------------
     @Override
     public CompletableFuture<Boolean> existsAsync(String key) {
@@ -998,6 +1003,21 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Set<T>> sinterAsync(final String key, final Type componentType, final String... key2s) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.sinter(Utility.append(key, key2s))
+                .thenApply(v -> formatCollection(key, cryptor, v, convert, componentType)));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Long> sinterstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.sinterstore(key, Utility.append(srcKey, srcKey2s)));
+        });
+    }
+
+    @Override
     public <T> CompletableFuture<T> spopAsync(String key, Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.spop(key)
@@ -1032,6 +1052,13 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Boolean> sismemberAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.sismember(key, encryptValue(key, cryptor, componentType, convert, value)));
+        });
+    }
+
+    @Override
+    public <T> CompletableFuture<List<Boolean>> smismembersAsync(final String key, final String... members) {
+        return connectStringAsync().thenCompose(command -> {
+            return completableStringFuture(key, cryptor, command, command.smismember(key, members));
         });
     }
 

@@ -323,6 +323,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
         }
     }
 
+    @Override
+    public CompletableFuture<Boolean> isOpenAsync() {
+        return CompletableFuture.completedFuture(client != null && !client.isShutdown());
+    }
+
     //--------------------- exists ------------------------------
     @Override
     public CompletableFuture<Boolean> existsAsync(String key) {
@@ -691,8 +696,39 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<List<Boolean>> smismembersAsync(final String key, final String... members) {
+        List bs = new ArrayList<>();
+        for (String m : members) {
+            bs.add(m.getBytes(StandardCharsets.UTF_8));
+        }
+        return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).containsEachAsync(bs)
+            .thenApply(result -> {
+                Set<String> keys = new HashSet<>();
+                for (Object item : (List) result) {
+                    keys.add(new String((byte[]) item, StandardCharsets.UTF_8));
+                }
+                List<Boolean> rs = new ArrayList<>();
+                for (String m : members) {
+                    rs.add(keys.contains(m));
+                }
+                return rs;
+            }));
+    }
+
+    @Override
     public CompletableFuture<Long> sdiffstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
         return completableFuture(client.getSet(key).diffAsync(Utility.append(srcKey, srcKey2s)).thenApply(v -> v.longValue()));
+    }
+
+    @Override
+    public <T> CompletableFuture<Set<T>> sinterAsync(final String key, final Type componentType, final String... key2s) {
+        return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).readIntersectionAsync(key2s)
+            .thenApply(result -> (Set) getCollectionValue(key, result, true, componentType)));
+    }
+
+    @Override
+    public CompletableFuture<Long> sinterstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
+        return completableFuture(client.getSet(key).intersectionAsync(Utility.append(srcKey, srcKey2s)).thenApply(v -> v.longValue()));
     }
 
     @Override

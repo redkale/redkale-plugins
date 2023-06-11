@@ -141,6 +141,14 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                         return false;
                     }
                     byte sign = array.get(0);
+                    if (sign == TYPE_NUMBER) {
+                        if (frameList == null) {
+                            frameList = new ArrayList<>();
+                        }
+                        frameList.add(array.getBytes(1, array.length() - 1));
+                        array.clear();
+                        continue;
+                    }
                     itemLength = Integer.parseInt(array.toString(1, StandardCharsets.UTF_8));
                     array.clear();
                     if (sign == TYPE_ARRAY) { //数组中嵌套数组，例如: SCAN、HSCAN

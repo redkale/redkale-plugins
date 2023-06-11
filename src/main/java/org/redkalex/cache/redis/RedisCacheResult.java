@@ -151,7 +151,8 @@ public class RedisCacheResult {
             return (T) new BigDecimal(new String(frames, StandardCharsets.UTF_8));
         }
         if (type == boolean.class || type == Boolean.class) {
-            return (T) (Boolean) "t".equalsIgnoreCase(new String(frames, StandardCharsets.UTF_8));
+            String v = new String(frames, StandardCharsets.UTF_8);
+            return (T) (Boolean) ("t".equalsIgnoreCase(v) || "1".equals(v));
         }
         if (type == double.class || type == Double.class) {
             return (T) (Double) Double.parseDouble(new String(frames, StandardCharsets.UTF_8));

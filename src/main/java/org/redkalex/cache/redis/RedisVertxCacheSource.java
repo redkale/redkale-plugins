@@ -283,6 +283,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     protected <T> T getObjectValue(String key, RedisCryptor cryptor, Response resp, Type type) {
+        if (type == boolean.class || type == Boolean.class) {
+            return (T) resp.toBoolean();
+        }
         return getObjectValue(key, cryptor, resp == null ? null : resp.toString(StandardCharsets.UTF_8), type);
     }
 
@@ -436,6 +439,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         }
         String val = (convert0 instanceof JsonConvert) ? ((JsonConvert) convert0).convertTo(type, value) : new String(convert0.convertToBytes(type, value), StandardCharsets.UTF_8);
         return encryptValue(key, cryptor, val);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> isOpenAsync() {
+        return CompletableFuture.completedFuture(client != null);
     }
 
     //--------------------- exists ------------------------------
@@ -737,8 +745,23 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Set<T>> sinterAsync(final String key, final Type componentType, final String... key2s) {
+        return sendAsync(Command.SINTER, Utility.append(key, key2s)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
+    }
+
+    @Override
+    public CompletableFuture<Long> sinterstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
+        return sendAsync(Command.SINTERSTORE, Utility.append(key, srcKey, srcKey2s)).thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
+    }
+
+    @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
         return sendAsync(Command.SMEMBERS, keyArgs(true, key)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
+    }
+
+    @Override
+    public CompletableFuture<List<Boolean>> smismembersAsync(final String key, final String... members) {
+        return sendAsync(Command.SMISMEMBER, Utility.append(key, members)).thenApply(v -> (List) getCollectionValue(key, cryptor, v, false, Boolean.class));
     }
 
     @Override
