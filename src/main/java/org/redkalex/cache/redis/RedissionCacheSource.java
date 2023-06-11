@@ -306,6 +306,15 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return rf.toCompletableFuture().thenApply(bs -> decryptValue(key, cryptor, c, type, bs));
     }
 
+    protected <T> Collection<T> getCollectionValue(String key, Collection bytesResult, boolean set, Type componentType) {
+        final Collection<T> rs = set ? new LinkedHashSet<>() : new ArrayList<>();
+        Collection<byte[]> kvs = bytesResult;
+        for (byte[] bs : kvs) {
+            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
+        }
+        return rs;
+    }
+
     @Override
     public void destroy(AnyValue conf) {
         super.destroy(conf);
@@ -618,11 +627,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
             }
         }
         return completableFuture(future.thenApply(result -> {
-            final List<String> rs = new ArrayList<>();
-            List<byte[]> kvs = (List) result.get(1);
-            for (byte[] bs : kvs) {
-                rs.add(new String(bs, StandardCharsets.UTF_8));
-            }
+            final List<String> rs = (List) getCollectionValue(null, (Collection) result.get(1), false, String.class);
             cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
             return rs;
         }));
@@ -650,11 +655,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
             }
         }
         return completableFuture(future.thenApply(result -> {
-            final Set<T> rs = new LinkedHashSet<>();
-            List<byte[]> kvs = (List) result.get(1);
-            for (byte[] bs : kvs) {
-                rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
-            }
+            final Set<T> rs = (Set) getCollectionValue(key, (Collection) result.get(1), true, componentType);
             cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
             return rs;
         }));
@@ -684,41 +685,26 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Set<T>> sdiffAsync(final String key, final Type componentType, final String... key2s) {
+        return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).readDiffAsync(key2s)
+            .thenApply(result -> (Set) getCollectionValue(key, result, true, componentType)));
+    }
+
+    @Override
+    public CompletableFuture<Long> sdiffstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
+        return completableFuture(client.getSet(key).diffAsync(Utility.append(srcKey, srcKey2s)).thenApply(v -> v.longValue()));
+    }
+
+    @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
-        return completableFuture((CompletionStage) client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-            if (isEmpty(set)) {
-                return set;
-            }
-            Set<T> rs = new LinkedHashSet<>();
-            for (Object item : set) {
-                byte[] bs = (byte[]) item;
-                if (bs == null) {
-                    rs.add(null);
-                } else {
-                    rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
-                }
-            }
-            return rs;
-        }));
+        return completableFuture((CompletionStage) client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync()
+            .thenApply(result -> (Set) getCollectionValue(key, result, true, componentType)));
     }
 
     @Override
     public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType, int start, int stop) {
-        return completableFuture((CompletionStage) client.getList(key, ByteArrayCodec.INSTANCE).rangeAsync(start, stop).thenApply(list -> {
-            if (isEmpty(list)) {
-                return list;
-            }
-            List<T> rs = new ArrayList<>();
-            for (Object item : list) {
-                byte[] bs = (byte[]) item;
-                if (bs == null) {
-                    rs.add(null);
-                } else {
-                    rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
-                }
-            }
-            return rs;
-        }));
+        return completableFuture((CompletionStage) client.getList(key, ByteArrayCodec.INSTANCE).rangeAsync(start, stop)
+            .thenApply(result -> (List) getCollectionValue(key, result, false, componentType)));
     }
 
     @Override
@@ -1120,37 +1106,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
             if (String.valueOf(type).contains("list")) {
-                return (CompletionStage) client.getList(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                    if (isEmpty(list)) {
-                        return list;
-                    }
-                    List<T> rs = new ArrayList<>();
-                    for (Object item : list) {
-                        byte[] bs = (byte[]) item;
-                        if (bs == null) {
-                            rs.add(null);
-                        } else {
-                            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
-                        }
-                    }
-                    return rs;
-                });
+                return (CompletionStage) client.getList(key, ByteArrayCodec.INSTANCE).readAllAsync()
+                    .thenApply(result -> (List) getCollectionValue(key, result, false, componentType));
             } else {
-                return (CompletionStage) client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-                    if (isEmpty(set)) {
-                        return set;
-                    }
-                    Set<T> rs = new LinkedHashSet<>();
-                    for (Object item : set) {
-                        byte[] bs = (byte[]) item;
-                        if (bs == null) {
-                            rs.add(null);
-                        } else {
-                            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
-                        }
-                    }
-                    return rs;
-                });
+                return (CompletionStage) client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync()
+                    .thenApply(result -> (Set) getCollectionValue(key, result, true, componentType));
             }
         }));
     }

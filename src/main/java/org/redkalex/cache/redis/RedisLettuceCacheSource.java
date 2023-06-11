@@ -983,6 +983,21 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Set<T>> sdiffAsync(final String key, final Type componentType, final String... key2s) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.sdiff(Utility.append(key, key2s))
+                .thenApply(v -> formatCollection(key, cryptor, v, convert, componentType)));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Long> sdiffstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.sdiffstore(key, Utility.append(srcKey, srcKey2s)));
+        });
+    }
+
+    @Override
     public <T> CompletableFuture<T> spopAsync(String key, Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.spop(key)

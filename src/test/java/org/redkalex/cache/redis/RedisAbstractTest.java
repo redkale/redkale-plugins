@@ -148,6 +148,7 @@ public abstract class RedisAbstractTest {
 
         source.del("sets3");
         source.del("sets4");
+        source.del("sets5");
         source.sadd("sets3", String.class, "setvals1");
         source.sadd("sets3", String.class, "setvals2");
         source.sadd("sets3", String.class, "setvals1");
@@ -212,6 +213,22 @@ public abstract class RedisAbstractTest {
         });
         mapcol.putAll(news);
         Assertions.assertEquals(Utility.ofMap("sets3", List.of("setvals2"), "sets4", List.of("setvals1", "setvals2")).toString(), mapcol.toString());
+
+        source.del("sets3");
+        source.del("sets4");
+        source.del("sets5");
+        source.del("sets6");
+        source.saddString("sets3", "setvals1", "setvals2", "setvals3", "setvals4", "setvals5");
+        source.saddString("sets4", "setvals3", "setvals6", "setvals7", "setvals8");
+        source.saddString("sets5", "setvals5", "setvals6", "setvals7", "setvals8");
+        Set<String> diffanswer = new TreeSet<>(Set.of("setvals1", "setvals2", "setvals4"));
+        Set<String> diffset = new TreeSet<>(source.sdiffString("sets3", "sets4", "sets5"));
+        System.out.println("sdiff: " + diffset);
+        Assertions.assertIterableEquals(diffanswer, diffset);
+        source.sdiffstore("sets6", "sets3", "sets4", "sets5");
+        diffset = new TreeSet<>(source.smembersString("sets6"));
+        System.out.println("sdiffstore: " + diffset);
+        Assertions.assertIterableEquals(diffanswer, diffset);
 
         System.out.println("------------------------------------");
         InetSocketAddress addr88 = new InetSocketAddress("127.0.0.1", 7788);
@@ -467,10 +484,8 @@ public abstract class RedisAbstractTest {
         source.del("objitem2");
         source.del("key1");
         source.del("key2");
-        source.del("keys3");
-        source.del("keys3-2");
-        source.del("sets3");
-        source.del("sets4");
+        source.del("keys3", "keys3-2");
+        source.del("sets3", "sets4", "sets5", "sets6");
         source.del("myaddrs");
         source.del("300");
         source.del("stringmap");

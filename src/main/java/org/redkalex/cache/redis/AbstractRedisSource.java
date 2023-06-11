@@ -347,6 +347,15 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
         return scardAsync(key).join();
     }
 
+    public <T> Set<T> sdiff(final String key, final Type componentType, final String... key2s) {
+        return (Set) sdiffAsync(key, componentType, key2s).join();
+    }
+
+    @Override
+    public long sdiffstore(final String key, final String srcKey, final String... srcKey2s) {
+        return sdiffstoreAsync(key, srcKey, srcKey2s).join();
+    }
+
     @Override
     public <T> Set<T> smembers(String key, final Type componentType) {
         return (Set) smembersAsync(key, componentType).join();

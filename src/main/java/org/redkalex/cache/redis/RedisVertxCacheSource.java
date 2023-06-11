@@ -727,6 +727,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Set<T>> sdiffAsync(final String key, final Type componentType, final String... key2s) {
+        return sendAsync(Command.SDIFF, Utility.append(key, key2s)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
+    }
+
+    @Override
+    public CompletableFuture<Long> sdiffstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
+        return sendAsync(Command.SDIFFSTORE, Utility.append(key, srcKey, srcKey2s)).thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
+    }
+
+    @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
         return sendAsync(Command.SMEMBERS, keyArgs(true, key)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
     }
