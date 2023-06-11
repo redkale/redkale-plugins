@@ -15,9 +15,9 @@ import org.redkale.util.ByteArray;
  */
 public class RedisCacheRequest extends ClientRequest {
 
-    static final byte[] TRUE = new byte[]{'t'};
+    static final byte[] BYTES_TRUE = new byte[]{'t'};
 
-    static final byte[] FALSE = new byte[]{'f'};
+    static final byte[] BYTES_FALSE = new byte[]{'f'};
 
     protected String key;
 

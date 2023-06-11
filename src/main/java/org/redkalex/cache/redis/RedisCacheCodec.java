@@ -143,7 +143,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                     byte sign = array.get(0);
                     itemLength = Integer.parseInt(array.toString(1, StandardCharsets.UTF_8));
                     array.clear();
-                    if (sign == TYPE_ARRAY) { //数组中嵌套数组，目前有 HSCAN
+                    if (sign == TYPE_ARRAY) { //数组中嵌套数组，例如: SCAN、HSCAN
                         frameValue = null;
                         if (frameList != null) {
                             if (frameList.size() == 1) {

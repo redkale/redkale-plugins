@@ -30,11 +30,11 @@ public class RedisCacheResult {
 
     protected List<byte[]> frameList;  //(不包含CRLF)
 
-    public RedisCacheResult prepare(byte byteType, byte[] frameCursor, byte[] val, List<byte[]> bytesList) {
+    public RedisCacheResult prepare(byte byteType, byte[] frameCursor, byte[] frameValue, List<byte[]> frameList) {
         this.frameType = byteType;
         this.frameCursor = frameCursor;
-        this.frameValue = val;
-        this.frameList = bytesList;
+        this.frameValue = frameValue;
+        this.frameList = frameList;
         return this;
     }
 
@@ -73,17 +73,6 @@ public class RedisCacheResult {
         return Integer.parseInt(val) > 0;
     }
 
-    public String getStringValue(String key, RedisCryptor cryptor) {
-        if (frameValue == null) {
-            return null;
-        }
-        String val = new String(frameValue, StandardCharsets.UTF_8);
-        if (cryptor != null) {
-            val = cryptor.decrypt(key, val);
-        }
-        return val;
-    }
-
     public Double getDoubleValue(Double defValue) {
         return frameValue == null ? defValue : Double.parseDouble(new String(frameValue, StandardCharsets.UTF_8));
     }
@@ -97,7 +86,7 @@ public class RedisCacheResult {
     }
 
     public <T> T getObjectValue(String key, RedisCryptor cryptor, Type type) {
-        return formatValue(key, cryptor, frameValue, type);
+        return decodeValue(key, cryptor, frameValue, type);
     }
 
     protected <T> Set<T> getSetValue(String key, RedisCryptor cryptor, Type type) {
@@ -106,7 +95,7 @@ public class RedisCacheResult {
         }
         Set<T> set = new LinkedHashSet<>();
         for (byte[] bs : frameList) {
-            set.add(formatValue(key, cryptor, bs, type));
+            set.add(decodeValue(key, cryptor, bs, type));
         }
         return set;
     }
@@ -117,7 +106,7 @@ public class RedisCacheResult {
         }
         List<T> list = new ArrayList<>();
         for (byte[] bs : frameList) {
-            list.add(formatValue(key, cryptor, bs, type));
+            list.add(decodeValue(key, cryptor, bs, type));
         }
         return list;
     }
@@ -130,15 +119,15 @@ public class RedisCacheResult {
         for (int i = 0; i < frameList.size(); i += 2) {
             byte[] bs1 = frameList.get(i);
             byte[] bs2 = frameList.get(i + 1);
-            T val = formatValue(key, cryptor, bs2, type);
+            T val = decodeValue(key, cryptor, bs2, type);
             if (val != null) {
-                map.put(formatValue(key, cryptor, bs1, String.class).toString(), val);
+                map.put(decodeValue(key, cryptor, bs1, String.class).toString(), val);
             }
         }
         return map;
     }
 
-    protected static <T> T formatValue(String key, RedisCryptor cryptor, byte[] frames, Type type) {
+    protected static <T> T decodeValue(String key, RedisCryptor cryptor, byte[] frames, Type type) {
         if (frames == null) {
             return null;
         }

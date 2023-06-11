@@ -383,6 +383,15 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return new String[]{key, String.valueOf(start), String.valueOf(stop)};
     }
 
+    protected <T> String[] keyArgs(String key, Type componentType, T... values) {
+        String[] strs = new String[values.length + 1];
+        strs[0] = key;
+        for (int i = 0; i < values.length; i++) {
+            strs[i + 1] = formatValue(key, componentType, values[i]);
+        }
+        return strs;
+    }
+
     protected String formatValue(long value) {
         return String.valueOf(value);
     }
@@ -393,6 +402,10 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     protected String formatValue(String key, RedisCryptor cryptor, Object value) {
         return formatValue(key, cryptor, null, null, value);
+    }
+
+    protected String formatValue(String key, Type type, Object value) {
+        return formatValue(key, cryptor, null, type, value);
     }
 
     protected String formatValue(String key, RedisCryptor cryptor, Convert convert0, Type type, Object value) {
@@ -426,50 +439,10 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.EXISTS, key).thenApply(v -> getBooleanValue(v));
     }
 
-    @Override
-    public boolean exists(String key) {
-        return existsAsync(key).join();
-    }
-
     //--------------------- get ------------------------------
     @Override
     public <T> CompletableFuture<T> getAsync(String key, Type type) {
         return sendAsync(Command.GET, key).thenApply(v -> getObjectValue(key, cryptor, v, type));
-    }
-
-    @Override
-    public CompletableFuture<String> getStringAsync(String key) {
-        return sendAsync(Command.GET, key).thenApply(v -> getStringValue(key, cryptor, v));
-    }
-
-    @Override
-    public CompletableFuture<Long> getLongAsync(String key, long defValue) {
-        return sendAsync(Command.GET, key).thenApply(v -> getLongValue(v, defValue));
-    }
-
-    @Override
-    public <T> T get(String key, final Type type) {
-        return (T) getAsync(key, type).join();
-    }
-
-    @Override
-    public String getString(String key) {
-        return getStringAsync(key).join();
-    }
-
-    @Override
-    public String getSetString(String key, String value) {
-        return getSetStringAsync(key, value).join();
-    }
-
-    @Override
-    public long getLong(String key, long defValue) {
-        return getLongAsync(key, defValue).join();
-    }
-
-    @Override
-    public long getSetLong(String key, long value, long defValue) {
-        return getSetLongAsync(key, value, defValue).join();
     }
 
     //--------------------- getex ------------------------------
@@ -478,44 +451,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.GETEX, key, "EX", String.valueOf(expireSeconds)).thenApply(v -> getObjectValue(key, cryptor, v, type));
     }
 
-    @Override
-    public <T> T getex(String key, final int expireSeconds, final Type type) {
-        return (T) getexAsync(key, expireSeconds, type).join();
-    }
-
-    @Override
-    public CompletableFuture<String> getexStringAsync(String key, int expireSeconds) {
-        return sendAsync(Command.GETEX, key, "EX", String.valueOf(expireSeconds)).thenApply(v -> getStringValue(key, cryptor, v));
-    }
-
-    @Override
-    public String getexString(String key, final int expireSeconds) {
-        return getexStringAsync(key, expireSeconds).join();
-    }
-
-    @Override
-    public CompletableFuture<Long> getexLongAsync(String key, int expireSeconds, long defValue) {
-        return sendAsync(Command.GETEX, key, "EX", String.valueOf(expireSeconds)).thenApply(v -> getLongValue(v, defValue));
-    }
-
-    @Override
-    public long getexLong(String key, final int expireSeconds, long defValue) {
-        return getexLongAsync(key, expireSeconds, defValue).join();
-    }
-
-    @Override
-    public void mset(final Object... keyVals) {
-        msetAsync(keyVals).join();
-    }
-
-    @Override
-    public void mset(final Map map) {
-        msetAsync(map).join();
-    }
-
     //--------------------- set ------------------------------
     @Override
-    public CompletableFuture<Void> msetAsync(final Object... keyVals) {
+    public CompletableFuture<Void> msetAsync(final Serializable... keyVals) {
         if (keyVals.length % 2 != 0) {
             throw new RedkaleException("key value must be paired");
         }
@@ -543,18 +481,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setAsync(String key, final Type type, T value) {
-        return sendAsync(Command.SET, key, formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> null);
-    }
-
-    @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, final Type type, T value) {
         return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Boolean> setnxAsync(String key, final Type type, T value) {
-        return sendAsync(Command.SETNX, key, formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> getBoolValue(v));
     }
 
     @Override
@@ -563,174 +491,19 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
+    public <T> CompletableFuture<T> getSetAsync(String key, Convert convert, final Type type, T value) {
         return sendAsync(Command.GETSET, key, formatValue(key, cryptor, convert, type, value)).thenApply(v -> getObjectValue(key, cryptor, v, type));
     }
 
-    @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, Convert convert0, final Type type, T value) {
-        return sendAsync(Command.GETSET, key, formatValue(key, cryptor, convert0, type, value)).thenApply(v -> getObjectValue(key, cryptor, v, type));
-    }
-
-    @Override
-    public <T> void set(final String key, final Type type, T value) {
-        setAsync(key, type, value).join();
-    }
-
-    @Override
-    public <T> void set(final String key, final Convert convert, final Type type, T value) {
-        setAsync(key, convert, type, value).join();
-    }
-
-    @Override
-    public <T> boolean setnx(final String key, final Type type, T value) {
-        return setnxAsync(key, type, value).join();
-    }
-
-    @Override
-    public <T> boolean setnx(final String key, final Convert convert, final Type type, T value) {
-        return setnxAsync(key, convert, type, value).join();
-    }
-
-    @Override
-    public <T> T getSet(final String key, final Type type, T value) {
-        return getSetAsync(key, type, value).join();
-    }
-
-    @Override
-    public <T> T getSet(String key, final Convert convert, final Type type, T value) {
-        return getSetAsync(key, convert, type, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Void> setStringAsync(String key, String value) {
-        return sendAsync(Command.SET, key, formatValue(key, cryptor, value)).thenApply(v -> null);
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxStringAsync(String key, String value) {
-        return sendAsync(Command.SETNX, key, formatValue(key, cryptor, value)).thenApply(v -> getBoolValue(v));
-    }
-
-    @Override
-    public CompletableFuture<String> getSetStringAsync(String key, String value) {
-        return sendAsync(Command.GETSET, key, formatValue(key, cryptor, value)).thenApply(v -> getStringValue(key, cryptor, v));
-    }
-
-    @Override
-    public void setString(String key, String value) {
-        setStringAsync(key, value).join();
-    }
-
-    @Override
-    public boolean setnxString(String key, String value) {
-        return setnxStringAsync(key, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Void> setLongAsync(String key, long value) {
-        return sendAsync(Command.SET, key, formatValue(value)).thenApply(v -> null);
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxLongAsync(String key, long value) {
-        return sendAsync(Command.SETNX, key, formatValue(value)).thenApply(v -> getBoolValue(v));
-    }
-
-    @Override
-    public CompletableFuture<Long> getSetLongAsync(String key, long value, long defvalue) {
-        return sendAsync(Command.GETSET, key, formatValue(value)).thenApply(v -> getLongValue(v, defvalue));
-    }
-
-    @Override
-    public void setLong(String key, long value) {
-        setLongAsync(key, value).join();
-    }
-
-    @Override
-    public boolean setnxLong(String key, long value) {
-        return setnxLongAsync(key, value).join();
-    }
-
     //--------------------- setex ------------------------------    
-    @Override
-    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, final Type type, T value) {
-        return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), formatValue(key, cryptor, (Convert) null, type, value)).thenApply(v -> null);
-    }
-
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
         return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, final Type type, T value) {
-        return sendAsync(Command.SET, key, formatValue(key, cryptor, (Convert) null, type, value), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
-    }
-
-    @Override
     public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
         return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
-    }
-
-    @Override
-    public <T> void setex(String key, int expireSeconds, final Type type, T value) {
-        setexAsync(key, expireSeconds, type, value).join();
-    }
-
-    @Override
-    public <T> void setex(String key, int expireSeconds, Convert convert, final Type type, T value) {
-        setexAsync(key, expireSeconds, convert, type, value).join();
-    }
-
-    @Override
-    public <T> boolean setnxex(String key, int expireSeconds, final Type type, T value) {
-        return setnxexAsync(key, expireSeconds, type, value).join();
-    }
-
-    @Override
-    public <T> boolean setnxex(String key, int expireSeconds, Convert convert, final Type type, T value) {
-        return setnxexAsync(key, expireSeconds, convert, type, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Void> setexStringAsync(String key, int expireSeconds, String value) {
-        return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), formatValue(key, cryptor, value)).thenApply(v -> null);
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxexStringAsync(String key, int expireSeconds, String value) {
-        return sendAsync(Command.SET, key, formatValue(key, cryptor, value), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
-    }
-
-    @Override
-    public void setexString(String key, int expireSeconds, String value) {
-        setexStringAsync(key, expireSeconds, value).join();
-    }
-
-    @Override
-    public boolean setnxexString(String key, int expireSeconds, String value) {
-        return setnxexStringAsync(key, expireSeconds, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Void> setexLongAsync(String key, int expireSeconds, long value) {
-        return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), formatValue(value)).thenApply(v -> null);
-    }
-
-    @Override
-    public void setexLong(String key, int expireSeconds, long value) {
-        setexLongAsync(key, expireSeconds, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxexLongAsync(String key, int expireSeconds, long value) {
-        return sendAsync(Command.SET, key, formatValue(value), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
-    }
-
-    @Override
-    public boolean setnxexLong(String key, int expireSeconds, long value) {
-        return setnxexLongAsync(key, expireSeconds, value).join();
     }
 
     //--------------------- expire ------------------------------    
@@ -739,20 +512,10 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.EXPIRE, key, String.valueOf(expireSeconds)).thenApply(v -> null);
     }
 
-    @Override
-    public void expire(String key, int expireSeconds) {
-        expireAsync(key, expireSeconds).join();
-    }
-
     //--------------------- persist ------------------------------    
     @Override
     public CompletableFuture<Boolean> persistAsync(String key) {
         return sendAsync(Command.PERSIST, key).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
-    }
-
-    @Override
-    public boolean persist(String key) {
-        return persistAsync(key).join();
     }
 
     //--------------------- rename ------------------------------    
@@ -762,50 +525,20 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public boolean rename(String oldKey, String newKey) {
-        return renameAsync(oldKey, newKey).join();
-    }
-
-    @Override
     public CompletableFuture<Boolean> renamenxAsync(String oldKey, String newKey) {
         return sendAsync(Command.RENAMENX, oldKey, newKey).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
     }
 
-    @Override
-    public boolean renamenx(String oldKey, String newKey) {
-        return renamenxAsync(oldKey, newKey).join();
-    }
-
     //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> delAsync(String... keys) {
-        return sendAsync(Command.DEL, keys).thenApply(v -> v.toInteger());
-    }
-
-    @Override
-    public int del(String... keys) {
-        return delAsync(keys).join();
+    public CompletableFuture<Long> delAsync(String... keys) {
+        return sendAsync(Command.DEL, keys).thenApply(v -> getLongValue(v, 0L));
     }
 
     //--------------------- incrby ------------------------------    
     @Override
-    public long incr(final String key) {
-        return incrAsync(key).join();
-    }
-
-    @Override
     public CompletableFuture<Long> incrAsync(final String key) {
         return sendAsync(Command.INCR, key).thenApply(v -> getLongValue(v, 0L));
-    }
-
-    @Override
-    public long incrby(final String key, long num) {
-        return incrbyAsync(key, num).join();
-    }
-
-    @Override
-    public double incrbyFloat(final String key, double num) {
-        return incrbyFloatAsync(key, num).join();
     }
 
     @Override
@@ -820,18 +553,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     //--------------------- decrby ------------------------------    
     @Override
-    public long decr(final String key) {
-        return decrAsync(key).join();
-    }
-
-    @Override
     public CompletableFuture<Long> decrAsync(final String key) {
         return sendAsync(Command.DECR, key).thenApply(v -> getLongValue(v, 0L));
-    }
-
-    @Override
-    public long decrby(final String key, long num) {
-        return decrbyAsync(key, num).join();
     }
 
     @Override
@@ -840,141 +563,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int hdel(final String key, String... fields) {
-        return hdelAsync(key, fields).join();
-    }
-
-    @Override
-    public int hlen(final String key) {
-        return hlenAsync(key).join();
-    }
-
-    @Override
-    public List<String> hkeys(final String key) {
-        return hkeysAsync(key).join();
-    }
-
-    @Override
-    public long hincr(final String key, String field) {
-        return hincrAsync(key, field).join();
-    }
-
-    @Override
-    public long hincrby(final String key, String field, long num) {
-        return hincrbyAsync(key, field, num).join();
-    }
-
-    @Override
-    public double hincrbyFloat(final String key, String field, double num) {
-        return hincrbyFloatAsync(key, field, num).join();
-    }
-
-    @Override
-    public long hdecr(final String key, String field) {
-        return hdecrAsync(key, field).join();
-    }
-
-    @Override
-    public long hdecrby(final String key, String field, long num) {
-        return hdecrbyAsync(key, field, num).join();
-    }
-
-    @Override
-    public boolean hexists(final String key, String field) {
-        return hexistsAsync(key, field).join();
-    }
-
-    @Override
-    public <T> void hset(final String key, final String field, final Type type, final T value) {
-        hsetAsync(key, field, type, value).join();
-    }
-
-    @Override
-    public <T> void hset(final String key, final String field, final Convert convert, final Type type, final T value) {
-        hsetAsync(key, field, convert, type, value).join();
-    }
-
-    @Override
-    public void hsetString(final String key, final String field, final String value) {
-        hsetStringAsync(key, field, value).join();
-    }
-
-    @Override
-    public void hsetLong(final String key, final String field, final long value) {
-        hsetLongAsync(key, field, value).join();
-    }
-
-    @Override
-    public <T> boolean hsetnx(final String key, final String field, final Type type, final T value) {
-        return hsetnxAsync(key, field, type, value).join();
-    }
-
-    @Override
-    public <T> boolean hsetnx(final String key, final String field, final Convert convert, final Type type, final T value) {
-        return hsetnxAsync(key, field, convert, type, value).join();
-    }
-
-    @Override
-    public boolean hsetnxString(final String key, final String field, final String value) {
-        return hsetnxStringAsync(key, field, value).join();
-    }
-
-    @Override
-    public boolean hsetnxLong(final String key, final String field, final long value) {
-        return hsetnxLongAsync(key, field, value).join();
-    }
-
-    @Override
-    public void hmset(final String key, final Serializable... values) {
-        hmsetAsync(key, values).join();
-    }
-
-    @Override
-    public void hmset(final String key, final Map map) {
-        hmsetAsync(key, map).join();
-    }
-
-    @Override
-    public List<Serializable> hmget(final String key, final Type type, final String... fields) {
-        return hmgetAsync(key, type, fields).join();
-    }
-
-    @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
-        return (Map) hscanAsync(key, type, cursor, limit, pattern).join();
-    }
-
-    @Override
-    public <T> Set< T> sscan(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
-        return (Set) sscanAsync(key, componentType, cursor, limit, pattern).join();
-    }
-
-    @Override
-    public <T> T hget(final String key, final String field, final Type type) {
-        return (T) hgetAsync(key, field, type).join();
-    }
-
-    @Override
-    public String hgetString(final String key, final String field) {
-        return hgetStringAsync(key, field).join();
-    }
-
-    @Override
-    public long hgetLong(final String key, final String field, long defValue) {
-        return hgetLongAsync(key, field, defValue).join();
-    }
-
-    @Override
-    public CompletableFuture<Integer> hdelAsync(final String key, String... fields) {
+    public CompletableFuture<Long> hdelAsync(final String key, String... fields) {
         String[] args = new String[fields.length + 1];
         args[0] = key;
         System.arraycopy(fields, 0, args, 1, fields.length);
-        return sendAsync(Command.HDEL, args).thenApply(v -> getIntValue(v, 0));
+        return sendAsync(Command.HDEL, args).thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
-    public CompletableFuture<Integer> hlenAsync(final String key) {
-        return sendAsync(Command.HLEN, key).thenApply(v -> getIntValue(v, 0));
+    public CompletableFuture<Long> hlenAsync(final String key) {
+        return sendAsync(Command.HLEN, key).thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
@@ -1013,14 +611,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Type type, final T value) {
-        if (value == null) {
-            return CompletableFuture.completedFuture(null);
-        }
-        return sendAsync(Command.HSET, key, field, formatValue(key, cryptor, null, type, value)).thenApply(v -> null);
-    }
-
-    @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
         if (value == null) {
             return CompletableFuture.completedFuture(null);
@@ -1029,45 +619,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> hsetStringAsync(final String key, final String field, final String value) {
-        if (value == null) {
-            return CompletableFuture.completedFuture(null);
-        }
-        return sendAsync(Command.HSET, key, field, formatValue(key, cryptor, value)).thenApply(v -> null);
-    }
-
-    @Override
-    public CompletableFuture<Void> hsetLongAsync(final String key, final String field, final long value) {
-        return sendAsync(Command.HSET, key, field, formatValue(value)).thenApply(v -> null);
-    }
-
-    @Override
-    public <T> CompletableFuture<Boolean> hsetnxAsync(final String key, final String field, final Type type, final T value) {
-        if (value == null) {
-            return CompletableFuture.completedFuture(null);
-        }
-        return sendAsync(Command.HSETNX, key, field, formatValue(key, cryptor, null, type, value)).thenApply(v -> getBoolValue(v));
-    }
-
-    @Override
     public <T> CompletableFuture<Boolean> hsetnxAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
         if (value == null) {
             return CompletableFuture.completedFuture(null);
         }
         return sendAsync(Command.HSETNX, key, field, formatValue(key, cryptor, convert, type, value)).thenApply(v -> getBoolValue(v));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> hsetnxStringAsync(final String key, final String field, final String value) {
-        if (value == null) {
-            return CompletableFuture.completedFuture(null);
-        }
-        return sendAsync(Command.HSETNX, key, field, formatValue(key, cryptor, value)).thenApply(v -> getBoolValue(v));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> hsetnxLongAsync(final String key, final String field, final long value) {
-        return sendAsync(Command.HSETNX, key, field, formatValue(value)).thenApply(v -> getBoolValue(v));
     }
 
     @Override
@@ -1145,16 +701,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<String> hgetStringAsync(final String key, final String field) {
-        return sendAsync(Command.HGET, key, field).thenApply(v -> getStringValue(key, cryptor, v));
-    }
-
-    @Override
-    public CompletableFuture<Long> hgetLongAsync(final String key, final String field, long defValue) {
-        return sendAsync(Command.HGET, key, field).thenApply(v -> getLongValue(v, defValue));
-    }
-
-    @Override
     public <T> CompletableFuture<Map<String, T>> hgetallAsync(final String key, final Type type) {
         return sendAsync(Command.HGETALL, key).thenApply(v -> getMapValue(key, cryptor, v, null, type));
     }
@@ -1164,75 +710,15 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.HVALS, key).thenApply(v -> (List) getCollectionValue(key, cryptor, v, false, type));
     }
 
-    @Override
-    public CompletableFuture<Map<String, String>> hgetallStringAsync(final String key) {
-        return hgetallAsync(key, String.class);
-    }
-
-    @Override
-    public CompletableFuture<List<String>> hvalsStringAsync(final String key) {
-        return hvalsAsync(key, String.class);
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Long>> hgetallLongAsync(final String key) {
-        return hgetallAsync(key, Long.class);
-    }
-
-    @Override
-    public CompletableFuture<List<Long>> hvalsLongAsync(final String key) {
-        return hvalsAsync(key, Long.class);
-    }
-
-    @Override
-    public <T> Map<String, T> hgetall(final String key, final Type type) {
-        return (Map) hgetallAsync(key, type).join();
-    }
-
-    @Override
-    public <T> List<T> hvals(final String key, final Type type) {
-        return (List) hvalsAsync(key, type).join();
-    }
-
-    @Override
-    public Map<String, String> hgetallString(final String key) {
-        return hgetallStringAsync(key).join();
-    }
-
-    @Override
-    public List<String> hvalsString(final String key) {
-        return hvalsStringAsync(key).join();
-    }
-
-    @Override
-    public Map<String, Long> hgetallLong(final String key) {
-        return hgetallLongAsync(key).join();
-    }
-
-    @Override
-    public List<Long> hvalsLong(final String key) {
-        return hvalsLongAsync(key).join();
-    }
-
     //--------------------- collection ------------------------------  
     @Override
-    public CompletableFuture<Integer> llenAsync(String key) {
-        return sendAsync(Command.TYPE, key).thenCompose(t -> sendAsync(Command.LLEN, key).thenApply(v -> getIntValue(v, 0)));
+    public CompletableFuture<Long> llenAsync(String key) {
+        return sendAsync(Command.TYPE, key).thenCompose(t -> sendAsync(Command.LLEN, key).thenApply(v -> getLongValue(v, 0L)));
     }
 
     @Override
-    public CompletableFuture<Integer> scardAsync(String key) {
-        return sendAsync(Command.TYPE, key).thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getIntValue(v, 0)));
-    }
-
-    @Override
-    public int llen(String key) {
-        return llenAsync(key).join();
-    }
-
-    @Override
-    public int scard(String key) {
-        return scardAsync(key).join();
+    public CompletableFuture<Long> scardAsync(String key) {
+        return sendAsync(Command.TYPE, key).thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
     }
 
     @Override
@@ -1246,54 +732,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, Long>> mgetLongAsync(String... keys) {
-        return sendAsync(Command.MGET, keys).thenApply(v -> {
-            List list = (List) getCollectionValue(null, null, v, false, long.class);
-            Map map = new LinkedHashMap<>();
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                if (obj != null) {
-                    map.put(keys[i], list.get(i));
-                }
-            }
-            return map;
-        });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, String>> mgetStringAsync(String... keys) {
-        return sendAsync(Command.MGET, keys).thenApply(v -> {
-            List list = (List) getCollectionValue(keys[0], cryptor, v, false, String.class);
-            Map map = new LinkedHashMap<>();
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                if (obj != null) {
-                    map.put(keys[i], list.get(i));
-                }
-            }
-            return map;
-        });
-    }
-
-    @Override
     public <T> CompletableFuture<Map<String, T>> mgetAsync(final Type componentType, String... keys) {
         return sendAsync(Command.MGET, keys).thenApply(v -> {
             List list = (List) getCollectionValue(keys[0], cryptor, v, false, componentType);
-            Map map = new LinkedHashMap<>();
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                if (obj != null) {
-                    map.put(keys[i], list.get(i));
-                }
-            }
-            return map;
-        });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, byte[]>> mgetBytesAsync(String... keys) {
-        return sendAsync(Command.MGET, keys).thenApply(v -> {
-            List list = (List) getCollectionValue(keys[0], cryptor, v, false, byte[].class);
             Map map = new LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object obj = list.get(i);
@@ -1369,106 +810,31 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return rsFuture;
     }
 
-    @Override
-    public <T> Set<T> smembers(String key, final Type componentType) {
-        return (Set) smembersAsync(key, componentType).join();
-    }
-
-    @Override
-    public <T> List<T> lrange(String key, final Type componentType, int start, int stop) {
-        return (List) lrangeAsync(key, componentType, start, stop).join();
-    }
-
-    @Override
-    public Map<String, Long> mgetLong(final String... keys) {
-        return mgetLongAsync(keys).join();
-    }
-
-    @Override
-    public Map<String, String> mgetString(final String... keys) {
-        return mgetStringAsync(keys).join();
-    }
-
-    @Override
-    public <T> Map<String, T> mget(final Type componentType, final String... keys) {
-        return (Map) mgetAsync(componentType, keys).join();
-    }
-
-    @Override
-    public Map<String, byte[]> mgetBytes(final String... keys) {
-        return (Map) mgetBytesAsync(keys).join();
-    }
-
-    @Override
-    public <T> Map<String, Set<T>> smembers(final Type componentType, String... keys) {
-        return (Map) smembersAsync(componentType, keys).join();
-    }
-
-    @Override
-    public <T> Map<String, List<T>> lrange(final Type componentType, String... keys) {
-        return (Map) lrangeAsync(componentType, keys).join();
-    }
-
     //--------------------- existsItem ------------------------------  
-    @Override
-    public <T> boolean sismember(String key, final Type componentType, T value) {
-        return sismemberAsync(key, componentType, value).join();
-    }
-
     @Override
     public <T> CompletableFuture<Boolean> sismemberAsync(String key, final Type componentType, T value) {
         return sendAsync(Command.SISMEMBER, key, formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> getIntValue(v, 0) > 0);
     }
 
-    @Override
-    public boolean sismemberString(String key, String value) {
-        return sismemberStringAsync(key, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Boolean> sismemberStringAsync(String key, String value) {
-        return sendAsync(Command.SISMEMBER, key, formatValue(key, cryptor, value)).thenApply(v -> getIntValue(v, 0) > 0);
-    }
-
-    @Override
-    public boolean sismemberLong(String key, long value) {
-        return sismemberLongAsync(key, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Boolean> sismemberLongAsync(String key, long value) {
-        return sendAsync(Command.SISMEMBER, key, formatValue(value)).thenApply(v -> getIntValue(v, 0) > 0);
-    }
-
     //--------------------- rpush ------------------------------  
     @Override
-    public <T> CompletableFuture<Void> rpushAsync(String key, final Type componentType, T value) {
-        return sendAsync(Command.RPUSH, key, formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> null);
+    public <T> CompletableFuture<Void> rpushAsync(String key, final Type componentType, T... values) {
+        return sendAsync(Command.RPUSH, keyArgs(key, componentType, values)).thenApply(v -> null);
     }
 
     @Override
-    public <T> void rpush(String key, final Type componentType, T value) {
-        rpushAsync(key, componentType, value).join();
+    public <T> CompletableFuture<Void> lpushAsync(String key, final Type componentType, T... values) {
+        return sendAsync(Command.LPUSH, keyArgs(key, componentType, values)).thenApply(v -> null);
     }
 
     @Override
-    public CompletableFuture<Void> rpushStringAsync(String key, String value) {
-        return sendAsync(Command.RPUSH, key, formatValue(key, cryptor, value)).thenApply(v -> null);
+    public <T> CompletableFuture<Void> rpushxAsync(final String key, final Type componentType, T... values) {
+        return sendAsync(Command.RPUSHX, keyArgs(key, componentType, values)).thenApply(v -> null);
     }
 
     @Override
-    public void rpushString(String key, String value) {
-        rpushStringAsync(key, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Void> rpushLongAsync(String key, long value) {
-        return sendAsync(Command.RPUSH, key, formatValue(value)).thenApply(v -> null);
-    }
-
-    @Override
-    public void rpushLong(String key, long value) {
-        rpushLongAsync(key, value).join();
+    public <T> CompletableFuture<Void> lpushxAsync(final String key, final Type componentType, T... values) {
+        return sendAsync(Command.LPUSHX, keyArgs(key, componentType, values)).thenApply(v -> null);
     }
 
     //--------------------- lrem ------------------------------  
@@ -1478,28 +844,23 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> int lrem(String key, final Type componentType, T value) {
-        return lremAsync(key, componentType, value).join();
+    public CompletableFuture<Void> ltrimAsync(final String key, int start, int stop) {
+        return sendAsync(Command.LTRIM, key, String.valueOf(start), String.valueOf(stop)).thenApply(v -> null);
     }
 
     @Override
-    public CompletableFuture<Integer> lremStringAsync(String key, String value) {
-        return sendAsync(Command.LREM, key, "0", formatValue(key, cryptor, value)).thenApply(v -> getIntValue(v, 0));
+    public <T> CompletableFuture<T> rpopAsync(String key, Type componentType) {
+        return sendAsync(Command.RPOP, key).thenApply(v -> getObjectValue(key, cryptor, v, componentType));
     }
 
     @Override
-    public int lremString(String key, String value) {
-        return lremStringAsync(key, value).join();
+    public <T> CompletableFuture<T> lpopAsync(String key, Type componentType) {
+        return sendAsync(Command.LPOP, key).thenApply(v -> getObjectValue(key, cryptor, v, componentType));
     }
 
     @Override
-    public CompletableFuture<Integer> lremLongAsync(String key, long value) {
-        return sendAsync(Command.LREM, key, "0", formatValue(value)).thenApply(v -> getIntValue(v, 0));
-    }
-
-    @Override
-    public int lremLong(String key, long value) {
-        return lremLongAsync(key, value).join();
+    public <T> CompletableFuture<T> rpoplpushAsync(final String key, final String key2, final Type componentType) {
+        return sendAsync(Command.RPOPLPUSH, key, key2).thenApply(v -> getObjectValue(key, cryptor, v, componentType));
     }
 
     //--------------------- sadd ------------------------------  
@@ -1515,82 +876,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Set<T>> spopAsync(String key, int count, Type componentType) {
-        return sendAsync(Command.SPOP, key, String.valueOf(count)).thenApply(v -> getObjectValue(key, cryptor, v, componentType));
-    }
-
-    @Override
-    public CompletableFuture<String> spopStringAsync(String key) {
-        return sendAsync(Command.SPOP, key).thenApply(v -> getStringValue(key, cryptor, v));
-    }
-
-    @Override
-    public CompletableFuture<Set<String>> spopStringAsync(String key, int count) {
-        return sendAsync(Command.SPOP, key, String.valueOf(count)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, String.class));
-    }
-
-    @Override
-    public CompletableFuture<Long> spopLongAsync(String key) {
-        return sendAsync(Command.SPOP, key).thenApply(v -> getLongValue(v, 0L));
-    }
-
-    @Override
-    public CompletableFuture<Set<Long>> spopLongAsync(String key, int count) {
-        return sendAsync(Command.SPOP, key, String.valueOf(count)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, long.class));
-    }
-
-    @Override
-    public <T> void sadd(String key, final Type componentType, T value) {
-        saddAsync(key, componentType, value).join();
-    }
-
-    @Override
-    public <T> T spop(String key, final Type componentType) {
-        return (T) spopAsync(key, componentType).join();
-    }
-
-    @Override
-    public <T> Set<T> spop(String key, int count, final Type componentType) {
-        return (Set) spopAsync(key, count, componentType).join();
-    }
-
-    @Override
-    public String spopString(String key) {
-        return spopStringAsync(key).join();
-    }
-
-    @Override
-    public Set<String> spopString(String key, int count) {
-        return spopStringAsync(key, count).join();
-    }
-
-    @Override
-    public Long spopLong(String key) {
-        return spopLongAsync(key).join();
-    }
-
-    @Override
-    public Set<Long> spopLong(String key, int count) {
-        return spopLongAsync(key, count).join();
-    }
-
-    @Override
-    public CompletableFuture<Void> saddStringAsync(String key, String value) {
-        return sendAsync(Command.SADD, key, formatValue(key, cryptor, value)).thenApply(v -> null);
-    }
-
-    @Override
-    public void saddString(String key, String value) {
-        saddStringAsync(key, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Void> saddLongAsync(String key, long value) {
-        return sendAsync(Command.SADD, key, formatValue(value)).thenApply(v -> null);
-    }
-
-    @Override
-    public void saddLong(String key, long value) {
-        saddLongAsync(key, value).join();
+        return sendAsync(Command.SPOP, key, String.valueOf(count)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
     }
 
     //--------------------- srem ------------------------------  
@@ -1599,112 +885,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.SREM, key, formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> getIntValue(v, 0));
     }
 
-    @Override
-    public <T> int srem(String key, final Type componentType, T value) {
-        return sremAsync(key, componentType, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Integer> sremStringAsync(String key, String value) {
-        return sendAsync(Command.SREM, key, formatValue(key, cryptor, value)).thenApply(v -> getIntValue(v, 0));
-    }
-
-    @Override
-    public int sremString(String key, String value) {
-        return sremStringAsync(key, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Integer> sremLongAsync(String key, long value) {
-        return sendAsync(Command.SREM, key, formatValue(value)).thenApply(v -> getIntValue(v, 0));
-    }
-
-    @Override
-    public int sremLong(String key, long value) {
-        return sremLongAsync(key, value).join();
-    }
-
     //--------------------- keys ------------------------------  
-    @Override
-    public List<String> keys(String pattern) {
-        return keysAsync(pattern).join();
-    }
-
-    @Override
-    public List<String> scan(AtomicLong cursor, int limit, String pattern) {
-        return scanAsync(cursor, limit, pattern).join();
-    }
-
-    @Override
-    public byte[] getBytes(final String key) {
-        return getBytesAsync(key).join();
-    }
-
-    @Override
-    public byte[] getSetBytes(final String key, byte[] value) {
-        return getSetBytesAsync(key, value).join();
-    }
-
-    @Override
-    public byte[] getexBytes(final String key, final int expireSeconds) {
-        return getexBytesAsync(key, expireSeconds).join();
-    }
-
-    @Override
-    public void setBytes(final String key, final byte[] value) {
-        setBytesAsync(key, value).join();
-    }
-
-    @Override
-    public void setexBytes(final String key, final int expireSeconds, final byte[] value) {
-        setexBytesAsync(key, expireSeconds, value).join();
-    }
-
-    @Override
-    public boolean setnxexBytes(final String key, final int expireSeconds, final byte[] value) {
-        return setnxexBytesAsync(key, expireSeconds, value).join();
-    }
-
-    @Override
-    public CompletableFuture<byte[]> getBytesAsync(final String key) {
-        return sendAsync(Command.GET, key).thenApply(v -> v.toBytes());
-    }
-
-    @Override
-    public CompletableFuture<byte[]> getSetBytesAsync(final String key, byte[] value) {
-        return sendAsync(Command.GETSET, key, new String(value, StandardCharsets.UTF_8)).thenApply(v -> v.toBytes());
-    }
-
-    @Override
-    public CompletableFuture<byte[]> getexBytesAsync(final String key, final int expireSeconds) {
-        return sendAsync(Command.GETEX, key, "EX", String.valueOf(expireSeconds)).thenApply(v -> v.toBytes());
-    }
-
-    @Override
-    public CompletableFuture<Void> setBytesAsync(final String key, final byte[] value) {
-        return sendAsync(Command.SET, key, new String(value, StandardCharsets.UTF_8)).thenApply(v -> null);
-    }
-
-    @Override
-    public boolean setnxBytes(final String key, final byte[] value) {
-        return setnxBytesAsync(key, value).join();
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxBytesAsync(final String key, byte[] value) {
-        return sendAsync(Command.SETNX, key, new String(value, StandardCharsets.UTF_8)).thenApply(v -> getBoolValue(v));
-    }
-
-    @Override
-    public CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
-        return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), new String(value, StandardCharsets.UTF_8)).thenApply(v -> null);
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
-        return sendAsync(Command.SET, key, new String(value, StandardCharsets.UTF_8), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
-    }
-
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
         return sendAsync(Command.KEYS, isEmpty(pattern) ? "*" : pattern).thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
@@ -1728,28 +909,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     //--------------------- dbsize ------------------------------  
     @Override
-    public long dbsize() {
-        return dbsizeAsync().join();
-    }
-
-    @Override
     public CompletableFuture<Long> dbsizeAsync() {
         return sendAsync(Command.DBSIZE).thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
-    public void flushdb() {
-        flushdbAsync().join();
-    }
-
-    @Override
     public CompletableFuture<Void> flushdbAsync() {
         return sendAsync(Command.FLUSHDB).thenApply(v -> null);
-    }
-
-    @Override
-    public void flushall() {
-        flushallAsync().join();
     }
 
     @Override

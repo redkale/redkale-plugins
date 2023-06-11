@@ -389,6 +389,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         }
     }
 
+    protected <T> byte[][] keyArgs(String key, Type componentType, T... values) {
+        byte[][] bss = new byte[values.length][];
+        for (int i = 0; i < values.length; i++) {
+            bss[i] = encryptValue(key, cryptor, componentType, (Convert) null, values[i]);
+        }
+        return bss;
+    }
+
     //--------------------- exists ------------------------------
     @Override
     public CompletableFuture<Boolean> existsAsync(String key) {
@@ -397,106 +405,12 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    public boolean exists(String key) {
-        RedisClusterCommands<String, byte[]> command = connectBytes();
-        boolean rs = command.exists(key) > 0;
-        releaseBytesCommand(command);
-        return rs;
-    }
-
     //--------------------- get ------------------------------
     @Override
     public <T> CompletableFuture<T> getAsync(String key, Type type) {
         return connectBytesAsync().thenCompose(command -> {
-            CompletableFuture<byte[]> rf = completableBytesFuture(command, command.get(key));
-            return rf.thenApply(bs -> decryptValue(key, cryptor, type, bs));
+            return completableBytesFuture(command, command.get(key).thenApply(bs -> decryptValue(key, cryptor, type, bs)));
         });
-    }
-
-    @Override
-    public CompletableFuture<String> getStringAsync(String key) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, cryptor, command, command.get(key));
-        });
-    }
-
-    @Override
-    public CompletableFuture<String> getSetStringAsync(String key, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, cryptor, command, command.setGet(key, encryptValue(key, cryptor, value)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Long> getLongAsync(String key, long defValue) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableLongFuture(command, command.get(key).thenApply(v -> v == null ? defValue : Long.parseLong(v)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Long> getSetLongAsync(String key, long value, long defValue) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableLongFuture(command, command.setGet(key, String.valueOf(value)).thenApply(v -> v == null ? defValue : Long.parseLong(v)));
-        });
-    }
-
-    @Override
-    public <T> T get(String key, final Type type) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs = command.get(key);
-        releaseBytesCommand(command);
-        return decryptValue(key, cryptor, type, bs);
-    }
-
-    @Override
-    public <T> T getSet(String key, final Type type, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs = command.setGet(key, encryptValue(key, cryptor, type, convert, value));
-        releaseBytesCommand(command);
-        return decryptValue(key, cryptor, type, bs);
-    }
-
-    @Override
-    public <T> T getSet(String key, Convert convert0, final Type type, T value) {
-        Convert c = convert0 == null ? this.convert : convert0;
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs = command.setGet(key, encryptValue(key, cryptor, type, c, value));
-        releaseBytesCommand(command);
-        return decryptValue(key, cryptor, c, type, bs);
-    }
-
-    @Override
-    public String getString(String key) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String rs = command.get(key);
-        releaseStringCommand(command);
-        return cryptor != null ? cryptor.decrypt(key, rs) : rs;
-    }
-
-    @Override
-    public String getSetString(String key, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String rs = command.setGet(key, encryptValue(key, cryptor, value));
-        releaseStringCommand(command);
-        return decryptValue(key, cryptor, rs);
-    }
-
-    @Override
-    public long getLong(String key, long defValue) {
-        final RedisClusterCommands<String, String> command = connectString();
-        final String v = command.get(key);
-        releaseStringCommand(command);
-        return v == null ? defValue : Long.parseLong(v);
-    }
-
-    @Override
-    public long getSetLong(String key, long value, long defValue) {
-        final RedisClusterCommands<String, String> command = connectString();
-        final String v = command.setGet(key, String.valueOf(value));
-        releaseStringCommand(command);
-        return v == null ? defValue : Long.parseLong(v);
     }
 
     //--------------------- getex ------------------------------
@@ -507,57 +421,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    public <T> T getex(String key, final int expireSeconds, final Type type) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs = command.getex(key, GetExArgs.Builder.ex(expireSeconds));
-        releaseBytesCommand(command);
-        if (bs == null) {
-            return null;
-        }
-        return decryptValue(key, cryptor, type, bs);
-    }
-
-    @Override
-    public CompletableFuture<String> getexStringAsync(String key, int expireSeconds) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, null, command, command.getex(key, GetExArgs.Builder.ex(expireSeconds)).thenApply(v -> cryptor != null ? cryptor.decrypt(key, v) : v));
-        });
-    }
-
-    @Override
-    public String getexString(String key, final int expireSeconds) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String v = command.getex(key, GetExArgs.Builder.ex(expireSeconds));
-        releaseStringCommand(command);
-        if (v == null) {
-            return null;
-        }
-        return cryptor != null ? cryptor.decrypt(key, v) : v;
-    }
-
-    @Override
-    public CompletableFuture<Long> getexLongAsync(String key, int expireSeconds, long defValue) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的long值，无需传cryptor进行解密
-            return completableLongFuture(command, command.getex(key, GetExArgs.Builder.ex(expireSeconds)).thenApply(v -> v == null ? defValue : Long.parseLong(v)));
-        });
-    }
-
-    @Override
-    public long getexLong(String key, final int expireSeconds, long defValue) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String v = command.getex(key, GetExArgs.Builder.ex(expireSeconds));
-        releaseStringCommand(command);
-        if (v == null) {
-            return defValue;
-        }
-        return Long.parseLong(v);
-    }
-
 //    //--------------------- setex ------------------------------
     @Override
-    public CompletableFuture<Void> msetAsync(final Object... keyVals) {
+    public CompletableFuture<Void> msetAsync(final Serializable... keyVals) {
         if (keyVals.length % 2 != 0) {
             throw new RedkaleException("key value must be paired");
         }
@@ -583,13 +449,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setAsync(String key, final Type type, T value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.set(key, encryptValue(key, cryptor, type, this.convert, value)));
-        });
-    }
-
-    @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.set(key, encryptValue(key, cryptor, type, convert0, value)));
@@ -597,24 +456,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> setnxAsync(String key, final Type type, T value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBoolFuture(command, command.setnx(key, encryptValue(key, cryptor, type, this.convert, value)));
-        });
-    }
-
-    @Override
     public <T> CompletableFuture<Boolean> setnxAsync(String key, Convert convert0, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBoolFuture(command, command.setnx(key, encryptValue(key, cryptor, type, convert0, value)));
-        });
-    }
-
-    @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setGet(key, encryptValue(key, cryptor, type, this.convert, value))
-                .thenApply(old -> decryptValue(key, cryptor, type, old)));
         });
     }
 
@@ -627,159 +471,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    public void mset(final Object... keyVals) {
-        if (keyVals.length % 2 != 0) {
-            throw new RedkaleException("key value must be paired");
-        }
-        Map<String, byte[]> map = new LinkedHashMap<>();
-        for (int i = 0; i < keyVals.length; i += 2) {
-            String key = keyVals[i].toString();
-            Object val = keyVals[i + 1];
-            map.put(key, encryptValue(key, cryptor, convert, val));
-        }
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.mset(map);
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public void mset(final Map map) {
-        if (isEmpty(map)) {
-            return;
-        }
-        Map<String, byte[]> rs = new LinkedHashMap<>();
-        map.forEach((key, val) -> {
-            rs.put(key.toString(), encryptValue(key.toString(), cryptor, convert, val));
-        });
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.mset(rs);
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public <T> void set(final String key, final Type type, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.set(key, encryptValue(key, cryptor, type, this.convert, value));
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public <T> void set(String key, final Convert convert0, final Type type, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.set(key, encryptValue(key, cryptor, type, convert0, value));
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public <T> boolean setnx(final String key, final Type type, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Boolean rs = command.setnx(key, encryptValue(key, cryptor, type, this.convert, value));
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public <T> boolean setnx(String key, final Convert convert0, final Type type, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Boolean rs = command.setnx(key, encryptValue(key, cryptor, type, convert0, value));
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public CompletableFuture<Void> setStringAsync(String key, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.set(key, encryptValue(key, cryptor, value)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxStringAsync(String key, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableBoolFuture(key, null, command, command.setnx(key, encryptValue(key, cryptor, value)));
-        });
-    }
-
-    @Override
-    public void setString(String key, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.set(key, encryptValue(key, cryptor, value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public boolean setnxString(String key, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        Boolean rs = command.setnx(key, encryptValue(key, cryptor, value));
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public CompletableFuture<Void> setLongAsync(String key, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.set(key, String.valueOf(value)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxLongAsync(String key, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.setnx(key, String.valueOf(value)));
-        });
-    }
-
-    @Override
-    public void setLong(String key, long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.set(key, String.valueOf(value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public boolean setnxLong(String key, long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        Boolean rs = command.setnx(key, String.valueOf(value));
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public boolean setnxBytes(final String key, final byte[] value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Boolean rs = command.setnx(key, value);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxBytesAsync(String key, byte[] value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setnx(key, value));
-        });
-    }
-
-//    //--------------------- setex ------------------------------    
-    @Override
-    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, final Type type, T value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setex(key, expireSeconds, encryptValue(key, cryptor, type, convert, value)).thenApply(r -> null));
-
-        });
-    }
-
-    @Override
-    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, final Type type, T value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.set(key, encryptValue(key, cryptor, type, convert, value), SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
-        });
-    }
-
+    //--------------------- setex ------------------------------    
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert0, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
@@ -790,113 +482,17 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert0, final Type type, T value) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.set(key, encryptValue(key, cryptor, type, convert0, value), SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
+            return completableBytesFuture(command, command.set(key, encryptValue(key, cryptor, type, convert0, value), SetArgs.Builder.nx().ex(expireSeconds))
+                .thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
         });
     }
 
-    @Override
-    public <T> boolean setnxex(String key, int expireSeconds, final Type type, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        String r = command.set(key, encryptValue(key, cryptor, type, convert, value), SetArgs.Builder.nx().ex(expireSeconds));
-        releaseBytesCommand(command);
-        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
-    }
-
-    @Override
-    public <T> boolean setnxex(String key, int expireSeconds, Convert convert0, final Type type, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        String r = command.set(key, encryptValue(key, cryptor, type, convert0, value), SetArgs.Builder.nx().ex(expireSeconds));
-        releaseBytesCommand(command);
-        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
-    }
-
-    @Override
-    public <T> void setex(String key, int expireSeconds, final Type type, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.setex(key, expireSeconds, encryptValue(key, cryptor, type, convert, value));
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public <T> void setex(String key, int expireSeconds, Convert convert0, final Type type, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.setex(key, expireSeconds, encryptValue(key, cryptor, type, convert0, value));
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public CompletableFuture<Void> setexStringAsync(String key, int expireSeconds, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.setex(key, expireSeconds, encryptValue(key, cryptor, value)).thenApply(r -> null));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxexStringAsync(String key, int expireSeconds, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, null, command, command.set(key, encryptValue(key, cryptor, value), SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
-        });
-    }
-
-    @Override
-    public void setexString(String key, int expireSeconds, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.setex(key, expireSeconds, encryptValue(key, cryptor, value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public boolean setnxexString(String key, int expireSeconds, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String r = command.set(key, encryptValue(key, cryptor, value), SetArgs.Builder.nx().ex(expireSeconds));
-        releaseStringCommand(command);
-        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
-    }
-
-    @Override
-    public CompletableFuture<Void> setexLongAsync(String key, int expireSeconds, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.setex(key, expireSeconds, String.valueOf(value)).thenApply(r -> null));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxexLongAsync(String key, int expireSeconds, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, null, command, command.set(key, String.valueOf(value), SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
-        });
-    }
-
-    @Override
-    public void setexLong(String key, int expireSeconds, long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.setex(key, expireSeconds, String.valueOf(value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public boolean setnxexLong(String key, int expireSeconds, long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String r = command.set(key, String.valueOf(value), SetArgs.Builder.nx().ex(expireSeconds));
-        releaseStringCommand(command);
-        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
-    }
-
-//    //--------------------- expire ------------------------------    
+    //--------------------- expire ------------------------------    
     @Override
     public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.expire(key, Duration.ofSeconds(expireSeconds)).thenApply(r -> null));
         });
-    }
-
-    @Override
-    public void expire(String key, int expireSeconds) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.expire(key, Duration.ofSeconds(expireSeconds));
-        releaseBytesCommand(command);
     }
 
 //    //--------------------- persist ------------------------------    
@@ -905,14 +501,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.persist(key));
         });
-    }
-
-    @Override
-    public boolean persist(String key) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        boolean rs = command.persist(key);
-        releaseBytesCommand(command);
-        return rs;
     }
 
 //    //--------------------- rename ------------------------------    
@@ -924,75 +512,27 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public boolean rename(String oldKey, String newKey) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        String r = command.rename(oldKey, newKey);
-        releaseBytesCommand(command);
-        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
-    }
-
-    @Override
     public CompletableFuture<Boolean> renamenxAsync(String oldKey, String newKey) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.renamenx(oldKey, newKey));
         });
     }
 
-    @Override
-    public boolean renamenx(String oldKey, String newKey) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Boolean rs = command.renamenx(oldKey, newKey);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
 //    //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> delAsync(String... keys) {
+    public CompletableFuture<Long> delAsync(String... keys) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.del(keys).thenApply(rs -> rs > 0 ? 1 : 0));
+            return completableBytesFuture(command, command.del(keys));
         });
     }
 
-    @Override
-    public int del(String... keys) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        int rs = command.del(keys).intValue();
-        releaseBytesCommand(command);
-        return rs;
-    }
-
 //    //--------------------- incrby ------------------------------    
-    @Override
-    public long incr(final String key) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        long rs = command.incr(key);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
     @Override
     public CompletableFuture<Long> incrAsync(final String key) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.incr(key));
         });
-    }
-
-    @Override
-    public long incrby(final String key, long num) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        long rs = command.incrby(key, num);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public double incrbyFloat(final String key, double num) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Double rs = command.incrbyfloat(key, num);
-        releaseBytesCommand(command);
-        return rs;
     }
 
     @Override
@@ -1010,30 +550,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             return completableStringFuture(key, null, command, command.incrbyfloat(key, num));
         });
     }
-//    //--------------------- decrby ------------------------------    
 
-    @Override
-    public long decr(final String key) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        long rs = command.decr(key);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
+    //--------------------- decrby ------------------------------    
     @Override
     public CompletableFuture<Long> decrAsync(final String key) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取的long值，无需传cryptor进行解密
             return completableStringFuture(key, null, command, command.decr(key));
         });
-    }
-
-    @Override
-    public long decrby(final String key, long num) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        long rs = command.decrby(key, num);
-        releaseBytesCommand(command);
-        return rs;
     }
 
     @Override
@@ -1044,99 +568,12 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    public int hdel(final String key, String... fields) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        int rs = command.hdel(key, fields).intValue();
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public int hlen(final String key) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        int rs = command.hlen(key).intValue();
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public List<String> hkeys(final String key) {
-        final RedisClusterCommands<String, String> command = connectString();
-        List<String> rs = command.hkeys(key);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public long hincr(final String key, String field) {
-        final RedisClusterCommands<String, String> command = connectString();
-        long rs = command.hincrby(key, field, 1L);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public long hincrby(final String key, String field, long num) {
-        final RedisClusterCommands<String, String> command = connectString();
-        long rs = command.hincrby(key, field, num);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public double hincrbyFloat(final String key, String field, double num) {
-        final RedisClusterCommands<String, String> command = connectString();
-        double rs = command.hincrbyfloat(key, field, num);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public long hdecr(final String key, String field) {
-        final RedisClusterCommands<String, String> command = connectString();
-        long rs = command.hincrby(key, field, -1L);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public long hdecrby(final String key, String field, long num) {
-        final RedisClusterCommands<String, String> command = connectString();
-        long rs = command.hincrby(key, field, -num);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public boolean hexists(final String key, String field) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        boolean rs = command.hget(key, field) != null;
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-//    //--------------------- dbsize ------------------------------  
-    @Override
-    public long dbsize() {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Long rs = command.dbsize();
-        releaseBytesCommand(command);
-        return rs;
-    }
-
+    //--------------------- dbsize ------------------------------  
     @Override
     public CompletableFuture<Long> dbsizeAsync() {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.dbsize());
         });
-    }
-
-    @Override
-    public void flushdb() {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.flushdb();
-        releaseBytesCommand(command);
     }
 
     @Override
@@ -1147,13 +584,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public void flushall() {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.flushall();
-        releaseBytesCommand(command);
-    }
-
-    @Override
     public CompletableFuture<Void> flushallAsync() {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.flushall());
@@ -1161,613 +591,21 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> void hset(final String key, final String field, final Type type, final T value) {
-        if (value == null) {
-            return;
-        }
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.hset(key, field, encryptValue(key, cryptor, type, this.convert, value));
-        releaseBytesCommand(command);
+    public <T> CompletableFuture<T> rpopAsync(final String key, final Type componentType) {
+        return connectBytesAsync().thenCompose(command
+            -> completableBytesFuture(command, command.rpop(key).thenApply(bs -> decryptValue(key, cryptor, componentType, bs)))
+        );
     }
 
     @Override
-    public <T> void hset(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        if (value == null) {
-            return;
-        }
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.hset(key, field, encryptValue(key, cryptor, type, convert0, value));
-        releaseBytesCommand(command);
+    public <T> CompletableFuture<T> rpoplpushAsync(final String key, final String key2, final Type componentType) {
+        return connectBytesAsync().thenCompose(command
+            -> completableBytesFuture(command, command.rpoplpush(key, key2).thenApply(bs -> decryptValue(key, cryptor, componentType, bs)))
+        );
     }
 
     @Override
-    public void hsetString(final String key, final String field, final String value) {
-        if (value == null) {
-            return;
-        }
-        final RedisClusterCommands<String, String> command = connectString();
-        command.hset(key, field, encryptValue(key, cryptor, value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public void hsetLong(final String key, final String field, final long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.hset(key, field, String.valueOf(value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public <T> boolean hsetnx(final String key, final String field, final Type type, final T value) {
-        if (value == null) {
-            return false;
-        }
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Boolean rs = command.hsetnx(key, field, encryptValue(key, cryptor, type, this.convert, value));
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public <T> boolean hsetnx(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        if (value == null) {
-            return false;
-        }
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Boolean rs = command.hsetnx(key, field, encryptValue(key, cryptor, type, convert0, value));
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public boolean hsetnxString(final String key, final String field, final String value) {
-        if (value == null) {
-            return false;
-        }
-        final RedisClusterCommands<String, String> command = connectString();
-        Boolean rs = command.hsetnx(key, field, encryptValue(key, cryptor, value));
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public boolean hsetnxLong(final String key, final String field, final long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        Boolean rs = command.hsetnx(key, field, String.valueOf(value));
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public void hmset(final String key, final Serializable... values) {
-        Map<String, byte[]> vals = new LinkedHashMap<>();
-        for (int i = 0; i < values.length; i += 2) {
-            byte[] bs;
-            if (cryptor != null && values[i + 1] != null) {
-                bs = values[i + 1] instanceof String ? cryptor.encrypt(key, values[i + 1].toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, values[i + 1].getClass(), this.convert, values[i + 1]);
-            } else {
-                bs = values[i + 1] instanceof String ? values[i + 1].toString().getBytes(StandardCharsets.UTF_8) : this.convert.convertToBytes(values[i + 1]);
-            }
-            vals.put(String.valueOf(values[i]), bs);
-        }
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.hmset(key, vals);
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public void hmset(final String key, final Map map) {
-        Map<String, byte[]> vals = new LinkedHashMap<>();
-        map.forEach((k, v) -> {
-            byte[] bs;
-            if (cryptor != null && v != null) {
-                bs = v instanceof String ? cryptor.encrypt(key, v.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, v.getClass(), this.convert, v);
-            } else {
-                bs = v instanceof String ? v.toString().getBytes(StandardCharsets.UTF_8) : this.convert.convertToBytes(v);
-            }
-            vals.put(k.toString(), bs);
-        });
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.hmset(key, vals);
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public List<Serializable> hmget(final String key, final Type type, final String... fields) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        List<KeyValue<String, byte[]>> rs = command.hmget(key, fields);
-        releaseBytesCommand(command);
-        List<Serializable> list = new ArrayList<>(fields.length);
-        for (String field : fields) {
-            byte[] bs = null;
-            for (KeyValue<String, byte[]> kv : rs) {
-                if (kv.getKey().equals(field)) {
-                    bs = kv.hasValue() ? kv.getValue() : null;
-                    break;
-                }
-            }
-            if (bs == null) {
-                list.add(null);
-            } else {
-                list.add(decryptValue(key, cryptor, type, bs));
-            }
-        }
-        return list;
-    }
-
-    @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        ScanArgs args = ScanArgs.Builder.limit(limit);
-        if (pattern != null) {
-            args = args.match(pattern);
-        }
-        MapScanCursor<String, byte[]> rs = command.hscan(key, new ScanCursor(cursor.toString(), false), args);
-        releaseBytesCommand(command);
-        final Map<String, T> map = new LinkedHashMap<>();
-        rs.getMap().forEach((k, v) -> map.put(k, decryptValue(key, cryptor, type, v)));
-        cursor.set(Long.parseLong(rs.getCursor()));
-        return map;
-    }
-
-    @Override
-    public <T> Set<T> sscan(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        ScanArgs args = ScanArgs.Builder.limit(limit);
-        if (pattern != null) {
-            args = args.match(pattern);
-        }
-        ValueScanCursor<byte[]> rs = command.sscan(key, new ScanCursor(cursor.toString(), false), args);
-        releaseBytesCommand(command);
-        final Set< T> set = new LinkedHashSet<>();
-        rs.getValues().forEach(v -> set.add(v == null ? null : decryptValue(key, cryptor, componentType, v)));
-        cursor.set(Long.parseLong(rs.getCursor()));
-        return set;
-    }
-
-    @Override
-    public List<String> scan(AtomicLong cursor, int limit, String pattern) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        ScanArgs args = ScanArgs.Builder.limit(limit);
-        if (pattern != null) {
-            args = args.match(pattern);
-        }
-        KeyScanCursor<String> rs = command.scan(new ScanCursor(cursor.toString(), false), args);
-        releaseBytesCommand(command);
-        final List<String> list = rs.getKeys();
-        cursor.set(Long.parseLong(rs.getCursor()));
-        return list;
-    }
-
-    @Override
-    public <T> T hget(final String key, final String field, final Type type) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs = command.hget(key, field);
-        releaseBytesCommand(command);
-        return decryptValue(key, cryptor, type, bs);
-    }
-
-    @Override
-    public String hgetString(final String key, final String field) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String rs = command.hget(key, field);
-        releaseStringCommand(command);
-        return cryptor != null ? cryptor.decrypt(key, rs) : rs;
-    }
-
-    @Override
-    public long hgetLong(final String key, final String field, long defValue) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String rs = command.hget(key, field);
-        releaseStringCommand(command);
-        if (rs == null) {
-            return defValue;
-        }
-        try {
-            return Long.parseLong(rs);
-        } catch (NumberFormatException e) {
-            return defValue;
-        }
-    }
-
-    @Override
-    public <T> Map<String, T> mget(final Type componentType, final String... keys) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        List<KeyValue<String, byte[]>> rs = command.mget(keys);
-        releaseBytesCommand(command);
-        Map<String, T> map = new LinkedHashMap(rs.size());
-        rs.forEach(kv -> {
-            if (kv.hasValue()) {
-                map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
-            }
-        });
-        return map;
-    }
-
-    @Override
-    public Map<String, byte[]> mgetBytes(final String... keys) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        List<KeyValue<String, byte[]>> rs = command.mget(keys);
-        releaseBytesCommand(command);
-        Map<String, byte[]> map = new LinkedHashMap(rs.size());
-        rs.forEach(kv -> {
-            if (kv.hasValue()) {
-                map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, byte[].class, kv.getValue()));
-            }
-        });
-        return map;
-    }
-
-    @Override
-    public <T> Set<T> smembers(String key, final Type componentType) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Set<T> rs = formatCollection(key, cryptor, command.smembers(key), convert, componentType);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public <T> List<T> lrange(String key, final Type componentType, int start, int stop) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        List<T> rs = formatCollection(key, cryptor, command.lrange(key, start, stop), convert, componentType);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    protected <T> Collection<T> getCollection(final RedisClusterCommands<String, byte[]> command, String key, final Type componentType) {
-        final String type = command.type(key);
-        if (type.contains("list")) {
-            return formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType);
-        } else { //set
-            return formatCollection(key, cryptor, command.smembers(key), convert, componentType);
-        }
-    }
-
-    @Override
-    public <T> Map<String, Set<T>> smembers(final Type componentType, String... keys) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        final Map<String, Set<T>> map = new LinkedHashMap<>();
-        for (String key : keys) {
-            map.put(key, formatCollection(key, cryptor, command.smembers(key), convert, componentType));
-        }
-        releaseBytesCommand(command);
-        return map;
-    }
-
-    @Override
-    public <T> Map<String, List<T>> lrange(final Type componentType, String... keys) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        final Map<String, List<T>> map = new LinkedHashMap<>();
-        for (String key : keys) {
-            map.put(key, formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType));
-        }
-        releaseBytesCommand(command);
-        return map;
-    }
-
-    @Override
-    public int llen(String key) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        int rs = command.llen(key).intValue();
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public int scard(String key) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        int rs = command.scard(key).intValue();
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
-    public <T> void rpush(String key, final Type componentType, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs;
-        if (cryptor != null && componentType == String.class) {
-            bs = cryptor.encrypt(key, String.valueOf(value)).getBytes(StandardCharsets.UTF_8);
-        } else {
-            bs = encryptValue(key, cryptor, componentType, convert, value);
-        }
-        command.rpush(key, bs);
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public <T> int lrem(String key, final Type componentType, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs;
-        if (cryptor != null && componentType == String.class) {
-            bs = cryptor.encrypt(key, String.valueOf(value)).getBytes(StandardCharsets.UTF_8);
-        } else {
-            bs = encryptValue(key, cryptor, componentType, convert, value);
-        }
-        int rs = command.lrem(key, 1L, bs).intValue();
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public <T> boolean sismember(String key, final Type componentType, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs;
-        if (cryptor != null && componentType == String.class) {
-            bs = cryptor.encrypt(key, String.valueOf(value)).getBytes(StandardCharsets.UTF_8);
-        } else {
-            bs = encryptValue(key, cryptor, componentType, convert, value);
-        }
-        boolean rs = command.sismember(key, bs);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
-    public <T> void sadd(String key, final Type componentType, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs;
-        if (cryptor != null && componentType == String.class) {
-            bs = cryptor.encrypt(key, String.valueOf(value)).getBytes(StandardCharsets.UTF_8);
-        } else {
-            bs = encryptValue(key, cryptor, componentType, convert, value);
-        }
-        command.sadd(key, bs);
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
-    public <T> int srem(String key, final Type componentType, T value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs;
-        if (cryptor != null && componentType == String.class) {
-            bs = cryptor.encrypt(key, String.valueOf(value)).getBytes(StandardCharsets.UTF_8);
-        } else {
-            bs = encryptValue(key, cryptor, componentType, convert, value);
-        }
-        int rs = command.srem(key, bs).intValue();
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public <T> T spop(String key, final Type componentType) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        T rs = decryptValue(key, cryptor, componentType, command.spop(key));
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public <T> Set<T> spop(String key, int count, final Type componentType) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Set<T> rs = formatCollection(key, cryptor, command.spop(key, count), convert, componentType);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public byte[] getBytes(final String key) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs = command.get(key);
-        releaseBytesCommand(command);
-        return bs;
-    }
-
-    @Override
-    public byte[] getSetBytes(final String key, byte[] value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs = command.setGet(key, value);
-        releaseBytesCommand(command);
-        return bs;
-    }
-
-    @Override
-    public byte[] getexBytes(final String key, final int expireSeconds) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        byte[] bs = command.getex(key, GetExArgs.Builder.ex(expireSeconds));
-        releaseBytesCommand(command);
-        return bs;
-    }
-
-    @Override
-    public void setBytes(final String key, final byte[] value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.set(key, value);
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public void setexBytes(final String key, final int expireSeconds, final byte[] value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.setex(key, expireSeconds, value);
-        releaseBytesCommand(command);
-    }
-
-    @Override
-    public boolean setnxexBytes(final String key, final int expireSeconds, final byte[] value) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        String r = command.set(key, value, SetArgs.Builder.nx().ex(expireSeconds));
-        releaseBytesCommand(command);
-        return r != null && ("OK".equals(r) || Integer.parseInt(r) > 0);
-    }
-
-    @Override
-    public List<String> keys(String pattern) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        List<String> rs = command.keys(isEmpty(pattern) ? "*" : pattern);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    public Map<String, String> mgetString(final String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        List<KeyValue<String, String>> rs = command.mget(keys);
-        releaseStringCommand(command);
-        Map<String, String> map = new LinkedHashMap<>();
-        rs.forEach(kv -> {
-            if (kv.hasValue()) {
-                map.put(kv.getKey(), cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue());
-            }
-        });
-        return map;
-    }
-
-    protected Collection<String> decryptStringCollection(String key, final boolean set, Collection<String> collection) {
-        if (isEmpty(collection) || cryptor == null) {
-            return collection;
-        }
-        if (set) {
-            Set<String> newset = new LinkedHashSet<>();
-            for (String value : collection) {
-                newset.add(cryptor.decrypt(key, value));
-            }
-            return newset;
-        } else {
-            List<String> newlist = new ArrayList<>();
-            for (String value : collection) {
-                newlist.add(cryptor.decrypt(key, value));
-            }
-            return newlist;
-        }
-    }
-
-    protected Collection<String> getStringCollection(final RedisClusterCommands<String, String> command, String key) {
-        final String type = command.type(key);
-        if (type.contains("list")) { //list
-            return decryptStringCollection(key, false, command.lrange(key, 0, -1));
-        } else { //set
-            return decryptStringCollection(key, true, command.smembers(key));
-        }
-    }
-
-    @Override
-    public void rpushString(String key, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.rpush(key, encryptValue(key, cryptor, value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public String spopString(String key) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String rs = command.spop(key);
-        releaseStringCommand(command);
-        return cryptor != null ? cryptor.encrypt(key, rs) : rs;
-    }
-
-    @Override
-    public Set<String> spopString(String key, int count) {
-        final RedisClusterCommands<String, String> command = connectString();
-        Set<String> rs = command.spop(key, count);
-        releaseStringCommand(command);
-        return (Set) decryptStringCollection(key, true, rs);
-    }
-
-    @Override
-    public int lremString(String key, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        int rs = command.lrem(key, 1, encryptValue(key, cryptor, value)).intValue();
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public boolean sismemberString(String key, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        boolean rs = command.sismember(key, encryptValue(key, cryptor, value));
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public void saddString(String key, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.sadd(key, encryptValue(key, cryptor, value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public int sremString(String key, String value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        int rs = command.srem(key, encryptValue(key, cryptor, value)).intValue();
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public Map<String, Long> mgetLong(String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        List<KeyValue<String, String>> rs = command.mget(keys);
-        releaseStringCommand(command);
-        Map<String, Long> map = new LinkedHashMap<>();
-        rs.forEach(kv -> {
-            if (kv.hasValue()) {
-                map.put(kv.getKey(), Long.parseLong(kv.getValue()));
-            }
-        });
-        return map;
-    }
-
-    @Override
-    public void rpushLong(String key, long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.rpush(key, String.valueOf(value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public Long spopLong(String key) {
-        final RedisClusterCommands<String, String> command = connectString();
-        String value = command.spop(key);
-        releaseStringCommand(command);
-        return value == null ? null : Long.parseLong(value);
-    }
-
-    @Override
-    public Set<Long> spopLong(String key, int count) {
-        final RedisClusterCommands<String, String> command = connectString();
-        Set<Long> rs = (Set) formatLongCollection(true, command.spop(key, count));
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public int lremLong(String key, long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        int rs = command.lrem(key, 1, String.valueOf(value)).intValue();
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public boolean sismemberLong(String key, long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        boolean rs = command.sismember(key, String.valueOf(value));
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public void saddLong(String key, long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.sadd(key, String.valueOf(value));
-        releaseStringCommand(command);
-    }
-
-    @Override
-    public int sremLong(String key, long value) {
-        final RedisClusterCommands<String, String> command = connectString();
-        int rs = command.srem(key, String.valueOf(value)).intValue();
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    public CompletableFuture<Integer> hdelAsync(String key, String... fields) {
+    public CompletableFuture<Long> hdelAsync(String key, String... fields) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.hdel(key, fields));
         });
@@ -1781,7 +619,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> hlenAsync(String key) {
+    public CompletableFuture<Long> hlenAsync(String key) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.hlen(key));
         });
@@ -1826,48 +664,12 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetAsync(String key, String field, Type type, T value) {
-        if (value == null) {
-            return CompletableFuture.completedFuture(null);
-        }
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.hset(key, field, convert.convertToBytes(type, value)));
-        });
-    }
-
-    @Override
     public <T> CompletableFuture<Void> hsetAsync(String key, String field, Convert convert0, Type type, T value) {
         if (value == null) {
             return CompletableFuture.completedFuture(null);
         }
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.hset(key, field, (convert0 == null ? convert : convert0).convertToBytes(type, value)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> hsetStringAsync(String key, String field, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.hset(key, field, value));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> hsetLongAsync(String key, String field, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.hset(key, field, String.valueOf(value)));
-        });
-    }
-
-    @Override
-    public <T> CompletableFuture<Boolean> hsetnxAsync(String key, String field, Type type, T value) {
-        if (value == null) {
-            return CompletableFuture.completedFuture(null);
-        }
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.hsetnx(key, field, convert.convertToBytes(type, value)));
+            return completableBytesFuture(command, command.hset(key, field, encryptValue(key, cryptor, type, convert0, value)));
         });
     }
 
@@ -1957,214 +759,163 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Map<String, T>> hscanAsync(String key, Type type, AtomicLong cursor, int limit, String pattern) {
+        ScanArgs args = new ScanArgs();
+        if (isNotEmpty(pattern)) {
+            args = args.match(pattern);
+        }
+        if (limit > 0) {
+            args = args.limit(limit);
+        }
+        final ScanArgs scanArgs = args;
         return connectBytesAsync().thenCompose(command -> {
-            ScanArgs args = new ScanArgs();
-            if (isNotEmpty(pattern)) {
-                args = args.match(pattern);
-            }
-            if (limit > 0) {
-                args = args.limit(limit);
-            }
-            return completableBytesFuture(command, command.hscan(key, new ScanCursor(cursor.toString(), false), args).thenApply((MapScanCursor<String, byte[]> rs) -> {
-                final Map<String, T> map = new LinkedHashMap<>();
-                rs.getMap().forEach((k, v) -> map.put(k, v == null ? null : decryptValue(key, cryptor, type, v)));
-                cursor.set(Long.parseLong(rs.getCursor()));
-                return map;
-            }));
+            return completableBytesFuture(command, command.hscan(key, new ScanCursor(cursor.toString(), false), scanArgs)
+                .thenApply((MapScanCursor<String, byte[]> rs) -> {
+                    final Map<String, T> map = new LinkedHashMap<>();
+                    rs.getMap().forEach((k, v) -> map.put(k, v == null ? null : decryptValue(key, cryptor, type, v)));
+                    cursor.set(Long.parseLong(rs.getCursor()));
+                    return map;
+                }));
         });
     }
 
     @Override
     public <T> CompletableFuture<Set< T>> sscanAsync(String key, Type componentType, AtomicLong cursor, int limit, String pattern) {
+        ScanArgs args = new ScanArgs();
+        if (isNotEmpty(pattern)) {
+            args = args.match(pattern);
+        }
+        if (limit > 0) {
+            args = args.limit(limit);
+        }
+        final ScanArgs scanArgs = args;
         return connectBytesAsync().thenCompose(command -> {
-            ScanArgs args = new ScanArgs();
-            if (isNotEmpty(pattern)) {
-                args = args.match(pattern);
-            }
-            if (limit > 0) {
-                args = args.limit(limit);
-            }
-            return completableBytesFuture(command, command.sscan(key, new ScanCursor(cursor.toString(), false), args).thenApply((ValueScanCursor<byte[]> rs) -> {
-                final Set< T> set = new LinkedHashSet<>();
-                rs.getValues().forEach(v -> set.add(v == null ? null : decryptValue(key, cryptor, componentType, v)));
-                cursor.set(Long.parseLong(rs.getCursor()));
-                return set;
-            }));
+            return completableBytesFuture(command, command.sscan(key, new ScanCursor(cursor.toString(), false), scanArgs)
+                .thenApply((ValueScanCursor<byte[]> rs) -> {
+                    final Set< T> set = new LinkedHashSet<>();
+                    rs.getValues().forEach(v -> set.add(v == null ? null : decryptValue(key, cryptor, componentType, v)));
+                    cursor.set(Long.parseLong(rs.getCursor()));
+                    return set;
+                }));
         });
     }
 
     @Override
     public CompletableFuture<List<String>> scanAsync(AtomicLong cursor, int limit, String pattern) {
+        ScanArgs args = new ScanArgs();
+        if (isNotEmpty(pattern)) {
+            args = args.match(pattern);
+        }
+        if (limit > 0) {
+            args = args.limit(limit);
+        }
+        final ScanArgs scanArgs = args;
         return connectBytesAsync().thenCompose(command -> {
-            ScanArgs args = new ScanArgs();
-            if (isNotEmpty(pattern)) {
-                args = args.match(pattern);
-            }
-            if (limit > 0) {
-                args = args.limit(limit);
-            }
-            return completableBytesFuture(command, command.scan(new ScanCursor(cursor.toString(), false), args).thenApply((KeyScanCursor<String> rs) -> {
-                final List<String> list = rs.getKeys();
-                cursor.set(Long.parseLong(rs.getCursor()));
-                return list;
-            }));
+            return completableBytesFuture(command, command.scan(new ScanCursor(cursor.toString(), false), scanArgs)
+                .thenApply((KeyScanCursor<String> rs) -> {
+                    final List<String> list = rs.getKeys();
+                    cursor.set(Long.parseLong(rs.getCursor()));
+                    return list;
+                }));
         });
     }
 
     @Override
     public <T> CompletableFuture<T> hgetAsync(String key, String field, Type type) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.hget(key, field).thenApply(bs -> bs == null ? null : decryptValue(key, cryptor, type, bs)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<String> hgetStringAsync(String key, String field) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, cryptor, command, command.hget(key, field));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Long> hgetLongAsync(String key, String field, long defValue) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的long值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.hget(key, field).thenApply(bs -> bs == null ? defValue : Long.parseLong(bs)));
+            return completableBytesFuture(command, command.hget(key, field)
+                .thenApply(bs -> bs == null ? null : decryptValue(key, cryptor, type, bs)));
         });
     }
 
     @Override
     public <T> CompletableFuture<Map<String, T>> mgetAsync(Type componentType, String... keys) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.mget(keys).thenApply((List<KeyValue<String, byte[]>> rs) -> {
-                Map<String, T> map = new LinkedHashMap(rs.size());
-                rs.forEach(kv -> {
-                    if (kv.hasValue()) {
-                        map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
-                    }
-                });
-                return map;
-            }));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, byte[]>> mgetBytesAsync(String... keys) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.mget(keys).thenApply((List<KeyValue<String, byte[]>> rs) -> {
-                Map<String, byte[]> map = new LinkedHashMap(rs.size());
-                rs.forEach(kv -> {
-                    if (kv.hasValue()) {
-                        map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, byte[].class, kv.getValue()));
-                    }
-                });
-                return map;
-            }));
+            return completableBytesFuture(command, command.mget(keys)
+                .thenApply((List<KeyValue<String, byte[]>> rs) -> {
+                    Map<String, T> map = new LinkedHashMap(rs.size());
+                    rs.forEach(kv -> {
+                        if (kv.hasValue()) {
+                            map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
+                        }
+                    });
+                    return map;
+                }));
         });
     }
 
     @Override
     public <T> CompletableFuture<Map<String, T>> hgetallAsync(String key, final Type type) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.hgetall(key).thenApply((Map<String, byte[]> rs) -> {
-                Map<String, T> map = new LinkedHashMap(rs.size());
-                rs.forEach((k, v) -> {
-                    map.put(k, decryptValue(k, cryptor, type, v));
-                });
-                return map;
-            }));
+            return completableBytesFuture(command, command.hgetall(key)
+                .thenApply((Map<String, byte[]> rs) -> {
+                    Map<String, T> map = new LinkedHashMap(rs.size());
+                    rs.forEach((k, v) -> {
+                        map.put(k, decryptValue(k, cryptor, type, v));
+                    });
+                    return map;
+                }));
         });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, String>> hgetallStringAsync(String key) {
-        return hgetallAsync(key, String.class);
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Long>> hgetallLongAsync(String key) {
-        return hgetallAsync(key, Long.class);
-    }
-
-    @Override
-    public <T> Map<String, T> hgetall(String key, final Type type) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Map<String, byte[]> rs = command.hgetall(key);
-        releaseBytesCommand(command);
-        Map<String, T> map = new LinkedHashMap(rs.size());
-        rs.forEach((k, v) -> {
-            map.put(k, decryptValue(k, cryptor, type, v));
-        });
-        return map;
-    }
-
-    @Override
-    public Map<String, String> hgetallString(String key) {
-        return hgetall(key, String.class);
-    }
-
-    @Override
-    public Map<String, Long> hgetallLong(String key) {
-        return hgetall(key, Long.class);
     }
 
     @Override
     public <T> CompletableFuture<List<T>> hvalsAsync(String key, final Type type) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.hvals(key).thenApply((List<byte[]> rs) -> {
-                List< T> list = new ArrayList<>(rs.size());
-                rs.forEach(v -> {
-                    list.add(decryptValue(key, cryptor, type, v));
-                });
-                return list;
-            }));
+            return completableBytesFuture(command, command.hvals(key)
+                .thenApply((List<byte[]> rs) -> {
+                    List< T> list = new ArrayList<>(rs.size());
+                    rs.forEach(v -> {
+                        list.add(decryptValue(key, cryptor, type, v));
+                    });
+                    return list;
+                }));
         });
-    }
-
-    @Override
-    public CompletableFuture<List< String>> hvalsStringAsync(String key) {
-        return hvalsAsync(key, String.class);
-    }
-
-    @Override
-    public CompletableFuture<List< Long>> hvalsLongAsync(String key) {
-        return hvalsAsync(key, Long.class);
-    }
-
-    @Override
-    public <T> List<T> hvals(String key, final Type type) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        List< byte[]> rs = command.hvals(key);
-        releaseBytesCommand(command);
-        List< T> list = new ArrayList<>(rs.size());
-        rs.forEach(v -> {
-            list.add(decryptValue(key, cryptor, type, v));
-        });
-        return list;
-    }
-
-    @Override
-    public List< String> hvalsString(String key) {
-        return hvals(key, String.class);
-    }
-
-    @Override
-    public List< Long> hvalsLong(String key) {
-        return hvals(key, Long.class);
     }
 
     @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
-            return command.smembers(key).thenApply(set -> formatCollection(key, cryptor, set, convert, componentType));
+            return completableBytesFuture(command, command.smembers(key).thenApply(set -> formatCollection(key, cryptor, set, convert, componentType)));
         });
     }
 
     @Override
     public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType, int start, int stop) {
         return connectBytesAsync().thenCompose(command -> {
-            return command.lrange(key, start, stop).thenApply(list -> formatCollection(key, cryptor, list, convert, componentType));
+            return completableBytesFuture(command, command.lrange(key, start, stop).thenApply(list -> formatCollection(key, cryptor, list, convert, componentType)));
         });
+    }
+
+    @Override
+    public CompletableFuture<Void> ltrimAsync(final String key, int start, int stop) {
+        return connectBytesAsync().thenCompose(command -> completableBytesFuture(command, command.ltrim(key, start, stop)));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> lpopAsync(final String key, final Type componentType) {
+        return connectBytesAsync().thenCompose(command
+            -> completableBytesFuture(command, command.lpop(key).thenApply(bs -> decryptValue(key, cryptor, componentType, bs)))
+        );
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> lpushAsync(final String key, final Type componentType, T... values) {
+        return connectBytesAsync().thenCompose(command
+            -> completableBytesFuture(command, command.lpush(key, keyArgs(key, componentType, values)))
+        );
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> lpushxAsync(final String key, final Type componentType, T... values) {
+        return connectBytesAsync().thenCompose(command
+            -> completableBytesFuture(command, command.lpushx(key, keyArgs(key, componentType, values)))
+        );
+    }
+
+    @Override
+    public <T> CompletableFuture<Void> rpushxAsync(final String key, final Type componentType, T... values) {
+        return connectBytesAsync().thenCompose(command
+            -> completableBytesFuture(command, command.rpushx(key, keyArgs(key, componentType, values)))
+        );
     }
 
     @Override
@@ -2186,7 +937,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                     }
                 }).toCompletableFuture();
             }
-            return CompletableFuture.allOf(futures).thenApply(v -> map);
+            return completableBytesFuture(command, CompletableFuture.allOf(futures).thenApply(v -> map));
         });
     }
 
@@ -2209,24 +960,24 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                     }
                 }).toCompletableFuture();
             }
-            return CompletableFuture.allOf(futures).thenApply(v -> map);
+            return completableBytesFuture(command, CompletableFuture.allOf(futures).thenApply(v -> map));
         });
     }
 
     @Override
-    public CompletableFuture<Integer> llenAsync(String key) {
+    public CompletableFuture<Long> llenAsync(String key) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.type(key).thenCompose(type -> {
-                return command.llen(key).thenApply(v -> v.intValue());
+                return command.llen(key);
             }));
         });
     }
 
     @Override
-    public CompletableFuture<Integer> scardAsync(String key) {
+    public CompletableFuture<Long> scardAsync(String key) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.type(key).thenCompose(type -> {
-                return command.scard(key).thenApply(v -> v.intValue());
+                return command.scard(key);
             }));
         });
     }
@@ -2234,35 +985,38 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     @Override
     public <T> CompletableFuture<T> spopAsync(String key, Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.spop(key).thenApply(bs -> bs == null ? null : decryptValue(key, cryptor, componentType, bs)));
+            return completableBytesFuture(command, command.spop(key)
+                .thenApply(bs -> bs == null ? null : decryptValue(key, cryptor, componentType, bs)));
         });
     }
 
     @Override
     public <T> CompletableFuture<Set<T>> spopAsync(String key, int count, Type componentType) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.spop(key, count).thenApply(v -> formatCollection(key, cryptor, v, convert, componentType)));
+            return completableBytesFuture(command, command.spop(key, count)
+                .thenApply(v -> formatCollection(key, cryptor, v, convert, componentType)));
         });
     }
 
     @Override
-    public <T> CompletableFuture<Void> rpushAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Void> rpushAsync(String key, Type componentType, T... values) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.rpush(key, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))));
+            return completableBytesFuture(command, command.rpush(key, keyArgs(key, componentType, values)));
         });
     }
 
     @Override
     public <T> CompletableFuture<Integer> lremAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.lrem(key, 1, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))).thenApply(v -> v.intValue()));
+            return completableBytesFuture(command, command.lrem(key, 0, encryptValue(key, cryptor, componentType, convert, value))
+                .thenApply(v -> v.intValue()));
         });
     }
 
     @Override
     public <T> CompletableFuture<Boolean> sismemberAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.sismember(key, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))));
+            return completableBytesFuture(command, command.sismember(key, encryptValue(key, cryptor, componentType, convert, value)));
         });
     }
 
@@ -2270,56 +1024,15 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
     public <T> CompletableFuture<Void> saddAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.sadd(key, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))));
+            return completableBytesFuture(command, command.sadd(key, encryptValue(key, cryptor, componentType, convert, value)));
         });
     }
 
     @Override
     public <T> CompletableFuture<Integer> sremAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.srem(key, encryptValue(key, cryptor, componentType, convert.convertToBytes(componentType, value))).thenApply(v -> v.intValue()));
-        });
-    }
-
-    @Override
-    public CompletableFuture<byte[]> getBytesAsync(String key) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.get(key));
-        });
-    }
-
-    @Override
-    public CompletableFuture<byte[]> getSetBytesAsync(String key, byte[] value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setGet(key, value));
-        });
-    }
-
-    @Override
-    public CompletableFuture<byte[]> getexBytesAsync(String key, int expireSeconds) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.expire(key, expireSeconds).thenCompose(v -> command.get(key)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> setBytesAsync(String key, byte[] value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.set(key, value));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> setexBytesAsync(String key, int expireSeconds, byte[] value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.setex(key, expireSeconds, value));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxexBytesAsync(String key, int expireSeconds, byte[] value) {
-        return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.set(key, value, SetArgs.Builder.nx().ex(expireSeconds)).thenApply(r -> r != null && ("OK".equals(r) || Integer.parseInt(r) > 0)));
+            return completableBytesFuture(command, command.srem(key, encryptValue(key, cryptor, componentType, convert, value))
+                .thenApply(v -> v.intValue()));
         });
     }
 
@@ -2331,175 +1044,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    public CompletableFuture<Map<String, String>> mgetStringAsync(String... keys) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(null, null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
-                Map<String, String> map = new LinkedHashMap<>();
-                rs.forEach(kv -> {
-                    if (kv.hasValue()) {
-                        map.put(kv.getKey(), cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue());
-                    }
-                });
-                return map;
-            }));
-        });
-    }
-
-    protected CompletableFuture<Collection<String>> getStringCollectionAsync(CompletableFuture<RedisClusterAsyncCommands<String, String>> commandFuture, String key) {
-        return commandFuture.thenCompose(command -> getStringCollectionAsync(command, key));
-    }
-
-    protected CompletableFuture<Collection<String>> getStringCollectionAsync(RedisClusterAsyncCommands<String, String> command, String key) {
-        return completableStringFuture(key, null, command, command.type(key).thenApply(type -> {
-            if (type.contains("list")) {
-                return command.lrange(key, 0, -1).thenApply(list -> formatStringCollection(key, cryptor, false, list));
-            } else { //set
-                return command.smembers(key).thenApply(list -> formatStringCollection(key, cryptor, true, list));
-            }
-        }));
-    }
-
-    @Override
-    public CompletableFuture<Void> rpushStringAsync(String key, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, null, command, command.rpush(key, encryptValue(key, cryptor, value)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<String> spopStringAsync(String key) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, cryptor, command, command.spop(key));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Set<String>> spopStringAsync(String key, int count) {
-        return connectStringAsync().thenCompose(command -> {
-            return completableStringFuture(key, null, command, command.spop(key, count).thenApply(list -> formatStringCollection(key, cryptor, true, list)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Integer> lremStringAsync(String key, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的int值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.lrem(key, 1, value).thenApply(v -> v.intValue()));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Boolean> sismemberStringAsync(String key, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的boolean值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.sismember(key, value));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> saddStringAsync(String key, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.sadd(key, value));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Integer> sremStringAsync(String key, String value) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的int值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.srem(key, value).thenApply(v -> v.intValue()));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Long>> mgetLongAsync(String... keys) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的long值，无需传cryptor进行解密
-            return completableStringFuture(keys[0], null, command, command.mget(keys).thenApply((List<KeyValue<String, String>> rs) -> {
-                Map<String, Long> map = new LinkedHashMap<>();
-                rs.forEach(kv -> {
-                    if (kv.hasValue()) {
-                        map.put(kv.getKey(), Long.parseLong(kv.getValue()));
-                    }
-                });
-                return map;
-            }));
-        });
-    }
-
-    protected CompletableFuture<Collection<Long>> getLongCollectionAsync(final CompletableFuture<RedisClusterAsyncCommands<String, String>> commandFuture, String key) {
-        return commandFuture.thenCompose(command -> getLongCollectionAsync(command, key));
-    }
-
-    protected CompletableFuture<Collection<Long>> getLongCollectionAsync(final RedisClusterAsyncCommands<String, String> command, String key) {
-        //此处获取的long值，无需传cryptor进行解密
-        return completableStringFuture(key, null, command, command.type(key).thenApply(type -> {
-            if (type.contains("list")) {
-                return command.lrange(key, 0, -1).thenApply(rs -> formatLongCollection(false, rs));
-            } else { //set
-                return command.smembers(key).thenApply(rs -> formatLongCollection(true, rs));
-            }
-        }));
-    }
-
-    @Override
-    public CompletableFuture<Void> rpushLongAsync(String key, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.rpush(key, String.valueOf(value)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Long> spopLongAsync(String key) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的long值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.spop(key).thenApply(v -> v == null ? null : Long.parseLong(v)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Set<Long>> spopLongAsync(String key, int count) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的long值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.spop(key, count).thenApply(v -> v == null ? null : formatLongCollection(true, v)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Integer> lremLongAsync(String key, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的int值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.lrem(key, 1, String.valueOf(value)).thenApply(v -> v.intValue()));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Boolean> sismemberLongAsync(String key, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的boolean值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.sismember(key, String.valueOf(value)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> saddLongAsync(String key, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            //不处理返回值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.sadd(key, String.valueOf(value)));
-        });
-    }
-
-    @Override
-    public CompletableFuture<Integer> sremLongAsync(String key, long value) {
-        return connectStringAsync().thenCompose(command -> {
-            //此处获取的int值，无需传cryptor进行解密
-            return completableStringFuture(key, null, command, command.srem(key, String.valueOf(value)).thenApply(v -> v.intValue()));
-        });
-    }
-
+    //-------------------------- 过期方法 ----------------------------------
     @Override
     @Deprecated(since = "2.8.0")
     public CompletableFuture<Long[]> getLongArrayAsync(String... keys) {
@@ -2522,7 +1067,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    //-------------------------- 过期方法 ----------------------------------
     @Override
     @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
@@ -2668,6 +1212,23 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         return rs;
     }
 
+    @Deprecated(since = "2.8.0")
+    protected CompletableFuture<Collection<Long>> getLongCollectionAsync(final CompletableFuture<RedisClusterAsyncCommands<String, String>> commandFuture, String key) {
+        return commandFuture.thenCompose(command -> getLongCollectionAsync(command, key));
+    }
+
+    @Deprecated(since = "2.8.0")
+    protected CompletableFuture<Collection<Long>> getLongCollectionAsync(final RedisClusterAsyncCommands<String, String> command, String key) {
+        //此处获取的long值，无需传cryptor进行解密
+        return completableStringFuture(key, null, command, command.type(key).thenApply(type -> {
+            if (type.contains("list")) {
+                return command.lrange(key, 0, -1).thenApply(rs -> formatLongCollection(false, rs));
+            } else { //set
+                return command.smembers(key).thenApply(rs -> formatLongCollection(true, rs));
+            }
+        }));
+    }
+
     @Override
     @Deprecated(since = "2.8.0")
     public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
@@ -2705,6 +1266,16 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         Collection<String> rs = getStringCollection(command, key);
         releaseStringCommand(command);
         return rs;
+    }
+
+    @Deprecated(since = "2.8.0")
+    protected Collection<String> getStringCollection(final RedisClusterCommands<String, String> command, String key) {
+        final String type = command.type(key);
+        if (type.contains("list")) { //list
+            return decryptStringCollection(key, false, command.lrange(key, 0, -1));
+        } else { //set
+            return decryptStringCollection(key, true, command.smembers(key));
+        }
     }
 
     @Override
@@ -2911,6 +1482,52 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
         return getStringCollectionAsync(connectStringAsync(), key);
+    }
+
+    @Deprecated(since = "2.8.0")
+    protected <T> Collection<T> getCollection(final RedisClusterCommands<String, byte[]> command, String key, final Type componentType) {
+        final String type = command.type(key);
+        if (type.contains("list")) {
+            return formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType);
+        } else { //set
+            return formatCollection(key, cryptor, command.smembers(key), convert, componentType);
+        }
+    }
+
+    @Deprecated(since = "2.8.0")
+    protected CompletableFuture<Collection<String>> getStringCollectionAsync(RedisClusterAsyncCommands<String, String> command, String key) {
+        return completableStringFuture(key, null, command, command.type(key).thenApply(type -> {
+            if (type.contains("list")) {
+                return command.lrange(key, 0, -1).thenApply(list -> formatStringCollection(key, cryptor, false, list));
+            } else { //set
+                return command.smembers(key).thenApply(list -> formatStringCollection(key, cryptor, true, list));
+            }
+        }));
+    }
+
+    @Deprecated(since = "2.8.0")
+    protected CompletableFuture<Collection<String>> getStringCollectionAsync(CompletableFuture<RedisClusterAsyncCommands<String, String>> commandFuture, String key) {
+        return commandFuture.thenCompose(command -> getStringCollectionAsync(command, key));
+    }
+
+    @Deprecated(since = "2.8.0")
+    private Collection<String> decryptStringCollection(String key, final boolean set, Collection<String> collection) {
+        if (isEmpty(collection) || cryptor == null) {
+            return collection;
+        }
+        if (set) {
+            Set<String> newset = new LinkedHashSet<>();
+            for (String value : collection) {
+                newset.add(cryptor.decrypt(key, value));
+            }
+            return newset;
+        } else {
+            List<String> newlist = new ArrayList<>();
+            for (String value : collection) {
+                newlist.add(cryptor.decrypt(key, value));
+            }
+            return newlist;
+        }
     }
 
 }

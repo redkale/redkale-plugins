@@ -130,6 +130,14 @@ public abstract class RedisAbstractTest {
         col = source.lrangeString("keys3");
         System.out.println("[一值] keys3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("vals2"));
+        source.rpush("keys3", String.class, "vals2");
+        source.rpush("keys3", String.class, "vals3");
+        source.rpush("keys3", String.class, "vals4");
+        Assertions.assertEquals("vals4", source.rpopString("keys3"));
+        source.lpush("keys3", String.class, "vals0");
+        Assertions.assertEquals("vals0", source.lpopString("keys3"));
+        String rlv = source.rpoplpush("keys3", "keys3-2", String.class);
+        Assertions.assertEquals("vals3", rlv);
 
         source.del("stringmap");
         source.sadd("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
@@ -168,7 +176,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[一值] sets3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("setvals2"));
 
-        int size = source.scard("sets3");
+        int size = (int) source.scard("sets3");
         System.out.println("sets3 大小 : " + size);
         Assertions.assertEquals(1, size);
 
@@ -178,7 +186,7 @@ public abstract class RedisAbstractTest {
         col = source.keys("key*");
         Collections.sort((List<String>) col);
         System.out.println("key startkeys: " + col);
-        Assertions.assertIterableEquals(col, List.of("key1", "keylong1", "keys3", "keystr1"));
+        Assertions.assertIterableEquals(col, List.of("key1", "keylong1", "keys3", "keys3-2", "keystr1"));
 
         num = source.incr("newnum");
         System.out.println("newnum 值 : " + num);
@@ -266,12 +274,6 @@ public abstract class RedisAbstractTest {
         System.out.println("mapvals:  " + map);
         Assertions.assertEquals(Utility.ofMap("a", 1, "b", 2).toString(), map.toString());
 
-        source.del("byteskey");
-        source.setBytes("byteskey", new byte[]{1, 2, 3});
-        byte[] bs = source.getBytes("byteskey");
-        System.out.println("byteskey 值 : " + Arrays.toString(bs));
-        Assertions.assertEquals(Arrays.toString(new byte[]{1, 2, 3}), Arrays.toString(bs));
-
         source.del("hmapall");
         source.hmset("hmapall", Utility.ofMap("k1", "111", "k2", "222"));
         Assertions.assertEquals(List.of("111", "222"), source.hvals("hmapall", String.class));
@@ -319,7 +321,7 @@ public abstract class RedisAbstractTest {
         System.out.println("hmap.key2 值 : " + obj);
         Assertions.assertEquals("haha", obj);
 
-        size = source.hlen("hmap");
+        size = (int) source.hlen("hmap");
         System.out.println("hmap列表(2)大小 : " + size);
         Assertions.assertEquals(2, size);
 
@@ -440,13 +442,6 @@ public abstract class RedisAbstractTest {
             Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 222));
             Assertions.assertEquals(111L, source.getLong("nxexkey1", 0L));
             source.del("nxexkey1");
-            Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1, 1}));
-            Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2, 2}));
-            Thread.sleep(1100);
-            Assertions.assertTrue(source.setnxexBytes("nxexkey1", 1, new byte[]{1}));
-            Assertions.assertTrue(!source.setnxexBytes("nxexkey1", 1, new byte[]{2}));
-            Assertions.assertEquals(Arrays.toString(new byte[]{1}), Arrays.toString(source.getBytes("nxexkey1")));
-            source.del("nxexkey1");
             Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
             Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
             Thread.sleep(1100);
@@ -457,7 +452,7 @@ public abstract class RedisAbstractTest {
         long dbsize = source.dbsize();
         System.out.println("keys总数量 : " + dbsize);
         //清除
-        int rs = source.del("stritem1");
+        long rs = source.del("stritem1");
         System.out.println("删除stritem1个数: " + rs);
         source.del("popset");
         source.del("stritem2");
@@ -474,6 +469,7 @@ public abstract class RedisAbstractTest {
         source.del("key1");
         source.del("key2");
         source.del("keys3");
+        source.del("keys3-2");
         source.del("sets3");
         source.del("sets4");
         source.del("myaddrs");
@@ -554,6 +550,7 @@ public abstract class RedisAbstractTest {
             System.out.println("hmap.key1 = " + source.hgetLong("hmap", "key1", -1));
             System.out.println("结束了, 循环" + count + "次耗时: " + e + "ms");
         }
+        source.del("testnumber");
     }
 
     public static void main(String[] args) throws Exception {

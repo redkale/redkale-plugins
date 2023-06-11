@@ -15,7 +15,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
-import java.util.stream.Collectors;
 import org.redisson.Redisson;
 import org.redisson.api.*;
 import org.redisson.client.codec.*;
@@ -322,73 +321,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(bucket.isExistsAsync());
     }
 
-    @Override
-    public boolean exists(String key) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.isExists();
-    }
-
     //--------------------- get ------------------------------
     @Override
     public <T> CompletableFuture<T> getAsync(String key, Type type) {
         final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
         return completableFuture(key, cryptor, type, bucket.getAsync());
-    }
-
-    @Override
-    public CompletableFuture<String> getStringAsync(String key) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(key, cryptor, bucket.getAsync());
-    }
-
-    @Override
-    public CompletableFuture<String> getSetStringAsync(String key, String value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(key, cryptor, bucket.getAndSetAsync(encryptValue(key, cryptor, value)));
-    }
-
-    @Override
-    public CompletableFuture<Long> getLongAsync(String key, long defValue) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.getAsync().thenApply(v -> v == null ? defValue : Long.parseLong(v)));
-    }
-
-    @Override
-    public CompletableFuture<Long> getSetLongAsync(String key, long value, long defValue) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.getAndSetAsync(String.valueOf(value)).thenApply(v -> v == null ? defValue : Long.parseLong(v)));
-    }
-
-    @Override
-    public <T> T get(String key, final Type type) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return decryptValue(key, cryptor, type, bucket.get());
-    }
-
-    @Override
-    public String getString(String key) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return decryptValue(key, cryptor, bucket.get());
-    }
-
-    @Override
-    public String getSetString(String key, String value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return decryptValue(key, cryptor, bucket.getAndSet(encryptValue(key, cryptor, value)));
-    }
-
-    @Override
-    public long getLong(String key, long defValue) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        String v = bucket.get();
-        return v == null ? defValue : Long.parseLong(v);
-    }
-
-    @Override
-    public long getSetLong(String key, long value, long defValue) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        String v = bucket.getAndSet(String.valueOf(value));
-        return v == null ? defValue : Long.parseLong(v);
     }
 
     //--------------------- getex ------------------------------
@@ -398,45 +335,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(bucket.getAndExpireAsync(Duration.ofSeconds(expireSeconds)).thenApply(bs -> decryptValue(key, cryptor, type, bs)));
     }
 
-    @Override
-    public <T> T getex(String key, final int expireSeconds, final Type type) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return decryptValue(key, cryptor, type, bucket.getAndExpire(Duration.ofSeconds(expireSeconds)));
-    }
-
-    @Override
-    public CompletableFuture<String> getexStringAsync(String key, int expireSeconds) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.getAndExpireAsync(Duration.ofSeconds(expireSeconds)).thenApply(v -> decryptValue(key, cryptor, v)));
-    }
-
-    @Override
-    public String getexString(String key, final int expireSeconds) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        String rs = bucket.getAndExpire(Duration.ofSeconds(expireSeconds));
-        return rs == null ? rs : decryptValue(key, cryptor, rs);
-    }
-
-    @Override
-    public CompletableFuture<Long> getexLongAsync(String key, int expireSeconds, long defValue) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.getAndExpireAsync(Duration.ofSeconds(expireSeconds)).thenApply(v -> v == null ? defValue : Long.parseLong(v)));
-    }
-
-    @Override
-    public long getexLong(String key, final int expireSeconds, long defValue) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        String v = bucket.getAndExpire(Duration.ofSeconds(expireSeconds));
-        return v == null ? defValue : Long.parseLong(v);
-    }
-
     //--------------------- setex ------------------------------
-    @Override
-    public <T> CompletableFuture<Void> setAsync(String key, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(type == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, type, convert, value)));
-    }
-
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert0, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
@@ -444,22 +343,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> setnxAsync(String key, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setIfAbsentAsync(type == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, type, convert, value)));
-    }
-
-    @Override
     public <T> CompletableFuture<Boolean> setnxAsync(String key, Convert convert0, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.setIfAbsentAsync(type == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, type, convert0, value)));
-    }
-
-    @Override
-    public <T> CompletableFuture<T> getSetAsync(String key, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.getAndSetAsync(type == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, type, convert, value))
-            .thenApply(old -> old == null ? null : convert.convertFrom(type, old)));
     }
 
     @Override
@@ -471,19 +357,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public boolean setnxBytes(final String key, final byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.setIfAbsent(value);
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxBytesAsync(final String key, byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setIfAbsentAsync(value));
-    }
-
-    @Override
-    public CompletableFuture<Void> msetAsync(Object... keyVals) {
+    public CompletableFuture<Void> msetAsync(Serializable... keyVals) {
         Map<String, byte[]> map = new LinkedHashMap<>();
         for (int i = 0; i < keyVals.length; i += 2) {
             String key = keyVals[i].toString();
@@ -504,202 +378,18 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(bucket.setAsync(bs).thenApply(v -> null));
     }
 
-    @Override
-    public void mset(Object... keyVals) {
-        Map<String, byte[]> map = new LinkedHashMap<>();
-        for (int i = 0; i < keyVals.length; i += 2) {
-            String key = keyVals[i].toString();
-            Object val = keyVals[i + 1];
-            map.put(key, val instanceof String ? encryptValue(key, cryptor, val.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, this.convert, val));
-        }
-        client.getBuckets(ByteArrayCodec.INSTANCE).set(map);
-    }
-
-    @Override
-    public void mset(Map map) {
-        Map<String, byte[]> bs = new LinkedHashMap<>();
-        map.forEach((key, val) -> {
-            bs.put(key.toString(), val instanceof String ? encryptValue(key.toString(), cryptor, val.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key.toString(), cryptor, this.convert, val));
-        });
-        client.getBuckets(ByteArrayCodec.INSTANCE).set(bs);
-    }
-
-    @Override
-    public <T> void set(final String key, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        bucket.set(type == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, type, convert, value));
-    }
-
-    @Override
-    public <T> void set(String key, final Convert convert0, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        bucket.set(encryptValue(key, cryptor, type, convert0, value));
-    }
-
-    @Override
-    public <T> boolean setnx(final String key, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.setIfAbsent(type == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, type, convert, value));
-    }
-
-    @Override
-    public <T> boolean setnx(String key, final Convert convert0, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.setIfAbsent(encryptValue(key, cryptor, type, convert0, value));
-    }
-
-    @Override
-    public <T> T getSet(final String key, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        byte[] old = bucket.getAndSet(type == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, type, convert, value));
-        return old == null ? null : convert.convertFrom(type, old);
-    }
-
-    @Override
-    public <T> T getSet(String key, final Convert convert0, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        Convert c = convert0 == null ? this.convert : convert0;
-        byte[] old = bucket.getAndSet(encryptValue(key, cryptor, type, c, value));
-        return decryptValue(key, cryptor, c, type, old);
-    }
-
-    @Override
-    public CompletableFuture<Void> setStringAsync(String key, String value) {
-        return completableFuture(client.getBucket(key, StringCodec.INSTANCE).setAsync(value));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxStringAsync(String key, String value) {
-        return completableFuture(client.getBucket(key, StringCodec.INSTANCE).setIfAbsentAsync(value));
-    }
-
-    @Override
-    public void setString(String key, String value) {
-        client.getBucket(key, StringCodec.INSTANCE).set(value);
-    }
-
-    @Override
-    public boolean setnxString(String key, String value) {
-        return client.getBucket(key, StringCodec.INSTANCE).setIfAbsent(value);
-    }
-
-    @Override
-    public CompletableFuture<Void> setLongAsync(String key, long value) {
-        return completableFuture(client.getAtomicLong(key).setAsync(value));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxLongAsync(String key, long value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.setIfAbsentAsync(String.valueOf(value)));
-    }
-
-    @Override
-    public void setLong(String key, long value) {
-        client.getAtomicLong(key).set(value);
-    }
-
-    @Override
-    public boolean setnxLong(String key, long value) {
-        return client.getBucket(key, StringCodec.INSTANCE).setIfAbsent(String.valueOf(value));
-    }
-
     //--------------------- setex ------------------------------    
     @Override
-    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, final Type type, T value) {
+    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.setAsync(encryptValue(key, cryptor, type, convert, value), expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
     }
 
-    @Override
-    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert0, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(encryptValue(key, cryptor, type, convert0, value), expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
-    }
-
-    @Override
-    public <T> void setex(String key, int expireSeconds, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        bucket.set(encryptValue(key, cryptor, type, convert, value), expireSeconds, TimeUnit.SECONDS);
-    }
-
-    @Override
-    public <T> void setex(String key, int expireSeconds, Convert convert0, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        bucket.set(encryptValue(key, cryptor, type, convert0, value), expireSeconds, TimeUnit.SECONDS);
-    }
-
-    @Override
-    public CompletableFuture<Void> setexStringAsync(String key, int expireSeconds, String value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(encryptValue(key, cryptor, value), expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
-    }
-
-    @Override
-    public void setexString(String key, int expireSeconds, String value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        bucket.set(encryptValue(key, cryptor, value), expireSeconds, TimeUnit.SECONDS);
-    }
-
-    @Override
-    public CompletableFuture<Void> setexLongAsync(String key, int expireSeconds, long value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(String.valueOf(value), expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
-    }
-
-    @Override
-    public void setexLong(String key, int expireSeconds, long value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        bucket.set(String.valueOf(value), expireSeconds, TimeUnit.SECONDS);
-    }
-
     //--------------------- setex ------------------------------    
-    @Override
-    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, type, convert, value), Duration.ofSeconds(expireSeconds)));
-    }
-
     @Override
     public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert0, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, type, convert0, value), Duration.ofSeconds(expireSeconds)));
-    }
-
-    @Override
-    public <T> boolean setnxex(String key, int expireSeconds, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.setIfAbsent(encryptValue(key, cryptor, type, convert, value), Duration.ofSeconds(expireSeconds));
-    }
-
-    @Override
-    public <T> boolean setnxex(String key, int expireSeconds, Convert convert0, final Type type, T value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.setIfAbsent(encryptValue(key, cryptor, type, convert0, value), Duration.ofSeconds(expireSeconds));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxexStringAsync(String key, int expireSeconds, String value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, value), Duration.ofSeconds(expireSeconds)));
-    }
-
-    @Override
-    public boolean setnxexString(String key, int expireSeconds, String value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return bucket.setIfAbsent(encryptValue(key, cryptor, value), Duration.ofSeconds(expireSeconds));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxexLongAsync(String key, int expireSeconds, long value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.setIfAbsentAsync(String.valueOf(value), Duration.ofSeconds(expireSeconds)));
-    }
-
-    @Override
-    public boolean setnxexLong(String key, int expireSeconds, long value) {
-        final RBucket<String> bucket = client.getBucket(key, StringCodec.INSTANCE);
-        return bucket.setIfAbsent(String.valueOf(value), Duration.ofSeconds(expireSeconds));
     }
 
     //--------------------- expire ------------------------------    
@@ -708,20 +398,10 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(client.getBucket(key).expireAsync(Duration.ofSeconds(expireSeconds)).thenApply(r -> null));
     }
 
-    @Override
-    public void expire(String key, int expireSeconds) {
-        client.getBucket(key).expire(Duration.ofSeconds(expireSeconds));
-    }
-
     //--------------------- persist ------------------------------    
     @Override
     public CompletableFuture<Boolean> persistAsync(String key) {
         return completableFuture(client.getBucket(key).clearExpireAsync());
-    }
-
-    @Override
-    public boolean persist(String key) {
-        return client.getBucket(key).clearExpire();
     }
 
     //--------------------- rename ------------------------------    
@@ -731,59 +411,20 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public boolean rename(String oldKey, String newKey) {
-        try {
-            client.getBucket(oldKey).rename(newKey);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    @Override
     public CompletableFuture<Boolean> renamenxAsync(String oldKey, String newKey) {
         return completableFuture(client.getBucket(oldKey).renamenxAsync(newKey));
     }
 
-    @Override
-    public boolean renamenx(String oldKey, String newKey) {
-        try {
-            return client.getBucket(oldKey).renamenx(newKey);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     //--------------------- del ------------------------------    
     @Override
-    public CompletableFuture<Integer> delAsync(String... keys) {
-        return completableFuture(client.getKeys().deleteAsync(keys).thenApply(rs -> rs.intValue()));
-    }
-
-    @Override
-    public int del(String... keys) {
-        return (int) client.getKeys().delete(keys);
+    public CompletableFuture<Long> delAsync(String... keys) {
+        return completableFuture(client.getKeys().deleteAsync(keys));
     }
 
     //--------------------- incrby ------------------------------    
     @Override
-    public long incr(final String key) {
-        return client.getAtomicLong(key).incrementAndGet();
-    }
-
-    @Override
     public CompletableFuture<Long> incrAsync(final String key) {
         return completableFuture(client.getAtomicLong(key).incrementAndGetAsync());
-    }
-
-    @Override
-    public long incrby(final String key, long num) {
-        return client.getAtomicLong(key).addAndGet(num);
-    }
-
-    @Override
-    public double incrbyFloat(final String key, double num) {
-        return client.getAtomicDouble(key).addAndGet(num);
     }
 
     @Override
@@ -798,18 +439,8 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     //--------------------- decrby ------------------------------    
     @Override
-    public long decr(final String key) {
-        return client.getAtomicLong(key).decrementAndGet();
-    }
-
-    @Override
     public CompletableFuture<Long> decrAsync(final String key) {
         return completableFuture(client.getAtomicLong(key).decrementAndGetAsync());
-    }
-
-    @Override
-    public long decrby(final String key, long num) {
-        return client.getAtomicLong(key).addAndGet(-num);
     }
 
     @Override
@@ -818,222 +449,15 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public int hdel(final String key, String... fields) {
-        RMap<String, ?> map = client.getMap(key, MapByteArrayCodec.instance);
-        return (int) map.fastRemove(fields);
-    }
-
-    @Override
-    public int hlen(final String key) {
-        return client.getMap(key, MapByteArrayCodec.instance).size();
-    }
-
-    @Override
-    public List<String> hkeys(final String key) {
-        return (List) new ArrayList<>(client.getMap(key, MapStringCodec.instance).keySet());
-    }
-
-    @Override
-    public long hincr(final String key, String field) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        return map.addAndGet(field, 1L);
-    }
-
-    @Override
-    public long hincrby(final String key, String field, long num) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        return map.addAndGet(field, num);
-    }
-
-    @Override
-    public double hincrbyFloat(final String key, String field, double num) {
-        RMap<String, Double> map = client.getMap(key, MapDoubleCodec.instance);
-        return map.addAndGet(field, num);
-    }
-
-    @Override
-    public long hdecr(final String key, String field) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        return map.addAndGet(field, -1L);
-    }
-
-    @Override
-    public long hdecrby(final String key, String field, long num) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        return map.addAndGet(field, -num);
-    }
-
-    @Override
-    public boolean hexists(final String key, String field) {
-        return client.getMap(key, MapByteArrayCodec.instance).containsKey(field);
-    }
-
-    @Override
-    public <T> void hset(final String key, final String field, final Type type, final T value) {
-        if (value == null) {
-            return;
-        }
+    public CompletableFuture<Long> hdelAsync(final String key, String... fields) {
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        map.fastPut(field, encryptValue(key, cryptor, type, convert, value));
+        return completableFuture(map.fastRemoveAsync(fields));
     }
 
     @Override
-    public <T> void hset(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        if (value == null) {
-            return;
-        }
+    public CompletableFuture<Long> hlenAsync(final String key) {
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        map.fastPut(field, encryptValue(key, cryptor, type, convert0, value));
-    }
-
-    @Override
-    public <T> boolean hsetnx(final String key, final String field, final Type type, final T value) {
-        if (value == null) {
-            return false;
-        }
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        return map.fastPutIfAbsent(field, encryptValue(key, cryptor, type, convert, value));
-    }
-
-    @Override
-    public <T> boolean hsetnx(final String key, final String field, final Convert convert0, final Type type, final T value) {
-        if (value == null) {
-            return false;
-        }
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        return map.fastPutIfAbsent(field, encryptValue(key, cryptor, type, convert0, value));
-    }
-
-    @Override
-    public void hsetString(final String key, final String field, final String value) {
-        if (value == null) {
-            return;
-        }
-        RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
-        map.fastPut(field, encryptValue(key, cryptor, value));
-    }
-
-    @Override
-    public boolean hsetnxString(final String key, final String field, final String value) {
-        if (value == null) {
-            return false;
-        }
-        RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
-        return map.fastPutIfAbsent(field, encryptValue(key, cryptor, value));
-    }
-
-    @Override
-    public void hsetLong(final String key, final String field, final long value) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        map.fastPut(field, value);
-    }
-
-    @Override
-    public boolean hsetnxLong(final String key, final String field, final long value) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        return map.fastPutIfAbsent(field, value);
-    }
-
-    @Override
-    public void hmset(final String key, final Serializable... values) {
-        Map<String, byte[]> vals = new LinkedHashMap<>();
-        for (int i = 0; i < values.length; i += 2) {
-            vals.put(String.valueOf(values[i]), values[i + 1] instanceof String ? encryptValue(key, cryptor, values[i + 1].toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, this.convert, values[i + 1]));
-        }
-        RMap<String, byte[]> rm = client.getMap(key, MapByteArrayCodec.instance);
-        rm.putAll(vals);
-    }
-
-    @Override
-    public void hmset(final String key, final Map map) {
-        Map<String, byte[]> vals = new LinkedHashMap<>();
-        map.forEach((k, v) -> {
-            vals.put(k.toString(), v instanceof String ? encryptValue(key, cryptor, v.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, this.convert, v));
-        });
-        RMap<String, byte[]> rm = client.getMap(key, MapByteArrayCodec.instance);
-        rm.putAll(vals);
-    }
-
-    @Override
-    public List<Serializable> hmget(final String key, final Type type, final String... fields) {
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        Map<String, byte[]> rs = map.getAll(Utility.ofSet(fields));
-        List<Serializable> list = new ArrayList<>(fields.length);
-        for (String field : fields) {
-            byte[] bs = rs.get(field);
-            if (bs == null) {
-                list.add(null);
-            } else {
-                list.add(decryptValue(key, cryptor, type, bs));
-            }
-        }
-        return list;
-    }
-
-    @Override
-    public <T> Map<String, T> hscan(final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
-        List result;
-        RScript script = client.getScript(SCAN_CODEC);
-        if (isEmpty(pattern)) {
-            if (limit > 0) {
-                String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'count', ARGV[2]);";
-                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), String.valueOf(limit));
-            } else {
-                String lua = "return redis.call('hscan', KEYS[1], ARGV[1]);";
-                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
-            }
-        } else {
-            if (limit > 0) {
-                String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
-                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern, String.valueOf(limit));
-            } else {
-                String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
-                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern);
-            }
-        }
-        final Map<String, T> rs = new LinkedHashMap<>();
-        List<byte[]> kvs = (List) result.get(1);
-        for (int i = 0; i < kvs.size(); i += 2) {
-            String field = new String(kvs.get(i));
-            byte[] bs = kvs.get(i + 1);
-            if (bs != null) {
-                rs.put(field, decryptValue(key, cryptor, type, bs));
-            }
-        }
-        cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
-        return rs;
-    }
-
-    @Override
-    public <T> T hget(final String key, final String field, final Type type) {
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        byte[] bs = map.get(field);
-        return decryptValue(key, cryptor, type, bs);
-    }
-
-    @Override
-    public String hgetString(final String key, final String field) {
-        RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
-        return decryptValue(key, cryptor, map.get(field));
-    }
-
-    @Override
-    public long hgetLong(final String key, final String field, long defValue) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        Long rs = map.get(field);
-        return rs == null ? defValue : rs;
-    }
-
-    @Override
-    public CompletableFuture<Integer> hdelAsync(final String key, String... fields) {
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        return completableFuture(map.fastRemoveAsync(fields).thenApply(r -> r.intValue()));
-    }
-
-    @Override
-    public CompletableFuture<Integer> hlenAsync(final String key) {
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        return completableFuture(map.sizeAsync());
+        return completableFuture(map.sizeAsync().thenApply(v -> v.longValue()));
     }
 
     @Override
@@ -1079,13 +503,10 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Type type, final T value) {
-        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
-        return completableFuture(map.fastPutAsync(field, encryptValue(key, cryptor, type, convert, value)).thenApply(r -> null));
-    }
-
-    @Override
     public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert0, final Type type, final T value) {
+        if (value == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.fastPutAsync(field, encryptValue(key, cryptor, type, convert0, value)).thenApply(r -> null));
     }
@@ -1100,36 +521,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Boolean> hsetnxAsync(final String key, final String field, final Convert convert0, final Type type, final T value) {
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.fastPutIfAbsentAsync(field, encryptValue(key, cryptor, type, convert0, value)));
-    }
-
-    @Override
-    public CompletableFuture<Void> hsetStringAsync(final String key, final String field, final String value) {
-        if (value == null) {
-            return CompletableFuture.completedFuture(null);
-        }
-        RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
-        return completableFuture(map.fastPutAsync(field, encryptValue(key, cryptor, value)).thenApply(r -> null));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> hsetnxStringAsync(final String key, final String field, final String value) {
-        if (value == null) {
-            return CompletableFuture.completedFuture(false);
-        }
-        RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
-        return completableFuture(map.fastPutIfAbsentAsync(field, encryptValue(key, cryptor, value)));
-    }
-
-    @Override
-    public CompletableFuture<Void> hsetLongAsync(final String key, final String field, final long value) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        return completableFuture(map.fastPutAsync(field, value).thenApply(r -> null));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> hsetnxLongAsync(final String key, final String field, final long value) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        return completableFuture(map.fastPutIfAbsentAsync(field, value));
     }
 
     @Override
@@ -1238,36 +629,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public List<String> scan(AtomicLong cursor, int limit, String pattern) {
-        List result;
-        RScript script = client.getScript(SCAN_CODEC);
-        if (isEmpty(pattern)) {
-            if (limit > 0) {
-                String lua = "return redis.call('scan', ARGV[1], 'count', ARGV[2]);";
-                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), String.valueOf(limit));
-            } else {
-                String lua = "return redis.call('scan', ARGV[1]);";
-                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString());
-            }
-        } else {
-            if (limit > 0) {
-                String lua = "return redis.call('scan', ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
-                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), pattern, String.valueOf(limit));
-            } else {
-                String lua = "return redis.call('scan', ARGV[1], 'match', ARGV[2]);";
-                result = (List) script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), pattern);
-            }
-        }
-        final List<String> rs = new ArrayList<>();
-        List<byte[]> kvs = (List) result.get(1);
-        for (byte[] bs : kvs) {
-            rs.add(new String(bs, StandardCharsets.UTF_8));
-        }
-        cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
-        return rs;
-    }
-
-    @Override
     public <T> CompletableFuture<Set<T>> sscanAsync(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
         RFuture<List> future;
         RScript script = client.getScript(SCAN_CODEC);
@@ -1300,72 +661,26 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> Set<T> sscan(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
-        List result;
-        RScript script = client.getScript(SCAN_CODEC);
-        if (isEmpty(pattern)) {
-            if (limit > 0) {
-                String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'count', ARGV[2]);";
-                result = script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), String.valueOf(limit));
-            } else {
-                String lua = "return redis.call('sscan', KEYS[1], ARGV[1]);";
-                result = script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
-            }
-        } else {
-            if (limit > 0) {
-                String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
-                result = script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern, String.valueOf(limit));
-            } else {
-                String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
-                result = script.eval(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern);
-            }
-        }
-        final Set<T> rs = new LinkedHashSet<>();
-        List<byte[]> kvs = (List) result.get(1);
-        for (byte[] bs : kvs) {
-            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
-        }
-        cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
-        return rs;
-    }
-
-    @Override
     public <T> CompletableFuture<T> hgetAsync(final String key, final String field, final Type type) {
         RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
         return completableFuture(map.getAsync(field).thenApply(r -> decryptValue(key, cryptor, type, r)));
     }
 
-    @Override
-    public CompletableFuture<String> hgetStringAsync(final String key, final String field) {
-        RMap<String, String> map = client.getMap(key, MapStringCodec.instance);
-        return completableFuture(key, cryptor, map.getAsync(field));
-    }
-
-    @Override
-    public CompletableFuture<Long> hgetLongAsync(final String key, final String field, long defValue) {
-        RMap<String, Long> map = client.getMap(key, MapLongCodec.instance);
-        return completableFuture(map.getAsync(field).thenApply(r -> r == null ? defValue : r.longValue()));
-    }
-
     //--------------------- collection ------------------------------  
     @Override
-    public CompletableFuture<Integer> llenAsync(String key) {
-        return completableFuture(client.getList(key).sizeAsync());
+    public CompletableFuture<Long> llenAsync(String key) {
+        return completableFuture(client.getList(key).sizeAsync().thenApply(v -> v.longValue()));
     }
 
     @Override
-    public CompletableFuture<Integer> scardAsync(String key) {
-        return completableFuture(client.getSet(key).sizeAsync());
+    public CompletableFuture<Void> ltrimAsync(final String key, int start, int stop) {
+        final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.trimAsync(start, stop));
     }
 
     @Override
-    public int llen(String key) {
-        return client.getList(key).size();
-    }
-
-    @Override
-    public int scard(String key) {
-        return client.getSet(key).size();
+    public CompletableFuture<Long> scardAsync(String key) {
+        return completableFuture(client.getSet(key).sizeAsync().thenApply(v -> v.longValue()));
     }
 
     @Override
@@ -1407,36 +722,10 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Map<String, Long>> mgetLongAsync(String... keys) {
-        return completableFuture(client.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).getAsync(keys));
-    }
-
-    @Override
-    public CompletableFuture<Map<String, String>> mgetStringAsync(String... keys) {
-        return completableFuture(client.getBuckets(StringCodec.INSTANCE).getAsync(keys).thenApply(map -> {
-            if (cryptor == null) {
-                return (Map) map;
-            }
-            Map rs = new LinkedHashMap();
-            map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, v == null ? null : v.toString())));
-            return rs;
-        }));
-    }
-
-    @Override
     public <T> CompletableFuture<Map<String, T>> mgetAsync(final Type componentType, String... keys) {
         return completableFuture(client.getBuckets(ByteArrayCodec.INSTANCE).getAsync(keys).thenApply(map -> {
             Map rs = new LinkedHashMap();
             map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, componentType, (byte[]) v)));
-            return rs;
-        }));
-    }
-
-    @Override
-    public CompletableFuture<Map<String, byte[]>> mgetBytesAsync(String... keys) {
-        return completableFuture(client.getBuckets(ByteArrayCodec.INSTANCE).getAsync(keys).thenApply(map -> {
-            Map rs = new LinkedHashMap();
-            map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, byte[].class, (byte[]) v)));
             return rs;
         }));
     }
@@ -1459,64 +748,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
             }
             return rs;
         }));
-    }
-
-    @Override
-    public CompletableFuture<Map<String, String>> hgetallStringAsync(final String key) {
-        return hgetallAsync(key, String.class);
-    }
-
-    @Override
-    public CompletableFuture<List<String>> hvalsStringAsync(final String key) {
-        return hvalsAsync(key, String.class);
-    }
-
-    @Override
-    public CompletableFuture<Map<String, Long>> hgetallLongAsync(final String key) {
-        return hgetallAsync(key, Long.class);
-    }
-
-    @Override
-    public CompletableFuture<List<Long>> hvalsLongAsync(final String key) {
-        return hvalsAsync(key, Long.class);
-    }
-
-    @Override
-    public <T> Map<String, T> hgetall(final String key, final Type type) {
-        Map<Object, Object> map = client.getMap(key, MapByteArrayCodec.instance).readAllMap();
-        Map rs = new LinkedHashMap();
-        map.forEach((k, v) -> rs.put(k.toString(), decryptValue(k.toString(), cryptor, type, (byte[]) v)));
-        return rs;
-    }
-
-    @Override
-    public <T> List<T> hvals(final String key, final Type type) {
-        Collection<Object> list = client.getMap(key, MapByteArrayCodec.instance).readAllValues();
-        List<T> rs = new ArrayList<>();
-        for (Object v : list) {
-            rs.add(decryptValue(key, cryptor, type, (byte[]) v));
-        }
-        return rs;
-    }
-
-    @Override
-    public Map<String, String> hgetallString(final String key) {
-        return hgetallStringAsync(key).join();
-    }
-
-    @Override
-    public List<String> hvalsString(final String key) {
-        return hvalsStringAsync(key).join();
-    }
-
-    @Override
-    public Map<String, Long> hgetallLong(final String key) {
-        return hgetallLongAsync(key).join();
-    }
-
-    @Override
-    public List<Long> hvalsLong(final String key) {
-        return hvalsLongAsync(key).join();
     }
 
     @Override
@@ -1599,162 +830,80 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return rsFuture;
     }
 
-    @Override
-    public <T> Set<T> smembers(String key, final Type componentType) {
-        return (Set) smembersAsync(key, componentType).join();
-    }
-
-    @Override
-    public <T> List<T> lrange(String key, final Type componentType, int start, int stop) {
-        return (List) lrangeAsync(key, componentType, start, stop).join();
-    }
-
-    @Override
-    public Map<String, Long> mgetLong(final String... keys) {
-        return client.getBuckets(org.redisson.client.codec.LongCodec.INSTANCE).get(keys);
-    }
-
-    @Override
-    public Map<String, String> mgetString(final String... keys) {
-        Map<String, String> map = client.getBuckets(StringCodec.INSTANCE).get(keys);
-        if (cryptor != null && !map.isEmpty()) {
-            Map<String, String> rs = new LinkedHashMap<>();
-            map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, v)));
-            return rs;
-        }
-        return map;
-    }
-
-    @Override
-    public <T> Map<String, T> mget(final Type componentType, final String... keys) {
-        Map<String, byte[]> map = client.getBuckets(ByteArrayCodec.INSTANCE).get(keys);
-        Map<String, T> rs = new LinkedHashMap(map.size());
-        map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, componentType, v)));
-        return rs;
-    }
-
-    @Override
-    public Map<String, byte[]> mgetBytes(final String... keys) {
-        Map<String, byte[]> map = client.getBuckets(ByteArrayCodec.INSTANCE).get(keys);
-        Map<String, byte[]> rs = new LinkedHashMap(map.size());
-        map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, byte[].class, v)));
-        return rs;
-    }
-
-    @Override
-    public <T> Map<String, Set<T>> smembers(final Type componentType, String... keys) {
-        return (Map) smembersAsync(componentType, keys).join();
-    }
-
-    @Override
-    public <T> Map<String, List<T>> lrange(final Type componentType, String... keys) {
-        return (Map) lrangeAsync(componentType, keys).join();
-    }
-
     //--------------------- existsItem ------------------------------  
-    @Override
-    public <T> boolean sismember(String key, final Type componentType, T value) {
-        final RSet<byte[]> bucket = client.getSet(key, ByteArrayCodec.INSTANCE);
-        return bucket.contains(componentType == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, componentType, convert, value));
-    }
-
     @Override
     public <T> CompletableFuture<Boolean> sismemberAsync(String key, final Type componentType, T value) {
         final RSet<byte[]> bucket = client.getSet(key, ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.containsAsync(encryptValue(key, cryptor, componentType, convert, value)));
     }
 
+    //--------------------- push ------------------------------  
     @Override
-    public boolean sismemberString(String key, String value) {
-        final RSet<String> bucket = client.getSet(key, StringCodec.INSTANCE);
-        return bucket.contains(encryptValue(key, cryptor, value));
+    public <T> CompletableFuture<Void> rpushAsync(String key, final Type componentType, T... values) {
+        List<byte[]> list = new ArrayList<>();
+        for (T value : values) {
+            list.add(encryptValue(key, cryptor, componentType, convert, value));
+        }
+        final RDeque<byte[]> bucket = client.getDeque(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.addLastAsync(list.toArray(new byte[list.size()][])).thenApply(r -> null));
+    } 
+
+    @Override
+    public <T> CompletableFuture<Void> rpushxAsync(String key, final Type componentType, T... values) {
+        List<byte[]> list = new ArrayList<>();
+        for (T value : values) {
+            list.add(encryptValue(key, cryptor, componentType, convert, value));
+        }
+        final RDeque<byte[]> bucket = client.getDeque(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.isExistsAsync()
+            .thenCompose(b -> b ? bucket.addLastAsync(list.toArray(new byte[list.size()][])) : CompletableFuture.completedFuture(null))
+            .thenApply(r -> null));
     }
 
     @Override
-    public CompletableFuture<Boolean> sismemberStringAsync(String key, String value) {
-        final RSet<String> bucket = client.getSet(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.containsAsync(encryptValue(key, cryptor, value)));
+    public <T> CompletableFuture<T> rpopAsync(String key, final Type componentType) {
+        final RDeque<byte[]> bucket = client.getDeque(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.pollLastAsync()).thenApply(v -> decryptValue(key, cryptor, componentType, v));
     }
 
     @Override
-    public boolean sismemberLong(String key, long value) {
-        final RSet<Long> bucket = client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return bucket.contains(value);
+    public <T> CompletableFuture<T> rpoplpushAsync(final String key, final String key2, final Type componentType) {
+        final RDeque<byte[]> bucket = client.getDeque(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.pollLastAndOfferFirstToAsync(key2)).thenApply(v -> decryptValue(key, cryptor, componentType, v));
     }
 
     @Override
-    public CompletableFuture<Boolean> sismemberLongAsync(String key, long value) {
-        final RSet<Long> bucket = client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return completableFuture(bucket.containsAsync(value));
-    }
-
-    //--------------------- rpush ------------------------------  
-    @Override
-    public <T> CompletableFuture<Void> rpushAsync(String key, final Type componentType, T value) {
-        final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.addAsync(encryptValue(key, cryptor, componentType, convert, value)).thenApply(r -> null));
+    public <T> CompletableFuture<Void> lpushAsync(String key, final Type componentType, T... values) {
+        List<byte[]> list = new ArrayList<>();
+        for (T value : values) {
+            list.add(encryptValue(key, cryptor, componentType, convert, value));
+        }
+        final RDeque<byte[]> bucket = client.getDeque(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.addFirstAsync(list.toArray(new byte[list.size()][])).thenApply(r -> null));
     }
 
     @Override
-    public <T> void rpush(String key, final Type componentType, T value) {
-        final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
-        bucket.add(componentType == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, componentType, convert, value));
+    public <T> CompletableFuture<Void> lpushxAsync(String key, final Type componentType, T... values) {
+        List<byte[]> list = new ArrayList<>();
+        for (T value : values) {
+            list.add(encryptValue(key, cryptor, componentType, convert, value));
+        }
+        final RDeque<byte[]> bucket = client.getDeque(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.isExistsAsync()
+            .thenCompose(b -> b ? bucket.addFirstAsync(list.toArray(new byte[list.size()][])) : CompletableFuture.completedFuture(null))
+            .thenApply(r -> null));
     }
 
     @Override
-    public CompletableFuture<Void> rpushStringAsync(String key, String value) {
-        final RList<String> bucket = client.getList(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.addAsync(encryptValue(key, cryptor, value)).thenApply(r -> null));
-    }
-
-    @Override
-    public void rpushString(String key, String value) {
-        final RList<String> bucket = client.getList(key, StringCodec.INSTANCE);
-        bucket.add(encryptValue(key, cryptor, value));
-    }
-
-    @Override
-    public CompletableFuture<Void> rpushLongAsync(String key, long value) {
-        final RList<Long> bucket = client.getList(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return completableFuture(bucket.addAsync(value).thenApply(r -> null));
-    }
-
-    @Override
-    public void rpushLong(String key, long value) {
-        final RList<Long> bucket = client.getList(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        bucket.add(value);
+    public <T> CompletableFuture<T> lpopAsync(String key, final Type componentType) {
+        final RDeque<byte[]> bucket = client.getDeque(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.pollFirstAsync()).thenApply(v -> decryptValue(key, cryptor, componentType, v));
     }
 
     //--------------------- lrem ------------------------------  
     @Override
     public <T> CompletableFuture<Integer> lremAsync(String key, final Type componentType, T value) {
         return completableFuture(client.getList(key, ByteArrayCodec.INSTANCE).removeAsync(encryptValue(key, cryptor, componentType, convert, value)).thenApply(r -> r ? 1 : 0));
-    }
-
-    @Override
-    public <T> int lrem(String key, final Type componentType, T value) {
-        final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
-        return bucket.remove(componentType == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, componentType, convert, value)) ? 1 : 0;
-    }
-
-    @Override
-    public CompletableFuture<Integer> lremStringAsync(String key, String value) {
-        return completableFuture(client.getList(key, StringCodec.INSTANCE).removeAsync(encryptValue(key, cryptor, value)).thenApply(r -> r ? 1 : 0));
-    }
-
-    @Override
-    public int lremString(String key, String value) {
-        return client.getList(key, StringCodec.INSTANCE).remove(encryptValue(key, cryptor, value)) ? 1 : 0;
-    }
-
-    @Override
-    public CompletableFuture<Integer> lremLongAsync(String key, long value) {
-        return completableFuture(client.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).removeAsync((Object) value).thenApply(r -> r ? 1 : 0));
-    }
-
-    @Override
-    public int lremLong(String key, long value) {
-        return client.getList(key, org.redisson.client.codec.LongCodec.INSTANCE).remove((Object) value) ? 1 : 0;
     }
 
     //--------------------- sadd ------------------------------  
@@ -1785,239 +934,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
         }));
     }
 
-    @Override
-    public CompletableFuture<String> spopStringAsync(String key) {
-        final RSet<String> bucket = client.getSet(key, StringCodec.INSTANCE);
-        return completableFuture(key, cryptor, bucket.removeRandomAsync());
-    }
-
-    @Override
-    public CompletableFuture<Set<String>> spopStringAsync(String key, int count) {
-        final RSet<String> bucket = client.getSet(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.removeRandomAsync(count).thenApply(r -> {
-            if (r == null) {
-                return r;
-            }
-            if (cryptor == null) {
-                return new LinkedHashSet<>(r);
-            }
-            Set<String> rs = new LinkedHashSet<>();
-            for (Object item : r) {
-                rs.add(item == null ? null : decryptValue(key, cryptor, item.toString()));
-            }
-            return rs;
-        }));
-    }
-
-    @Override
-    public CompletableFuture<Long> spopLongAsync(String key) {
-        final RSet<Long> bucket = client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return completableFuture(bucket.removeRandomAsync());
-    }
-
-    @Override
-    public CompletableFuture<Set<Long>> spopLongAsync(String key, int count) {
-        final RSet<Long> bucket = client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return completableFuture(bucket.removeRandomAsync(count));
-    }
-
-    @Override
-    public <T> void sadd(String key, final Type componentType, T value) {
-        final RSet<byte[]> bucket = client.getSet(key, ByteArrayCodec.INSTANCE);
-        bucket.add(componentType == String.class ? encryptValue(key, cryptor, String.valueOf(value)).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, componentType, convert, value));
-    }
-
-    @Override
-    public <T> T spop(String key, final Type componentType) {
-        final RSet<byte[]> bucket = client.getSet(key, ByteArrayCodec.INSTANCE);
-        byte[] bs = bucket.removeRandom();
-        return decryptValue(key, cryptor, componentType, bs);
-    }
-
-    @Override
-    public <T> Set<T> spop(String key, int count, final Type componentType) {
-        final RSet<byte[]> bucket = client.getSet(key, ByteArrayCodec.INSTANCE);
-        Set< byte[]> bslist = bucket.removeRandom(count);
-        Set<T> rs = new LinkedHashSet<>();
-        if (bslist == null) {
-            return rs;
-        }
-        for (byte[] bs : bslist) {
-            rs.add(decryptValue(key, cryptor, componentType, bs));
-        }
-        return rs;
-    }
-
-    @Override
-    public String spopString(String key) {
-        final RSet<String> bucket = client.getSet(key, StringCodec.INSTANCE);
-        return decryptValue(key, cryptor, bucket.removeRandom());
-    }
-
-    @Override
-    public Set<String> spopString(String key, int count) {
-        final RSet<String> bucket = client.getSet(key, StringCodec.INSTANCE);
-        Set<String> r = bucket.removeRandom(count);
-        if (cryptor == null) {
-            return r;
-        }
-        Set<String> rs = new LinkedHashSet<>();
-        for (String item : r) {
-            rs.add(decryptValue(key, cryptor, item));
-        }
-        return rs;
-    }
-
-    @Override
-    public Long spopLong(String key) {
-        final RSet<Long> bucket = client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return bucket.removeRandom();
-    }
-
-    @Override
-    public Set<Long> spopLong(String key, int count) {
-        final RSet<Long> bucket = client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return bucket.removeRandom(count);
-    }
-
-    @Override
-    public CompletableFuture<Void> saddStringAsync(String key, String value) {
-        final RSet<String> bucket = client.getSet(key, StringCodec.INSTANCE);
-        return completableFuture(bucket.addAsync(encryptValue(key, cryptor, value)).thenApply(r -> null));
-    }
-
-    @Override
-    public void saddString(String key, String value) {
-        final RSet<String> bucket = client.getSet(key, StringCodec.INSTANCE);
-        bucket.add(encryptValue(key, cryptor, value));
-    }
-
-    @Override
-    public CompletableFuture<Void> saddLongAsync(String key, long value) {
-        final RSet<Long> bucket = client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        return completableFuture(bucket.addAsync(value).thenApply(r -> null));
-    }
-
-    @Override
-    public void saddLong(String key, long value) {
-        final RSet<Long> bucket = client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE);
-        bucket.add(value);
-    }
-
     //--------------------- srem ------------------------------  
     @Override
     public <T> CompletableFuture<Integer> sremAsync(String key, final Type componentType, T value) {
         return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).removeAsync(encryptValue(key, cryptor, componentType, convert, value)).thenApply(r -> r ? 1 : 0));
     }
 
-    @Override
-    public <T> int srem(String key, final Type componentType, T value) {
-        final RSet<byte[]> bucket = client.getSet(key, ByteArrayCodec.INSTANCE);
-        return bucket.remove(componentType == String.class ? String.valueOf(value).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, componentType, convert, value)) ? 1 : 0;
-    }
-
-    @Override
-    public CompletableFuture<Integer> sremStringAsync(String key, String value) {
-        return completableFuture(client.getSet(key, StringCodec.INSTANCE).removeAsync(encryptValue(key, cryptor, value)).thenApply(r -> r ? 1 : 0));
-    }
-
-    @Override
-    public int sremString(String key, String value) {
-        return client.getSet(key, StringCodec.INSTANCE).remove(encryptValue(key, cryptor, value)) ? 1 : 0;
-    }
-
-    @Override
-    public CompletableFuture<Integer> sremLongAsync(String key, long value) {
-        return completableFuture(client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).removeAsync(value).thenApply(r -> r ? 1 : 0));
-    }
-
-    @Override
-    public int sremLong(String key, long value) {
-        return client.getSet(key, org.redisson.client.codec.LongCodec.INSTANCE).remove(value) ? 1 : 0;
-    }
-
     //--------------------- keys ------------------------------  
-    @Override
-    public List<String> keys(String pattern) {
-        if (isEmpty(pattern)) {
-            return client.getKeys().getKeysStream().collect(Collectors.toList());
-        } else {
-            return client.getKeys().getKeysStreamByPattern(pattern).collect(Collectors.toList());
-        }
-    }
-
-    @Override
-    public byte[] getBytes(final String key) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.get();
-    }
-
-    @Override
-    public byte[] getSetBytes(final String key, byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.getAndSet(value);
-    }
-
-    @Override
-    public byte[] getexBytes(final String key, final int expireSeconds) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.getAndExpire(Duration.ofSeconds(expireSeconds));
-    }
-
-    @Override
-    public void setBytes(final String key, final byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        bucket.set(value);
-    }
-
-    @Override
-    public void setexBytes(final String key, final int expireSeconds, final byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        bucket.set(value, expireSeconds, TimeUnit.SECONDS);
-    }
-
-    @Override
-    public boolean setnxexBytes(final String key, final int expireSeconds, final byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return bucket.setIfAbsent(value, Duration.ofSeconds(expireSeconds));
-    }
-
-    @Override
-    public CompletableFuture<byte[]> getBytesAsync(final String key) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.getAsync());
-    }
-
-    @Override
-    public CompletableFuture<byte[]> getSetBytesAsync(final String key, byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.getAndSetAsync(value));
-    }
-
-    @Override
-    public CompletableFuture<byte[]> getexBytesAsync(final String key, final int expireSeconds) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.getAndExpireAsync(Duration.ofSeconds(expireSeconds)));
-    }
-
-    @Override
-    public CompletableFuture<Void> setBytesAsync(final String key, final byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(value));
-    }
-
-    @Override
-    public CompletableFuture<Void> setexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setAsync(value, expireSeconds, TimeUnit.SECONDS).thenApply(v -> null));
-    }
-
-    @Override
-    public CompletableFuture<Boolean> setnxexBytesAsync(final String key, final int expireSeconds, final byte[] value) {
-        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.setIfAbsentAsync(value, Duration.ofSeconds(expireSeconds)));
-    }
-
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
         if (isEmpty(pattern)) {
@@ -2029,28 +952,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     //--------------------- dbsize ------------------------------  
     @Override
-    public long dbsize() {
-        return client.getKeys().count();
-    }
-
-    @Override
     public CompletableFuture<Long> dbsizeAsync() {
         return completableFuture(client.getKeys().countAsync());
     }
 
     @Override
-    public void flushdb() {
-        client.getKeys().flushdb();
-    }
-
-    @Override
     public CompletableFuture<Void> flushdbAsync() {
         return completableFuture(client.getKeys().flushdbAsync());
-    }
-
-    @Override
-    public void flushall() {
-        client.getKeys().flushall();
     }
 
     @Override
