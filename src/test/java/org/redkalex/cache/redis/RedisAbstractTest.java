@@ -408,11 +408,10 @@ public abstract class RedisAbstractTest {
         System.out.println("SPOP两个元素：" + col);
         System.out.println("SPOP五个元素：" + source.spopString("popset", 5));
 
-        source.saddLong("popset", 111);
-        source.saddLong("popset", 222);
-        source.saddLong("popset", 333);
-        source.saddLong("popset", 444);
-        source.saddLong("popset", 555);
+        source.saddLong("popset", 111L);
+        source.saddLong("popset", 222L);
+        source.saddLong("popset", 333L);
+        source.saddLong("popset", 444L, 555L);
         System.out.println("SPOP一个元素：" + source.spopLong("popset"));
         System.out.println("SPOP两个元素：" + source.spopLong("popset", 2));
         System.out.println("SPOP五个元素：" + source.spopLong("popset", 5));

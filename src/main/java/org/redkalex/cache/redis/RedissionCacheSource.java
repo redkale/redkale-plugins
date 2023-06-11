@@ -846,7 +846,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         }
         final RDeque<byte[]> bucket = client.getDeque(key, ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.addLastAsync(list.toArray(new byte[list.size()][])).thenApply(r -> null));
-    } 
+    }
 
     @Override
     public <T> CompletableFuture<Void> rpushxAsync(String key, final Type componentType, T... values) {
@@ -908,9 +908,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     //--------------------- sadd ------------------------------  
     @Override
-    public <T> CompletableFuture<Void> saddAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Void> saddAsync(String key, Type componentType, T... values) {
+        List<byte[]> list = new ArrayList<>();
+        for (T value : values) {
+            list.add(encryptValue(key, cryptor, componentType, convert, value));
+        }
         final RSet<byte[]> bucket = client.getSet(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.addAsync(encryptValue(key, cryptor, componentType, convert, value)).thenApply(r -> null));
+        return completableFuture(bucket.addAllAsync(list).thenApply(r -> null));
     }
 
     @Override
@@ -936,8 +940,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     //--------------------- srem ------------------------------  
     @Override
-    public <T> CompletableFuture<Integer> sremAsync(String key, final Type componentType, T value) {
-        return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).removeAsync(encryptValue(key, cryptor, componentType, convert, value)).thenApply(r -> r ? 1 : 0));
+    public <T> CompletableFuture<Long> sremAsync(String key, final Type componentType, T... values) {
+        List<byte[]> list = new ArrayList<>();
+        for (T value : values) {
+            list.add(encryptValue(key, cryptor, componentType, convert, value));
+        }
+        return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).removeAllAsync(list).thenApply(r -> r ? 1L : 0L));
     }
 
     //--------------------- keys ------------------------------  
@@ -1109,17 +1117,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     @Deprecated(since = "2.8.0")
-    public int getCollectionSize(String key) {
-        String type = client.getScript().eval(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE);
-        if (String.valueOf(type).contains("list")) {
-            return client.getList(key).size();
-        } else {
-            return client.getSet(key).size();
-        }
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
             if (String.valueOf(type).contains("list")) {
@@ -1281,18 +1278,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     @Deprecated(since = "2.8.0")
-    public Collection<String> getStringCollection(String key) {
-        return getStringCollectionAsync(key).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
-        return getStringCollectionMapAsync(set, keys).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
         return completableFuture(client.getScript().evalAsync(RScript.Mode.READ_ONLY, "return redis.call('TYPE', '" + key + "')", RScript.ReturnType.VALUE).thenCompose(type -> {
             if (String.valueOf(type).contains("list")) {
@@ -1351,29 +1336,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return rsFuture;
     }
 
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Collection<Long> getLongCollection(String key) {
-        return getLongCollectionAsync(key).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Map<String, Collection<Long>> getLongCollectionMap(final boolean set, String... keys) {
-        return getLongCollectionMapAsync(set, keys).join();
-    }
-
     //--------------------- getexCollection ------------------------------  
     @Override
     @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
         return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
-        return (Collection) getexCollectionAsync(key, expireSeconds, componentType).join();
     }
 
     @Override
@@ -1384,26 +1351,8 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     @Deprecated(since = "2.8.0")
-    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
-        return getexStringCollectionAsync(key, expireSeconds).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
         return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Collection<Long> getexLongCollection(String key, final int expireSeconds) {
-        return getexLongCollectionAsync(key, expireSeconds).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public <T> Collection<T> getCollection(String key, final Type componentType) {
-        return (Collection) getCollectionAsync(key, componentType).join();
     }
 
     @Override
@@ -1426,12 +1375,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
             rs[i] = decryptValue(keys[i], cryptor, map.get(keys[i]));
         }
         return rs;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
-        return (Map) getCollectionMapAsync(set, componentType, keys).join();
     }
 
 }

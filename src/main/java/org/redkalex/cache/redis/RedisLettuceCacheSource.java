@@ -1021,18 +1021,16 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    @SuppressWarnings({"ConfusingArrayVararg", "PrimitiveArrayArgumentToVariableArgMethod"})
-    public <T> CompletableFuture<Void> saddAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Void> saddAsync(String key, Type componentType, T... values) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.sadd(key, encryptValue(key, cryptor, componentType, convert, value)));
+            return completableBytesFuture(command, command.sadd(key, keyArgs(key, componentType, values)));
         });
     }
 
     @Override
-    public <T> CompletableFuture<Integer> sremAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Long> sremAsync(String key, Type componentType, T... values) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.srem(key, encryptValue(key, cryptor, componentType, convert, value))
-                .thenApply(v -> v.intValue()));
+            return completableBytesFuture(command, command.srem(key, keyArgs(key, componentType, values)));
         });
     }
 
@@ -1170,48 +1168,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
-    @Override
-    @Deprecated(since = "2.8.0")
-    public <T> Collection<T> getCollection(String key, final Type componentType) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        Collection<T> rs = getCollection(command, key, componentType);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        final Map<String, Collection<T>> map = new LinkedHashMap<>();
-        if (set) {  //set
-            for (String key : keys) {
-                map.put(key, formatCollection(key, cryptor, command.smembers(key), convert, componentType));
-            }
-        } else { //list
-            for (String key : keys) {
-                map.put(key, formatCollection(key, cryptor, command.lrange(key, 0, -1), convert, componentType));
-            }
-        }
-        releaseBytesCommand(command);
-        return map;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public int getCollectionSize(String key) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        final String type = command.type(key);
-        int rs;
-        if (type.contains("list")) {
-            rs = command.llen(key).intValue();
-        } else { //set
-            rs = command.scard(key).intValue();
-        }
-        releaseBytesCommand(command);
-        return rs;
-    }
-
     @Deprecated(since = "2.8.0")
     protected CompletableFuture<Collection<Long>> getLongCollectionAsync(final CompletableFuture<RedisClusterAsyncCommands<String, String>> commandFuture, String key) {
         return commandFuture.thenCompose(command -> getLongCollectionAsync(command, key));
@@ -1227,152 +1183,6 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
                 return command.smembers(key).thenApply(rs -> formatLongCollection(true, rs));
             }
         }));
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
-        final RedisClusterCommands<String, byte[]> command = connectBytes();
-        command.expire(key, Duration.ofSeconds(expireSeconds));
-        Collection<T> rs = getCollection(command, key, componentType);
-        releaseBytesCommand(command);
-        return rs;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public String[] getStringArray(final String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        List<KeyValue<String, String>> rs = command.mget(keys);
-        releaseStringCommand(command);
-        String[] array = new String[keys.length];
-        for (int i = 0; i < array.length; i++) {
-            String bs = null;
-            for (KeyValue<String, String> kv : rs) {
-                if (kv.getKey().equals(keys[i])) {
-                    bs = kv.hasValue() ? (cryptor != null ? cryptor.decrypt(kv.getKey(), kv.getValue()) : kv.getValue()) : null;
-                    break;
-                }
-            }
-            array[i] = bs;
-        }
-        return array;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Collection<String> getStringCollection(String key) {
-        final RedisClusterCommands<String, String> command = connectString();
-        Collection<String> rs = getStringCollection(command, key);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Deprecated(since = "2.8.0")
-    protected Collection<String> getStringCollection(final RedisClusterCommands<String, String> command, String key) {
-        final String type = command.type(key);
-        if (type.contains("list")) { //list
-            return decryptStringCollection(key, false, command.lrange(key, 0, -1));
-        } else { //set
-            return decryptStringCollection(key, true, command.smembers(key));
-        }
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        final Map<String, Collection<String>> map = new LinkedHashMap<>();
-        if (set) {//set    
-            for (String key : keys) {
-                map.put(key, decryptStringCollection(key, true, command.smembers(key)));
-            }
-        } else {  //list           
-            for (String key : keys) {
-                map.put(key, decryptStringCollection(key, false, command.lrange(key, 0, -1)));
-            }
-        }
-        releaseStringCommand(command);
-        return map;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.expire(key, expireSeconds);
-        Collection<String> rs = getStringCollection(command, key);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Long[] getLongArray(String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        List<KeyValue<String, String>> rs = command.mget(keys);
-        releaseStringCommand(command);
-        Long[] array = new Long[keys.length];
-        for (int i = 0; i < array.length; i++) {
-            Long bs = null;
-            for (KeyValue<String, String> kv : rs) {
-                if (kv.getKey().equals(keys[i])) {
-                    bs = kv.hasValue() ? Long.parseLong(kv.getValue()) : null;
-                    break;
-                }
-            }
-            array[i] = bs;
-        }
-        return array;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Collection<Long> getLongCollection(String key) {
-        final RedisClusterCommands<String, String> command = connectString();
-        Collection<Long> rs = getLongCollection(command, key);
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Deprecated(since = "2.8.0")
-    protected Collection<Long> getLongCollection(final RedisClusterCommands<String, String> command, String key) {
-        final String type = command.type(key);
-        Collection<Long> rs;
-        if (type.contains("list")) { //list
-            rs = formatLongCollection(false, command.lrange(key, 0, -1));
-        } else { //set
-            rs = formatLongCollection(true, command.smembers(key));
-        }
-        releaseStringCommand(command);
-        return rs;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Map<String, Collection<Long>> getLongCollectionMap(boolean set, String... keys) {
-        final RedisClusterCommands<String, String> command = connectString();
-        final Map<String, Collection<Long>> map = new LinkedHashMap<>();
-        if (set) { //set
-            for (String key : keys) {
-                map.put(key, formatLongCollection(true, command.smembers(key)));
-            }
-        } else { //list                
-            for (String key : keys) {
-                map.put(key, formatLongCollection(false, command.lrange(key, 0, -1)));
-            }
-        }
-        releaseStringCommand(command);
-        return map;
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Collection<Long> getexLongCollection(String key, int expireSeconds) {
-        final RedisClusterCommands<String, String> command = connectString();
-        command.expire(key, expireSeconds);
-        releaseStringCommand(command);
-        return getLongCollection(key);
     }
 
     @Override

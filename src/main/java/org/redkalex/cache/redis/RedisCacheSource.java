@@ -592,8 +592,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     //--------------------- sadd ------------------------------  
     @Override
-    public <T> CompletableFuture<Void> saddAsync(String key, Type componentType, T value) {
-        return sendWriteAsync("SADD", key, keyArgs(key, componentType, value)).thenApply(v -> v.getVoidValue());
+    public <T> CompletableFuture<Void> saddAsync(String key, Type componentType, T... values) {
+        return sendWriteAsync("SADD", key, keyArgs(key, componentType, values)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
@@ -617,8 +617,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     //--------------------- srem ------------------------------  
     @Override
-    public <T> CompletableFuture<Integer> sremAsync(String key, final Type componentType, T value) {
-        return sendWriteAsync("SREM", key, keyArgs(key, componentType, value)).thenApply(v -> v.getIntValue(0));
+    public <T> CompletableFuture<Long> sremAsync(String key, final Type componentType, T... values) {
+        return sendWriteAsync("SREM", key, keyArgs(key, componentType, values)).thenApply(v -> v.getLongValue(0L));
     }
 
     //--------------------- keys ------------------------------  
@@ -863,7 +863,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     private byte[] encodeValue(String key, RedisCryptor cryptor, Object value) {
         return encodeValue(key, cryptor, null, null, value);
     }
-    
+
     private byte[] encodeValue(String key, RedisCryptor cryptor, Convert convert0, Type type, Object value) {
         if (value == null) {
             throw new NullPointerException();
@@ -947,12 +947,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     @Deprecated(since = "2.8.0")
-    public int getCollectionSize(String key) {
-        return getCollectionSizeAsync(key).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
         return sendReadAsync("TYPE", key, keyArgs(key)).thenCompose(t -> {
             String type = t.getObjectValue(key, cryptor, String.class);
@@ -998,12 +992,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
             }
             return rs;
         });
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public <T> Collection<T> getCollection(String key, final Type componentType) {
-        return (Collection) getCollectionAsync(key, componentType).join();
     }
 
     @Override
@@ -1064,18 +1052,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     @Deprecated(since = "2.8.0")
-    public Collection<String> getStringCollection(String key) {
-        return getStringCollectionAsync(key).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Map<String, Collection<String>> getStringCollectionMap(final boolean set, String... keys) {
-        return getStringCollectionMapAsync(set, keys).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
         return sendReadAsync("TYPE", key, keyArgs(key)).thenCompose(t -> {
             String type = t.getObjectValue(key, cryptor, String.class);
@@ -1119,29 +1095,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return rsFuture;
     }
 
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Collection<Long> getLongCollection(String key) {
-        return getLongCollectionAsync(key).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Map<String, Collection<Long>> getLongCollectionMap(final boolean set, String... keys) {
-        return getLongCollectionMapAsync(set, keys).join();
-    }
-
     //--------------------- getexCollection ------------------------------  
     @Override
     @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
         return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public <T> Collection<T> getexCollection(String key, final int expireSeconds, final Type componentType) {
-        return (Collection) getexCollectionAsync(key, expireSeconds, componentType).join();
     }
 
     @Override
@@ -1152,25 +1110,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     @Deprecated(since = "2.8.0")
-    public Collection<String> getexStringCollection(String key, final int expireSeconds) {
-        return getexStringCollectionAsync(key, expireSeconds).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
         return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
     }
 
-    @Override
-    @Deprecated(since = "2.8.0")
-    public Collection<Long> getexLongCollection(String key, final int expireSeconds) {
-        return getexLongCollectionAsync(key, expireSeconds).join();
-    }
-
-    @Override
-    @Deprecated(since = "2.8.0")
-    public <T> Map<String, Collection<T>> getCollectionMap(final boolean set, final Type componentType, String... keys) {
-        return (Map) getCollectionMapAsync(set, componentType, keys).join();
-    }
 }

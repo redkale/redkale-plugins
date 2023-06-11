@@ -423,8 +423,8 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     }
 
     @Override
-    public <T> void sadd(String key, final Type componentType, T value) {
-        saddAsync(key, componentType, value).join();
+    public <T> void sadd(String key, final Type componentType, T... values) {
+        saddAsync(key, componentType, values).join();
     }
 
     @Override
@@ -443,8 +443,8 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     }
 
     @Override
-    public <T> int srem(String key, final Type componentType, T value) {
-        return sremAsync(key, componentType, value).join();
+    public <T> long srem(String key, final Type componentType, T... values) {
+        return sremAsync(key, componentType, values).join();
     }
 
     @Override
