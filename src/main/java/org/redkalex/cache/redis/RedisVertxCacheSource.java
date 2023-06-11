@@ -163,6 +163,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return getClass().getSimpleName() + "{addrs=" + this.nodeAddrs + ", db=" + this.db + "}";
     }
 
+    @Local
+    public io.vertx.redis.client.RedisAPI getRedisClient() {
+        return this.client;
+    }
+
     @Override
     public void destroy(AnyValue conf) {
         super.destroy(conf);

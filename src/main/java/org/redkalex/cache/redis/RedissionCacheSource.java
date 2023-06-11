@@ -286,7 +286,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Local
-    public RedissonClient getRedissonClient() {
+    public org.redisson.api.RedissonClient getRedisClient() {
         return client;
     }
 
