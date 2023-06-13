@@ -17,7 +17,7 @@ public class RedisCacheReqClientName extends RedisCacheRequest {
 
     public RedisCacheReqClientName(String appName, String resourceName) {
         this.clientName = "redkalex" + (Utility.isEmpty(appName) ? "" : ("-" + appName))
-            + ":" + (Utility.isEmpty(resourceName) ? "client" : resourceName);
+            + (Utility.isEmpty(resourceName) ? "" : (":" + resourceName));
     }
 
     @Override
