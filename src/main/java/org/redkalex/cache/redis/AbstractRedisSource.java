@@ -7,6 +7,7 @@ package org.redkalex.cache.redis;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import org.redkale.annotation.Resource;
+import static org.redkale.boot.Application.RESNAME_APP_NAME;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.AbstractCacheSource;
@@ -23,6 +24,9 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     public static final String CACHE_SOURCE_CRYPTOR = "cryptor";
 
     protected String name;
+
+    @Resource(name = RESNAME_APP_NAME, required = false)
+    protected String appName = "";
 
     @Resource(required = false)
     protected ResourceFactory resourceFactory;

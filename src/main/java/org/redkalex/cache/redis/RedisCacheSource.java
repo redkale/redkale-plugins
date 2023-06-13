@@ -143,8 +143,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
         int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
         int pipelines = conf.getIntValue(CACHE_SOURCE_PIPELINES, urlpipelines);
         RedisCacheClient old = this.client;
-        this.client = new RedisCacheClient(resourceName(), ioGroup, resourceName() + "." + db, new ClientAddress(address), maxconns, pipelines,
-            isEmpty(password) ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
+        this.client = new RedisCacheClient(appName, resourceName(), ioGroup, resourceName() + "." + db, new ClientAddress(address),
+             maxconns, pipelines, isEmpty(password) ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
         if (old != null) {
             old.close();
         }
