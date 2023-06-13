@@ -25,7 +25,7 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.*;
 import org.redkale.net.client.ClientAddress;
 import org.redkale.service.Local;
-import org.redkale.source.CacheSource;
+import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
 
@@ -645,23 +645,48 @@ public final class RedisCacheSource extends AbstractRedisSource {
         });
     }
 
-    //--------------------- srem ------------------------------  
     @Override
     public <T> CompletableFuture<Long> sremAsync(String key, final Type componentType, T... values) {
         return sendWriteAsync("SREM", key, keyArgs(key, componentType, values)).thenApply(v -> v.getLongValue(0L));
+    }
+
+    //--------------------- sorted set ------------------------------ 
+    @Override
+    public CompletableFuture<Void> zaddAsync(String key, CacheScoredValue... values) {
+        return sendWriteAsync("ZADD", key, keyArgs(key, values)).thenApply(v -> v.getVoidValue());
+    }
+
+    @Override
+    public CompletableFuture<Long> zremAsync(String key, String... members) {
+        return sendWriteAsync("ZREM", key, keysArgs(key, members)).thenApply(v -> v.getLongValue(0L));
+    }
+
+    @Override
+    public <T extends Number> CompletableFuture<List<T>> zmscoreAsync(String key, Class<T> scoreType, String... members) {
+        return sendReadAsync("ZMSCORE", key, keysArgs(key, members)).thenApply(v -> v.getListValue(key, (RedisCryptor) null, scoreType));
+    }
+
+    @Override
+    public <T extends Number> CompletableFuture<T> zscoreAsync(String key, Class<T> scoreType, String member) {
+        return sendReadAsync("ZSCORE", key, keysArgs(key, member)).thenApply(v -> v.getObjectValue(key, (RedisCryptor) null, scoreType));
+    }
+
+    @Override
+    public CompletableFuture<Long> zcardAsync(String key) {
+        return sendWriteAsync("ZCARD", key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
     }
 
     //--------------------- keys ------------------------------  
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
         String key = isEmpty(pattern) ? "*" : pattern;
-        return sendReadAsync("KEYS", key, keyArgs(key)).thenApply(v -> (List) v.getListValue(key, cryptor, String.class));
+        return sendReadAsync("KEYS", key, keyArgs(key)).thenApply(v -> (List) v.getListValue(key, (RedisCryptor) null, String.class));
     }
 
     @Override
     public CompletableFuture<List<String>> scanAsync(AtomicLong cursor, int limit, String pattern) {
         return sendReadAsync("SCAN", null, keyArgs(null, cursor, limit, pattern)).thenApply(v -> {
-            List<String> list = v.getListValue(null, cryptor, String.class);
+            List<String> list = v.getListValue(null, (RedisCryptor) null, String.class);
             cursor.set(v.getCursor());
             return list;
         });
@@ -796,6 +821,16 @@ public final class RedisCacheSource extends AbstractRedisSource {
         bss[0] = key.getBytes(StandardCharsets.UTF_8);
         for (int i = 0; i < values.length; i++) {
             bss[i + 1] = encodeValue(key, cryptor, null, componentType, values[i]);
+        }
+        return bss;
+    }
+
+    private <T> byte[][] keyArgs(String key, CacheScoredValue... values) {
+        byte[][] bss = new byte[values.length * 2 + 1][];
+        bss[0] = key.getBytes(StandardCharsets.UTF_8);
+        for (int i = 0; i < values.length * 2; i += 2) {
+            bss[i + 1] = values[i].getScore().toString().getBytes(StandardCharsets.UTF_8);
+            bss[i + 2] = values[i].getValue().getBytes(StandardCharsets.UTF_8);
         }
         return bss;
     }

@@ -15,6 +15,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
+import java.util.stream.Collectors;
 import org.redisson.Redisson;
 import org.redisson.api.*;
 import org.redisson.client.codec.*;
@@ -28,7 +29,7 @@ import org.redkale.service.Local;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODE;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_URL;
-import org.redkale.source.CacheSource;
+import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
 
@@ -960,7 +961,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
         }));
     }
 
-    //--------------------- srem ------------------------------  
     @Override
     public <T> CompletableFuture<Long> sremAsync(String key, final Type componentType, T... values) {
         List<byte[]> list = new ArrayList<>();
@@ -968,6 +968,42 @@ public class RedissionCacheSource extends AbstractRedisSource {
             list.add(encryptValue(key, cryptor, componentType, convert, value));
         }
         return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).removeAllAsync(list).thenApply(r -> r ? 1L : 0L));
+    }
+
+    //--------------------- sorted set ------------------------------  
+    @Override
+    public CompletableFuture<Void> zaddAsync(String key, CacheScoredValue... values) {
+        Map<String, Double> map = new HashMap<>();
+        for (CacheScoredValue value : values) {
+            map.put(value.getValue(), value.getScore().doubleValue());
+        }
+        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        return completableFuture(bucket.addAllAsync(map).thenApply(r -> null));
+    }
+
+    @Override
+    public CompletableFuture<Long> zremAsync(String key, String... members) {
+        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        return completableFuture(bucket.removeAllAsync(List.of(members)).thenApply(r -> r ? 1L : 0L));
+    }
+
+    @Override
+    public <T extends Number> CompletableFuture<List<T>> zmscoreAsync(String key, Class<T> scoreType, String... members) {
+        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        return completableFuture(bucket.getScoreAsync(List.of(members))
+            .thenApply(list -> list.stream().map(v -> decryptScore(scoreType, v)).collect(Collectors.toList())));
+    }
+
+    @Override
+    public <T extends Number> CompletableFuture<T> zscoreAsync(String key, Class<T> scoreType, String member) {
+        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        return completableFuture(bucket.getScoreAsync(member).thenApply(r -> decryptScore(scoreType, r)));
+    }
+
+    @Override
+    public CompletableFuture<Long> zcardAsync(String key) {
+        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        return completableFuture(bucket.sizeAsync().thenApply(r -> r.longValue()));
     }
 
     //--------------------- keys ------------------------------  

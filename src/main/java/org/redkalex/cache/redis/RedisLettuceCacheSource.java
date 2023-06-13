@@ -25,12 +25,13 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
+import java.util.stream.Collectors;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
 import org.redkale.service.Local;
-import org.redkale.source.CacheSource;
+import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
 
@@ -393,6 +394,14 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         byte[][] bss = new byte[values.length][];
         for (int i = 0; i < values.length; i++) {
             bss[i] = encryptValue(key, cryptor, componentType, (Convert) null, values[i]);
+        }
+        return bss;
+    }
+
+    protected <T> byte[][] keyArgs(String... members) {
+        byte[][] bss = new byte[members.length][];
+        for (int i = 0; i < members.length; i++) {
+            bss[i] = members[i].getBytes(StandardCharsets.UTF_8);
         }
         return bss;
     }
@@ -1080,7 +1089,51 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public CompletableFuture<List<String>> keysAsync(String pattern) {
         return connectStringAsync().thenCompose(command -> {
             //此处获取key值，无需传cryptor进行解密
-            return completableStringFuture(null, null, command, command.keys(isEmpty(pattern) ? "*" : pattern));
+            return completableStringFuture(null, (RedisCryptor) null, command, command.keys(isEmpty(pattern) ? "*" : pattern));
+        });
+    }
+
+    //--------------------- sorted set ------------------------------ 
+    @Override
+    public CompletableFuture<Void> zaddAsync(String key, CacheScoredValue... values) {
+        ScoredValue<byte[]>[] vals = new ScoredValue[values.length];
+        for (int i = 0; i < values.length; i++) {
+            vals[i] = ScoredValue.just(values[i].getScore().doubleValue(), values[i].getValue().getBytes(StandardCharsets.UTF_8));
+        }
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.zadd(key, (ScoredValue[]) vals).thenApply(v -> null));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Long> zremAsync(String key, String... members) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.zrem(key, keyArgs(members)));
+        });
+    }
+
+    @Override
+    public <T extends Number> CompletableFuture<List<T>> zmscoreAsync(String key, Class<T> scoreType, String... members) {
+        return connectStringAsync().thenCompose(command -> {
+            //此处获取score值，无需传cryptor进行解密
+            return completableStringFuture(null, (RedisCryptor) null, command, command.zmscore(key, members)
+                .thenApply(list -> list.stream().map(v -> decryptScore(scoreType, v)).collect(Collectors.toList())));
+        });
+    }
+
+    @Override
+    public <T extends Number> CompletableFuture<T> zscoreAsync(String key, Class<T> scoreType, String member) {
+        return connectStringAsync().thenCompose(command -> {
+            //此处获取score值，无需传cryptor进行解密 
+            return completableStringFuture(null, (RedisCryptor) null, command, command.zscore(key, member)
+                .thenApply(v -> decryptScore(scoreType, v)));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Long> zcardAsync(String key) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.zcard(key));
         });
     }
 

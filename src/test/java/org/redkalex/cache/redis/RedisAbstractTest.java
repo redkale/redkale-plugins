@@ -177,7 +177,7 @@ public abstract class RedisAbstractTest {
         System.out.println("[一值] sets3 VALUES : " + col);
         Assertions.assertIterableEquals(col, List.of("setvals2"));
 
-        int size = (int) source.scard("sets3");
+        long size = source.scard("sets3");
         System.out.println("sets3 大小 : " + size);
         Assertions.assertEquals(1, size);
 
@@ -357,7 +357,7 @@ public abstract class RedisAbstractTest {
         System.out.println("hmap.key2 值 : " + obj);
         Assertions.assertEquals("haha", obj);
 
-        size = (int) source.hlen("hmap");
+        size = source.hlen("hmap");
         System.out.println("hmap列表(2)大小 : " + size);
         Assertions.assertEquals(2, size);
 
@@ -409,6 +409,24 @@ public abstract class RedisAbstractTest {
         } else {
             Assertions.assertTrue(cursor.get() > 0);
         }
+
+        source.del("sortset");
+        source.zadd("sortset", 100, "key100");
+        source.zadd("sortset", 200, "key200");
+        source.zadd("sortset", 300, "key300");
+        source.zadd("sortset", 400, "key400");
+        source.zadd("sortset", 500, "key500");
+        System.out.println("sortset 写入5条记录 ");
+        size = source.zcard("sortset");
+        Assertions.assertEquals(5, size);
+        size = source.zrem("sortset", "key400", "key800");
+        Assertions.assertTrue(size == 1);
+        List<Long> scores = source.zmscoreLong("sortset", "key200", "key800", "key500");
+        List<Long> scoreAnswer = new ArrayList<>();
+        scoreAnswer.add(200L);
+        scoreAnswer.add(null);
+        scoreAnswer.add(500L);
+        Assertions.assertIterableEquals(scoreAnswer, scores);
 
         source.del("popset");
         source.saddString("popset", "111");
@@ -534,8 +552,8 @@ public abstract class RedisAbstractTest {
 //        }
         source.del("bigmap");
         if (press) {
-            int count = Runtime.getRuntime().availableProcessors() * 10;
-            System.out.println("------开始进行压力测试 " + count + "个并发------");
+            int count = 300;
+            System.out.println("------" + source.getClass().getSimpleName() + " 开始进行压力测试 " + count + "个并发------");
             source.del("hmap");
             source.del("testnumber");
             source.hincr("hmap", "key1");
@@ -583,7 +601,7 @@ public abstract class RedisAbstractTest {
             System.out.println("hmap.key1 = " + source.hgetLong("hmap", "key1", -1));
             System.out.println("结束了, 循环" + count + "次耗时: " + e + "ms");
         }
-        source.del("testnumber");
+        source.flushdb();
     }
 
     public static void main(String[] args) throws Exception {
@@ -606,12 +624,12 @@ public abstract class RedisAbstractTest {
             }
         }
         {
-            System.out.println("############################  开始 Lettuce ############################");
-            RedisLettuceCacheSource source = new RedisLettuceCacheSource();
+            System.out.println("############################  开始 Redission ############################");
+            RedissionCacheSource source = new RedissionCacheSource();
             source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
-                run(source, false);
+                run(source, true);
             } finally {
                 source.close();
             }
@@ -623,18 +641,18 @@ public abstract class RedisAbstractTest {
             source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
-                run(source, false);
+                run(source, true);
             } finally {
                 source.close();
             }
         }
         {
-            System.out.println("############################  开始 Redission ############################");
-            RedissionCacheSource source = new RedissionCacheSource();
+            System.out.println("############################  开始 Lettuce ############################");
+            RedisLettuceCacheSource source = new RedisLettuceCacheSource();
             source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
-                run(source, false);
+                run(source, true);
             } finally {
                 source.close();
             }

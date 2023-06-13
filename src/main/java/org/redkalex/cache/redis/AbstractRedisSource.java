@@ -143,4 +143,20 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
         return enval == null ? null : enval.getBytes(StandardCharsets.UTF_8);
     }
 
+    protected <T extends Number> T decryptScore(Class<T> scoreType, Double score) {
+        if (score == null) {
+            return null;
+        }
+        if (scoreType == int.class || scoreType == Integer.class) {
+            return (T) (Number) score.intValue();
+        } else if (scoreType == long.class || scoreType == Long.class) {
+            return (T) (Number) score.longValue();
+        } else if (scoreType == float.class || scoreType == Float.class) {
+            return (T) (Number) score.floatValue();
+        } else if (scoreType == double.class || scoreType == Double.class) {
+            return (T) (Number) score;
+        } else {
+            return JsonConvert.root().convertFrom(scoreType, score.toString());
+        }
+    }
 }
