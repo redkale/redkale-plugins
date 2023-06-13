@@ -102,6 +102,11 @@ public class RedissionCacheSource extends AbstractRedisSource {
         String cluster = conf.getOrDefault("cluster", "");
         int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, Utility.cpus());
         BaseConfig baseConfig = null;
+        SingleServerConfig singleConfig = null;
+        MasterSlaveServersConfig masterConfig = null;
+        ClusterServersConfig clusterConfig = null;
+        ReplicatedServersConfig replicateConfig = null;
+        SentinelServersConfig sentinelConfig = null;
         for (AnyValue node : nodes) {
             String addr = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
             String db0 = node.getValue(CACHE_SOURCE_DB, "").trim();
@@ -131,56 +136,61 @@ public class RedissionCacheSource extends AbstractRedisSource {
             }
             addresses.add(addr);
             if (nodes.length == 1) {
-                baseConfig = redisConfig.useSingleServer();
-                if (maxconns > 0) {
-                    redisConfig.useSingleServer().setConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    redisConfig.useSingleServer().setConnectionPoolSize(maxconns);
+                if (singleConfig == null) {
+                    singleConfig = redisConfig.useSingleServer();
+                    singleConfig.setConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    singleConfig.setConnectionPoolSize(maxconns);
+                    baseConfig = singleConfig;
                 }
-                redisConfig.useSingleServer().setAddress(addr);
-                redisConfig.useSingleServer().setDatabase(this.db);
+                singleConfig.setAddress(addr);
+                singleConfig.setDatabase(this.db);
             } else if ("masterslave".equalsIgnoreCase(cluster)) { //主从
-                baseConfig = redisConfig.useMasterSlaveServers();
-                if (maxconns > 0) {
-                    redisConfig.useMasterSlaveServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    redisConfig.useMasterSlaveServers().setMasterConnectionPoolSize(maxconns);
-                    redisConfig.useMasterSlaveServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    redisConfig.useMasterSlaveServers().setSlaveConnectionPoolSize(maxconns);
+                if (masterConfig == null) {
+                    masterConfig = redisConfig.useMasterSlaveServers();
+                    masterConfig.setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    masterConfig.setMasterConnectionPoolSize(maxconns);
+                    masterConfig.setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    masterConfig.setSlaveConnectionPoolSize(maxconns);
+                    baseConfig = masterConfig;
                 }
                 if (node.get("master") != null) {
-                    redisConfig.useMasterSlaveServers().setMasterAddress(addr);
+                    masterConfig.setMasterAddress(addr);
                 } else {
-                    redisConfig.useMasterSlaveServers().addSlaveAddress(addr);
+                    masterConfig.addSlaveAddress(addr);
                 }
-                redisConfig.useMasterSlaveServers().setDatabase(this.db);
+                masterConfig.setDatabase(this.db);
             } else if ("cluster".equalsIgnoreCase(cluster)) { //集群
-                baseConfig = redisConfig.useClusterServers();
-                if (maxconns > 0) {
-                    redisConfig.useClusterServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    redisConfig.useClusterServers().setMasterConnectionPoolSize(maxconns);
-                    redisConfig.useClusterServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    redisConfig.useClusterServers().setSlaveConnectionPoolSize(maxconns);
+                if (clusterConfig == null) {
+                    clusterConfig = redisConfig.useClusterServers();
+                    clusterConfig.setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    clusterConfig.setMasterConnectionPoolSize(maxconns);
+                    clusterConfig.setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    clusterConfig.setSlaveConnectionPoolSize(maxconns);
+                    baseConfig = clusterConfig;
                 }
-                redisConfig.useClusterServers().addNodeAddress(addr);
-            } else if ("replicated".equalsIgnoreCase(cluster)) { //
-                baseConfig = redisConfig.useReplicatedServers();
-                if (maxconns > 0) {
-                    redisConfig.useReplicatedServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    redisConfig.useReplicatedServers().setMasterConnectionPoolSize(maxconns);
-                    redisConfig.useReplicatedServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    redisConfig.useReplicatedServers().setSlaveConnectionPoolSize(maxconns);
+                clusterConfig.addNodeAddress(addr);
+            } else if ("replicated".equalsIgnoreCase(cluster)) { //                
+                if (replicateConfig == null) {
+                    replicateConfig = redisConfig.useReplicatedServers();
+                    replicateConfig.setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    replicateConfig.setMasterConnectionPoolSize(maxconns);
+                    replicateConfig.setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    replicateConfig.setSlaveConnectionPoolSize(maxconns);
+                    baseConfig = replicateConfig;
                 }
-                redisConfig.useReplicatedServers().addNodeAddress(addr);
-                redisConfig.useReplicatedServers().setDatabase(this.db);
+                replicateConfig.addNodeAddress(addr);
+                replicateConfig.setDatabase(this.db);
             } else if ("sentinel".equalsIgnoreCase(cluster)) { //
-                baseConfig = redisConfig.useSentinelServers();
-                if (maxconns > 0) {
-                    redisConfig.useSentinelServers().setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    redisConfig.useSentinelServers().setMasterConnectionPoolSize(maxconns);
-                    redisConfig.useSentinelServers().setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    redisConfig.useSentinelServers().setSlaveConnectionPoolSize(maxconns);
+                if (sentinelConfig == null) {
+                    sentinelConfig = redisConfig.useSentinelServers();
+                    sentinelConfig.setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    sentinelConfig.setMasterConnectionPoolSize(maxconns);
+                    sentinelConfig.setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
+                    sentinelConfig.setSlaveConnectionPoolSize(maxconns);
+                    baseConfig = sentinelConfig;
                 }
-                redisConfig.useSentinelServers().addSentinelAddress(addr);
-                redisConfig.useSentinelServers().setDatabase(this.db);
+                sentinelConfig.addSentinelAddress(addr);
+                sentinelConfig.setDatabase(this.db);
             }
             if (baseConfig != null) {  //单个进程的不同自定义密码
                 if (!username.isEmpty()) {
@@ -977,32 +987,32 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (CacheScoredValue value : values) {
             map.put(value.getValue(), value.getScore().doubleValue());
         }
-        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
         return completableFuture(bucket.addAllAsync(map).thenApply(r -> null));
     }
 
     @Override
     public CompletableFuture<Long> zremAsync(String key, String... members) {
-        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
         return completableFuture(bucket.removeAllAsync(List.of(members)).thenApply(r -> r ? 1L : 0L));
     }
 
     @Override
     public <T extends Number> CompletableFuture<List<T>> zmscoreAsync(String key, Class<T> scoreType, String... members) {
-        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
         return completableFuture(bucket.getScoreAsync(List.of(members))
             .thenApply(list -> list.stream().map(v -> decryptScore(scoreType, v)).collect(Collectors.toList())));
     }
 
     @Override
     public <T extends Number> CompletableFuture<T> zscoreAsync(String key, Class<T> scoreType, String member) {
-        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
         return completableFuture(bucket.getScoreAsync(member).thenApply(r -> decryptScore(scoreType, r)));
     }
 
     @Override
     public CompletableFuture<Long> zcardAsync(String key) {
-        final RScoredSortedSet<String> bucket =  client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
         return completableFuture(bucket.sizeAsync().thenApply(r -> r.longValue()));
     }
 
