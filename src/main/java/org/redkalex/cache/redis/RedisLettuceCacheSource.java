@@ -138,7 +138,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             this.client = clusterClient;
         }
         this.nodeAddrs = addresses;
-        BoundedPoolConfig bpc = BoundedPoolConfig.builder().maxTotal(maxconns).maxIdle(maxconns).minIdle(0).build();
+        BoundedPoolConfig bpc = BoundedPoolConfig.builder().maxTotal(-1).maxIdle(maxconns).minIdle(0).build();
         if (clusterClient == null) {
             RedisClient sClient = singleClient;
             this.singleBytesConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> sClient.connectAsync(stringByteArrayCodec, singleRedisURI), bpc);

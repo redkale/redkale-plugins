@@ -599,7 +599,7 @@ public abstract class RedisAbstractTest {
             over.await();
             long e = System.currentTimeMillis() - s;
             System.out.println("hmap.key1 = " + source.hgetLong("hmap", "key1", -1));
-            System.out.println("结束了, 循环" + count + "次耗时: " + e + "ms");
+            System.out.println(source.getClass().getSimpleName() + " 压测结束了, 循环" + count + "次耗时: " + e + "ms");
         }
         source.flushdb();
     }
