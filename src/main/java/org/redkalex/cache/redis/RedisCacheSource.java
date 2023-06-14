@@ -144,7 +144,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         int pipelines = conf.getIntValue(CACHE_SOURCE_PIPELINES, urlpipelines);
         RedisCacheClient old = this.client;
         this.client = new RedisCacheClient(appName, resourceName(), ioGroup, resourceName() + "." + db, new ClientAddress(address),
-             maxconns, pipelines, isEmpty(password) ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
+            maxconns, pipelines, isEmpty(password) ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
         if (old != null) {
             old.close();
         }
@@ -616,8 +616,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     //--------------------- lrem ------------------------------  
     @Override
-    public <T> CompletableFuture<Integer> lremAsync(String key, final Type componentType, T value) {
-        return sendReadAsync("LREM", key, keyArgs(key, 0, componentType, value)).thenApply(v -> v.getIntValue(0));
+    public <T> CompletableFuture<Long> lremAsync(String key, final Type componentType, T value) {
+        return sendReadAsync("LREM", key, keyArgs(key, 0, componentType, value)).thenApply(v -> v.getLongValue(0L));
     }
 
     //--------------------- sadd ------------------------------  
@@ -958,7 +958,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
             }
             convert0 = convert;
         }
-        byte[] bs = convert0.convertToBytes(type == null ? value.getClass() : type, value);
+        Type t = type == null ? value.getClass() : type;
+        byte[] bs = convert0.convertToBytes(t, value);
+        if (bs.length > 1 && t instanceof Class && !CharSequence.class.isAssignableFrom((Class) t)) {
+            if (bs[0] == '"' && bs[bs.length - 1] == '"') {
+                bs = Arrays.copyOfRange(bs, 1, bs.length - 1);
+            }
+        }
         if (cryptor != null) {
             String val = cryptor.encrypt(key, new String(bs, StandardCharsets.UTF_8));
             return val.getBytes(StandardCharsets.UTF_8);

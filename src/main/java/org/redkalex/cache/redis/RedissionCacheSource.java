@@ -935,8 +935,8 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     //--------------------- lrem ------------------------------  
     @Override
-    public <T> CompletableFuture<Integer> lremAsync(String key, final Type componentType, T value) {
-        return completableFuture(client.getList(key, ByteArrayCodec.INSTANCE).removeAsync(encryptValue(key, cryptor, componentType, convert, value)).thenApply(r -> r ? 1 : 0));
+    public <T> CompletableFuture<Long> lremAsync(String key, final Type componentType, T value) {
+        return completableFuture(client.getList(key, ByteArrayCodec.INSTANCE).removeAsync(encryptValue(key, cryptor, componentType, convert, value)).thenApply(r -> r ? 1L : 0L));
     }
 
     //--------------------- sadd ------------------------------  

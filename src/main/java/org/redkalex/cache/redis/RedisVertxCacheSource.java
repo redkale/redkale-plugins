@@ -18,7 +18,7 @@ import java.util.logging.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
-import org.redkale.convert.Convert;
+import org.redkale.convert.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
@@ -402,13 +402,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return map;
     }
 
-    protected String[] keyArgs(boolean set, String key) {
-        if (set) {
-            return new String[]{key};
-        }
-        return new String[]{key, "0", "-1"};
-    }
-
     protected String[] keyArgs(String key, int start, int stop) {
         return new String[]{key, String.valueOf(start), String.valueOf(stop)};
     }
@@ -503,7 +496,12 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             || Number.class.isAssignableFrom(clz) || CharSequence.class.isAssignableFrom(clz)) {
             return String.valueOf(value);
         }
-        String val = (convert0 instanceof JsonConvert) ? ((JsonConvert) convert0).convertTo(type, value) : new String(convert0.convertToBytes(type, value), StandardCharsets.UTF_8);
+        String val = (convert0 instanceof TextConvert) ? ((TextConvert) convert0).convertTo(type, value) : new String(convert0.convertToBytes(type, value), StandardCharsets.UTF_8);
+        if (val != null && val.length() > 1 && type instanceof Class && !CharSequence.class.isAssignableFrom((Class) type)) {
+            if (val.charAt(0) == '"' && val.charAt(val.length() - 1) == '"') {
+                val = val.substring(1, val.length() - 1);
+            }
+        }
         return encryptValue(key, cryptor, val);
     }
 
@@ -798,7 +796,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
-        return sendAsync(Command.SMEMBERS, keyArgs(true, key)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
+        return sendAsync(Command.SMEMBERS, key).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
     }
 
     @Override
@@ -834,7 +832,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(Command.LRANGE, keyArgs(false, key)).thenAccept(v -> {
+            futures[i] = sendAsync(Command.LRANGE, key, "0", "-1").thenAccept(v -> {
                 List c = (List) getCollectionValue(key, cryptor, v, false, componentType);
                 if (c != null) {
                     mapLock.lock();
@@ -866,7 +864,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(Command.SMEMBERS, keyArgs(true, key)).thenAccept(v -> {
+            futures[i] = sendAsync(Command.SMEMBERS, key).thenAccept(v -> {
                 Set c = (Set) getCollectionValue(key, cryptor, v, true, componentType);
                 if (c != null) {
                     mapLock.lock();
@@ -919,8 +917,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     //--------------------- lrem ------------------------------  
     @Override
-    public <T> CompletableFuture<Integer> lremAsync(String key, final Type componentType, T value) {
-        return sendAsync(Command.LREM, key, "0", formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> getIntValue(v, 0));
+    public <T> CompletableFuture<Long> lremAsync(String key, final Type componentType, T value) {
+        return sendAsync(Command.LREM, key, "0", formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
@@ -1018,6 +1016,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     //-------------------------- 过期方法 ----------------------------------
+    protected String[] keyArgs22(boolean set, String key) {
+        if (set) {
+            return new String[]{key};
+        }
+        return new String[]{key, "0", "-1"};
+    }
+
     @Override
     @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
@@ -1027,7 +1032,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
                 return CompletableFuture.completedFuture(null);
             }
             boolean set = !type.contains("list");
-            return sendAsync(set ? Command.SMEMBERS : Command.LRANGE, keyArgs(set, key)).thenApply(v -> getCollectionValue(key, cryptor, v, set, String.class));
+            return sendAsync(set ? Command.SMEMBERS : Command.LRANGE, set ? new String[]{key} : new String[]{key, "0", "-1"})
+                .thenApply(v -> getCollectionValue(key, cryptor, v, set, String.class));
         });
     }
 
@@ -1040,7 +1046,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(set ? Command.SMEMBERS : Command.LRANGE, keyArgs(set, key)).thenAccept(v -> {
+            futures[i] = sendAsync(set ? Command.SMEMBERS : Command.LRANGE, set ? new String[]{key} : new String[]{key, "0", "-1"}).thenAccept(v -> {
                 Collection<String> c = getCollectionValue(key, cryptor, v, set, String.class);
                 if (c != null) {
                     mapLock.lock();
@@ -1095,7 +1101,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
                 return CompletableFuture.completedFuture(null);
             }
             boolean set = !type.contains("list");
-            return sendAsync(set ? Command.SMEMBERS : Command.LRANGE, keyArgs(set, key)).thenApply(v -> getCollectionValue(key, cryptor, v, set, componentType));
+            return sendAsync(set ? Command.SMEMBERS : Command.LRANGE, set ? new String[]{key} : new String[]{key, "0", "-1"})
+                .thenApply(v -> getCollectionValue(key, cryptor, v, set, componentType));
         });
     }
 
@@ -1136,7 +1143,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(set ? Command.SMEMBERS : Command.LRANGE, keyArgs(set, key)).thenAccept(v -> {
+            futures[i] = sendAsync(set ? Command.SMEMBERS : Command.LRANGE, set ? new String[]{key} : new String[]{key, "0", "-1"}).thenAccept(v -> {
                 Collection c = getCollectionValue(key, cryptor, v, set, componentType);
                 if (c != null) {
                     mapLock.lock();
@@ -1170,7 +1177,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
                 return CompletableFuture.completedFuture(null);
             }
             boolean set = !type.contains("list");
-            return sendAsync(set ? Command.SMEMBERS : Command.LRANGE, keyArgs(set, key)).thenApply(v -> getCollectionValue(key, cryptor, v, set, long.class));
+            return sendAsync(set ? Command.SMEMBERS : Command.LRANGE, set ? new String[]{key} : new String[]{key, "0", "-1"})
+                .thenApply(v -> getCollectionValue(key, cryptor, v, set, long.class));
         });
     }
 
@@ -1183,17 +1191,18 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(set ? Command.SMEMBERS : Command.LRANGE, keyArgs(set, key)).thenAccept(v -> {
-                Collection<String> c = getCollectionValue(key, cryptor, v, set, long.class);
-                if (c != null) {
-                    mapLock.lock();
-                    try {
-                        map.put(key, (Collection) c);
-                    } finally {
-                        mapLock.unlock();
+            futures[i] = sendAsync(set ? Command.SMEMBERS : Command.LRANGE, set ? new String[]{key} : new String[]{key, "0", "-1"})
+                .thenAccept(v -> {
+                    Collection<String> c = getCollectionValue(key, cryptor, v, set, long.class);
+                    if (c != null) {
+                        mapLock.lock();
+                        try {
+                            map.put(key, (Collection) c);
+                        } finally {
+                            mapLock.unlock();
+                        }
                     }
-                }
-            });
+                });
         }
         CompletableFuture.allOf(futures).whenComplete((w, e) -> {
             if (e != null) {

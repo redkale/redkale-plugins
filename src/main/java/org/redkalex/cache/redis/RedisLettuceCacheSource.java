@@ -1050,10 +1050,9 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Integer> lremAsync(String key, Type componentType, T value) {
+    public <T> CompletableFuture<Long> lremAsync(String key, Type componentType, T value) {
         return connectBytesAsync().thenCompose(command -> {
-            return completableBytesFuture(command, command.lrem(key, 0, encryptValue(key, cryptor, componentType, convert, value))
-                .thenApply(v -> v.intValue()));
+            return completableBytesFuture(command, command.lrem(key, 0, encryptValue(key, cryptor, componentType, convert, value)));
         });
     }
 

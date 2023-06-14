@@ -6,6 +6,7 @@ package org.redkalex.cache.redis;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import org.redkale.annotation.Resource;
 import static org.redkale.boot.Application.RESNAME_APP_NAME;
 import org.redkale.convert.Convert;
@@ -133,7 +134,13 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
         if (cryptor == null && t == String.class) {
             return value.toString().getBytes(StandardCharsets.UTF_8);
         }
-        return encryptValue(key, cryptor, t, (c == null ? this.convert : c).convertToBytes(t, value));
+        byte[] bs = (c == null ? this.convert : c).convertToBytes(t, value);
+        if (bs.length > 1 && t instanceof Class && !CharSequence.class.isAssignableFrom((Class) t)) {
+            if (bs[0] == '"' && bs[bs.length - 1] == '"') {
+                bs = Arrays.copyOfRange(bs, 1, bs.length - 1);
+            }
+        }
+        return encryptValue(key, cryptor, t, bs);
     }
 
     protected byte[] encryptValue(String key, RedisCryptor cryptor, Type type, byte[] bs) {
