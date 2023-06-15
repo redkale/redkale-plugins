@@ -15,22 +15,23 @@ import org.redkale.util.ByteArray;
  */
 public class RedisCacheReqClose extends RedisCacheRequest {
 
-    private static final byte[] PS = "QUIT".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] BYTES = new ByteArray()
+        .put((byte) '*')
+        .put((byte) '1')
+        .put((byte) '\r', (byte) '\n')
+        .put((byte) '$')
+        .put((byte) '4')
+        .put((byte) '\r', (byte) '\n')
+        .put("QUIT".getBytes(StandardCharsets.UTF_8))
+        .put((byte) '\r', (byte) '\n').getBytes();
 
     @Override
     public final boolean isCloseType() {
         return true;
     }
-    
+
     @Override
     public void writeTo(ClientConnection conn, ByteArray writer) {
-        writer.put((byte) '*');
-        writer.put((byte) '1');
-        writer.put((byte) '\r', (byte) '\n');
-        writer.put((byte) '$');
-        writer.put((byte) '4');
-        writer.put((byte) '\r', (byte) '\n');
-        writer.put(PS);
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(BYTES);
     }
 }
