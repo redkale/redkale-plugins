@@ -969,6 +969,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T extends Number> CompletableFuture<T> zincrbyAsync(String key, CacheScoredValue value) {
+        return sendAsync(Command.ZINCRBY, keyArgs(key, value)).thenApply(v -> getObjectValue(key, null, v, value.getScore().getClass()));
+    }
+
+    @Override
     public CompletableFuture<Long> zremAsync(String key, String... members) {
         return sendAsync(Command.ZREM, keyArgs(key, members)).thenApply(v -> getLongValue(v, 0L));
     }

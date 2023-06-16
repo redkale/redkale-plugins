@@ -1105,6 +1105,15 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T extends Number> CompletableFuture<T> zincrbyAsync(String key, CacheScoredValue value) {
+        return connectBytesAsync().thenCompose(command -> {
+            //此处获取score值，无需传cryptor进行解密 
+            return completableBytesFuture(command, command.zincrby(key, value.getScore().doubleValue(), value.getValue().getBytes(StandardCharsets.UTF_8))
+                .thenApply(v -> decryptScore((Class) value.getScore().getClass(), v)));
+        });
+    }
+
+    @Override
     public CompletableFuture<Long> zremAsync(String key, String... members) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.zrem(key, keyArgs(members)));

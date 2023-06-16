@@ -427,6 +427,12 @@ public abstract class RedisAbstractTest {
         scoreAnswer.add(null);
         scoreAnswer.add(500L);
         Assertions.assertIterableEquals(scoreAnswer, scores);
+        source.del("sortnumset");
+        source.zincrby("sortnumset", 100, "int100");
+        Assertions.assertEquals(100, source.zscoreInteger("sortnumset", "int100"));
+        source.zincrby("sortnumset", 120.12f, "float120");
+        source.zincrby("sortnumset", 130.13f, "float120");
+        Assertions.assertEquals(250.25f, source.zscore("sortnumset", float.class, "float120"));
 
         source.del("popset");
         source.saddString("popset", "111");
@@ -483,7 +489,7 @@ public abstract class RedisAbstractTest {
         cursor = new AtomicLong();
         keys = (List) source.scanAsync(cursor, 5).join();
         Assertions.assertFalse(keys.isEmpty());
-        if (press && !"memory".equals(source.getType())) {
+        if (press) {
             source.del("nxexkey1");
             Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "hahaha"));
             Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehehe"));

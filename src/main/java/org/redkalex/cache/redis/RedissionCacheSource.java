@@ -992,6 +992,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T extends Number> CompletableFuture<T> zincrbyAsync(String key, CacheScoredValue value) {
+        final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        return completableFuture(bucket.addScoreAsync(value.getValue(), value.getScore())
+            .thenApply(v -> (T) decryptScore(value.getScore().getClass(), v)));
+    }
+
+    @Override
     public CompletableFuture<Long> zremAsync(String key, String... members) {
         final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
         return completableFuture(bucket.removeAllAsync(List.of(members)).thenApply(r -> r ? 1L : 0L));
