@@ -344,6 +344,28 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return list;
     }
 
+    protected Collection<CacheScoredValue.NumberScoredValue> getSortedCollectionValue(String key, RedisCryptor cryptor, Response gresp, AtomicLong cursor, boolean set, Type scoreType) {
+        Collection<CacheScoredValue.NumberScoredValue> list = set ? new LinkedHashSet<>() : new ArrayList<>();
+        int gsize = gresp.size();
+        if (gsize == 0) {
+            return list;
+        }
+        //resp.tostring = [0, [key1, 10, key2, 30]]
+        for (int j = 0; j < gsize; j++) {
+            Response resp = gresp.get(j);
+            if (resp.type() != ResponseType.MULTI) {
+                cursor.set(Long.parseLong(new String(resp.toBytes())));
+                continue;
+            }
+            int size = resp.size();
+            for (int i = 0; i < size; i += 2) {
+                String member = resp.get(i).toString(StandardCharsets.UTF_8);
+                list.add(new CacheScoredValue.NumberScoredValue(getObjectValue(key, cryptor, resp.get(i+1), scoreType), member));
+            }
+        }
+        return list;
+    }
+
     protected List<String> getKeysValue(Response gresp, AtomicLong cursor) {
         int gsize = gresp.size();
         if (gsize == 0) {
@@ -1001,6 +1023,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Long> zrevrankAsync(String key, String member) {
         return sendAsync(Command.ZREVRANK, keyArgs(key, member)).thenApply(v -> getLongValue(v, null));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> zrangeAsync(String key, int start, int stop) {
+        return sendAsync(Command.ZRANGE, keyArgs(key, start, stop)).thenApply(v -> (List) getCollectionValue(key, (RedisCryptor) null, v, false, String.class));
+    }
+
+    @Override
+    public CompletableFuture<List<CacheScoredValue.NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
+        return sendAsync(Command.ZSCAN, keyArgs(key, cursor, limit, pattern)).thenApply(v -> (List) getSortedCollectionValue(key, cryptor, v, cursor, false, scoreType));
     }
 
     //--------------------- keys ------------------------------  

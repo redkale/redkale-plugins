@@ -326,6 +326,15 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return rs;
     }
 
+    protected List<String> getSortedListValue(String key, Collection bytesResult) {
+        final List<String> rs = new ArrayList<>();
+        Collection<org.redisson.client.protocol.ScoredEntry> kvs = bytesResult;
+        for (org.redisson.client.protocol.ScoredEntry bs : kvs) {
+            rs.add(bs.getValue().toString());
+        }
+        return rs;
+    }
+
     @Override
     public void destroy(AnyValue conf) {
         super.destroy(conf);
@@ -1033,6 +1042,49 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public CompletableFuture<Long> zrevrankAsync(String key, String member) {
         final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
         return completableFuture(bucket.revRankAsync(member).thenApply(r -> r == null ? null : r.longValue()));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> zrangeAsync(String key, int start, int stop) {
+        final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        return completableFuture(bucket.entryRangeAsync(start, stop)
+            .thenApply(result -> getSortedListValue(key, result)));
+    } 
+
+    @Override
+    public CompletableFuture<List<CacheScoredValue.NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
+        RFuture<List> future;
+        RScript script = client.getScript(SCAN_CODEC);
+        if (isEmpty(pattern)) {
+            if (limit > 0) {
+                String lua = "return redis.call('zscan', KEYS[1], ARGV[1], 'count', ARGV[2]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('zscan', KEYS[1], ARGV[1]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
+            }
+        } else {
+            if (limit > 0) {
+                String lua = "return redis.call('zscan', KEYS[1], ARGV[1], 'match', ARGV[2], 'count', ARGV[3]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern, String.valueOf(limit));
+            } else {
+                String lua = "return redis.call('zscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
+                future = script.evalAsync(RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString(), pattern);
+            }
+        }
+        return completableFuture(future.thenApply(result -> {
+            final List<CacheScoredValue.NumberScoredValue> rs = new ArrayList<>();
+            List<byte[]> kvs = (List) result.get(1);
+            for (int i = 0; i < kvs.size(); i += 2) {
+                String field = new String(kvs.get(i), StandardCharsets.UTF_8);
+                byte[] bs = kvs.get(i + 1);
+                if (bs != null) {
+                    rs.add(new CacheScoredValue.NumberScoredValue(decryptValue(key, cryptor, scoreType, bs), field));
+                }
+            }
+            cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
+            return rs;
+        }));
     }
 
     //--------------------- keys ------------------------------  

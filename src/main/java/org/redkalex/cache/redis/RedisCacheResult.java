@@ -10,6 +10,7 @@ import java.math.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.source.CacheScoredValue;
 
 /**
  *
@@ -100,6 +101,22 @@ public class RedisCacheResult {
         return set;
     }
 
+    protected List<CacheScoredValue.NumberScoredValue> getScoreListValue(String key, RedisCryptor cryptor, Type scoreType) {
+        if (frameList == null || frameList.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<CacheScoredValue.NumberScoredValue> set = new ArrayList<>();
+        for (int i = 0; i < frameList.size(); i += 2) {
+            byte[] bs1 = frameList.get(i);
+            byte[] bs2 = frameList.get(i + 1);
+            Number val = decodeValue(key, cryptor, bs2, scoreType);
+            if (val != null) {
+                set.add(new CacheScoredValue.NumberScoredValue(val, new String(bs1, StandardCharsets.UTF_8)));
+            }
+        }
+        return set;
+    }
+
     protected <T> List<T> getListValue(String key, RedisCryptor cryptor, Type type) {
         if (frameList == null || frameList.isEmpty()) {
             return new ArrayList<>();
@@ -141,8 +158,14 @@ public class RedisCacheResult {
             }
             return (T) val;
         }
+        if (type == int.class || type == Integer.class) {
+            return (T) (Integer) Integer.parseInt(new String(frames, StandardCharsets.UTF_8));
+        }
         if (type == long.class || type == Long.class) {
             return (T) (Long) Long.parseLong(new String(frames, StandardCharsets.UTF_8));
+        }
+        if (type == float.class || type == Float.class) {
+            return (T) (Float) Float.parseFloat(new String(frames, StandardCharsets.UTF_8));
         }
         if (type == BigInteger.class) {
             return (T) new BigInteger(new String(frames, StandardCharsets.UTF_8));

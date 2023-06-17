@@ -678,17 +678,31 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Long> zcardAsync(String key) {
-        return sendWriteAsync("ZCARD", key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
+        return sendReadAsync("ZCARD", key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
     }
 
     @Override
     public CompletableFuture<Long> zrankAsync(String key, String member) {
-        return sendWriteAsync("ZRANK", key, keysArgs(key, member)).thenApply(v -> v.getLongValue(null));
+        return sendReadAsync("ZRANK", key, keysArgs(key, member)).thenApply(v -> v.getLongValue(null));
     }
 
     @Override
     public CompletableFuture<Long> zrevrankAsync(String key, String member) {
-        return sendWriteAsync("ZREVRANK", key, keysArgs(key, member)).thenApply(v -> v.getLongValue(null));
+        return sendReadAsync("ZREVRANK", key, keysArgs(key, member)).thenApply(v -> v.getLongValue(null));
+    }
+    
+    @Override
+    public CompletableFuture<List<String>> zrangeAsync(String key, int start, int stop) {
+        return sendReadAsync("ZRANGE", key, keyArgs(key, start, stop)).thenApply(v -> v.getListValue(key, (RedisCryptor) null, String.class)); 
+    }
+    
+    @Override
+    public CompletableFuture<List<CacheScoredValue.NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
+        return sendReadAsync("ZSCAN", null, keyArgs(key, cursor, limit, pattern)).thenApply(v -> {
+            List<CacheScoredValue.NumberScoredValue> set = v.getScoreListValue(null, (RedisCryptor) null, scoreType);
+            cursor.set(v.getCursor());
+            return set;
+        }); 
     }
 
     //--------------------- keys ------------------------------  

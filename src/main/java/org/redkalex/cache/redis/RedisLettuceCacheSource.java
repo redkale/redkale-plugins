@@ -30,6 +30,7 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
@@ -1156,6 +1157,35 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     public CompletableFuture<Long> zrevrankAsync(String key, String member) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.zrevrank(key, member.getBytes(StandardCharsets.UTF_8)));
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<String>> zrangeAsync(String key, int start, int stop) {
+        return connectStringAsync().thenCompose(command -> {
+            //此处获取score值，无需传cryptor进行解密
+            return completableStringFuture(null, (RedisCryptor) null, command, command.zrange(key, start, stop));
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<CacheScoredValue.NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
+        ScanArgs args = new ScanArgs();
+        if (isNotEmpty(pattern)) {
+            args = args.match(pattern);
+        }
+        if (limit > 0) {
+            args = args.limit(limit);
+        }
+        final ScanArgs scanArgs = args;
+        return connectStringAsync().thenCompose(command -> {
+            //此处获取score值，无需传cryptor进行解密 
+            return completableStringFuture(null, (RedisCryptor) null, command, command.zscan(key, scanArgs)
+                .thenApply(sv -> {
+                   return sv.getValues().stream()
+                        .map(v -> new CacheScoredValue.NumberScoredValue(JsonConvert.root().convertFrom(scoreType, String.valueOf(v.getScore())), v.getValue()))
+                        .collect(Collectors.toList());
+                }));
         });
     }
 

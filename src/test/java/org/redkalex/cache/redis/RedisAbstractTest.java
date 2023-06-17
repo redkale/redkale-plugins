@@ -420,6 +420,14 @@ public abstract class RedisAbstractTest {
 
         Assertions.assertEquals(2L, source.zrank("sortset", "key300"));
         Assertions.assertEquals(1L, source.zrevrank("sortset", "key400"));
+        Assertions.assertEquals(List.of("key100", "key200", "key300"), source.zrange("sortset", 0, 2));
+        cursor = new AtomicLong();
+        Assertions.assertEquals(List.of(CacheScoredValue.create(100, "key100"),
+             CacheScoredValue.create(200, "key200"),
+             CacheScoredValue.create(300, "key300"),
+             CacheScoredValue.create(400, "key400"),
+             CacheScoredValue.create(500, "key500")
+        ), source.zscanInteger("sortset", cursor, -1));
 
         size = source.zcard("sortset");
         Assertions.assertEquals(5, size);
