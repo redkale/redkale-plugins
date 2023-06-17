@@ -1145,6 +1145,20 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         });
     }
 
+    @Override
+    public CompletableFuture<Long> zrankAsync(String key, String member) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.zrank(key, member.getBytes(StandardCharsets.UTF_8)));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Long> zrevrankAsync(String key, String member) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.zrevrank(key, member.getBytes(StandardCharsets.UTF_8)));
+        });
+    }
+
     //-------------------------- 过期方法 ----------------------------------
     @Override
     @Deprecated(since = "2.8.0")

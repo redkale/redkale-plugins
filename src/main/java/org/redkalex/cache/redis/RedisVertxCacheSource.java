@@ -220,7 +220,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return cryptor.decrypt(key, val);
     }
 
-    protected Long getLongValue(Response resp, long defvalue) {
+    protected Long getLongValue(Response resp, Long defvalue) {
         if (resp == null) {
             return defvalue;
         }
@@ -228,7 +228,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return v == null ? defvalue : v;
     }
 
-    protected Double getDoubleValue(Response resp, double defvalue) {
+    protected Double getDoubleValue(Response resp, Double defvalue) {
         if (resp == null) {
             return defvalue;
         }
@@ -236,7 +236,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return v == null ? defvalue : v;
     }
 
-    protected Integer getIntValue(Response resp, int defvalue) {
+    protected Integer getIntValue(Response resp, Integer defvalue) {
         if (resp == null) {
             return defvalue;
         }
@@ -991,6 +991,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Long> zcardAsync(String key) {
         return sendAsync(Command.ZCARD, key).thenApply(v -> getLongValue(v, 0L));
+    }
+
+    @Override
+    public CompletableFuture<Long> zrankAsync(String key, String member) {
+        return sendAsync(Command.ZRANK, keyArgs(key, member)).thenApply(v -> getLongValue(v, null));
+    }
+
+    @Override
+    public CompletableFuture<Long> zrevrankAsync(String key, String member) {
+        return sendAsync(Command.ZREVRANK, keyArgs(key, member)).thenApply(v -> getLongValue(v, null));
     }
 
     //--------------------- keys ------------------------------  

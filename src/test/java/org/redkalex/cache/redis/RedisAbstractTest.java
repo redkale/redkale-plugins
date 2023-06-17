@@ -417,6 +417,10 @@ public abstract class RedisAbstractTest {
         source.zadd("sortset", 400, "key400");
         source.zadd("sortset", 500, "key500");
         System.out.println("sortset 写入5条记录 ");
+
+        Assertions.assertEquals(2L, source.zrank("sortset", "key300"));
+        Assertions.assertEquals(1L, source.zrevrank("sortset", "key400"));
+
         size = source.zcard("sortset");
         Assertions.assertEquals(5, size);
         size = source.zrem("sortset", "key400", "key800");

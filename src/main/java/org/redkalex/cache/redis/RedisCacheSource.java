@@ -681,6 +681,16 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return sendWriteAsync("ZCARD", key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
     }
 
+    @Override
+    public CompletableFuture<Long> zrankAsync(String key, String member) {
+        return sendWriteAsync("ZRANK", key, keysArgs(key, member)).thenApply(v -> v.getLongValue(null));
+    }
+
+    @Override
+    public CompletableFuture<Long> zrevrankAsync(String key, String member) {
+        return sendWriteAsync("ZREVRANK", key, keysArgs(key, member)).thenApply(v -> v.getLongValue(null));
+    }
+
     //--------------------- keys ------------------------------  
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {

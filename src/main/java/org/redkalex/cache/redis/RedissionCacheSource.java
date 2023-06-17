@@ -1023,6 +1023,18 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(bucket.sizeAsync().thenApply(r -> r.longValue()));
     }
 
+    @Override
+    public CompletableFuture<Long> zrankAsync(String key, String member) {
+        final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        return completableFuture(bucket.rankAsync(member).thenApply(r -> r == null ? null : r.longValue()));
+    }
+
+    @Override
+    public CompletableFuture<Long> zrevrankAsync(String key, String member) {
+        final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
+        return completableFuture(bucket.revRankAsync(member).thenApply(r -> r == null ? null : r.longValue()));
+    }
+
     //--------------------- keys ------------------------------  
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
