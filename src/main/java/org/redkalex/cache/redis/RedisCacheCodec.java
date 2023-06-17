@@ -69,7 +69,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         return recyclableArray;
     }
 
-    private boolean checkBytesFrame(RedisCacheConnection conn, ByteBuffer buffer, ByteArray array) {
+    private boolean readFrames(RedisCacheConnection conn, ByteBuffer buffer, ByteArray array) {
 //        byte[] dbs = new byte[buffer.remaining()];
 //        for (int i = 0; i < dbs.length; i++) {
 //            dbs[i] = buffer.get(buffer.position() + i);
@@ -141,7 +141,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                         return false;
                     }
                     byte sign = array.get(0);
-                    if (sign == TYPE_NUMBER) {
+                    if (type == TYPE_STRING || type == TYPE_ERROR || type == TYPE_NUMBER) {
                         if (frameList == null) {
                             frameList = new ArrayList<>();
                         }
@@ -168,7 +168,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                         if (!buffer.hasRemaining()) {
                             return false;
                         }
-                        return checkBytesFrame(conn, buffer, array);
+                        return readFrames(conn, buffer, array);
                     }
                 }
                 int cha = itemLength - array.length();
@@ -218,7 +218,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
             return;
         }
         ByteBuffer buffer = realbuf;
-        if (!checkBytesFrame(conn, buffer, array)) {
+        if (!readFrames(conn, buffer, array)) {
             return;
         }
         //buffer必然包含一个完整的frame数据
@@ -228,7 +228,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
             if (request == null) {
                 request = nextRequest();
             }
-            if (!first && !checkBytesFrame(conn, buffer, array)) {
+            if (!first && !readFrames(conn, buffer, array)) {
                 break;
             }
             if (frameType == TYPE_ERROR) {
