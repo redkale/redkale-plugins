@@ -21,19 +21,17 @@
         <maven-failsafe-plugin.version>3.0.0</maven-failsafe-plugin.version>
 
         <netty.version>4.1.92.Final</netty.version>
-        <enjoy.version>5.0.3</enjoy.version>
+        <enjoy.version>5.1.1</enjoy.version>
         <freemarker.version>2.3.32</freemarker.version>
         <slf4j.version>2.0.7</slf4j.version>
-        <kafka.version>3.4.0</kafka.version>
-        <redisson.version>3.21.3</redisson.version>
+        <kafka.version>3.5.0</kafka.version> 
+        <redisson.version>3.22.0</redisson.version>
         <lettuce.version>6.2.4.RELEASE</lettuce.version>
-        <vertx-redis.version>4.4.2</vertx-redis.version>
-        <vertx-sql.version>4.4.2</vertx-sql.version>
+        <vertx.version>4.4.3</vertx.version>
         <mongodb.version>4.9.1</mongodb.version>
         <protobuf.version>3.23.2</protobuf.version>
         <apollo-client.version>2.1.0</apollo-client.version>
         <nacos-client.version>2.2.2</nacos-client.version>
-        <flink.version>1.16.0</flink.version>
         <mysql.version>8.0.33</mysql.version>
         <postgresql.version>42.6.0</postgresql.version>
     </properties>
@@ -92,26 +90,7 @@
             <version>${slf4j.version}</version>
             <scope>provided</scope>
         </dependency>
-        <!--
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-clients</artifactId>
-            <version>${flink.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-connector-kafka</artifactId>
-            <version>${flink.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-connector-jdbc</artifactId>
-            <version>${flink.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        -->        
+       
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
@@ -148,7 +127,7 @@
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-redis-client</artifactId>
-            <version>${vertx-redis.version}</version> 
+            <version>${vertx.version}</version> 
             <exclusions>   
                 <exclusion>
                     <groupId>io.netty</groupId>
@@ -161,7 +140,7 @@
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-pg-client</artifactId>
-            <version>${vertx-sql.version}</version> <!-- version 3.9.2 以上性能下降很多 -->
+            <version>${vertx.version}</version> <!-- version 3.9.2 以上性能下降很多 -->
             <exclusions>   
                 <exclusion>
                     <groupId>io.netty</groupId>
@@ -174,7 +153,7 @@
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-mysql-client</artifactId>
-            <version>${vertx-sql.version}</version>
+            <version>${vertx.version}</version>
             <exclusions>   
                 <exclusion>
                     <groupId>io.netty</groupId>

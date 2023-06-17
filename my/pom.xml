@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+ï»¿<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.redkalex</groupId>
@@ -16,21 +16,24 @@
 		
         <maven-plugin.version>3.2.0</maven-plugin.version>
         <maven-gpg-plugin.version>3.0.1</maven-gpg-plugin.version>
-        <maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
-        <maven-surefire-plugin.version>3.0.0-M5</maven-surefire-plugin.version>
-        <maven-failsafe-plugin.version>3.0.0-M5</maven-failsafe-plugin.version>
+        <maven-compiler-plugin.version>3.9.0</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.0.0</maven-surefire-plugin.version>
+        <maven-failsafe-plugin.version>3.0.0</maven-failsafe-plugin.version>
 
-        <netty.version>4.1.65.Final</netty.version>
-        <enjoy.version>4.9.21</enjoy.version>
-        <freemarker.version>2.3.31</freemarker.version>
-        <slf4j.version>1.7.30</slf4j.version>
-        <kafka.version>3.1.0</kafka.version>
-        <redisson.version>3.16.8</redisson.version>
-        <lettuce.version>6.1.6.RELEASE</lettuce.version>
-        <vertxredis.version>4.2.5</vertxredis.version>
-        <vertxsql.version>4.2.5</vertxsql.version>
-        <mongodb.version>4.3.1</mongodb.version>
-        <protobuf.version>3.19.6</protobuf.version>
+        <netty.version>4.1.92.Final</netty.version>
+        <enjoy.version>5.1.1</enjoy.version>
+        <freemarker.version>2.3.32</freemarker.version>
+        <slf4j.version>2.0.7</slf4j.version>
+        <kafka.version>3.5.0</kafka.version>
+        <redisson.version>3.22.0</redisson.version>
+        <lettuce.version>6.2.4.RELEASE</lettuce.version>
+        <vertx.version>4.4.3</vertx.version>
+        <mongodb.version>4.9.1</mongodb.version>
+        <protobuf.version>3.23.2</protobuf.version>
+        <apollo-client.version>2.1.0</apollo-client.version>
+        <nacos-client.version>2.2.2</nacos-client.version>
+        <mysql.version>8.0.33</mysql.version>
+        <postgresql.version>42.6.0</postgresql.version>
     </properties>
 
     <dependencies>
@@ -40,6 +43,27 @@
             <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.7.0</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>${netty.version}</version>
+            <scope>provided</scope>
+        </dependency> 
+        
         <dependency>
             <groupId>com.jfinal</groupId>
             <artifactId>enjoy</artifactId>
@@ -53,14 +77,20 @@
             <version>${freemarker.version}</version>
             <scope>provided</scope>
         </dependency>
-
+        
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
             <scope>provided</scope>
         </dependency>
-	
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-jdk14</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>provided</scope>
+        </dependency>
+   
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
@@ -97,7 +127,7 @@
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-redis-client</artifactId>
-            <version>${vertxredis.version}</version> 
+            <version>${vertx.version}</version> 
             <exclusions>   
                 <exclusion>
                     <groupId>io.netty</groupId>
@@ -106,11 +136,11 @@
             </exclusions>
             <scope>provided</scope>
         </dependency>
-
+        
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-pg-client</artifactId>
-            <version>${vertxsql.version}</version> <!-- version 3.9.2 ÒÔÉÏÐÔÄÜÏÂ½µºÜ¶à -->
+            <version>${vertx.version}</version> <!-- version 3.9.2 ä»¥ä¸Šæ€§èƒ½ä¸‹é™å¾ˆå¤š -->
             <exclusions>   
                 <exclusion>
                     <groupId>io.netty</groupId>
@@ -123,7 +153,7 @@
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-mysql-client</artifactId>
-            <version>${vertxsql.version}</version>
+            <version>${vertx.version}</version>
             <exclusions>   
                 <exclusion>
                     <groupId>io.netty</groupId>
@@ -134,25 +164,46 @@
         </dependency>
         
         <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.protobuf</groupId>
+                    <artifactId>protobuf-java</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-reactivestreams</artifactId>
             <version>${mongodb.version}</version>
             <scope>provided</scope>
         </dependency>
-        
+
         <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>${protobuf.version}</version>
-            <scope>test</scope>
+            <groupId>com.ctrip.framework.apollo</groupId>
+            <artifactId>apollo-client</artifactId>
+            <version>${apollo-client.version}</version>
+            <scope>provided</scope>
         </dependency>
-        
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>5.7.0</version>
-            <scope>test</scope>
+
+        <dependency>    
+            <groupId>com.alibaba.nacos</groupId>
+            <artifactId>nacos-client</artifactId>
+            <version>${nacos-client.version}</version>
+            <scope>provided</scope>
         </dependency>
+                
     </dependencies>
 	
     <licenses>     
