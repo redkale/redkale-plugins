@@ -843,17 +843,19 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> mgetAsync(Type componentType, String... keys) {
+    public <T> CompletableFuture<List<T>> mgetAsync(Type componentType, String... keys) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.mget(keys)
                 .thenApply((List<KeyValue<String, byte[]>> rs) -> {
-                    Map<String, T> map = new LinkedHashMap(rs.size());
+                    List<T> list = new ArrayList<>(rs.size());
                     rs.forEach(kv -> {
                         if (kv.hasValue()) {
-                            map.put(kv.getKey(), decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
+                            list.add(decryptValue(kv.getKey(), cryptor, componentType, kv.getValue()));
+                        } else {
+                            list.add(null);
                         }
                     });
-                    return map;
+                    return list;
                 }));
         });
     }
@@ -934,7 +936,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, List<T>>> lrangeAsync(Type componentType, String... keys) {
+    public <T> CompletableFuture<Map<String, List<T>>> lrangesAsync(Type componentType, String... keys) {
         return connectBytesAsync().thenCompose(command -> {
             final Map<String, List<T>> map = new LinkedHashMap<>();
             final ReentrantLock mapLock = new ReentrantLock();

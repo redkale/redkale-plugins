@@ -74,8 +74,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
 //        for (int i = 0; i < dbs.length; i++) {
 //            dbs[i] = buffer.get(buffer.position() + i);
 //        }
-//        ArrayDeque<ClientFuture> deque = (ArrayDeque) responseQueue(conn);
-//        logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 原始数据: " + new String(dbs).replace("\r\n", "  ") + ", req=" + deque.getFirst().getRequest());
+//        ((System).out).println("[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 原始数据: " + new String(dbs).replace("\r\n", "  "));
 
         array.clear();
         byte type = halfFrameCmd == 0 ? buffer.get() : halfFrameCmd;
@@ -141,7 +140,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                         return false;
                     }
                     byte sign = array.get(0);
-                    if (type == TYPE_STRING || type == TYPE_ERROR || type == TYPE_NUMBER) {
+                    if (sign == TYPE_STRING || sign == TYPE_ERROR || sign == TYPE_NUMBER) {
                         if (frameList == null) {
                             frameList = new ArrayList<>();
                         }

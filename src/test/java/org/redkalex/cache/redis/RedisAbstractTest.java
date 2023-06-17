@@ -36,13 +36,13 @@ public abstract class RedisAbstractTest {
         System.out.println("stritem开头的key有两个: " + list);
         Assertions.assertTrue(Utility.equalsElement(List.of("stritem2", "stritem1"), list));
 
-        Map<String, String> map = source.mgetString("stritem1", "stritem2");
+        Map<String, String> map = source.mgetsString("stritem1", "stritem2");
         System.out.println("[有值] MGET : " + map);
         Assertions.assertTrue(Utility.equalsElement(Utility.ofMap("stritem1", "value1", "stritem2", "value2"), map));
 
-        String[] array = source.mgetsString("stritem1", "stritem2");
-        System.out.println("[有值] MGET : " + Arrays.toString(array));
-        Assertions.assertTrue(Utility.equalsElement(new String[]{"value1", "value2"}, array));
+        List<String> array = source.mgetString("stritem1", "stritem2");
+        System.out.println("[有值] MGET : " + array);
+        Assertions.assertTrue(Utility.equalsElement(List.of("value1", "value2"), array));
 
         Assertions.assertFalse(source.persist("stritem1"));
         Assertions.assertTrue(source.rename("stritem1", "stritem1x"));
@@ -56,18 +56,22 @@ public abstract class RedisAbstractTest {
         source.setLong("intitem1", 333);
         source.setLong("intitem2", 444);
 
-        map = source.mgetString("intitem1", "intitem22", "intitem2");
+        map = source.mgetsString("intitem1", "intitem22", "intitem2");
         System.out.println("[有值] MGET : " + map);
         Assertions.assertTrue(Utility.equalsElement(Utility.ofMap("intitem1", "333", "intitem2", "444"), map));
 
-        array = source.mgetsString("intitem1", "intitem22", "intitem2");
-        System.out.println("[有值] MGET : " + Arrays.toString(array));
-        Assertions.assertTrue(Utility.equalsElement(new Object[]{"333", null, "444"}, array));
+        array = source.mgetString("intitem1", "intitem22", "intitem2");
+        System.out.println("[有值] MGET : " + array);
+        List<String> ss = new ArrayList<>();
+        ss.add("333");
+        ss.add(null);
+        ss.add("444");
+        Assertions.assertTrue(Utility.equalsElement(ss, array));
 
         source.del("objitem1", "objitem2");
         source.mset(Utility.ofMap("objitem1", new Flipper(10), "objitem2", new Flipper(20)));
 
-        Map<String, Flipper> flippermap = source.mget(Flipper.class, "objitem1", "objitem2");
+        Map<String, Flipper> flippermap = source.mgets(Flipper.class, "objitem1", "objitem2");
         System.out.println("[有值] MGET : " + flippermap);
         Assertions.assertTrue(Utility.equalsElement(Utility.ofMap("objitem1", new Flipper(10), "objitem2", new Flipper(20)), flippermap));
 
@@ -423,10 +427,10 @@ public abstract class RedisAbstractTest {
         Assertions.assertEquals(List.of("key100", "key200", "key300"), source.zrange("sortset", 0, 2));
         cursor = new AtomicLong();
         Assertions.assertEquals(List.of(CacheScoredValue.create(100, "key100"),
-             CacheScoredValue.create(200, "key200"),
-             CacheScoredValue.create(300, "key300"),
-             CacheScoredValue.create(400, "key400"),
-             CacheScoredValue.create(500, "key500")
+            CacheScoredValue.create(200, "key200"),
+            CacheScoredValue.create(300, "key300"),
+            CacheScoredValue.create(400, "key400"),
+            CacheScoredValue.create(500, "key500")
         ), source.zscanInteger("sortset", cursor, -1));
 
         size = source.zcard("sortset");

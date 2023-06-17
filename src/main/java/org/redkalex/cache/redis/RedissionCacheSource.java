@@ -321,7 +321,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final Collection<T> rs = set ? new LinkedHashSet<>() : new ArrayList<>();
         Collection<byte[]> kvs = bytesResult;
         for (byte[] bs : kvs) {
-            rs.add(componentType == String.class ? (T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)) : (T) decryptValue(key, cryptor, componentType, bs));
+            if (bs == null) {
+                rs.add(null);
+            } else if (componentType == String.class) {
+                rs.add((T) decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)));
+            } else {
+                rs.add((T) decryptValue(key, cryptor, componentType, bs));
+            }
         }
         return rs;
     }
@@ -764,12 +770,15 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> mgetAsync(final Type componentType, String... keys) {
-        return completableFuture(client.getBuckets(ByteArrayCodec.INSTANCE).getAsync(keys).thenApply(map -> {
-            Map rs = new LinkedHashMap();
-            map.forEach((k, v) -> rs.put(k, decryptValue(k, cryptor, componentType, (byte[]) v)));
-            return rs;
-        }));
+    public <T> CompletableFuture<List<T>> mgetAsync(final Type componentType, String... keys) {
+        return completableFuture(client.getBuckets(ByteArrayCodec.INSTANCE).getAsync(keys)
+            .thenApply(result -> {
+                List vs = new ArrayList();
+                for (String key : keys) {
+                    vs.add(result.get(key));
+                }
+                return (List) getCollectionValue(keys[0], vs, false, componentType);
+            }));
     }
 
     @Override
@@ -793,7 +802,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, List<T>>> lrangeAsync(final Type componentType, final String... keys) {
+    public <T> CompletableFuture<Map<String, List<T>>> lrangesAsync(final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, List<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, List<T>> map = new LinkedHashMap<>();
         final ReentrantLock mapLock = new ReentrantLock();
@@ -1049,7 +1058,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final RScoredSortedSet<String> bucket = client.getScoredSortedSet(key, StringCodec.INSTANCE);
         return completableFuture(bucket.entryRangeAsync(start, stop)
             .thenApply(result -> getSortedListValue(key, result)));
-    } 
+    }
 
     @Override
     public CompletableFuture<List<CacheScoredValue.NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {

@@ -524,18 +524,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> mgetAsync(final Type componentType, final String... keys) {
-        return sendReadAsync("MGET", keys[0], keysArgs(keys)).thenApply(v -> {
-            List list = (List) v.getListValue(keys[0], cryptor, componentType);
-            Map map = new LinkedHashMap<>();
-            for (int i = 0; i < keys.length; i++) {
-                Object obj = list.get(i);
-                if (obj != null) {
-                    map.put(keys[i], list.get(i));
-                }
-            }
-            return map;
-        });
+    public <T> CompletableFuture<List<T>> mgetAsync(final Type componentType, final String... keys) {
+        return sendReadAsync("MGET", keys[0], keysArgs(keys)).thenApply(v ->  (List) v.getListValue(keys[0], cryptor, componentType));
     }
 
     @Override
@@ -569,7 +559,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, List<T>>> lrangeAsync(final Type componentType, final String... keys) {
+    public <T> CompletableFuture<Map<String, List<T>>> lrangesAsync(final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, List<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, List<T>> map = new LinkedHashMap<>();
         final ReentrantLock mapLock = new ReentrantLock();
