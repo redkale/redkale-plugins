@@ -262,7 +262,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         if (type == String.class) {
             return (T) decryptValue(key, cryptor, bs);
         }
-        if (type == long.class) {
+        if (type == long.class || type == Long.class) {
             return (T) (Long) Long.parseLong(bs);
         }
         return (T) JsonConvert.root().convertFrom(type, decryptValue(key, cryptor, bs));
@@ -280,6 +280,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         }
         if (type == long.class || type == Long.class) {
             return (T) (Long) Long.parseLong(new String(bs, StandardCharsets.UTF_8));
+        }
+        if (type == double.class || type == Double.class) {
+            return (T) (Double) Double.parseDouble(new String(bs, StandardCharsets.UTF_8));
         }
         return (T) JsonConvert.root().convertFrom(type, decryptValue(key, cryptor, new String(bs, StandardCharsets.UTF_8)));
     }
@@ -360,7 +363,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             int size = resp.size();
             for (int i = 0; i < size; i += 2) {
                 String member = resp.get(i).toString(StandardCharsets.UTF_8);
-                list.add(new CacheScoredValue.NumberScoredValue(getObjectValue(key, cryptor, resp.get(i+1), scoreType), member));
+                list.add(new CacheScoredValue.NumberScoredValue(getObjectValue(key, cryptor, resp.get(i + 1), scoreType), member));
             }
         }
         return list;

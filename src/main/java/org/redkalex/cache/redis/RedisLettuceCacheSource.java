@@ -1182,8 +1182,22 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             //此处获取score值，无需传cryptor进行解密 
             return completableStringFuture(null, (RedisCryptor) null, command, command.zscan(key, scanArgs)
                 .thenApply(sv -> {
-                   return sv.getValues().stream()
-                        .map(v -> new CacheScoredValue.NumberScoredValue(JsonConvert.root().convertFrom(scoreType, String.valueOf(v.getScore())), v.getValue()))
+                    return sv.getValues().stream()
+                        .map(v -> {
+                            Number num = v.getScore();
+                            if (scoreType == int.class || scoreType == Integer.class) {
+                                num = ((Number) v.getScore()).intValue();
+                            } else if (scoreType == long.class || scoreType == Long.class) {
+                                num = ((Number) v.getScore()).longValue();
+                            } else if (scoreType == float.class || scoreType == Float.class) {
+                                num = ((Number) v.getScore()).floatValue();
+                            } else if (scoreType == double.class || scoreType == Double.class) {
+                                num = ((Number) v.getScore()).doubleValue();
+                            } else {
+                                num = (Number) JsonConvert.root().convertFrom(scoreType, String.valueOf(v.getScore()));
+                            }
+                            return new CacheScoredValue.NumberScoredValue(num, v.getValue());
+                        })
                         .collect(Collectors.toList());
                 }));
         });
