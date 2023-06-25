@@ -666,6 +666,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public void convertToBytes(final ByteArray array, final Type type, final Object value) {
+        Objects.requireNonNull(array);
         final ProtobufWriter writer = configWrite(new ProtobufWriter(array).tiny(tiny).enumtostring(((ProtobufFactory) factory).enumtostring));
         if (value == null) {
             writer.writeNull();
@@ -713,10 +714,8 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public ByteBuffer[] convertTo(final Supplier<ByteBuffer> supplier, final Type type, final Object value) {
-        //if (true) throw new ConvertException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");
-        if (supplier == null) {
-            return null;
-        }
+        //if (true) throw new ConvertException(this.getClass().getSimpleName() + " not supported convertTo ByteBuffer");        
+        Objects.requireNonNull(supplier);
         ProtobufByteBufferWriter writer = pollProtobufWriter(supplier);
         if (value == null) {
             writer.writeNull();
