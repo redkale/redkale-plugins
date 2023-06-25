@@ -730,12 +730,12 @@ public final class RedisCacheSource extends AbstractRedisSource {
     //--------------------- send ------------------------------  
     @Local
     public CompletableFuture<RedisCacheResult> sendReadAsync(final String command, final String key, final byte[]... args) {
-        return client.connect().thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currWorkThread()).prepare(command, key, args))).orTimeout(6, TimeUnit.SECONDS);
+        return client.connect().thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currentWorkThread()).prepare(command, key, args))).orTimeout(6, TimeUnit.SECONDS);
     }
 
     @Local
     public CompletableFuture<RedisCacheResult> sendWriteAsync(final String command, final String key, final byte[]... args) {
-        return client.connect().thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currWorkThread()).prepare(command, key, args))).orTimeout(6, TimeUnit.SECONDS);
+        return client.connect().thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currentWorkThread()).prepare(command, key, args))).orTimeout(6, TimeUnit.SECONDS);
     }
 
     private byte[][] keyArgs(String key) {

@@ -39,7 +39,7 @@ public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, Re
     }
 
     public RedisCacheRequest pollRequest(WorkThread workThread) {
-        RedisCacheRequest rs = new RedisCacheRequest().currThread(workThread);
+        RedisCacheRequest rs = new RedisCacheRequest().workThread(workThread);
         return rs;
     }
 

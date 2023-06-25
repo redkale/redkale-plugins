@@ -108,7 +108,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     processor.begin(count, s);
                     for (ConsumerRecord<String, MessageRecord> r : records0) {
                         msg = r.value();
-                        Traces.currTraceid(msg.getTraceid());
+                        Traces.currentTraceid(msg.getTraceid());
                         processor.process(msg, null);
                     }
                     processor.commit();
@@ -166,7 +166,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     processor.begin(count, s);
                     for (ConsumerRecord<String, MessageRecord> r : records) {
                         msg = r.value();
-                        Traces.currTraceid(msg.getTraceid());
+                        Traces.currentTraceid(msg.getTraceid());
                         processor.process(msg, null);
                     }
                     processor.commit();

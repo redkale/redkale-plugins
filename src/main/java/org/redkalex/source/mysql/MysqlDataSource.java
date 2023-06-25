@@ -201,7 +201,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         Map<String, PrepareInfo<T>> prepareInfos = info.getTableStrategy() == null ? null : getInsertQuestionPrepareInfo(info, entitys);
         if ((prepareInfos == null || prepareInfos.size() < 2) && pool.cachePreparedStatements()) {
             String sql = info.getInsertQuestionPrepareSQL(entitys[0]);
-            WorkThread workThread = WorkThread.currWorkThread();
+            WorkThread workThread = WorkThread.currentWorkThread();
             ObjectReference<MyClientRequest> reqRef = new ObjectReference();
             ObjectReference<ClientConnection> connRef = new ObjectReference();
             return thenApplyInsertStrategy(info, pool.connect().thenCompose(conn -> {
@@ -305,7 +305,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         final Object[][] objs = objs0;
         if (pool.cachePreparedStatements()) {
             String sql = casesql == null ? info.getUpdateQuestionPrepareSQL(values[0]) : casesql;
-            WorkThread workThread = WorkThread.currWorkThread();
+            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
                 MyReqExtended req = conn.pollReqExtended(workThread, info);
                 req.prepare(MyClientRequest.REQ_TYPE_EXTEND_UPDATE, sql, 0, casesql == null ? Utility.append(attrs, primary) : null, objs);
@@ -382,7 +382,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         MyClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindQuestionPrepareSQL(pk);
-            WorkThread workThread = WorkThread.currWorkThread();
+            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
                 MyReqExtended req = conn.pollReqExtended(workThread, info);
                 req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, sql, 0, null, new Object[]{pk});
@@ -412,7 +412,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         MyClient pool = readPool();
         if (info.getTableStrategy() == null && selects == null && pool.cachePreparedStatements()) {
             String sql = info.getFindQuestionPrepareSQL(pks[0]);
-            WorkThread workThread = WorkThread.currWorkThread();
+            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
                 MyReqExtended req = conn.pollReqExtended(workThread, info);
                 Object[][] params = new Object[pks.length][];
@@ -445,7 +445,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         MyClient pool = readPool();
         if (info.getTableStrategy() == null && pool.cachePreparedStatements()) {
             String sql = info.getFindQuestionPrepareSQL(ids[0]);
-            WorkThread workThread = WorkThread.currWorkThread();
+            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
                 MyReqExtended req = conn.pollReqExtended(workThread, info);
                 Object[][] params = new Object[ids.length][];
@@ -512,7 +512,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         if (!needtotal) {
             CompletableFuture<MyResultSet> listFuture;
             if (cachePrepared) {
-                WorkThread workThread = WorkThread.currWorkThread();
+                WorkThread workThread = WorkThread.currentWorkThread();
                 listFuture = pool.connect().thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
                     MyReqExtended req = conn.pollReqExtended(workThread, info);
                     req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, listSql, 0, null);
@@ -764,7 +764,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String[] sqls, final T[] values, int fetchSize, final int extendType, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
         final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
-        WorkThread workThread = WorkThread.currWorkThread();
+        WorkThread workThread = WorkThread.currentWorkThread();
         ObjectReference<MyClientRequest> reqRef = new ObjectReference();
         ObjectReference<ClientConnection> connRef = new ObjectReference();
         Function<MyClientConnection, CompletableFuture<MyResultSet>> futureFunc = conn -> {
@@ -809,7 +809,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     protected <T> CompletableFuture<MyResultSet> executeQuery(final EntityInfo<T> info, final String sql) {
         final long s = System.currentTimeMillis();
         final MyClient pool = readPool();
-        WorkThread workThread = WorkThread.currWorkThread();
+        WorkThread workThread = WorkThread.currentWorkThread();
         return pool.connect().thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
             MyReqQuery req = conn.pollReqQuery(workThread, info);
             req.prepare(sql);
@@ -825,7 +825,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     public int nativeExecute(String sql) {
         final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
-        WorkThread workThread = WorkThread.currWorkThread();
+        WorkThread workThread = WorkThread.currentWorkThread();
         CompletableFuture<MyResultSet> future = pool.connect().thenCompose(conn -> {
             MyReqUpdate req = conn.pollReqUpdate(workThread, null);
             return pool.writeChannel(conn, req.prepare(sql));

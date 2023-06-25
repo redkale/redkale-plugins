@@ -114,28 +114,28 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
     public PgReqInsert pollReqInsert(WorkThread workThread, EntityInfo info) {
         PgReqInsert rs = new PgReqInsert();
         rs.info = info;
-        rs.currThread(workThread);
+        rs.workThread(workThread);
         return rs;
     }
 
     public PgReqUpdate pollReqUpdate(WorkThread workThread, EntityInfo info) {
         PgReqUpdate rs = new PgReqUpdate();
         rs.info = info;
-        rs.currThread(workThread);
+        rs.workThread(workThread);
         return rs;
     }
 
     public PgReqQuery pollReqQuery(WorkThread workThread, EntityInfo info) {
         PgReqQuery rs = new PgReqQuery();
         rs.info = info;
-        rs.currThread(workThread);
+        rs.workThread(workThread);
         return rs;
     }
 
     public PgReqExtended pollReqExtended(WorkThread workThread, EntityInfo info) {
         PgReqExtended rs = reqExtendedPool.get();
         rs.info = info;
-        rs.currThread(workThread);
+        rs.workThread(workThread);
         return rs;
     }
 

@@ -46,7 +46,7 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
 
     protected static final short STATUS_EXTEND_ROWDATA = 32;
 
-    protected final WorkThread thread = WorkThread.currWorkThread();
+    protected final WorkThread thread = WorkThread.currentWorkThread();
 
     protected EntityInfo info;
 

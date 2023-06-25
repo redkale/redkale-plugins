@@ -81,21 +81,21 @@ public class MyClientConnection extends ClientConnection<MyClientRequest, MyResu
     public MyReqUpdate pollReqUpdate(WorkThread workThread, EntityInfo info) {
         MyReqUpdate rs = new MyReqUpdate();
         rs.info = info;
-        rs.currThread(workThread);
+        rs.workThread(workThread);
         return rs;
     }
 
     public MyReqQuery pollReqQuery(WorkThread workThread, EntityInfo info) {
         MyReqQuery rs = new MyReqQuery();
         rs.info = info;
-        rs.currThread(workThread);
+        rs.workThread(workThread);
         return rs;
     }
 
     public MyReqExtended pollReqExtended(WorkThread workThread, EntityInfo info) {
         MyReqExtended rs = new MyReqExtended();
         rs.info = info;
-        rs.currThread(workThread);
+        rs.workThread(workThread);
         return rs;
     }
 }
