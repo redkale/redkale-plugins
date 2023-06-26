@@ -509,6 +509,16 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Boolean> smoveAsync(String key, String key2, Type componentType, T member) {
+        return sendReadAsync("SMOVE", key, keyArgs(key, key2, componentType, member)).thenApply(v -> v.getBoolValue());
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> srandmemberAsync(String key, Type componentType, int count) {
+        return sendReadAsync("SRANDMEMBER", key, keyArgs(key, count)).thenApply(v -> v.getListValue(key, cryptor, componentType));
+    }
+
+    @Override
     public <T> CompletableFuture<Set<T>> sdiffAsync(final String key, final Type componentType, final String... key2s) {
         return sendReadAsync("SDIFF", key, keysArgs(key, key2s)).thenApply(v -> v.getSetValue(key, cryptor, componentType));
     }

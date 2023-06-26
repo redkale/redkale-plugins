@@ -249,7 +249,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             return false;
         }
         Integer v = resp.toInteger();
-        return v == null ? false : v > 0;
+        return v != null && v > 0;
     }
 
     protected <T> T getObjectValue(String key, RedisCryptor cryptor, String bs, Type type) {
@@ -782,7 +782,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     public CompletableFuture<Long> hstrlenAsync(final String key, final String field) {
         return sendAsync(Command.HSTRLEN, key, field).thenApply(v -> getLongValue(v, 0L));
     }
-    
+
     @Override
     public <T> CompletableFuture<Map<String, T>> hgetallAsync(final String key, final Type type) {
         return sendAsync(Command.HGETALL, key).thenApply(v -> getMapValue(key, cryptor, v, null, type));
@@ -802,6 +802,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Long> scardAsync(String key) {
         return sendAsync(Command.TYPE, key).thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
+    }
+
+    @Override
+    public <T> CompletableFuture<Boolean> smoveAsync(String key, String key2, Type componentType, T member) {
+        return sendAsync(Command.SMOVE, key, key2, formatValue(key, componentType, member)).thenApply(v -> getBoolValue(v));
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> srandmemberAsync(String key, Type componentType, int count) {
+        return sendAsync(Command.SRANDMEMBER, key, String.valueOf(count)).thenApply(v -> (List) getCollectionValue(key, cryptor, v, false, componentType));
     }
 
     @Override

@@ -728,6 +728,17 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Boolean> smoveAsync(String key, String key2, Type componentType, T member) {
+        return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).moveAsync(key2, encryptValue(key, cryptor, componentType, convert, member)));
+    }
+
+    @Override
+    public <T> CompletableFuture<List<T>> srandmemberAsync(String key, Type componentType, int count) {
+        return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).randomAsync(count)
+            .thenApply(result -> (List) getCollectionValue(key, result, false, componentType)));
+    }
+
+    @Override
     public <T> CompletableFuture<List<Boolean>> smismembersAsync(final String key, final String... members) {
         List bs = new ArrayList<>();
         for (String m : members) {

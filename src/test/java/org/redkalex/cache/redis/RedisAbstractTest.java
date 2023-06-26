@@ -252,6 +252,14 @@ public abstract class RedisAbstractTest {
         List<Boolean> ems = source.smismembers("sets3", "setvals3", "setvals33");
         System.out.println("smismembers: " + ems);
         Assertions.assertIterableEquals(List.of(true, false), ems);
+        List<String> rands = List.of("setvals1", "setvals2", "setvals3", "setvals4", "setvals5");
+        List<String> rand2 = (List) source.srandmemberString("sets3", 100);
+        Collections.sort(rand2);
+        System.out.println("srandmember: " + rand2);
+        Assertions.assertIterableEquals(rands, rand2);
+
+        Assertions.assertTrue(source.smoveString("sets4", "sets5", "setvals5"));
+        Assertions.assertTrue(source.smoveString("sets4", "sets7", "setvals3"));
 
         System.out.println("------------------------------------");
         InetSocketAddress addr88 = new InetSocketAddress("127.0.0.1", 7788);

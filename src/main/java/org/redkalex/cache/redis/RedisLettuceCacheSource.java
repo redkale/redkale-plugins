@@ -1007,6 +1007,21 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Boolean> smoveAsync(String key, String key2, Type componentType, T member) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.smove(key, key2, encryptValue(key, cryptor, componentType, (Convert) null, member)));
+        });
+    }
+    
+    @Override
+    public <T> CompletableFuture<List<T>> srandmemberAsync(String key, Type componentType, int count) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.srandmember(key, count)
+                .thenApply(v -> formatCollection(key, cryptor, v, convert, componentType)));
+        });
+    }
+
+    @Override
     public <T> CompletableFuture<Set<T>> sdiffAsync(final String key, final Type componentType, final String... key2s) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.sdiff(Utility.append(key, key2s))
