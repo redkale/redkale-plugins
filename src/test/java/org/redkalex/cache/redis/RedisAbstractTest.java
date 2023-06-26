@@ -372,6 +372,7 @@ public abstract class RedisAbstractTest {
         Map<String, Long> longmap = source.hscan("hmaplong", long.class, cursor, 10);
         System.out.println("hmaplong.所有两值 : " + longmap);
         Assertions.assertEquals(Utility.ofMap("key1", 10, "key2", 30).toString(), longmap.toString());
+        Assertions.assertEquals(2L, source.hstrlen("hmaplong", "key1"));
 
         source.del("hmapstr");
         source.hsetString("hmapstr", "key1", "str10");

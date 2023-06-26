@@ -779,6 +779,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Long> hstrlenAsync(final String key, final String field) {
+        return sendAsync(Command.HSTRLEN, key, field).thenApply(v -> getLongValue(v, 0L));
+    }
+    
+    @Override
     public <T> CompletableFuture<Map<String, T>> hgetallAsync(final String key, final Type type) {
         return sendAsync(Command.HGETALL, key).thenApply(v -> getMapValue(key, cryptor, v, null, type));
     }

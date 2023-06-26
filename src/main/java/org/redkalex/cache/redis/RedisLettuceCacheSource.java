@@ -843,6 +843,13 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Long> hstrlenAsync(String key, String field) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.hstrlen(key, field));
+        });
+    }
+
+    @Override
     public <T> CompletableFuture<List<T>> mgetAsync(Type componentType, String... keys) {
         return connectBytesAsync().thenCompose(command -> {
             return completableBytesFuture(command, command.mget(keys)

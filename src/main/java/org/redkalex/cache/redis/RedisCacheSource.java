@@ -448,6 +448,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public CompletableFuture<Long> hstrlenAsync(String key, final String field) {
+        return sendReadAsync("HSTRLEN", key, keysArgs(key, field)).thenApply(v -> v.getLongValue(0L));
+    }
+
+    @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
         return sendReadAsync("SMEMBERS", key, keyArgs(key)).thenApply(v -> v.getSetValue(key, cryptor, componentType));
     }
@@ -525,7 +530,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<List<T>> mgetAsync(final Type componentType, final String... keys) {
-        return sendReadAsync("MGET", keys[0], keysArgs(keys)).thenApply(v ->  (List) v.getListValue(keys[0], cryptor, componentType));
+        return sendReadAsync("MGET", keys[0], keysArgs(keys)).thenApply(v -> (List) v.getListValue(keys[0], cryptor, componentType));
     }
 
     @Override
@@ -680,19 +685,19 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<Long> zrevrankAsync(String key, String member) {
         return sendReadAsync("ZREVRANK", key, keysArgs(key, member)).thenApply(v -> v.getLongValue(null));
     }
-    
+
     @Override
     public CompletableFuture<List<String>> zrangeAsync(String key, int start, int stop) {
-        return sendReadAsync("ZRANGE", key, keyArgs(key, start, stop)).thenApply(v -> v.getListValue(key, (RedisCryptor) null, String.class)); 
+        return sendReadAsync("ZRANGE", key, keyArgs(key, start, stop)).thenApply(v -> v.getListValue(key, (RedisCryptor) null, String.class));
     }
-    
+
     @Override
     public CompletableFuture<List<CacheScoredValue.NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
         return sendReadAsync("ZSCAN", null, keyArgs(key, cursor, limit, pattern)).thenApply(v -> {
             List<CacheScoredValue.NumberScoredValue> set = v.getScoreListValue(null, (RedisCryptor) null, scoreType);
             cursor.set(v.getCursor());
             return set;
-        }); 
+        });
     }
 
     //--------------------- keys ------------------------------  

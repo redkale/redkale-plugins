@@ -698,6 +698,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
         return completableFuture(map.getAsync(field).thenApply(r -> decryptValue(key, cryptor, type, r)));
     }
 
+    @Override
+    public CompletableFuture<Long> hstrlenAsync(final String key, final String field) {
+        RMap<String, byte[]> map = client.getMap(key, MapByteArrayCodec.instance);
+        return completableFuture(map.valueSizeAsync(field).thenApply(r -> r.longValue()));
+    }
+
     //--------------------- collection ------------------------------  
     @Override
     public CompletableFuture<Long> llenAsync(String key) {
