@@ -775,6 +775,17 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Set<T>> sunionAsync(final String key, final Type componentType, final String... key2s) {
+        return completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).readUnionAsync(key2s)
+            .thenApply(result -> (Set) getCollectionValue(key, result, true, componentType)));
+    }
+
+    @Override
+    public CompletableFuture<Long> sunionstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
+        return completableFuture(client.getSet(key).unionAsync(Utility.append(srcKey, srcKey2s)).thenApply(v -> v.longValue()));
+    }
+    
+    @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
         return completableFuture((CompletionStage) client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync()
             .thenApply(result -> (Set) getCollectionValue(key, result, true, componentType)));

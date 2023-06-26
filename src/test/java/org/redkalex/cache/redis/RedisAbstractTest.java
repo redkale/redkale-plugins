@@ -249,6 +249,17 @@ public abstract class RedisAbstractTest {
         interset = new TreeSet<>(source.smembersString("sets6"));
         System.out.println("sinterstore: " + interset);
         Assertions.assertIterableEquals(interanswer, interset);
+
+        source.del("sets6");
+        Set<String> unionanswer = new TreeSet<>(Set.of("setvals1", "setvals2", "setvals3", "setvals4", "setvals5", "setvals6", "setvals7", "setvals8"));
+        Set<String> unionset = new TreeSet<>(source.sunionString("sets3", "sets4", "sets5"));
+        System.out.println("sunion: " + unionset);
+        Assertions.assertIterableEquals(unionanswer, unionset);
+        source.sunionstore("sets6", "sets3", "sets4", "sets5");
+        unionset = new TreeSet<>(source.smembersString("sets6"));
+        System.out.println("sunionstore: " + unionset);
+        Assertions.assertIterableEquals(unionanswer, unionset);
+
         List<Boolean> ems = source.smismembers("sets3", "setvals3", "setvals33");
         System.out.println("smismembers: " + ems);
         Assertions.assertIterableEquals(List.of(true, false), ems);

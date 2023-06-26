@@ -539,6 +539,16 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Set<T>> sunionAsync(final String key, final Type componentType, final String... key2s) {
+        return sendReadAsync("SUNION", key, keysArgs(key, key2s)).thenApply(v -> v.getSetValue(key, cryptor, componentType));
+    }
+
+    @Override
+    public CompletableFuture<Long> sunionstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
+        return sendReadAsync("SUNIONSTORE", key, keysArgs(Utility.append(key, srcKey, srcKey2s))).thenApply(v -> v.getLongValue(0L));
+    }
+
+    @Override
     public <T> CompletableFuture<List<T>> mgetAsync(final Type componentType, final String... keys) {
         return sendReadAsync("MGET", keys[0], keysArgs(keys)).thenApply(v -> (List) v.getListValue(keys[0], cryptor, componentType));
     }
