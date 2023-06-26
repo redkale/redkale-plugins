@@ -143,6 +143,18 @@ public abstract class RedisAbstractTest {
         String rlv = source.rpoplpush("keys3", "keys3-2", String.class);
         Assertions.assertEquals("vals3", rlv);
 
+        source.del("keys3");
+        source.lpushString("keys3", "vals20");
+        source.lpushString("keys3", "vals10");
+        System.out.println("keys3-list: " + source.lrangeString("keys3"));
+        Assertions.assertEquals("vals10", source.lindexString("keys3", 0));
+        Assertions.assertEquals("vals20", source.lindexString("keys3", -1));
+        source.linsertBeforeString("keys3", "vals10", "vals00");
+        source.linsertAfterString("keys3", "vals10", "vals15");
+        Assertions.assertEquals(0, source.linsertBeforeString("keys_3", "vals10", "vals00"));
+        Assertions.assertEquals(-1, source.linsertBeforeString("keys3", "vals90", "vals00"));
+        Assertions.assertEquals(4, source.llen("keys3"));
+
         source.del("stringmap");
         source.sadd("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
         source.sadd("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));

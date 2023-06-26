@@ -706,17 +706,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     //--------------------- collection ------------------------------  
     @Override
-    public CompletableFuture<Long> llenAsync(String key) {
-        return completableFuture(client.getList(key).sizeAsync().thenApply(v -> v.longValue()));
-    }
-
-    @Override
-    public CompletableFuture<Void> ltrimAsync(final String key, int start, int stop) {
-        final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
-        return completableFuture(bucket.trimAsync(start, stop));
-    }
-
-    @Override
     public CompletableFuture<Long> scardAsync(String key) {
         return completableFuture(client.getSet(key).sizeAsync().thenApply(v -> v.longValue()));
     }
@@ -784,7 +773,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public CompletableFuture<Long> sunionstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
         return completableFuture(client.getSet(key).unionAsync(Utility.append(srcKey, srcKey2s)).thenApply(v -> v.longValue()));
     }
-    
+
     @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
         return completableFuture((CompletionStage) client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync()
@@ -977,6 +966,37 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<T> lpopAsync(String key, final Type componentType) {
         final RDeque<byte[]> bucket = client.getDeque(key, ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.pollFirstAsync()).thenApply(v -> decryptValue(key, cryptor, componentType, v));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> lindexAsync(String key, Type componentType, int index) {
+        final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.getAsync(index)).thenApply(v -> decryptValue(key, cryptor, componentType, v));
+    }
+
+    @Override
+    public <T> CompletableFuture<Long> linsertBeforeAsync(String key, Type componentType, T pivot, T value) {
+        final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.addBeforeAsync(encryptValue(key, cryptor, componentType, convert, pivot),
+             encryptValue(key, cryptor, componentType, convert, value)).thenApply(v -> v.longValue()));
+    }
+
+    @Override
+    public <T> CompletableFuture<Long> linsertAfterAsync(String key, Type componentType, T pivot, T value) {
+        final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.addAfterAsync(encryptValue(key, cryptor, componentType, convert, pivot),
+             encryptValue(key, cryptor, componentType, convert, value)).thenApply(v -> v.longValue()));
+    }
+
+    @Override
+    public CompletableFuture<Long> llenAsync(String key) {
+        return completableFuture(client.getList(key).sizeAsync().thenApply(v -> v.longValue()));
+    }
+
+    @Override
+    public CompletableFuture<Void> ltrimAsync(final String key, int start, int stop) {
+        final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(bucket.trimAsync(start, stop));
     }
 
     //--------------------- lrem ------------------------------  

@@ -910,6 +910,31 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<T> lindexAsync(String key, Type componentType, int index) {
+        return connectBytesAsync().thenCompose(command
+            -> completableBytesFuture(command, command.lindex(key, index).thenApply(bs -> decryptValue(key, cryptor, componentType, bs)))
+        );
+    }
+
+    @Override
+    public <T> CompletableFuture<Long> linsertBeforeAsync(String key, Type componentType, T pivot, T value) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.linsert(key, true,
+                encryptValue(key, cryptor, componentType, (Convert) null, pivot),
+                encryptValue(key, cryptor, componentType, (Convert) null, value)));
+        });
+    }
+
+    @Override
+    public <T> CompletableFuture<Long> linsertAfterAsync(String key, Type componentType, T pivot, T value) {
+        return connectBytesAsync().thenCompose(command -> {
+            return completableBytesFuture(command, command.linsert(key, false,
+                encryptValue(key, cryptor, componentType, (Convert) null, pivot),
+                encryptValue(key, cryptor, componentType, (Convert) null, value)));
+        });
+    }
+
+    @Override
     public CompletableFuture<Void> ltrimAsync(final String key, int start, int stop) {
         return connectBytesAsync().thenCompose(command -> completableBytesFuture(command, command.ltrim(key, start, stop)));
     }
@@ -1012,7 +1037,7 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             return completableBytesFuture(command, command.smove(key, key2, encryptValue(key, cryptor, componentType, (Convert) null, member)));
         });
     }
-    
+
     @Override
     public <T> CompletableFuture<List<T>> srandmemberAsync(String key, Type componentType, int count) {
         return connectBytesAsync().thenCompose(command -> {

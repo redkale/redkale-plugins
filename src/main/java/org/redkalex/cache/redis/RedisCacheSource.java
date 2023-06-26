@@ -463,6 +463,21 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<T> lindexAsync(String key, Type componentType, int index) {
+        return sendReadAsync("LINDEX", key, keyArgs(key, index)).thenApply(v -> v.getObjectValue(key, cryptor, componentType));
+    }
+
+    @Override
+    public <T> CompletableFuture<Long> linsertBeforeAsync(String key, Type componentType, T pivot, T value) {
+        return sendReadAsync("LINSERT", key, keyArgs(key, "BEFORE", componentType, pivot, value)).thenApply(v -> v.getLongValue(0L));
+    }
+
+    @Override
+    public <T> CompletableFuture<Long> linsertAfterAsync(String key, Type componentType, T pivot, T value) {
+        return sendReadAsync("LINSERT", key, keyArgs(key, "AFTER", componentType, pivot, value)).thenApply(v -> v.getLongValue(0L));
+    }
+
+    @Override
     public CompletableFuture<Void> ltrimAsync(final String key, int start, int stop) {
         return sendReadAsync("LTRIM", key, keyArgs(key, start, stop)).thenApply(v -> null);
     }
@@ -865,6 +880,16 @@ public final class RedisCacheSource extends AbstractRedisSource {
         bss[0] = key.getBytes(StandardCharsets.UTF_8);
         for (int i = 0; i < values.length; i++) {
             bss[i + 1] = encodeValue(key, cryptor, null, componentType, values[i]);
+        }
+        return bss;
+    }
+
+    private <T> byte[][] keyArgs(String key, String arg, final Type componentType, T... values) {
+        byte[][] bss = new byte[values.length + 2][];
+        bss[0] = key.getBytes(StandardCharsets.UTF_8);
+        bss[1] = arg.getBytes(StandardCharsets.UTF_8);
+        for (int i = 0; i < values.length; i++) {
+            bss[i + 2] = encodeValue(key, cryptor, null, componentType, values[i]);
         }
         return bss;
     }

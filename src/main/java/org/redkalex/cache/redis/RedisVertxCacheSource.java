@@ -440,6 +440,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return strs;
     }
 
+    protected <T> String[] keyArgs(String key, String arg, Type componentType, T... values) {
+        String[] strs = new String[values.length + 2];
+        strs[0] = key;
+        strs[1] = arg;
+        for (int i = 0; i < values.length; i++) {
+            strs[i + 2] = formatValue(key, componentType, values[i]);
+        }
+        return strs;
+    }
+
     protected <T> String[] keyArgs(String key, CacheScoredValue... values) {
         String[] strs = new String[values.length * 2 + 1];
         strs[0] = key;
@@ -955,7 +965,22 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.LPUSHX, keyArgs(key, componentType, values)).thenApply(v -> null);
     }
 
-    //--------------------- lrem ------------------------------  
+    //--------------------- lrem ------------------------------ 
+    @Override
+    public <T> CompletableFuture<T> lindexAsync(String key, Type componentType, int index) {
+        return sendAsync(Command.LINDEX, key, String.valueOf(index)).thenApply(v -> getObjectValue(key, cryptor, v, componentType));
+    }
+
+    @Override
+    public <T> CompletableFuture<Long> linsertBeforeAsync(String key, Type componentType, T pivot, T value) {
+        return sendAsync(Command.LINSERT, keyArgs(key, "BEFORE", componentType, pivot, value)).thenApply(v -> getLongValue(v, 0L));
+    }
+
+    @Override
+    public <T> CompletableFuture<Long> linsertAfterAsync(String key, Type componentType, T pivot, T value) {
+        return sendAsync(Command.LINSERT, keyArgs(key, "AFTER", componentType, pivot, value)).thenApply(v -> getLongValue(v, 0L));
+    }
+
     @Override
     public <T> CompletableFuture<Long> lremAsync(String key, final Type componentType, T value) {
         return sendAsync(Command.LREM, key, "0", formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> getLongValue(v, 0L));
