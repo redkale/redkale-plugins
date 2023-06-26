@@ -154,6 +154,7 @@ public abstract class RedisAbstractTest {
         Assertions.assertEquals(0, source.linsertBeforeString("keys_3", "vals10", "vals00"));
         Assertions.assertEquals(-1, source.linsertBeforeString("keys3", "vals90", "vals00"));
         Assertions.assertEquals(4, source.llen("keys3"));
+        Assertions.assertIterableEquals(List.of("vals00", "vals10", "vals15", "vals20"), source.lrangeString("keys3"));
 
         source.del("stringmap");
         source.sadd("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("a", "aa", "b", "bb"));
