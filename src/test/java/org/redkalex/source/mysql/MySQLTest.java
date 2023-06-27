@@ -54,7 +54,7 @@ public class MySQLTest {
         Function<DataResultSet, String> func = set -> set.next() ? ("" + set.getObject(1)) : null;
         //System.out.println("查询结果: " + source.nativeQuery("SHOW TABLES", func));
         //System.out.println("执行结果: " + source.nativeExecute("SET NAMES UTF8MB4"));
-        if (true) {
+        if (false) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
             System.out.println("执行结果: " + source.nativeExecute("UPDATE World set id =0 where id =0"));
             System.out.println("随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
@@ -220,7 +220,17 @@ public class MySQLTest {
         System.out.println(source.find(SmsRecord.class, "sms1-1632282662741"));
 
         System.out.println("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n");
+        source.close();
         System.out.println(" -------------------------------- 压测开始 --------------------------------");
+        MysqlDataSource source2 = new MysqlDataSource();
+        MysqlDataSource.debug = false;
+        AsyncIOGroup asyncGroup2 = new AsyncIOGroup(8192, 16);
+        asyncGroup2.start();
+        ResourceFactory factory2 = ResourceFactory.create();
+        factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup2);
+        factory2.inject(source2);
+        source2.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
+        
         final String json = JsonConvert.root().convertTo(record);
         int count = 200;
         CountDownLatch cdl = new CountDownLatch(count);
@@ -232,16 +242,16 @@ public class MySQLTest {
                     try {
                         if (b % 3 == 0) {
                             String smsid = record.getSmsid().replace("sms1", "sms" + ((b + 1) % 5 + 100));
-                            source.delete(SmsRecord.class, smsid);
+                            source2.delete(SmsRecord.class, smsid);
                         } else if (b % 2 == 0) {
-                            source.findAsync(SmsRecord.class, record.getSmsid()).thenCompose(v -> source.updateAsync(v)).join();
+                            source2.findAsync(SmsRecord.class, record.getSmsid()).thenCompose(v -> source2.updateAsync(v)).join();
                         } else {
                             String smsid = record.getSmsid().replace("sms1", "sms" + (b + 1) % 5);
                             String content = "这是内容," + ((b + 1) % 5);
                             SmsRecord s = JsonConvert.root().convertFrom(SmsRecord.class, json);
                             s.setSmsid(smsid);
                             s.setContent(content);
-                            source.update(s);
+                            source2.update(s);
                         }
                     } finally {
                         cdl.countDown();
@@ -253,7 +263,7 @@ public class MySQLTest {
         long e = System.currentTimeMillis() - s;
         System.out.println("并发 " + count + ", 一共耗时: " + e + "ms");
         System.out.println("---------------- 准备关闭DataSource ----------------");
-        source.close();
+        source2.close();
         System.out.println("---------------- 全部执行完毕 ----------------");
     }
 
