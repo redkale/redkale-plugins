@@ -20,7 +20,6 @@ import org.redkale.annotation.Comment;
 import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.net.WorkThread;
 import org.redkale.service.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
@@ -34,7 +33,7 @@ import static org.redkale.util.Utility.*;
 @Local
 @Component
 @AutoLoad(false)
-public final class WeiXinQYService implements Service {
+public final class WeiXinQYService extends AbstractService {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -283,15 +282,6 @@ public final class WeiXinQYService implements Service {
         }
         cipher.init(mode, qykeyspec, qyivspec);
         return cipher;
-    }
-
-    protected void runAsync(Runnable runner) {
-        Thread thread = Thread.currentThread();
-        if (thread instanceof WorkThread) {
-            ((WorkThread) thread).runAsync(runner);
-            return;
-        }
-        runner.run();
     }
 
     //-----------------------------------通用接口----------------------------------------------------------
