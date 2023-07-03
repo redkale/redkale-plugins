@@ -109,9 +109,7 @@ public class PgSQLTest {
                 return null;
             });
             System.out.println("执行结果应该是(3): " + source.nativeExecute("UPDATE World SET randomNumber = id WHERE id < 3"));
-            if (true) {
-                return;
-            }
+            
             final CompletableFuture[] futures = new CompletableFuture[Utility.cpus()];
             for (int i = 0; i < futures.length; i++) {
                 futures[i] = source.findAsync(World.class, randomId()).thenCompose(v -> source.updateAsync(v));

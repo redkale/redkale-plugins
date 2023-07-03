@@ -32,6 +32,7 @@ public class MySourceTest {
         factory.inject(source);
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println("---------");
+        source.clearTable(World.class);
         World[] words = new World[10000];
         for (int i = 0; i < words.length; i++) {
             words[i] = new World();
