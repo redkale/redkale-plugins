@@ -93,7 +93,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 //        }
         redisConfig.setEndpoints(addrs);
         if (this.vertx == null) {
-            this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));
+            this.vertx = Vertx.vertx(new VertxOptions().setEventLoopPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         }
         RedisAPI old = this.client;
         this.client = RedisAPI.api(Redis.createClient(this.vertx, redisConfig));

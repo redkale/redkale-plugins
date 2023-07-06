@@ -9,6 +9,7 @@ import io.vertx.core.*;
 import io.vertx.sqlclient.*;
 import io.vertx.sqlclient.impl.ListTuple;
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -53,12 +54,13 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     public void init(AnyValue conf) {
         super.init(conf);
+        System.out.println("==========dbtype=" + dbtype());
         this.dollar = "postgresql".equalsIgnoreCase(dbtype);
-        this.vertx = Vertx.vertx(new VertxOptions().setWorkerPoolSize(Utility.cpus()).setPreferNativeTransport(true));
+        this.vertx = Vertx.vertx(new VertxOptions().setEventLoopPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         {
             this.readOptions = createSqlOptions(readConfProps);
             int readMaxconns = Math.max(1, Integer.decode(readConfProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
-            this.readPoolOptions = new PoolOptions().setMaxSize(readMaxconns);
+            this.readPoolOptions = createPoolOptions(readMaxconns);
             RedkaleClassLoader.putReflectionClass(readOptions.getClass().getName());
             RedkaleClassLoader.putReflectionPublicConstructors(readOptions.getClass(), readOptions.getClass().getName());
         }
@@ -70,7 +72,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         } else {
             this.writeOptions = createSqlOptions(writeConfProps);
             int writeMaxconns = Math.max(1, Integer.decode(writeConfProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
-            this.writePoolOptions = new PoolOptions().setMaxSize(writeMaxconns);
+            this.writePoolOptions = createPoolOptions(writeMaxconns);
             this.writeThreadPool = Pool.pool(vertx, writeOptions, writePoolOptions);
         }
     }
@@ -80,7 +82,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         Pool oldPool = this.readThreadPool;
         SqlConnectOptions readOpt = createSqlOptions(newProps);
         int readMaxconns = Math.max(1, Integer.decode(newProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
-        PoolOptions readPoolOpt = new PoolOptions().setMaxSize(readMaxconns);
+        PoolOptions readPoolOpt = createPoolOptions(readMaxconns);
         this.readThreadPool = Pool.pool(vertx, readOpt, readPoolOpt);
         this.readOptions = readOpt;
         this.readPoolOptions = readPoolOpt;
@@ -98,7 +100,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         Pool oldPool = this.readThreadPool;
         SqlConnectOptions readOpt = createSqlOptions(newReadProps);
         int readMaxconns = Math.max(1, Integer.decode(newReadProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
-        PoolOptions readPoolOpt = new PoolOptions().setMaxSize(readMaxconns);
+        PoolOptions readPoolOpt = createPoolOptions(readMaxconns);
         this.readThreadPool = Pool.pool(vertx, readOpt, readPoolOpt);
         this.readOptions = readOpt;
         this.readPoolOptions = readPoolOpt;
@@ -112,12 +114,44 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         Pool oldPool = this.writeThreadPool;
         SqlConnectOptions writeOpt = createSqlOptions(newWriteProps);
         int writeMaxconns = Math.max(1, Integer.decode(newWriteProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
-        PoolOptions writePoolOpt = new PoolOptions().setMaxSize(writeMaxconns);
+        PoolOptions writePoolOpt = createPoolOptions(writeMaxconns);
         this.writeThreadPool = Pool.pool(vertx, writeOpt, writePoolOpt);
         this.writeOptions = writeOpt;
         this.writePoolOptions = writePoolOpt;
         if (oldPool != null) {
             oldPool.close();
+        }
+    }
+
+    private PoolOptions createPoolOptions(int maxConns) {
+        PoolOptions options = new PoolOptions()
+            .setEventLoopSize(Utility.cpus())
+            .setMaxSize(maxConns);
+        try {
+            if ("mysql".equalsIgnoreCase(dbtype())) {
+                Class myclass = Class.forName("io.vertx.mysqlclient.impl.MySQLPoolOptions");
+                Object myopts = myclass.getConstructor(PoolOptions.class).newInstance(options);
+                Method method = myclass.getMethod("setPipelined", boolean.class);
+                method.invoke(myopts, true);
+                RedkaleClassLoader.putReflectionClass(myclass.getName());
+                RedkaleClassLoader.putReflectionPublicConstructors(myclass, myclass.getName());
+                RedkaleClassLoader.putReflectionMethod(myclass.getName(), method);
+                return (PoolOptions) myopts;
+            } else if ("postgresql".equalsIgnoreCase(dbtype())) {
+                Class myclass = Class.forName("io.vertx.pgclient.impl.PgPoolOptions");
+                Object myopts = myclass.getConstructor(PoolOptions.class).newInstance(options);
+                Method method = myclass.getMethod("setPipelined", boolean.class);
+                method.invoke(myopts, true);
+                RedkaleClassLoader.putReflectionClass(myclass.getName());
+                RedkaleClassLoader.putReflectionPublicConstructors(myclass, myclass.getName());
+                RedkaleClassLoader.putReflectionMethod(myclass.getName(), method);
+                return (PoolOptions) myopts;
+            } else {
+                return options;
+            }
+        } catch (Throwable t) {
+            t.printStackTrace();
+            return options;
         }
     }
 
@@ -166,6 +200,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 Class clazz = Thread.currentThread().getContextClassLoader().loadClass("io.vertx.mysqlclient.MySQLConnectOptions");
                 RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
                 sqlOptions = (SqlConnectOptions) clazz.getConstructor().newInstance();
+                Method method = sqlOptions.getClass().getMethod("setPipeliningLimit", int.class);
+                method.invoke(sqlOptions, 100000);
             } catch (Exception e) {
                 throw new SourceException(e);
             }
@@ -174,6 +210,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 Class clazz = Thread.currentThread().getContextClassLoader().loadClass("io.vertx.pgclient.PgConnectOptions");
                 RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
                 sqlOptions = (SqlConnectOptions) clazz.getConstructor().newInstance();
+                Method method = sqlOptions.getClass().getMethod("setPipeliningLimit", int.class);
+                method.invoke(sqlOptions, 100000);
             } catch (Exception e) {
                 throw new SourceException(e);
             }
@@ -719,11 +757,11 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     protected <T> boolean isTableNotExist(EntityInfo<T> info, Throwable t) {
         String code = null;
         if ("postgresql".equals(dbtype())) {
-            if (t instanceof io.vertx.pgclient.PgException) {
+            if (t.getClass().getName().equals("io.vertx.pgclient.PgException")) {
                 code = ((io.vertx.pgclient.PgException) t).getSqlState();
             }
         } else if ("mysql".equals(dbtype())) {
-            if (t instanceof io.vertx.mysqlclient.MySQLException) {
+            if (t.getClass().getName().equals("io.vertx.mysqlclient.MySQLException")) {
                 code = ((io.vertx.mysqlclient.MySQLException) t).getSqlState();
             }
         }
