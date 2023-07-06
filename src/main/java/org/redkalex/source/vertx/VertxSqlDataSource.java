@@ -150,7 +150,6 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 return options;
             }
         } catch (Throwable t) {
-            t.printStackTrace();
             return options;
         }
     }
