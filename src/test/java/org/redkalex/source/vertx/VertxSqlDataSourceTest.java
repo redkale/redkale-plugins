@@ -40,6 +40,7 @@ public class VertxSqlDataSourceTest {
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
         System.out.println(source.find(Fortune.class, 5));
         System.out.println(source.queryList(Fortune.class));
+        System.out.println("findsList: " + source.findsList(Fortune.class, List.of(2, 3, 1, 0, 30).stream()));
         Fortune one = source.queryList(Fortune.class).get(0);
         one.setMessage(one.getMessage() + " zz");
         System.out.println(source.updateColumn(one, "message"));

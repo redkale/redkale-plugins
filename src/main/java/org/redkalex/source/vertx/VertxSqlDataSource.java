@@ -12,8 +12,10 @@ import java.io.Serializable;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
 import org.redkale.service.Local;
@@ -461,6 +463,68 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             T val = rs ? (selects == null ? getEntityValue(info, null, rsset) : getEntityValue(info, selects, rsset)) : null;
             return val;
         });
+    }
+
+    @Override
+    public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
+        final EntityInfo<T> info = loadEntityInfo(clazz);
+        final EntityCache<T> cache = info.getCache();
+        Serializable[] ids = pks.toArray(serialArrayFunc);
+        if (cache != null) {
+            T[] rs = cache.finds(ids);
+            if (cache.isFullLoaded() || rs != null) {
+                return CompletableFuture.completedFuture(Arrays.asList(rs));
+            }
+        }
+        if (ids.length == 0) {
+            return CompletableFuture.completedFuture(new ArrayList<>());
+        }
+        final String sql = dollar ? info.getFindDollarPrepareSQL(ids[0]) : info.getFindQuestionPrepareSQL(ids[0]);
+        final long s = System.currentTimeMillis();
+        final PreparedQuery<RowSet<Row>> query = readPool().preparedQuery(sql);
+        final T[] array = Creator.newArray(clazz, ids.length);
+        final CompletableFuture<List<T>> future = new CompletableFuture<>();
+        final AtomicInteger count = new AtomicInteger();
+        for (int i = 0; i < ids.length; i++) {
+            final int index = i;
+            query.execute(Tuple.of(ids[index]), (AsyncResult<RowSet<Row>> event) -> {
+                slowLog(s, sql);
+                if (event.failed()) {
+                    final Throwable ex = event.cause();
+                    if (!isTableNotExist(info, ex)) {
+                        future.completeExceptionally(ex);
+                    } else {  //表不存在
+                        if (info.getTableStrategy() == null) {  //没有原始表
+                            String[] tablesqls = createTableSqls(info);
+                            if (tablesqls == null) { //没有建表DDL
+                                future.completeExceptionally(ex);
+                            } else {
+                                array[index] = null;
+                                if (count.incrementAndGet() == ids.length) {
+                                    future.complete(Arrays.asList(array));
+                                }
+                            }
+                        } else {  //没有分表
+                            array[index] = null;
+                            if (count.incrementAndGet() == ids.length) {
+                                future.complete(Arrays.asList(array));
+                            }
+                        }
+                    }
+                } else {
+                    VertxResultSet vrs = new VertxResultSet(info, null, event.result());
+                    if (vrs.next()) {
+                        array[index] = getEntityValue(info, null, vrs);
+                    } else {
+                        array[index] = null;
+                    }
+                    if (count.incrementAndGet() == ids.length) {
+                        future.complete(Arrays.asList(array));
+                    }
+                }
+            });
+        }
+        return future;
     }
 
     @Override

@@ -27,7 +27,8 @@
         <kafka.version>3.5.0</kafka.version> 
         <redisson.version>3.22.0</redisson.version>
         <lettuce.version>6.2.4.RELEASE</lettuce.version>
-        <vertx.version>4.4.3</vertx.version>
+        <vertx.version>4.4.4</vertx.version>
+        <vertx-scram.version>2.1</vertx-scram.version>
         <mongodb.version>4.9.1</mongodb.version>
         <protobuf.version>3.23.2</protobuf.version>
         <apollo-client.version>2.1.0</apollo-client.version>
@@ -150,6 +151,13 @@
             <scope>provided</scope>
         </dependency>
         
+        <dependency>
+            <groupId>com.ongres.scram</groupId>
+            <artifactId>client</artifactId>
+            <version>${vertx-scram.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-mysql-client</artifactId>
