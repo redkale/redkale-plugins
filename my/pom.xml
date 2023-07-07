@@ -30,7 +30,6 @@
         <vertx.version>4.4.4</vertx.version>
         <vertx-scram.version>2.1</vertx-scram.version>
         <mongodb.version>4.10.1</mongodb.version>
-        <protobuf.version>3.23.3</protobuf.version>
         <apollo-client.version>2.1.0</apollo-client.version>
         <nacos-client.version>2.2.4</nacos-client.version>
         <mysql.version>8.0.33</mysql.version>
@@ -43,14 +42,14 @@
             <artifactId>redkale</artifactId>  
             <version>${project.version}</version>
         </dependency>
-
+        <!--
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>${protobuf.version}</version>
+            <version>3.23.3</version>
             <scope>test</scope>
         </dependency>
-        
+        -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
