@@ -19,13 +19,28 @@ public class RedisCacheRequest extends ClientRequest {
 
     static final byte[] BYTES_FALSE = new byte[]{'f'};
 
-    protected String key;
+    private static final byte[] RL = new byte[]{'\r', '\n'};
 
-    protected String command;
+    private static final byte[][] starLengthBytes;
+
+    private static final byte[][] dollarLengthBytes;
+
+    static {
+        starLengthBytes = new byte[1024][];
+        dollarLengthBytes = new byte[1024][];
+        for (int i = 0; i < dollarLengthBytes.length; i++) {
+            starLengthBytes[i] = ("*" + i + "\r\n").getBytes(StandardCharsets.ISO_8859_1);
+            dollarLengthBytes[i] = ("$" + i + "\r\n").getBytes(StandardCharsets.ISO_8859_1);
+        }
+    }
+
+    protected RedisCommand command;
+
+    protected String key;
 
     protected byte[][] args;
 
-    public <T> RedisCacheRequest prepare(String command, String key, byte[]... args) {
+    public <T> RedisCacheRequest prepare(RedisCommand command, String key, byte[]... args) {
         super.prepare();
         this.command = command;
         this.key = key;
@@ -35,21 +50,33 @@ public class RedisCacheRequest extends ClientRequest {
 
     @Override
     public void writeTo(ClientConnection conn, ByteArray writer) {
-        writer.put((byte) '*');
-        writer.put(String.valueOf(args.length + 1).getBytes(StandardCharsets.UTF_8));
-        writer.put((byte) '\r', (byte) '\n');
-        writer.put((byte) '$');
-        writer.put(String.valueOf(command.length()).getBytes(StandardCharsets.UTF_8));
-        writer.put((byte) '\r', (byte) '\n');
-        writer.put(command.getBytes(StandardCharsets.UTF_8));
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(starLengthBytes(args.length + 1));
+        writer.put(command.getBytes());
 
         for (final byte[] arg : args) {
-            writer.put((byte) '$');
-            writer.put(String.valueOf(arg.length).getBytes(StandardCharsets.UTF_8));
-            writer.put((byte) '\r', (byte) '\n');
-            writer.put(arg);
-            writer.put((byte) '\r', (byte) '\n');
+            putArgBytes(writer, arg);
+        }
+    }
+
+    protected void putArgBytes(ByteArray writer, byte[] arg) {
+        writer.put(dollarLengthBytes(arg.length));
+        writer.put(arg);
+        writer.put(RL);
+    }
+
+    protected static byte[] starLengthBytes(int length) {
+        if (length >= 0 && length < starLengthBytes.length) {
+            return starLengthBytes[length];
+        } else {
+            return ("*" + length + "\r\n").getBytes(StandardCharsets.ISO_8859_1);
+        }
+    }
+
+    protected static byte[] dollarLengthBytes(int length) {
+        if (length >= 0 && length < dollarLengthBytes.length) {
+            return dollarLengthBytes[length];
+        } else {
+            return ("$" + length + "\r\n").getBytes(StandardCharsets.ISO_8859_1);
         }
     }
 
