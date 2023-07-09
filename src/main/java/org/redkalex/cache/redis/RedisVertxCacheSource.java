@@ -43,7 +43,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     protected Vertx vertx;
 
-    protected io.vertx.redis.client.RedisAPI client;
+    protected io.vertx.redis.client.Redis client;
 
     @Override
     public void init(AnyValue conf) {
@@ -95,8 +95,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         if (this.vertx == null) {
             this.vertx = Vertx.vertx(new VertxOptions().setEventLoopPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         }
-        RedisAPI old = this.client;
-        this.client = RedisAPI.api(Redis.createClient(this.vertx, redisConfig));
+        Redis old = this.client;
+        this.client = Redis.createClient(this.vertx, redisConfig);
         if (old != null) {
             old.close();
         }
@@ -166,7 +166,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Local
-    public io.vertx.redis.client.RedisAPI getRedisClient() {
+    public Redis getRedisClient() {
         return this.client;
     }
 
@@ -186,10 +186,18 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     protected CompletableFuture<Response> sendAsync(Command cmd, String... args) {
-        return completableFuture(redisAPI().send(cmd, args));
+        Request request = Request.cmd(cmd);
+        for (String arg : args) {
+            request.arg(arg);
+        }
+        return completableFuture(redisClient().send(request));
     }
 
-    protected RedisAPI redisAPI() {
+    protected CompletableFuture<List<Response>> sendAsync(List<Request> requests) {
+        return completableFuture(redisClient().batch(requests));
+    }
+
+    protected Redis redisClient() {
         return client;
     }
 
@@ -876,66 +884,46 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Map<String, List<T>>> lrangesAsync(final Type componentType, final String... keys) {
-        final CompletableFuture<Map<String, List<T>>> rsFuture = new CompletableFuture<>();
-        final Map<String, List<T>> map = new LinkedHashMap<>();
-        final ReentrantLock mapLock = new ReentrantLock();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        final List<Request> requests = new ArrayList<>(keys.length);
         for (int i = 0; i < keys.length; i++) {
-            final String key = keys[i];
-            futures[i] = sendAsync(Command.LRANGE, key, "0", "-1").thenAccept(v -> {
-                List c = (List) getCollectionValue(key, cryptor, v, false, componentType);
-                if (c != null) {
-                    mapLock.lock();
-                    try {
-                        map.put(key, c);
-                    } finally {
-                        mapLock.unlock();
-                    }
-                }
-            });
+            String key = keys[i];
+            Request req = Request.cmd(Command.LRANGE);
+            req.arg(key).arg(0).arg(-1);
+            requests.add(req);
         }
-        CompletableFuture.allOf(futures)
-            .whenComplete((w, e) -> {
-                if (e != null) {
-                    rsFuture.completeExceptionally(e);
-                } else {
-                    rsFuture.complete(map);
+        return sendAsync(requests).thenApply(list -> {
+            final Map<String, List<T>> map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                String key = keys[i];
+                List c = (List) getCollectionValue(key, cryptor, list.get(i), false, componentType);
+                if (c != null) {
+                    map.put(key, c);
                 }
             }
-            );
-        return rsFuture;
+            return map;
+        });
     }
 
     @Override
     public <T> CompletableFuture<Map<String, Set<T>>> smembersAsync(final Type componentType, final String... keys) {
-        final CompletableFuture<Map<String, Set<T>>> rsFuture = new CompletableFuture<>();
-        final Map<String, Set<T>> map = new LinkedHashMap<>();
-        final ReentrantLock mapLock = new ReentrantLock();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        final List<Request> requests = new ArrayList<>(keys.length);
         for (int i = 0; i < keys.length; i++) {
-            final String key = keys[i];
-            futures[i] = sendAsync(Command.SMEMBERS, key).thenAccept(v -> {
-                Set c = (Set) getCollectionValue(key, cryptor, v, true, componentType);
-                if (c != null) {
-                    mapLock.lock();
-                    try {
-                        map.put(key, c);
-                    } finally {
-                        mapLock.unlock();
-                    }
-                }
-            });
+            String key = keys[i];
+            Request req = Request.cmd(Command.SMEMBERS);
+            req.arg(key);
+            requests.add(req);
         }
-        CompletableFuture.allOf(futures)
-            .whenComplete((w, e) -> {
-                if (e != null) {
-                    rsFuture.completeExceptionally(e);
-                } else {
-                    rsFuture.complete(map);
+        return sendAsync(requests).thenApply(list -> {
+            final Map<String, Set<T>> map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                String key = keys[i];
+                Set c = (Set) getCollectionValue(key, cryptor, list.get(i), true, componentType);
+                if (c != null) {
+                    map.put(key, c);
                 }
             }
-            );
-        return rsFuture;
+            return map;
+        });
     }
 
     //--------------------- existsItem ------------------------------  
