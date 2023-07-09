@@ -19,6 +19,10 @@ public class RedisCacheRequest extends ClientRequest {
 
     static final byte[] BYTES_FALSE = new byte[]{'f'};
 
+    static final byte[] BYTES_MATCH = "MATCH".getBytes(StandardCharsets.UTF_8);
+
+    static final byte[] BYTES_COUNT = "COUNT".getBytes(StandardCharsets.UTF_8);
+
     private static final byte[] RL = new byte[]{'\r', '\n'};
 
     private static final byte[][] starLengthBytes;
@@ -40,7 +44,11 @@ public class RedisCacheRequest extends ClientRequest {
 
     protected byte[][] args;
 
-    public <T> RedisCacheRequest prepare(RedisCommand command, String key, byte[]... args) {
+    public static RedisCacheRequest create(RedisCommand command, String key, byte[]... args) {
+        return new RedisCacheRequest().prepare(command, key, args);
+    }
+
+    public RedisCacheRequest prepare(RedisCommand command, String key, byte[]... args) {
         super.prepare();
         this.command = command;
         this.key = key;

@@ -103,6 +103,10 @@ public enum RedisCommand {
         this.bytes = ("$" + command.length() + "\r\n" + command + "\r\n").getBytes(StandardCharsets.ISO_8859_1);
     }
 
+    public String getCommand() {
+        return command;
+    }
+
     public byte[] getBytes() {
         return bytes;
     }

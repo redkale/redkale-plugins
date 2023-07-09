@@ -28,6 +28,8 @@ import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
+import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_COUNT;
+import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
 
 /**
  * 详情见: https://redkale.org
@@ -570,62 +572,42 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Map<String, Set<T>>> smembersAsync(final Type componentType, final String... keys) {
-        final CompletableFuture<Map<String, Set<T>>> rsFuture = new CompletableFuture<>();
-        final Map<String, Set<T>> map = new LinkedHashMap<>();
-        final ReentrantLock mapLock = new ReentrantLock();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        final RedisCacheRequest[] requests = new RedisCacheRequest[keys.length];
         for (int i = 0; i < keys.length; i++) {
-            final String key = keys[i];
-            futures[i] = sendAsync(RedisCommand.SMEMBERS, key, keyArgs(key)).thenAccept(v -> {
-                Set c = v.getSetValue(key, cryptor, componentType);
-                if (c != null) {
-                    mapLock.lock();
-                    try {
-                        map.put(key, c);
-                    } finally {
-                        mapLock.unlock();
-                    }
-                }
-            });
+            String key = keys[i];
+            requests[i] = RedisCacheRequest.create(RedisCommand.SMEMBERS, key, keyArgs(key));
         }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
+        return sendAsync(requests).thenApply(list -> {
+            final Map<String, Set<T>> map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                String key = keys[i];
+                Set c = list.get(i).getSetValue(key, cryptor, componentType);
+                if (c != null) {
+                    map.put(key, c);
+                }
             }
+            return map;
         });
-        return rsFuture;
     }
 
     @Override
     public <T> CompletableFuture<Map<String, List<T>>> lrangesAsync(final Type componentType, final String... keys) {
-        final CompletableFuture<Map<String, List<T>>> rsFuture = new CompletableFuture<>();
-        final Map<String, List<T>> map = new LinkedHashMap<>();
-        final ReentrantLock mapLock = new ReentrantLock();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
+        final RedisCacheRequest[] requests = new RedisCacheRequest[keys.length];
         for (int i = 0; i < keys.length; i++) {
-            final String key = keys[i];
-            futures[i] = sendAsync(RedisCommand.LRANGE, key, keyArgs(key, 0, -1)).thenAccept(v -> {
-                List c = v.getListValue(key, cryptor, componentType);
-                if (c != null) {
-                    mapLock.lock();
-                    try {
-                        map.put(key, c);
-                    } finally {
-                        mapLock.unlock();
-                    }
-                }
-            });
+            String key = keys[i];
+            requests[i] = RedisCacheRequest.create(RedisCommand.LRANGE, key, keyArgs(key, 0, -1));
         }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
+        return sendAsync(requests).thenApply(list -> {
+            final Map<String, List<T>> map = new LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                String key = keys[i];
+                List c = list.get(i).getListValue(key, cryptor, componentType);
+                if (c != null) {
+                    map.put(key, c);
+                }
             }
+            return map;
         });
-        return rsFuture;
     }
 
     @Override
@@ -770,7 +752,20 @@ public final class RedisCacheSource extends AbstractRedisSource {
     //--------------------- send ------------------------------  
     @Local
     public CompletableFuture<RedisCacheResult> sendAsync(final RedisCommand command, final String key, final byte[]... args) {
-        return client.connect().thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currentWorkThread()).prepare(command, key, args))).orTimeout(6, TimeUnit.SECONDS);
+        return client.connect()
+            .thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currentWorkThread()).prepare(command, key, args)))
+            .orTimeout(6, TimeUnit.SECONDS);
+    }
+
+    @Local
+    public CompletableFuture<List<RedisCacheResult>> sendAsync(final RedisCacheRequest... requests) {
+        WorkThread workThread = WorkThread.currentWorkThread();
+        for (RedisCacheRequest request : requests) {
+            request.workThread(workThread);
+        }
+        return client.connect()
+            .thenCompose(conn -> conn.writeRequest(requests))
+            .orTimeout(6, TimeUnit.SECONDS);
     }
 
     private byte[][] keyArgs(String key) {
@@ -792,11 +787,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
         }
         bss[++index] = cursor.toString().getBytes(StandardCharsets.UTF_8);
         if (isNotEmpty(pattern)) {
-            bss[++index] = "MATCH".getBytes(StandardCharsets.UTF_8);
+            bss[++index] = BYTES_MATCH;
             bss[++index] = pattern.getBytes(StandardCharsets.UTF_8);
         }
         if (limit > 0) {
-            bss[++index] = "COUNT".getBytes(StandardCharsets.UTF_8);
+            bss[++index] = BYTES_COUNT;
             bss[++index] = String.valueOf(limit).getBytes(StandardCharsets.UTF_8);
         }
         return bss;
