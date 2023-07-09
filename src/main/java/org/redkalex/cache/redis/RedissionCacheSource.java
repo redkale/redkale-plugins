@@ -820,18 +820,17 @@ public class RedissionCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Map<String, List<T>>> lrangesAsync(final Type componentType, final String... keys) {
-        final CompletableFuture<Map<String, List<T>>> rsFuture = new CompletableFuture<>();
-        final Map<String, List<T>> map = new LinkedHashMap<>();
-        final ReentrantLock mapLock = new ReentrantLock();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        for (int i = 0; i < keys.length; i++) {
-            final String key = keys[i];
-            futures[i] = completableFuture(client.getList(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(list -> {
-                if (isEmpty(list)) {
-                    return list;
-                }
+        final RBatch batch = client.createBatch();
+        for (String key : keys) {
+            batch.getList(key, ByteArrayCodec.INSTANCE).readAllAsync();
+        }        
+        return completableFuture(batch.executeAsync().thenApply(resps -> {
+            final Map<String, List<T>> map = new LinkedHashMap<>();
+            List<Collection> list = (List) resps.getResponses();
+            for (int i = 0; i < keys.length; i++) {
+                String key = keys[i];
                 List<T> rs = new ArrayList<>();
-                for (Object item : list) {
+                for (Object item : list.get(i)) {
                     byte[] bs = (byte[]) item;
                     if (bs == null) {
                         rs.add(null);
@@ -839,39 +838,25 @@ public class RedissionCacheSource extends AbstractRedisSource {
                         rs.add(decryptValue(key, cryptor, componentType, bs));
                     }
                 }
-                mapLock.lock();
-                try {
-                    map.put(key, rs);
-                } finally {
-                    mapLock.unlock();
-                }
-                return rs;
-            }));
-        }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
+                map.put(key, rs);
             }
-        });
-        return rsFuture;
+            return map;
+        }));        
     }
 
     @Override
     public <T> CompletableFuture<Map<String, Set<T>>> smembersAsync(final Type componentType, final String... keys) {
-        final CompletableFuture<Map<String, Set<T>>> rsFuture = new CompletableFuture<>();
-        final Map<String, Set<T>> map = new LinkedHashMap<>();
-        final ReentrantLock mapLock = new ReentrantLock();
-        final CompletableFuture[] futures = new CompletableFuture[keys.length];
-        for (int i = 0; i < keys.length; i++) {
-            final String key = keys[i];
-            futures[i] = completableFuture(client.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync().thenApply(set -> {
-                if (isEmpty(set)) {
-                    return set;
-                }
+        final RBatch batch = client.createBatch();
+        for (String key : keys) {
+            batch.getSet(key, ByteArrayCodec.INSTANCE).readAllAsync();
+        }
+        return completableFuture(batch.executeAsync().thenApply(resps -> {
+            final Map<String, Set<T>> map = new LinkedHashMap<>();
+            List<Collection> list = (List) resps.getResponses();
+            for (int i = 0; i < keys.length; i++) {
+                String key = keys[i];
                 Set<T> rs = new LinkedHashSet<>();
-                for (Object item : set) {
+                for (Object item : list.get(i)) {
                     byte[] bs = (byte[]) item;
                     if (bs == null) {
                         rs.add(null);
@@ -879,23 +864,10 @@ public class RedissionCacheSource extends AbstractRedisSource {
                         rs.add(decryptValue(key, cryptor, componentType, bs));
                     }
                 }
-                mapLock.lock();
-                try {
-                    map.put(key, rs);
-                } finally {
-                    mapLock.unlock();
-                }
-                return rs;
-            }));
-        }
-        CompletableFuture.allOf(futures).whenComplete((w, e) -> {
-            if (e != null) {
-                rsFuture.completeExceptionally(e);
-            } else {
-                rsFuture.complete(map);
+                map.put(key, rs);
             }
-        });
-        return rsFuture;
+            return map;
+        }));
     }
 
     //--------------------- existsItem ------------------------------  
@@ -978,14 +950,14 @@ public class RedissionCacheSource extends AbstractRedisSource {
     public <T> CompletableFuture<Long> linsertBeforeAsync(String key, Type componentType, T pivot, T value) {
         final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.addBeforeAsync(encryptValue(key, cryptor, componentType, convert, pivot),
-             encryptValue(key, cryptor, componentType, convert, value)).thenApply(v -> v.longValue()));
+            encryptValue(key, cryptor, componentType, convert, value)).thenApply(v -> v.longValue()));
     }
 
     @Override
     public <T> CompletableFuture<Long> linsertAfterAsync(String key, Type componentType, T pivot, T value) {
         final RList<byte[]> bucket = client.getList(key, ByteArrayCodec.INSTANCE);
         return completableFuture(bucket.addAfterAsync(encryptValue(key, cryptor, componentType, convert, pivot),
-             encryptValue(key, cryptor, componentType, convert, value)).thenApply(v -> v.longValue()));
+            encryptValue(key, cryptor, componentType, convert, value)).thenApply(v -> v.longValue()));
     }
 
     @Override
