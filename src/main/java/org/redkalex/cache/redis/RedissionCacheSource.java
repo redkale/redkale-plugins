@@ -102,7 +102,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         ReplicatedServersConfig replicateConfig = null;
         SentinelServersConfig sentinelConfig = null;
         for (String addr : config.getAddresses()) {
-            if (config.getAddresses().size() == 1) {
+            if (config.getAddresses().size() == 1) { //单体
                 if (singleConfig == null) {
                     singleConfig = redisConfig.useSingleServer();
                     singleConfig.setConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
@@ -111,21 +111,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
                 }
                 singleConfig.setAddress(addr);
                 singleConfig.setDatabase(this.db);
-            } else if ("masterslave".equalsIgnoreCase(cluster)) { //主从
-                if (masterConfig == null) {
-                    masterConfig = redisConfig.useMasterSlaveServers();
-                    masterConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
-                    masterConfig.setMasterConnectionPoolSize(config.getMaxconns());
-                    masterConfig.setSlaveConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
-                    masterConfig.setSlaveConnectionPoolSize(config.getMaxconns());
-                    baseConfig = masterConfig;
-                }
-                if (masterConfig.getMasterAddress() == null) {
-                    masterConfig.setMasterAddress(addr);
-                } else {
-                    masterConfig.addSlaveAddress(addr);
-                }
-                masterConfig.setDatabase(this.db);
             } else if ("cluster".equalsIgnoreCase(cluster)) { //集群
                 if (clusterConfig == null) {
                     clusterConfig = redisConfig.useClusterServers();
@@ -136,7 +121,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
                     baseConfig = clusterConfig;
                 }
                 clusterConfig.addNodeAddress(addr);
-            } else if ("replicated".equalsIgnoreCase(cluster)) { //                
+            } else if ("replicated".equalsIgnoreCase(cluster)) { //主从             
                 if (replicateConfig == null) {
                     replicateConfig = redisConfig.useReplicatedServers();
                     replicateConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
@@ -147,7 +132,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
                 }
                 replicateConfig.addNodeAddress(addr);
                 replicateConfig.setDatabase(this.db);
-            } else if ("sentinel".equalsIgnoreCase(cluster)) { //
+            } else if ("sentinel".equalsIgnoreCase(cluster)) { //哨兵
                 if (sentinelConfig == null) {
                     sentinelConfig = redisConfig.useSentinelServers();
                     sentinelConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);

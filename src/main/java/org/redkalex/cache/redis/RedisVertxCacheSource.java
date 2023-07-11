@@ -53,6 +53,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     private void initClient(AnyValue conf) {
+        if (this.vertx == null) {
+            this.vertx = Vertx.vertx(new VertxOptions().setEventLoopPoolSize(Utility.cpus()).setPreferNativeTransport(true));
+        }
         RedisConfig config = RedisConfig.create(conf);
         //Redis链接
         RedisOptions redisConfig = new RedisOptions();
@@ -63,10 +66,23 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         if (config.getPassword() != null) {
             redisConfig.setPassword(config.getPassword().trim());
         }
-        redisConfig.setEndpoints(config.getAddresses());
-        if (this.vertx == null) {
-            this.vertx = Vertx.vertx(new VertxOptions().setEventLoopPoolSize(Utility.cpus()).setPreferNativeTransport(true));
+        String cluster = conf.getOrDefault("cluster", "");
+        if ("cluster".equalsIgnoreCase(cluster)) { //集群
+            redisConfig.setType(RedisClientType.CLUSTER);
+        } else if ("replicated".equalsIgnoreCase(cluster)) { //主从
+            redisConfig.setType(RedisClientType.REPLICATION);
+        } else if ("sentinel".equalsIgnoreCase(cluster)) { //哨兵
+            redisConfig.setType(RedisClientType.SENTINEL);
         }
+        String replica = conf.getOrDefault("replica", "");
+        if ("never".equalsIgnoreCase(replica)) {
+            redisConfig.setUseReplicas(RedisReplicas.NEVER);
+        } else if ("share".equalsIgnoreCase(replica)) {
+            redisConfig.setUseReplicas(RedisReplicas.SHARE);
+        } else if ("always".equalsIgnoreCase(replica)) {
+            redisConfig.setUseReplicas(RedisReplicas.ALWAYS);
+        }
+        redisConfig.setEndpoints(config.getAddresses());
         Redis old = this.client;
         this.client = Redis.createClient(this.vertx, redisConfig);
         if (old != null) {
