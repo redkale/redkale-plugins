@@ -706,17 +706,6 @@ public abstract class RedisAbstractTest {
             }
         }
         {
-            System.out.println("############################  开始 Lettuce ############################");
-            RedisLettuceCacheSource source = new RedisLettuceCacheSource();
-            source.defaultConvert = JsonFactory.root().getConvert();
-            source.init(conf);
-            try {
-                run(source, true);
-            } finally {
-                source.close();
-            }
-        }
-        {
             System.out.println("############################  开始 Memnory ############################");
             CacheMemorySource source = new CacheMemorySource("");
             source.init(conf);

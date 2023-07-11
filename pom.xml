@@ -26,7 +26,6 @@
         <slf4j.version>2.0.7</slf4j.version>
         <kafka.version>3.5.0</kafka.version> 
         <redisson.version>3.22.1</redisson.version>
-        <lettuce.version>6.2.4.RELEASE</lettuce.version>
         <vertx.version>4.4.4</vertx.version>
         <vertx-scram.version>2.1</vertx-scram.version>
         <mongodb.version>4.10.1</mongodb.version>
@@ -118,20 +117,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>io.lettuce</groupId>
-            <artifactId>lettuce-core</artifactId>
-            <version>${lettuce.version}</version>
-            <exclusions>   
-                <exclusion>
-                    <groupId>io.netty</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-            <optional>true</optional>
-            <scope>provided</scope>
-        </dependency>
-        
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-redis-client</artifactId>
