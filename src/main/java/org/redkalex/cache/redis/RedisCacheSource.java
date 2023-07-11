@@ -81,72 +81,28 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     private void initClient(AnyValue conf) {
-        String password = null;
-        int urlmaxconns = Utility.cpus();
-        int urlpipelines = org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES;
-        for (AnyValue node : getNodes(conf)) {
-            String urluser = "";
-            String urlpwd = "";
-            String urldb = "";
-            String addrstr = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
-            if (addrstr.startsWith("redis://")) { //兼容 redis://:1234@127.0.0.1:6379?db=2
-                URI uri = URI.create(addrstr);
-                address = new InetSocketAddress(uri.getHost(), uri.getPort() > 0 ? uri.getPort() : 6379);
-                String userInfo = uri.getUserInfo();
-                if (isEmpty(userInfo)) {
-                    String authority = uri.getAuthority();
-                    if (authority != null && authority.indexOf('@') > 0) {
-                        userInfo = authority.substring(0, authority.indexOf('@'));
-                    }
-                }
-                if (isNotEmpty(userInfo)) {
-                    urlpwd = userInfo;
-                    if (urlpwd.startsWith(":")) {
-                        urlpwd = urlpwd.substring(1);
-                    } else {
-                        int index = urlpwd.indexOf(':');
-                        if (index > 0) {
-                            urluser = urlpwd.substring(0, index);
-                            urlpwd = urlpwd.substring(index + 1);
-                        }
-                    }
-                }
-                if (isNotEmpty(uri.getQuery())) {
-                    String[] qrys = uri.getQuery().split("&|=");
-                    for (int i = 0; i < qrys.length; i += 2) {
-                        if (CACHE_SOURCE_USER.equals(qrys[i])) {
-                            urluser = i == qrys.length - 1 ? "" : qrys[i + 1];
-                        } else if (CACHE_SOURCE_PASSWORD.equals(qrys[i])) {
-                            urlpwd = i == qrys.length - 1 ? "" : qrys[i + 1];
-                        } else if (CACHE_SOURCE_DB.equals(qrys[i])) {
-                            urldb = i == qrys.length - 1 ? "" : qrys[i + 1];
-                        } else if (CACHE_SOURCE_MAXCONNS.equals(qrys[i])) {
-                            urlmaxconns = i == qrys.length - 1 ? Utility.cpus() : Integer.parseInt(qrys[i + 1]);
-                        } else if (CACHE_SOURCE_PIPELINES.equals(qrys[i])) {
-                            urlpipelines = i == qrys.length - 1 ? org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES : Integer.parseInt(qrys[i + 1]);
-                        }
-                    }
-                }
-            } else { //兼容addr和port分开
-                address = new InetSocketAddress(addrstr, node.getIntValue("port"));
-            }
-            password = node.getValue(CACHE_SOURCE_PASSWORD, urlpwd).trim();
-            String db0 = node.getValue(CACHE_SOURCE_DB, urldb).trim();
-            if (!db0.isEmpty()) {
-                db = Integer.valueOf(db0);
-            }
-            break;
+        RedisConfig config = RedisConfig.create(conf);
+        if (config.getAddresses().size() != 1) {
+            throw new RedkaleException("Only one address supported for " + getClass().getSimpleName());
+        }
+        String oneAddr = config.getAddresses().get(0);
+        if (oneAddr.contains("://")) {
+            URI uri = URI.create(oneAddr);
+            address = new InetSocketAddress(uri.getHost(), uri.getPort() > 0 ? uri.getPort() : 6379);
+        } else {
+            int pos = oneAddr.indexOf(':');
+            address = new InetSocketAddress(pos < 0 ? oneAddr : oneAddr.substring(0, pos), pos < 0 ? 6379 : Integer.parseInt(oneAddr.substring(pos + 1)));
         }
         AsyncGroup ioGroup = clientAsyncGroup;
         if (clientAsyncGroup == null) {
             String f = "Redkalex-Redis-IOThread-" + resourceName() + "-%s";
             ioGroup = AsyncGroup.create(f, workExecutor, 16 * 1024, Utility.cpus() * 4).start();
         }
-        int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
-        int pipelines = conf.getIntValue(CACHE_SOURCE_PIPELINES, urlpipelines);
         RedisCacheClient old = this.client;
-        this.client = new RedisCacheClient(appName, resourceName(), ioGroup, resourceName() + "." + db, new ClientAddress(address),
-            maxconns, pipelines, isEmpty(password) ? null : new RedisCacheReqAuth(password), db > 0 ? new RedisCacheReqDB(db) : null);
+        this.client = new RedisCacheClient(appName, resourceName(), ioGroup, resourceName() + "." + config.getDb(),
+            new ClientAddress(address), config.getMaxconns(), config.getPipelines(),
+            isEmpty(config.getPassword()) ? null : new RedisCacheReqAuth(config.getPassword()),
+            config.getDb() < 1 ? null : new RedisCacheReqDB(config.getDb()));
         if (old != null) {
             old.close();
         }
@@ -163,44 +119,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
         for (ResourceEvent event : events) {
             sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
-        initClient(this.config);
+        initClient(this.conf);
         if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
-    }
-
-    public boolean acceptsConf(AnyValue config) {
-        if (config == null) {
-            return false;
-        }
-        AnyValue[] nodes = getNodes(config);
-        if (nodes == null || nodes.length == 0) {
-            return false;
-        }
-        for (AnyValue node : nodes) {
-            String val = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
-            if (val != null && val.startsWith("redis://")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    protected AnyValue[] getNodes(AnyValue config) {
-        AnyValue[] nodes = config.getAnyValues(CACHE_SOURCE_NODE);
-        if (nodes == null || nodes.length == 0) {
-            AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
-            if (one == null) {
-                String val = config.getValue(CACHE_SOURCE_URL);
-                if (val == null) {
-                    return nodes;
-                }
-                nodes = new AnyValue[]{config};
-            } else {
-                nodes = new AnyValue[]{one};
-            }
-        }
-        return nodes;
     }
 
     @Override
@@ -752,9 +674,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
     //--------------------- send ------------------------------  
     @Local
     public CompletableFuture<RedisCacheResult> sendAsync(final RedisCommand command, final String key, final byte[]... args) {
-        return client.connect()
-            .thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currentWorkThread()).prepare(command, key, args)))
-            .orTimeout(6, TimeUnit.SECONDS);
+        WorkThread workThread = WorkThread.currentWorkThread();
+        return Utility.orTimeout(client.connect()
+            .thenCompose(conn -> conn.writeRequest(conn.pollRequest(workThread).prepare(command, key, args))),
+            6, TimeUnit.SECONDS);
     }
 
     @Local
@@ -763,9 +686,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
         for (RedisCacheRequest request : requests) {
             request.workThread(workThread);
         }
-        return client.connect()
-            .thenCompose(conn -> conn.writeRequest(requests))
-            .orTimeout(6, TimeUnit.SECONDS);
+        return Utility.orTimeout(client.connect()
+            .thenCompose(conn -> conn.writeRequest(requests)),
+            6, TimeUnit.SECONDS);
     }
 
     private byte[][] keyArgs(String key) {

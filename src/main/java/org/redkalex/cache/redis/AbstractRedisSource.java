@@ -42,11 +42,11 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
 
     protected RedisCryptor cryptor;
 
-    protected AnyValue config;
+    protected AnyValue conf;
 
     @Override
     public void init(AnyValue conf) {
-        this.config = conf;
+        this.conf = conf;
         super.init(conf);
         this.name = conf.getValue("name", "");
         if (this.convert == null) {
@@ -78,6 +78,20 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
         if (cryptor != null) {
             cryptor.destroy(conf);
         }
+    }
+
+    public boolean acceptsConf(AnyValue config) {
+        if (config == null) {
+            return false;
+        }
+        return "redis".equalsIgnoreCase(config.getValue(CACHE_SOURCE_TYPE))
+            || getClass().getName().equalsIgnoreCase(config.getValue(CACHE_SOURCE_TYPE))
+            || config.getValue(CACHE_SOURCE_NODES, config.getValue("url", "")).startsWith("redis://")
+            || config.getValue(CACHE_SOURCE_NODES, config.getValue("url", "")).startsWith("rediss://");
+    }
+
+    protected String getNodes(AnyValue config) {
+        return config.getValue(CACHE_SOURCE_NODES, config.getValue("url", ""));
     }
 
     @Override

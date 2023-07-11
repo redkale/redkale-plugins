@@ -17,7 +17,6 @@ import io.lettuce.core.codec.*;
 import io.lettuce.core.support.*;
 import java.io.Serializable;
 import java.lang.reflect.Type;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
@@ -79,53 +78,20 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         this.stringByteArrayCodec = (RedisCodec) RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE);
         this.stringStringCodec = StringCodec.UTF8;
 
-        final List<String> addresses = new ArrayList<>();
-        AnyValue[] nodes = getNodes(conf);
-        List<RedisURI> uris = new ArrayList(nodes.length);
-        int urlmaxconns = Utility.cpus();
-        String gdb = conf.getValue(CACHE_SOURCE_DB, "").trim();
-        String gusername = conf.getValue(CACHE_SOURCE_USER, "").trim();
-        String gpassword = conf.getValue(CACHE_SOURCE_PASSWORD, "").trim();
-        for (AnyValue node : nodes) {
-            String addr = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
-            addresses.add(addr);
-            String dbstr = node.getValue(CACHE_SOURCE_DB, "").trim();
-            String username = node.getValue(CACHE_SOURCE_USER, "").trim();
-            String password = node.getValue(CACHE_SOURCE_PASSWORD, "").trim();
-            URI uri = URI.create(addr);
-            if (isNotEmpty(uri.getQuery())) {
-                String[] qrys = uri.getQuery().split("&|=");
-                for (int i = 0; i < qrys.length; i += 2) {
-                    if (CACHE_SOURCE_MAXCONNS.equals(qrys[i])) {
-                        urlmaxconns = i == qrys.length - 1 ? Utility.cpus() : Integer.parseInt(qrys[i + 1]);
-                    }
-                }
-            }
+        final RedisConfig config = RedisConfig.create(conf);
+        List<RedisURI> uris = new ArrayList();
+        for (String addr : config.getAddresses()) {
             RedisURI ruri = RedisURI.create(addr);
-            if (!dbstr.isEmpty()) {
-                db = Integer.parseInt(dbstr);
-                ruri.setDatabase(db);
-            } else if (!gdb.isEmpty()) {
-                ruri.setDatabase(Integer.parseInt(gdb));
-            }
-//            if (!username.isEmpty()) {
-//                ruri.setUsername(username);
-//            } else if (!gusername.isEmpty()) {
-//                ruri.setUsername(gusername);
-//            }
-//            if (!password.isEmpty()) {
-//                ruri.setPassword(password.toCharArray());
-//            } else if (!gpassword.isEmpty()) {
-//                ruri.setPassword(gpassword.toCharArray());
-//            }
-            if (!username.isEmpty() || !gusername.isEmpty()) {
-                RedisCredentials authCredentials = RedisCredentials.just(!username.isEmpty() ? username : gusername, !password.isEmpty() ? password : (!gpassword.isEmpty() ? gpassword : ""));
+            ruri.setDatabase(config.getDb());
+            if (config.getUsername() != null || config.getPassword() != null) {
+                RedisCredentials authCredentials = RedisCredentials.just(
+                    config.getUsername() != null ? config.getUsername() : "",
+                    config.getPassword() != null ? config.getPassword() : "");
                 ruri.setCredentialsProvider(RedisCredentialsProvider.from(() -> authCredentials));
             }
 
             uris.add(ruri);
         }
-        final int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
         final RedisURI singleRedisURI = uris.get(0);
         io.lettuce.core.AbstractRedisClient old = this.client;
 
@@ -138,8 +104,8 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
             clusterClient = RedisClusterClient.create(uris);
             this.client = clusterClient;
         }
-        this.nodeAddrs = addresses;
-        BoundedPoolConfig bpc = BoundedPoolConfig.builder().maxTotal(-1).maxIdle(maxconns).minIdle(0).build();
+        this.nodeAddrs = config.getAddresses();
+        BoundedPoolConfig bpc = BoundedPoolConfig.builder().maxTotal(-1).maxIdle(config.getMaxconns()).minIdle(0).build();
         if (clusterClient == null) {
             RedisClient sClient = singleClient;
             this.singleBytesConnPool = AsyncConnectionPoolSupport.createBoundedObjectPool(() -> sClient.connectAsync(stringByteArrayCodec, singleRedisURI), bpc);
@@ -165,53 +131,10 @@ public class RedisLettuceCacheSource extends AbstractRedisSource {
         for (ResourceEvent event : events) {
             sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
-        initClient(this.config);
+        initClient(this.conf);
         if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
-    }
-
-    public boolean acceptsConf(AnyValue config) {
-        if (config == null) {
-            return false;
-        }
-        AnyValue[] nodes = getNodes(config);
-        if (nodes == null || nodes.length == 0) {
-            return false;
-        }
-        for (AnyValue node : nodes) {
-            String val = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
-            if (val != null && val.startsWith("redis://")) {
-                return true;
-            }
-            if (val != null && val.startsWith("rediss://")) {
-                return true;
-            }
-            if (val != null && val.startsWith("redis-socket://")) {
-                return true;
-            }
-            if (val != null && val.startsWith("redis-sentinel://")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    protected AnyValue[] getNodes(AnyValue config) {
-        AnyValue[] nodes = config.getAnyValues(CACHE_SOURCE_NODE);
-        if (nodes == null || nodes.length == 0) {
-            AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
-            if (one == null) {
-                String val = config.getValue(CACHE_SOURCE_URL);
-                if (val == null) {
-                    return nodes;
-                }
-                nodes = new AnyValue[]{config};
-            } else {
-                nodes = new AnyValue[]{one};
-            }
-        }
-        return nodes;
     }
 
     @Override

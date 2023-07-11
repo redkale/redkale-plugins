@@ -15,8 +15,7 @@ import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.json.*;
 import org.redkale.net.AsyncIOGroup;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODE;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_URL;
+import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODES;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
@@ -664,8 +663,9 @@ public abstract class RedisAbstractTest {
     }
 
     public static void main(String[] args) throws Exception {
-        AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_MAXCONNS, "1");
-        conf.addValue(CACHE_SOURCE_NODE, new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_URL, "redis://127.0.0.1:6363"));
+        AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue()
+            .addValue(CACHE_SOURCE_MAXCONNS, "1")
+            .addValue(CACHE_SOURCE_NODES, "redis://127.0.0.1:6363");
         final ResourceFactory factory = ResourceFactory.create();
         {
             final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);

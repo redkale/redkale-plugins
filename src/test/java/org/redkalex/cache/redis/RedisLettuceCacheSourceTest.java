@@ -16,8 +16,9 @@ import org.redkale.util.AnyValue;
 public class RedisLettuceCacheSourceTest extends RedisAbstractTest {
 
     public static void main(String[] args) throws Exception {
-        AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_MAXCONNS, "1");
-        conf.addValue(CACHE_SOURCE_NODE, new AnyValue.DefaultAnyValue().addValue(CACHE_SOURCE_URL, "redis://127.0.0.1:6363"));
+        AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue()
+            .addValue(CACHE_SOURCE_MAXCONNS, "1")
+            .addValue(CACHE_SOURCE_NODES, "redis://127.0.0.1:6363");
 
         RedisLettuceCacheSource source = new RedisLettuceCacheSource();
         source.defaultConvert = JsonFactory.root().getConvert();

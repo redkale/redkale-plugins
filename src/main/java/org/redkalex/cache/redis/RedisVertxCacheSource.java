@@ -8,7 +8,6 @@ import io.vertx.redis.client.*;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -21,7 +20,6 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.convert.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
@@ -55,43 +53,17 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     private void initClient(AnyValue conf) {
-        String password = null;
-        int urlmaxconns = Utility.cpus();
-        List<String> addrs = new ArrayList<>();
-        for (AnyValue node : getNodes(conf)) {
-            String addrstr = node.getValue(CACHE_SOURCE_URL);
-            addrs.add(addrstr);
-            password = node.getValue(CACHE_SOURCE_PASSWORD, null);
-            if (db < 0) {
-                String db0 = node.getValue(CACHE_SOURCE_DB, "").trim();
-                if (!db0.isEmpty()) {
-                    db = Integer.valueOf(db0);
-                }
-            }
-            URI uri = URI.create(addrstr);
-            if (isNotEmpty(uri.getQuery())) {
-                String[] qrys = uri.getQuery().split("&|=");
-                for (int i = 0; i < qrys.length; i += 2) {
-                    if (CACHE_SOURCE_MAXCONNS.equals(qrys[i])) {
-                        urlmaxconns = i == qrys.length - 1 ? Utility.cpus() : Integer.parseInt(qrys[i + 1]);
-                    }
-                }
-            }
-        }
-        int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, urlmaxconns);
+        RedisConfig config = RedisConfig.create(conf);
         //Redis链接
         RedisOptions redisConfig = new RedisOptions();
-        if (maxconns > 0) {
-            redisConfig.setMaxPoolSize(maxconns);
-        }
-        if (password != null) {
-            redisConfig.setPassword(password.trim());
-        }
         redisConfig.setMaxPoolWaiting(-1);
-//        if (maxconns > 0) {
-//            redisConfig.setMaxPoolWaiting(maxconns != Utility.cpus() ? maxconns : maxconns * 10);
-//        }
-        redisConfig.setEndpoints(addrs);
+        if (config.getMaxconns() > 0) {
+            redisConfig.setMaxPoolSize(config.getMaxconns());
+        }
+        if (config.getPassword() != null) {
+            redisConfig.setPassword(config.getPassword().trim());
+        }
+        redisConfig.setEndpoints(config.getAddresses());
         if (this.vertx == null) {
             this.vertx = Vertx.vertx(new VertxOptions().setEventLoopPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         }
@@ -112,47 +84,10 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         for (ResourceEvent event : events) {
             sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
-        initClient(this.config);
+        initClient(this.conf);
         if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
-    }
-
-    public boolean acceptsConf(AnyValue config) {
-        if (config == null) {
-            return false;
-        }
-        AnyValue[] nodes = getNodes(config);
-        if (nodes == null || nodes.length == 0) {
-            return false;
-        }
-        for (AnyValue node : nodes) {
-            String val = node.getValue(CACHE_SOURCE_URL);
-            if (val != null && val.startsWith("redis://")) {
-                return true;
-            }
-            if (val != null && val.startsWith("rediss://")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    protected AnyValue[] getNodes(AnyValue config) {
-        AnyValue[] nodes = config.getAnyValues(CACHE_SOURCE_NODE);
-        if (nodes == null || nodes.length == 0) {
-            AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
-            if (one == null) {
-                String val = config.getValue(CACHE_SOURCE_URL);
-                if (val == null) {
-                    return nodes;
-                }
-                nodes = new AnyValue[]{config};
-            } else {
-                nodes = new AnyValue[]{one};
-            }
-        }
-        return nodes;
     }
 
     @Override

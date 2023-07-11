@@ -7,7 +7,6 @@ package org.redkalex.cache.redis;
 
 import java.io.Serializable;
 import java.lang.reflect.Type;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
@@ -26,9 +25,6 @@ import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
 import org.redkale.service.Local;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODE;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_URL;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
@@ -96,50 +92,21 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     private void initClient(AnyValue conf) {
-        final List<String> addresses = new ArrayList<>();
+        RedisConfig config = RedisConfig.create(conf);
         Config redisConfig = new Config();
-        AnyValue[] nodes = getNodes(conf);
         String cluster = conf.getOrDefault("cluster", "");
-        int maxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, Utility.cpus());
         BaseConfig baseConfig = null;
         SingleServerConfig singleConfig = null;
         MasterSlaveServersConfig masterConfig = null;
         ClusterServersConfig clusterConfig = null;
         ReplicatedServersConfig replicateConfig = null;
         SentinelServersConfig sentinelConfig = null;
-        for (AnyValue node : nodes) {
-            String addr = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
-            String db0 = node.getValue(CACHE_SOURCE_DB, "").trim();
-            if (!db0.isEmpty()) {
-                this.db = Integer.valueOf(db0);
-            }
-            String username = node.getValue(CACHE_SOURCE_USER, "").trim();
-            String password = node.getValue(CACHE_SOURCE_PASSWORD, "").trim();
-            if (addr.startsWith("redis")) {
-                URI uri = URI.create(addr);
-                if (isNotEmpty(uri.getQuery())) {
-                    String[] qrys = uri.getQuery().split("&|=");
-                    for (int i = 0; i < qrys.length; i += 2) {
-                        if (CACHE_SOURCE_USER.equals(qrys[i])) {
-                            username = i == qrys.length - 1 ? "" : qrys[i + 1];
-                        } else if (CACHE_SOURCE_PASSWORD.equals(qrys[i])) {
-                            password = i == qrys.length - 1 ? "" : qrys[i + 1];
-                        } else if (CACHE_SOURCE_DB.equals(qrys[i])) {
-                            String urldb = i == qrys.length - 1 ? "-1" : qrys[i + 1];
-                            this.db = Integer.valueOf(urldb);
-                        }
-                        if (CACHE_SOURCE_MAXCONNS.equals(qrys[i])) {
-                            maxconns = i == qrys.length - 1 ? Utility.cpus() : Integer.parseInt(qrys[i + 1]);
-                        }
-                    }
-                }
-            }
-            addresses.add(addr);
-            if (nodes.length == 1) {
+        for (String addr : config.getAddresses()) {
+            if (config.getAddresses().size() == 1) {
                 if (singleConfig == null) {
                     singleConfig = redisConfig.useSingleServer();
-                    singleConfig.setConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    singleConfig.setConnectionPoolSize(maxconns);
+                    singleConfig.setConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
+                    singleConfig.setConnectionPoolSize(config.getMaxconns());
                     baseConfig = singleConfig;
                 }
                 singleConfig.setAddress(addr);
@@ -147,13 +114,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
             } else if ("masterslave".equalsIgnoreCase(cluster)) { //主从
                 if (masterConfig == null) {
                     masterConfig = redisConfig.useMasterSlaveServers();
-                    masterConfig.setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    masterConfig.setMasterConnectionPoolSize(maxconns);
-                    masterConfig.setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    masterConfig.setSlaveConnectionPoolSize(maxconns);
+                    masterConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
+                    masterConfig.setMasterConnectionPoolSize(config.getMaxconns());
+                    masterConfig.setSlaveConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
+                    masterConfig.setSlaveConnectionPoolSize(config.getMaxconns());
                     baseConfig = masterConfig;
                 }
-                if (node.get("master") != null) {
+                if (masterConfig.getMasterAddress() == null) {
                     masterConfig.setMasterAddress(addr);
                 } else {
                     masterConfig.addSlaveAddress(addr);
@@ -162,20 +129,20 @@ public class RedissionCacheSource extends AbstractRedisSource {
             } else if ("cluster".equalsIgnoreCase(cluster)) { //集群
                 if (clusterConfig == null) {
                     clusterConfig = redisConfig.useClusterServers();
-                    clusterConfig.setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    clusterConfig.setMasterConnectionPoolSize(maxconns);
-                    clusterConfig.setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    clusterConfig.setSlaveConnectionPoolSize(maxconns);
+                    clusterConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
+                    clusterConfig.setMasterConnectionPoolSize(config.getMaxconns());
+                    clusterConfig.setSlaveConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
+                    clusterConfig.setSlaveConnectionPoolSize(config.getMaxconns());
                     baseConfig = clusterConfig;
                 }
                 clusterConfig.addNodeAddress(addr);
             } else if ("replicated".equalsIgnoreCase(cluster)) { //                
                 if (replicateConfig == null) {
                     replicateConfig = redisConfig.useReplicatedServers();
-                    replicateConfig.setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    replicateConfig.setMasterConnectionPoolSize(maxconns);
-                    replicateConfig.setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    replicateConfig.setSlaveConnectionPoolSize(maxconns);
+                    replicateConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
+                    replicateConfig.setMasterConnectionPoolSize(config.getMaxconns());
+                    replicateConfig.setSlaveConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
+                    replicateConfig.setSlaveConnectionPoolSize(config.getMaxconns());
                     baseConfig = replicateConfig;
                 }
                 replicateConfig.addNodeAddress(addr);
@@ -183,21 +150,21 @@ public class RedissionCacheSource extends AbstractRedisSource {
             } else if ("sentinel".equalsIgnoreCase(cluster)) { //
                 if (sentinelConfig == null) {
                     sentinelConfig = redisConfig.useSentinelServers();
-                    sentinelConfig.setMasterConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    sentinelConfig.setMasterConnectionPoolSize(maxconns);
-                    sentinelConfig.setSlaveConnectionMinimumIdleSize(maxconns / 2 + 1);
-                    sentinelConfig.setSlaveConnectionPoolSize(maxconns);
+                    sentinelConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
+                    sentinelConfig.setMasterConnectionPoolSize(config.getMaxconns());
+                    sentinelConfig.setSlaveConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
+                    sentinelConfig.setSlaveConnectionPoolSize(config.getMaxconns());
                     baseConfig = sentinelConfig;
                 }
                 sentinelConfig.addSentinelAddress(addr);
                 sentinelConfig.setDatabase(this.db);
             }
             if (baseConfig != null) {  //单个进程的不同自定义密码
-                if (!username.isEmpty()) {
-                    baseConfig.setUsername(username);
+                if (config.getUsername() != null) {
+                    baseConfig.setUsername(config.getUsername());
                 }
-                if (!password.isEmpty()) {
-                    baseConfig.setPassword(password);
+                if (config.getPassword() != null) {
+                    baseConfig.setPassword(config.getPassword());
                 }
             }
         }
@@ -221,7 +188,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         }
         RedissonClient old = this.client;
         this.client = Redisson.create(redisConfig);
-        this.nodeAddrs = addresses;
+        this.nodeAddrs = config.getAddresses();
         if (old != null) {
             old.shutdown();
         }
@@ -243,47 +210,10 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (ResourceEvent event : events) {
             sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
-        initClient(this.config);
+        initClient(this.conf);
         if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
         }
-    }
-
-    public boolean acceptsConf(AnyValue config) {
-        if (config == null) {
-            return false;
-        }
-        AnyValue[] nodes = getNodes(config);
-        if (nodes == null || nodes.length == 0) {
-            return false;
-        }
-        for (AnyValue node : nodes) {
-            String val = node.getValue(CACHE_SOURCE_URL, node.getValue("addr"));  //兼容addr
-            if (val != null && val.startsWith("redis://")) {
-                return true;
-            }
-            if (val != null && val.startsWith("rediss://")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    protected AnyValue[] getNodes(AnyValue config) {
-        AnyValue[] nodes = config.getAnyValues(CACHE_SOURCE_NODE);
-        if (nodes == null || nodes.length == 0) {
-            AnyValue one = config.getAnyValue(CACHE_SOURCE_NODE);
-            if (one == null) {
-                String val = config.getValue(CACHE_SOURCE_URL);
-                if (val == null) {
-                    return nodes;
-                }
-                nodes = new AnyValue[]{config};
-            } else {
-                nodes = new AnyValue[]{one};
-            }
-        }
-        return nodes;
     }
 
     @Override
@@ -823,7 +753,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final RBatch batch = client.createBatch();
         for (String key : keys) {
             batch.getList(key, ByteArrayCodec.INSTANCE).readAllAsync();
-        }        
+        }
         return completableFuture(batch.executeAsync().thenApply(resps -> {
             final Map<String, List<T>> map = new LinkedHashMap<>();
             List<Collection> list = (List) resps.getResponses();
@@ -841,7 +771,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
                 map.put(key, rs);
             }
             return map;
-        }));        
+        }));
     }
 
     @Override
