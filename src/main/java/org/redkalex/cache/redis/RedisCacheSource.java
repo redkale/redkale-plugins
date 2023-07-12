@@ -675,16 +675,18 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Local
     public CompletableFuture<RedisCacheResult> sendAsync(final RedisCommand command, final String key, final byte[]... args) {
         WorkThread workThread = WorkThread.currentWorkThread();
+        String traceid = Traces.currentTraceid();
         return Utility.orTimeout(client.connect()
-            .thenCompose(conn -> conn.writeRequest(conn.pollRequest(workThread).prepare(command, key, args))),
+            .thenCompose(conn -> conn.writeRequest(conn.pollRequest(workThread, traceid).prepare(command, key, args))),
             6, TimeUnit.SECONDS);
     }
 
     @Local
     public CompletableFuture<List<RedisCacheResult>> sendAsync(final RedisCacheRequest... requests) {
         WorkThread workThread = WorkThread.currentWorkThread();
+        String traceid = Traces.currentTraceid();
         for (RedisCacheRequest request : requests) {
-            request.workThread(workThread);
+            request.workThread(workThread).traceid(traceid);
         }
         return Utility.orTimeout(client.connect()
             .thenCompose(conn -> conn.writeRequest(requests)),
@@ -864,13 +866,21 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return bss;
     }
 
-    private byte[][] keysArgs(String key, String... keys) {
-        byte[][] bss = new byte[keys.length + 1][];
-        bss[0] = key.getBytes(StandardCharsets.UTF_8);
-        for (int i = 0; i < keys.length; i++) {
-            bss[i + 1] = keys[i].getBytes(StandardCharsets.UTF_8);
+    static byte[][] keysArgs(String key, String... keys) {
+        if (key == null) {
+            byte[][] bss = new byte[keys.length][];
+            for (int i = 0; i < keys.length; i++) {
+                bss[i] = keys[i].getBytes(StandardCharsets.UTF_8);
+            }
+            return bss;
+        } else {
+            byte[][] bss = new byte[keys.length + 1][];
+            bss[0] = key.getBytes(StandardCharsets.UTF_8);
+            for (int i = 0; i < keys.length; i++) {
+                bss[i + 1] = keys[i].getBytes(StandardCharsets.UTF_8);
+            }
+            return bss;
         }
-        return bss;
     }
 
     private byte[] encodeValue(String key, RedisCryptor cryptor, String value) {
@@ -931,13 +941,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     //-------------------------- 过期方法 ----------------------------------
-    @Deprecated(since = "2.8.0")
-    private CompletableFuture<RedisCacheResult> sendAsync(final String command, final String key, final byte[]... args) {
-        return client.connect()
-            .thenCompose(conn -> conn.writeRequest(conn.pollRequest(WorkThread.currentWorkThread()).prepare(RedisCommand.valueOf(command), key, args)))
-            .orTimeout(6, TimeUnit.SECONDS);
-    }
-
     @Override
     @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
@@ -947,7 +950,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenAccept(v -> {
+            futures[i] = sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenAccept(v -> {
                 Collection c = set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType);
                 if (c != null) {
                     mapLock.lock();
@@ -972,25 +975,25 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     @Deprecated(since = "2.8.0")
     public CompletableFuture<Integer> getCollectionSizeAsync(String key) {
-        return sendAsync("TYPE", key, keyArgs(key)).thenCompose(t -> {
+        return sendAsync(RedisCommand.TYPE, key, keyArgs(key)).thenCompose(t -> {
             String type = t.getObjectValue(key, cryptor, String.class);
             if (type == null) {
                 return CompletableFuture.completedFuture(0);
             }
-            return sendAsync(type.contains("list") ? "LLEN" : "SCARD", key, keyArgs(key)).thenApply(v -> v.getIntValue(0));
+            return sendAsync(type.contains("list") ? RedisCommand.LLEN : RedisCommand.SCARD, key, keyArgs(key)).thenApply(v -> v.getIntValue(0));
         });
     }
 
     @Override
     @Deprecated(since = "2.8.0")
     public <T> CompletableFuture<Collection<T>> getCollectionAsync(String key, final Type componentType) {
-        return sendAsync("TYPE", key, keyArgs(key)).thenCompose(t -> {
+        return sendAsync(RedisCommand.TYPE, key, keyArgs(key)).thenCompose(t -> {
             String type = t.getObjectValue(key, cryptor, String.class);
             if (type == null) {
                 return CompletableFuture.completedFuture(null);
             }
             boolean set = !type.contains("list");
-            return sendAsync(set ? "SMEMBERS" : "LRANGE", key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenApply(v -> set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType));
+            return sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenApply(v -> set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType));
         });
     }
 
@@ -1001,7 +1004,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         for (int i = 0; i < bs.length; i++) {
             bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
         }
-        return sendAsync("MGET", keys[0], bs).thenApply(v -> {
+        return sendAsync(RedisCommand.MGET, keys[0], bs).thenApply(v -> {
             List list = (List) v.getListValue(keys[0], cryptor, long.class);
             Long[] rs = new Long[keys.length];
             for (int i = 0; i < keys.length; i++) {
@@ -1019,7 +1022,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         for (int i = 0; i < bs.length; i++) {
             bs[i] = keys[i].getBytes(StandardCharsets.UTF_8);
         }
-        return sendAsync("MGET", keys[0], bs).thenApply(v -> {
+        return sendAsync(RedisCommand.MGET, keys[0], bs).thenApply(v -> {
             List list = (List) v.getListValue(keys[0], cryptor, String.class);
             String[] rs = new String[keys.length];
             for (int i = 0; i < keys.length; i++) {
@@ -1045,13 +1048,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<String>> getStringCollectionAsync(String key) {
-        return sendAsync("TYPE", key, keyArgs(key)).thenCompose(t -> {
+        return sendAsync(RedisCommand.TYPE, key, keyArgs(key)).thenCompose(t -> {
             String type = t.getObjectValue(key, cryptor, String.class);
             if (type == null) {
                 return CompletableFuture.completedFuture(null);
             }
             boolean set = !type.contains("list");
-            return sendAsync(set ? "SMEMBERS" : "LRANGE", key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenApply(v -> set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class));
+            return sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenApply(v -> set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class));
         });
     }
 
@@ -1064,7 +1067,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenAccept(v -> {
+            futures[i] = sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenAccept(v -> {
                 Collection<String> c = set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class);
                 if (c != null) {
                     mapLock.lock();
@@ -1089,13 +1092,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     @Deprecated(since = "2.8.0")
     public CompletableFuture<Collection<Long>> getLongCollectionAsync(String key) {
-        return sendAsync("TYPE", key, keyArgs(key)).thenCompose(t -> {
+        return sendAsync(RedisCommand.TYPE, key, keyArgs(key)).thenCompose(t -> {
             String type = t.getObjectValue(key, cryptor, String.class);
             if (type == null) {
                 return CompletableFuture.completedFuture(null);
             }
             boolean set = !type.contains("list");
-            return sendAsync(set ? "SMEMBERS" : "LRANGE", key, set ? keyArgs(key) : keyArgs(key, 0, -1))
+            return sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1))
                 .thenApply(v -> set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class));
         });
     }
@@ -1109,7 +1112,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(set ? "SMEMBERS" : "LRANGE", key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenAccept(v -> {
+            futures[i] = sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenAccept(v -> {
                 Collection<Long> c = set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class);
                 if (c != null) {
                     mapLock.lock();

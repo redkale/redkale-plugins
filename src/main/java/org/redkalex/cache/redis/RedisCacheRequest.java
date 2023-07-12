@@ -44,6 +44,10 @@ public class RedisCacheRequest extends ClientRequest {
 
     protected byte[][] args;
 
+    public static RedisCacheRequest create(RedisCommand command, String key, String... args) {
+        return new RedisCacheRequest().prepare(command, key, RedisCacheSource.keysArgs(key, args));
+    }
+
     public static RedisCacheRequest create(RedisCommand command, String key, byte[]... args) {
         return new RedisCacheRequest().prepare(command, key, args);
     }
