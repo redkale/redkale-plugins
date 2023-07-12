@@ -1,4 +1,3 @@
-org.redkalex.cache.redis.RedisLettuceCacheSourceProvider
 org.redkalex.cache.redis.RedisVertxCacheSourceProvider
 org.redkalex.cache.redis.RedissionCacheSourceProvider
 org.redkalex.cache.redis.RedisCacheSourceProvider
