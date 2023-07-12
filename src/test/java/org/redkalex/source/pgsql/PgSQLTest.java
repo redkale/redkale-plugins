@@ -60,23 +60,23 @@ public class PgSQLTest {
 
         Properties prop = new Properties();
         if (rwSeparate) { //读写分离
-            prop.setProperty("redkale.datasource[].read.url", url);
-            prop.setProperty("redkale.datasource[].read.table-autoddl", "true");
-            prop.setProperty("redkale.datasource[].read.user", user);
-            prop.setProperty("redkale.datasource[].read.password", password);
+            prop.setProperty("redkale.datasource.default.read.url", url);
+            prop.setProperty("redkale.datasource.default.read.table-autoddl", "true");
+            prop.setProperty("redkale.datasource.default.read.user", user);
+            prop.setProperty("redkale.datasource.default.read.password", password);
 
-            prop.setProperty("redkale.datasource[].write.url", url);
-            prop.setProperty("redkale.datasource[].write.table-autoddl", "true");
-            prop.setProperty("redkale.datasource[].write.user", user);
-            prop.setProperty("redkale.datasource[].write.password", password);
+            prop.setProperty("redkale.datasource.default.write.url", url);
+            prop.setProperty("redkale.datasource.default.write.table-autoddl", "true");
+            prop.setProperty("redkale.datasource.default.write.user", user);
+            prop.setProperty("redkale.datasource.default.write.password", password);
         } else {
-            prop.setProperty("redkale.datasource[].url", url);
-            prop.setProperty("redkale.datasource[].table-autoddl", "true");
-            prop.setProperty("redkale.datasource[].user", user);
-            prop.setProperty("redkale.datasource[].password", password);
+            prop.setProperty("redkale.datasource.default.url", url);
+            prop.setProperty("redkale.datasource.default.table-autoddl", "true");
+            prop.setProperty("redkale.datasource.default.user", user);
+            prop.setProperty("redkale.datasource.default.password", password);
         }
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
+        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
         System.out.println("-------------------- " + (forFortune ? "Fortune" : "World") + " " + (rwSeparate ? "读写分离" : "读写合并") + " --------------------");
         System.out.println("-------------------- " + "当前内核数: " + Utility.cpus() + " --------------------");
         if (true) {

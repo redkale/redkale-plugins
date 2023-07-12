@@ -7,13 +7,13 @@ package org.redkalex.cache.redis;
 
 import org.redkale.annotation.Priority;
 import org.redkale.source.*;
-import org.redkale.util.*;
+import org.redkale.util.AnyValue;
 
 /**
  *
  * @author zhangjx
  */
-@Priority(-300)
+@Priority(-500)
 public class RedissionCacheSourceProvider implements CacheSourceProvider {
 
     @Override

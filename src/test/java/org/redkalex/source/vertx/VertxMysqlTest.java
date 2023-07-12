@@ -6,7 +6,7 @@
 package org.redkalex.source.vertx;
 
 import java.util.Properties;
-import org.redkale.source.*;
+import org.redkale.source.FilterNode;
 import org.redkale.util.AnyValue;
 
 /**
@@ -17,14 +17,14 @@ public class VertxMysqlTest {
 
     public static void main(String[] args) throws Throwable {
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/redsns_platf?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.setProperty("redkale.datasource[].maxconns", "2");
-        prop.setProperty("redkale.datasource[].table-autoddl", "true");
-        prop.setProperty("redkale.datasource[].user", "root");
-        prop.setProperty("redkale.datasource[].password", "");
+        prop.setProperty("redkale.datasource.default.url", "jdbc:mysql://127.0.0.1:3389/redsns_platf?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty("redkale.datasource.default.maxconns", "2");
+        prop.setProperty("redkale.datasource.default.table-autoddl", "true");
+        prop.setProperty("redkale.datasource.default.user", "root");
+        prop.setProperty("redkale.datasource.default.password", "");
 
         final VertxSqlDataSource source = new VertxSqlDataSource();
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
+        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
 
         TestRecord entity = new TestRecord();
         entity.setRecordid("r223");

@@ -29,15 +29,15 @@ public class MySQLJdbcTest {
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.setProperty("redkale.datasource[].maxconns", "10");
-        prop.setProperty("redkale.datasource[].table-autoddl", "true");
-        prop.setProperty("redkale.datasource[].user", "root");
-        prop.setProperty("redkale.datasource[].password", "");
+        prop.setProperty("redkale.datasource.default.url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty("redkale.datasource.default.maxconns", "10");
+        prop.setProperty("redkale.datasource.default.table-autoddl", "true");
+        prop.setProperty("redkale.datasource.default.user", "root");
+        prop.setProperty("redkale.datasource.default.password", "");
 
         DataJdbcSource source = new DataJdbcSource();
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
+        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
         System.out.println("---------");
 
         System.out.println("当前机器CPU核数: " + Utility.cpus());

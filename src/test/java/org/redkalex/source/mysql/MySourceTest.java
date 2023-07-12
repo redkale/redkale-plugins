@@ -23,14 +23,14 @@ public class MySourceTest {
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource[].url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8");
-        prop.setProperty("redkale.datasource[].table-autoddl", "true");
-        prop.setProperty("redkale.datasource[].user", "root");
-        prop.setProperty("redkale.datasource[].password", "");
+        prop.setProperty("redkale.datasource.default.url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8");
+        prop.setProperty("redkale.datasource.default.table-autoddl", "true");
+        prop.setProperty("redkale.datasource.default.user", "root");
+        prop.setProperty("redkale.datasource.default.password", "");
 
         MysqlDataSource source = new MysqlDataSource();
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
+        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
         System.out.println("---------");
         source.clearTable(World.class);
         World[] words = new World[10000];

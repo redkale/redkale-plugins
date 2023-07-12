@@ -24,14 +24,14 @@ public class PgSourceTest {
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource[].url", "jdbc:postgresql://127.0.0.1:5432/hello_world");
-        prop.setProperty("redkale.datasource[].table-autoddl", "true");
-        prop.setProperty("redkale.datasource[].user", "postgres");
-        prop.setProperty("redkale.datasource[].password", "1234");
+        prop.setProperty("redkale.datasource.default.url", "jdbc:postgresql://127.0.0.1:5432/hello_world");
+        prop.setProperty("redkale.datasource.default.table-autoddl", "true");
+        prop.setProperty("redkale.datasource.default.user", "postgres");
+        prop.setProperty("redkale.datasource.default.password", "1234");
 
         PgsqlDataSource source = new PgsqlDataSource();
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
+        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
         System.out.println("---------");
         SourceTest.run(source);
         source.close();

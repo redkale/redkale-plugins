@@ -30,14 +30,14 @@ public class VertxSqlDataSourceTest {
     public static void main(String[] args) throws Throwable {
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource[].url", "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.setProperty("redkale.datasource[].preparecache", "true");
-        prop.setProperty("redkale.datasource[].table-autoddl", "true");
-        prop.setProperty("redkale.datasource[].user", "postgres");
-        prop.setProperty("redkale.datasource[].password", "1234");
+        prop.setProperty("redkale.datasource.default.url", "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty("redkale.datasource.default.preparecache", "true");
+        prop.setProperty("redkale.datasource.default.table-autoddl", "true");
+        prop.setProperty("redkale.datasource.default.user", "postgres");
+        prop.setProperty("redkale.datasource.default.password", "1234");
 
         final VertxSqlDataSource source = new VertxSqlDataSource();
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue(""));
+        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
         System.out.println(source.find(Fortune.class, 5));
         System.out.println(source.queryList(Fortune.class));
         System.out.println("findsList: " + source.findsList(Fortune.class, List.of(2, 3, 1, 0, 30).stream()));
