@@ -30,6 +30,9 @@ public abstract class RedisAbstractTest {
         source.del("stritem1", "stritem2", "stritem1x");
         source.setString("stritem1", "value1");
         source.setString("stritem2", "value2");
+        Assertions.assertEquals("value2", source.getDelString("stritem2"));
+        Assertions.assertTrue(source.getDelString("stritem2") == null);
+        source.setString("stritem2", "value2");
 
         List<String> list = source.keysStartsWith("stritem");
         System.out.println("stritem开头的key有两个: " + list);

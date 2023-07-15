@@ -567,6 +567,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.GETSET, key, formatValue(key, cryptor, convert, type, value)).thenApply(v -> getObjectValue(key, cryptor, v, type));
     }
 
+    @Override
+    public <T> CompletableFuture<T> getDelAsync(String key, final Type type) {
+        return sendAsync(Command.GETDEL, key).thenApply(v -> getObjectValue(key, cryptor, v, type));
+    }
+
     //--------------------- setex ------------------------------    
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {

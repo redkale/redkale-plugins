@@ -311,6 +311,12 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<T> getDelAsync(String key, final Type type) {
+        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
+        return completableFuture(key, cryptor, type, bucket.getAndDeleteAsync());
+    }
+
+    @Override
     public CompletableFuture<Void> msetAsync(Serializable... keyVals) {
         Map<String, byte[]> map = new LinkedHashMap<>();
         for (int i = 0; i < keyVals.length; i += 2) {

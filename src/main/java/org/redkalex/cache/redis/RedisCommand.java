@@ -18,6 +18,7 @@ public enum RedisCommand {
     SET("SET", false),
     SETNX("SETNX", false),
     GETSET("GETSET", false),
+    GETDEL("GETDEL", false),
     SETEX("SETEX", false),
     EXPIRE("EXPIRE", false),
     PERSIST("PERSIST", false),
