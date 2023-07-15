@@ -97,7 +97,6 @@ public class RedissionCacheSource extends AbstractRedisSource {
         String cluster = conf.getOrDefault("cluster", "");
         BaseConfig baseConfig = null;
         SingleServerConfig singleConfig = null;
-        MasterSlaveServersConfig masterConfig = null;
         ClusterServersConfig clusterConfig = null;
         ReplicatedServersConfig replicateConfig = null;
         SentinelServersConfig sentinelConfig = null;

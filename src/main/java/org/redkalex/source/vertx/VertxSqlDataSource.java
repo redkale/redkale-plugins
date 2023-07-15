@@ -54,7 +54,6 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     public void init(AnyValue conf) {
         super.init(conf);
-        System.out.println("==========dbtype=" + dbtype());
         this.dollar = "postgresql".equalsIgnoreCase(dbtype);
         this.vertx = Vertx.vertx(new VertxOptions().setEventLoopPoolSize(Utility.cpus()).setPreferNativeTransport(true));
         {
