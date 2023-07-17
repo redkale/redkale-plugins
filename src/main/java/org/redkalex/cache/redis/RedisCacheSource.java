@@ -44,16 +44,6 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     static final boolean debug = false; //System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
 
-    protected static final byte FRAME_TYPE_BULK = '$';  //块字符串
-
-    protected static final byte FRAME_TYPE_ARRAY = '*'; //数组
-
-    protected static final byte FRAME_TYPE_STRING = '+';  //简单字符串(不包含CRLF)类型
-
-    protected static final byte FRAME_TYPE_ERROR = '-'; //错误(不包含CRLF)类型
-
-    protected static final byte FRAME_TYPE_NUMBER = ':'; //整型
-
     protected static final byte[] NX = "NX".getBytes();
 
     protected static final byte[] EX = "EX".getBytes();

@@ -18,18 +18,18 @@ import org.redkale.source.CacheScoredValue;
  */
 public class RedisCacheResult {
 
-    //+   简单字符串类型 (不包含CRLF)
-    //-   错误类型 (不包含CRLF)
-    //':  整型
-    //$   块字符串 
+    //$   块字符串类型
     //*   数组
+    //+   简单字符串类型
+    //-   错误类型
+    //:   整型
     protected byte frameType;
 
     protected byte[] frameCursor;
 
-    protected byte[] frameValue;  //(不包含CRLF)
+    protected byte[] frameValue;
 
-    protected List<byte[]> frameList;  //(不包含CRLF)
+    protected List<byte[]> frameList;
 
     public RedisCacheResult prepare(byte byteType, byte[] frameCursor, byte[] frameValue, List<byte[]> frameList) {
         this.frameType = byteType;
@@ -75,15 +75,57 @@ public class RedisCacheResult {
     }
 
     public Double getDoubleValue(Double defValue) {
-        return frameValue == null ? defValue : Double.parseDouble(new String(frameValue, StandardCharsets.UTF_8));
+        if (frameValue == null) {
+            return defValue;
+        }
+        String val = new String(frameValue, StandardCharsets.UTF_8);
+        if ("nan".equalsIgnoreCase(val) || "-nan".equalsIgnoreCase(val)) {
+            return Double.NaN;
+        } else if ("inf".equalsIgnoreCase(val)) {
+            return Double.POSITIVE_INFINITY;
+        } else if ("-inf".equalsIgnoreCase(val)) {
+            return Double.NEGATIVE_INFINITY;
+        } else if ("-1".equalsIgnoreCase(val)) {
+            return -1.0;
+        } else if ("0".equalsIgnoreCase(val)) {
+            return 0.0;
+        } else if ("1".equalsIgnoreCase(val)) {
+            return 1.0;
+        } else {
+            return Double.parseDouble(val);
+        }
     }
 
     public Long getLongValue(Long defValue) {
-        return frameValue == null ? defValue : Long.parseLong(new String(frameValue, StandardCharsets.UTF_8));
+        if (frameValue == null) {
+            return defValue;
+        }
+        String val = new String(frameValue, StandardCharsets.UTF_8);
+        if ("-1".equalsIgnoreCase(val)) {
+            return -1L;
+        } else if ("0".equalsIgnoreCase(val)) {
+            return 0L;
+        } else if ("1".equalsIgnoreCase(val)) {
+            return 1L;
+        } else {
+            return Long.parseLong(val);
+        }
     }
 
     public Integer getIntValue(Integer defValue) {
-        return frameValue == null ? defValue : Integer.parseInt(new String(frameValue, StandardCharsets.UTF_8));
+        if (frameValue == null) {
+            return defValue;
+        }
+        String val = new String(frameValue, StandardCharsets.UTF_8);
+        if ("-1".equalsIgnoreCase(val)) {
+            return -1;
+        } else if ("0".equalsIgnoreCase(val)) {
+            return 0;
+        } else if ("1".equalsIgnoreCase(val)) {
+            return 1;
+        } else {
+            return Integer.parseInt(val);
+        }
     }
 
     public <T> T getObjectValue(String key, RedisCryptor cryptor, Type type) {

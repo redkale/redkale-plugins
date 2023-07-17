@@ -23,7 +23,7 @@ public class RedisCacheRequest extends ClientRequest {
 
     static final byte[] BYTES_COUNT = "COUNT".getBytes(StandardCharsets.UTF_8);
 
-    private static final byte[] RL = new byte[]{'\r', '\n'};
+    private static final byte[] CRLF = new byte[]{'\r', '\n'};
 
     private static final byte[][] starLengthBytes;
 
@@ -73,7 +73,7 @@ public class RedisCacheRequest extends ClientRequest {
     protected void putArgBytes(ByteArray writer, byte[] arg) {
         writer.put(dollarLengthBytes(arg.length));
         writer.put(arg);
-        writer.put(RL);
+        writer.put(CRLF);
     }
 
     protected static byte[] starLengthBytes(int length) {
