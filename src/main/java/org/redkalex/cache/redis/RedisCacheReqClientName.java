@@ -22,27 +22,17 @@ public class RedisCacheReqClientName extends RedisCacheRequest {
 
     @Override
     public void writeTo(ClientConnection conn, ByteArray writer) {
-        writer.put((byte) '*');
-        writer.put((byte) '3');
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(mutliLengthBytes(3));
 
-        writer.put((byte) '$');
-        writer.put((byte) '6');
-        writer.put((byte) '\r', (byte) '\n');
-        writer.put("CLIENT".getBytes(StandardCharsets.UTF_8));
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(bulkLengthBytes(6));
+        writer.put("CLIENT\r\n".getBytes(StandardCharsets.UTF_8));
 
-        writer.put((byte) '$');
-        writer.put((byte) '7');
-        writer.put((byte) '\r', (byte) '\n');
-        writer.put("SETNAME".getBytes(StandardCharsets.UTF_8));
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(bulkLengthBytes(7));
+        writer.put("SETNAME\r\n".getBytes(StandardCharsets.UTF_8));
 
         byte[] ns = clientName.getBytes(StandardCharsets.UTF_8);
-        writer.put((byte) '$');
-        writer.put(String.valueOf(ns.length).getBytes(StandardCharsets.UTF_8));
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(bulkLengthBytes(ns.length));
         writer.put(ns);
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(CRLF);
     }
 }

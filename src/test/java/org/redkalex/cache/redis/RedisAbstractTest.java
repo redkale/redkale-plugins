@@ -512,21 +512,35 @@ public abstract class RedisAbstractTest {
         }
 
         obj = source.spopString("popset");
-        System.out.println("SPOP一个元素：" + obj);
+        Assertions.assertTrue(obj != null);
+        System.out.println("SPOP一个String元素：" + obj);
         Assertions.assertTrue(List.of("111", "222", "333", "444", "555").contains(obj));
+        size = source.scard("popset");
+        System.out.println("popset元素个数：" + size);
+        Assertions.assertEquals(4, size);
 
         col = source.spopString("popset", 2);
-        System.out.println("SPOP两个元素：" + col);
-        System.out.println("SPOP五个元素：" + source.spopString("popset", 5));
+        Assertions.assertEquals(2, col.size());
+        System.out.println("SPOP两个String元素：" + col);
+        col = source.spopString("popset", 5);
+        Assertions.assertEquals(2, col.size());
+        System.out.println("SPOP五个String元素(值两个)：" + col);
 
+        source.del("popset");
         source.saddLong("popset", 111L);
         source.saddLong("popset", 222L);
         source.saddLong("popset", 333L);
         source.saddLong("popset", 444L, 555L);
-        System.out.println("SPOP一个元素：" + source.spopLong("popset"));
-        System.out.println("SPOP两个元素：" + source.spopLong("popset", 2));
-        System.out.println("SPOP五个元素：" + source.spopLong("popset", 5));
-        System.out.println("SPOP一个元素：" + source.spopLong("popset"));
+        System.out.println("SPOP一个Long元素：" + source.spopLong("popset"));
+        col = source.spopLong("popset", 2);
+        Assertions.assertEquals(2, col.size());
+        System.out.println("SPOP两个Long元素：" + col);
+        col = source.spopLong("popset", 5);
+        Assertions.assertEquals(2, col.size());
+        System.out.println("SPOP五个Long元素(值两个)：" + col);
+        obj = source.spopLong("popset");
+        Assertions.assertTrue(obj == null);
+        System.out.println("SPOP一个Long元素：" + obj);
 
         cursor = new AtomicLong();
         List<String> keys = source.scan(cursor, 5);

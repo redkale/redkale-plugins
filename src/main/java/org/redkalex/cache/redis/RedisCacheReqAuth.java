@@ -15,8 +15,8 @@ import org.redkale.util.ByteArray;
  */
 public class RedisCacheReqAuth extends RedisCacheRequest {
 
-    private static final byte[] PS = "AUTH".getBytes(StandardCharsets.UTF_8);
-    
+    private static final byte[] PS = "AUTH\r\n".getBytes(StandardCharsets.UTF_8);
+
     protected String password;
 
     public RedisCacheReqAuth(String password) {
@@ -26,20 +26,13 @@ public class RedisCacheReqAuth extends RedisCacheRequest {
     @Override
     public void writeTo(ClientConnection conn, ByteArray writer) {
         byte[] pwd = password.getBytes();
-        writer.put((byte) '*');
-        writer.put((byte) '2');
-        writer.put((byte) '\r', (byte) '\n');
-        writer.put((byte) '$');
-        writer.put((byte) '4');
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(mutliLengthBytes(2));
+        writer.put(bulkLengthBytes(4));
         writer.put(PS);
-        writer.put((byte) '\r', (byte) '\n');
 
-        writer.put((byte) '$');
-        writer.put(String.valueOf(pwd.length).getBytes(StandardCharsets.UTF_8));
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(bulkLengthBytes(pwd.length));
         writer.put(pwd);
-        writer.put((byte) '\r', (byte) '\n');
+        writer.put(CRLF);
 
     }
 }

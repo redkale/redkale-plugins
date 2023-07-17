@@ -62,7 +62,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         redisConfig.setMaxPoolWaiting(-1);
         if (config.getMaxconns() > 0) {
             redisConfig.setMaxPoolSize(Math.max(config.getAddresses().size(), config.getMaxconns()));
-            redisConfig.setMaxPoolWaiting(redisConfig.getMaxPoolSize() * 100);
+            redisConfig.setMaxPoolWaiting(Math.max(8, redisConfig.getMaxPoolSize()) * 100);
         }
         if (config.getPassword() != null) {
             redisConfig.setPassword(config.getPassword().trim());

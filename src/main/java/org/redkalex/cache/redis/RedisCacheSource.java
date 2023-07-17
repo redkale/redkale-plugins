@@ -562,7 +562,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Set<T>> spopAsync(String key, int count, Type componentType) {
-        return sendAsync(RedisCommand.SPOP, key, keyArgs(key, count)).thenApply(v -> v.getObjectValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.SPOP, key, keyArgs(key, count)).thenApply(v -> v.getSetValue(key, cryptor, componentType));
     }
 
     @Override

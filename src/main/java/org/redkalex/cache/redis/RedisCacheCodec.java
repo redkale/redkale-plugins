@@ -30,8 +30,6 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
 
     protected static final Logger logger = Logger.getLogger(RedisCacheCodec.class.getSimpleName());
 
-    private RedisCacheRequest request = null;
-
     private ByteArray halfFrameBytes;
 
     private int halfFrameBulkLength = Integer.MIN_VALUE;
@@ -74,7 +72,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
 //        for (int i = 0; i < dbs.length; i++) {
 //            dbs[i] = buffer.get(buffer.position() + i);
 //        }
-//        (System .out).println("[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 原始数据: " + new String(dbs).replace("\r\n", "  "));
+//        (System. out).println("[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 原始数据: " + new String(dbs).replace("\r\n", "  "));
 
         array.clear();
         if (this.frameType == 0) {
@@ -208,9 +206,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
             if (!readFrames(conn, buffer, array)) {
                 break;
             }
-            if (request == null) {
-                request = nextRequest();
-            }
+            RedisCacheRequest request = nextRequest();
             if (frameType == TYPE_ERROR) {
                 addMessage(request, new RedkaleException(new String(frameValue, StandardCharsets.UTF_8)));
             } else {
@@ -220,7 +216,6 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
             frameCursor = null;
             frameValue = null;
             frameList = null;
-            request = null;
             clearHalfFrame();
             buffer = realbuf;
         }

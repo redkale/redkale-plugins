@@ -23,7 +23,7 @@ public class RedisCacheRequest extends ClientRequest {
 
     static final byte[] BYTES_COUNT = "COUNT".getBytes(StandardCharsets.UTF_8);
 
-    private static final byte[] CRLF = new byte[]{'\r', '\n'};
+    protected static final byte[] CRLF = new byte[]{'\r', '\n'};
 
     private static final byte[][] starLengthBytes;
 
@@ -62,7 +62,7 @@ public class RedisCacheRequest extends ClientRequest {
 
     @Override
     public void writeTo(ClientConnection conn, ByteArray writer) {
-        writer.put(starLengthBytes(args.length + 1));
+        writer.put(mutliLengthBytes(args.length + 1));
         writer.put(command.getBytes());
 
         for (final byte[] arg : args) {
@@ -71,12 +71,12 @@ public class RedisCacheRequest extends ClientRequest {
     }
 
     protected void putArgBytes(ByteArray writer, byte[] arg) {
-        writer.put(dollarLengthBytes(arg.length));
+        writer.put(bulkLengthBytes(arg.length));
         writer.put(arg);
         writer.put(CRLF);
     }
 
-    protected static byte[] starLengthBytes(int length) {
+    protected static byte[] mutliLengthBytes(int length) {
         if (length >= 0 && length < starLengthBytes.length) {
             return starLengthBytes[length];
         } else {
@@ -84,7 +84,7 @@ public class RedisCacheRequest extends ClientRequest {
         }
     }
 
-    protected static byte[] dollarLengthBytes(int length) {
+    protected static byte[] bulkLengthBytes(int length) {
         if (length >= 0 && length < dollarLengthBytes.length) {
             return dollarLengthBytes[length];
         } else {
@@ -94,6 +94,15 @@ public class RedisCacheRequest extends ClientRequest {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{command=" + command + ", key=" + key + "}";
+        if (args == null || args.length == 0) {
+            return getClass().getSimpleName() + "{" + command + " " + key + "}";
+        } else {
+            StringBuilder sb = new StringBuilder();
+            sb.append(command);
+            for (final byte[] arg : args) {
+                sb.append(" ").append(new String(arg, StandardCharsets.UTF_8));
+            }
+            return sb.toString();
+        }
     }
 }
