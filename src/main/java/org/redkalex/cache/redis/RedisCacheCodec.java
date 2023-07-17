@@ -101,13 +101,13 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
             if (halfFrameBulkLength == -1) {
                 frameValue = null;
             } else {
-                int need = halfFrameBulkLength + 2 - array.length();
-                if (buffer.remaining() < need) {
+                int expect = halfFrameBulkLength + 2 - array.length();
+                if (buffer.remaining() < expect) {
                     array.put(buffer);
                     halfFrameBytes = pollArray(array);
                     return false;
                 }
-                array.put(buffer, need);
+                array.put(buffer, expect);
                 array.removeLastByte(); //移除\n
                 array.removeLastByte(); //移除\r
                 frameValue = array.getBytes();
@@ -156,13 +156,13 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                         if (halfFrameMultiItemLength == -1) {
                             frameList.add(null);
                         } else {
-                            int need = halfFrameMultiItemLength + 2 - array.length();
-                            if (buffer.remaining() < need) {
+                            int expect = halfFrameMultiItemLength + 2 - array.length();
+                            if (buffer.remaining() < expect) {
                                 array.put(buffer);
                                 halfFrameBytes = pollArray(array);
                                 return false;
                             }
-                            array.put(buffer, need);
+                            array.put(buffer, expect);
                             array.removeLastByte(); //移除\n
                             array.removeLastByte(); //移除\r
                             frameList.add(array.getBytes());
