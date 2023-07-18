@@ -645,6 +645,8 @@ public abstract class RedisAbstractTest {
             CountDownLatch start = new CountDownLatch(count * 3);
             CountDownLatch over = new CountDownLatch(count * 3);
             long s = System.currentTimeMillis();
+            AtomicLong cc1 = new AtomicLong();
+            AtomicLong cc2 = new AtomicLong();
             for (int i = 0; i < count; i++) {
                 new Thread() {
                     public void run() {
@@ -652,14 +654,22 @@ public abstract class RedisAbstractTest {
                         if (ai.decrementAndGet() == 0) {
                             System.out.println("开始了 ");
                         }
-                        source.incr("testnumber");
+                        long c = cc1.incrementAndGet();
+                        long c2 = source.incr("testnumber");
+                        if (c < c2) {
+                            System.err.println("错误数据: " + c + ", " + c2);
+                        }
                         over.countDown();
                     }
                 }.start();
                 new Thread() {
                     public void run() {
                         start.countDown();
-                        source.hincr("hmap", "key1");
+                        long c = cc2.incrementAndGet();
+                        long c2 = source.hincr("hmap", "key1");
+                        if (c < c2) {
+                            System.err.println("错误数据2: " + c + ", " + c2);
+                        }
                         over.countDown();
                     }
                 }.start();

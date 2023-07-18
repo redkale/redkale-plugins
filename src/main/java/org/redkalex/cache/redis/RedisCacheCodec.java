@@ -28,7 +28,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
 
     protected static final byte TYPE_NUMBER = ':'; //整型， 例如：:2\r\n
 
-    protected static final Logger logger = Logger.getLogger(RedisCacheCodec.class.getSimpleName());
+    private static final Logger logger = Logger.getLogger(RedisCacheCodec.class.getSimpleName());
 
     private ByteArray halfFrameBytes;
 
@@ -189,9 +189,9 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         halfFrameBytes = null;
         halfFrameBulkLength = Integer.MIN_VALUE;
         halfFrameMultiSize = Integer.MIN_VALUE;
+        halfFrameMultiItemLength = Integer.MIN_VALUE;
         halfFrameMultiItemIndex = 0; //从0开始
         halfFrameMultiItemType = 0;
-        halfFrameMultiItemLength = Integer.MIN_VALUE;
     }
 
     @Override
@@ -235,6 +235,9 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
 
     private int readInt(ByteArray array) {
         String val = array.toString(StandardCharsets.ISO_8859_1);
+        if (val.length() == 1 && val.charAt(0) == '0') {
+            return 0;
+        }
         if (val.length() == 2 && val.charAt(0) == '-' && val.charAt(1) == '1') {
             return -1;
         }
