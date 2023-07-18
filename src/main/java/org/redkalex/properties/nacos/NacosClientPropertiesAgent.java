@@ -94,10 +94,10 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
 
                     @Override
                     public void receiveConfigInfo(String configInfo) {
-                        updateConent(application, info, configInfo, null);
+                        updateContent(application, info, configInfo, null);
                     }
                 });
-                updateConent(application, info, content, new Properties());
+                updateContent(application, info, content, new Properties());
                 result.put(info.dataId, info.properties);
             }
             return result;
@@ -120,7 +120,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
         }
     }
 
-    private void updateConent(final Application application, NacosInfo info, String content, Properties result) {
+    private void updateContent(final Application application, NacosInfo info, String content, Properties result) {
         Properties props = new Properties();
         try {
             info.content = content;
