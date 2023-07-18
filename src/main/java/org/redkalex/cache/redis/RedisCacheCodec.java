@@ -166,7 +166,7 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
                             frameList.add(array.getBytes());
                         }
                     } else if (itemType == TYPE_MULTI) { //数组中嵌套数组，例如: SCAN、HSCAN   
-                        if (frameList != null && frameList.size() == 1) {
+                        if (size == 2 && frameList != null && frameList.size() == 1) {
                             //读游标 数据例如: *2  $1  0  *4  $4  key1  $2  10  $4  key2  $2  30 
                             frameCursor = frameList.get(0);
                             frameList.clear();
