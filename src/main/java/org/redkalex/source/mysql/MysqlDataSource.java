@@ -822,7 +822,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int nativeExecute(String sql) {
+    public int executeUpdate(String sql) {
         final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
         WorkThread workThread = WorkThread.currentWorkThread();
@@ -838,9 +838,9 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int[] nativeExecute(String... sqls) {
+    public int[] executeUpdate(String... sqls) {
         if (sqls.length == 1) {
-            return new int[]{nativeExecute(sqls[0])};
+            return new int[]{executeUpdate(sqls[0])};
         }
         final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
@@ -856,7 +856,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public <V> V nativeQuery(String sql, Function<DataResultSet, V> handler) {
+    public <V> V executeQuery(String sql, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
         return executeQuery(null, sql).thenApply((DataResultSet dataset) -> {
             V rs = handler.apply(dataset);

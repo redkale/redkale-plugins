@@ -3,7 +3,10 @@
  */
 package org.redkalex.source.mysql;
 
+import java.sql.*;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
@@ -30,10 +33,15 @@ public class MySQLJdbcTest {
 
         Properties prop = new Properties();
         prop.setProperty("redkale.datasource.default.url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
-        prop.setProperty("redkale.datasource.default.maxconns", "10");
+        prop.setProperty("redkale.datasource.default.maxconns", "1");
         prop.setProperty("redkale.datasource.default.table-autoddl", "true");
         prop.setProperty("redkale.datasource.default.user", "root");
         prop.setProperty("redkale.datasource.default.password", "");
+
+        Connection conn = DriverManager.getConnection(prop.getProperty("redkale.datasource.default.url"),
+            prop.getProperty("redkale.datasource.default.user"), prop.getProperty("redkale.datasource.default.password"));
+        System.out.println(conn);
+        conn.close();
 
         DataJdbcSource source = new DataJdbcSource();
         factory.inject(source);
@@ -109,6 +117,30 @@ public class MySQLJdbcTest {
         t2.setRandomNumber(22);
         t3.setRandomNumber(33);
         source.update(t1, t2, t3);
+
+        if (true) { //压测
+            int count = 500;
+            CountDownLatch sr = new CountDownLatch(count);
+            CountDownLatch cdl = new CountDownLatch(count);
+            long s = System.currentTimeMillis();
+            AtomicInteger rand = new AtomicInteger();
+            for (int i = 0; i < count; i++) {
+                new Thread(() -> {
+                    sr.countDown();
+                    try {
+                        sr.await();
+                        source.find(OneRecord.class, record2.getRecordid() + rand.incrementAndGet());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        cdl.countDown();
+                    }
+                }).start();
+            }
+            cdl.await();
+            long e = System.currentTimeMillis() - s;
+            System.out.println("并发 " + count + ", 参考值：0.330秒，耗时: " + e / 1000.0);
+        }
 
         System.out.println("---------------- 准备关闭DataSource ----------------");
         source.close();

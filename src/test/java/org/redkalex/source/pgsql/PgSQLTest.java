@@ -104,11 +104,11 @@ public class PgSQLTest {
 
             System.out.println("查询模板数据: " + source.queryList(Fortune.class));
 
-            source.nativeQuery("SELECT COUNT(*) FROM World", rs -> {
+            source.executeQuery("SELECT COUNT(*) FROM World", rs -> {
                 System.out.println("获得World总数: " + (rs.next() ? rs.getObject(1) : null));
                 return null;
             });
-            System.out.println("执行结果应该是(3): " + source.nativeExecute("UPDATE World SET randomNumber = id WHERE id < 3"));
+            System.out.println("执行结果应该是(3): " + source.executeUpdate("UPDATE World SET randomNumber = id WHERE id < 3"));
             
             final CompletableFuture[] futures = new CompletableFuture[Utility.cpus()];
             for (int i = 0; i < futures.length; i++) {
