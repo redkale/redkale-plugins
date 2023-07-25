@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.Function;
+import java.util.function.*;
 import java.util.logging.Level;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
@@ -856,7 +856,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public <V> V executeQuery(String sql, Function<DataResultSet, V> handler) {
+    public <V> V executeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
         return executeQuery(null, sql).thenApply((DataResultSet dataset) -> {
             V rs = handler.apply(dataset);

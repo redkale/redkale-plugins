@@ -14,7 +14,7 @@ import java.net.URI;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
+import java.util.function.*;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import org.redkale.annotation.AutoLoad;
@@ -798,7 +798,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public <V> V executeQuery(String sql, Function<DataResultSet, V> handler) {
+    public <V> V executeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
         return queryResultSet(null, sql).thenApply((VertxResultSet set) -> {
             slowLog(s, sql);
