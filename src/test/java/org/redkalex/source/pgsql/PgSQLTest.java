@@ -24,6 +24,7 @@ import org.redkale.persistence.*;
 import static org.redkale.source.AbstractDataSource.DATA_SOURCE_MAXCONNS;
 import org.redkale.source.*;
 import org.redkale.util.*;
+import org.redkalex.source.base.IncreWorld;
 
 /**
  *
@@ -109,7 +110,7 @@ public class PgSQLTest {
                 return null;
             });
             System.out.println("执行结果应该是(3): " + source.executeUpdate("UPDATE World SET randomNumber = id WHERE id < 3"));
-            
+
             final CompletableFuture[] futures = new CompletableFuture[Utility.cpus()];
             for (int i = 0; i < futures.length; i++) {
                 futures[i] = source.findAsync(World.class, randomId()).thenCompose(v -> source.updateAsync(v));
@@ -126,6 +127,19 @@ public class PgSQLTest {
                 System.out.println("可写池resp等待数: " + getRespWaitingCount(source.writePool()));
             }
         }
+        try {
+            source.dropTable(IncreWorld.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        IncreWorld in1 = new IncreWorld();
+        in1.setRandomNumber(11);
+        IncreWorld in2 = new IncreWorld();
+        in2.setRandomNumber(22);
+        source.insert(in1, in2);
+        System.out.println("IncreWorld记录: " + in1);
+        System.out.println("IncreWorld记录: " + in2);
+
         //System.out.println(source.findsList(Fortune.class, List.of(1, 222, 2, 3).stream()));
         source.queryList(Fortune.class);
         final int fortuneSize = source.queryList(Fortune.class).size();

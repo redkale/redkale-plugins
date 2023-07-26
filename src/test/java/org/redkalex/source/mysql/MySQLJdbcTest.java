@@ -16,6 +16,7 @@ import org.redkale.net.AsyncIOGroup;
 import org.redkale.persistence.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
+import org.redkalex.source.base.IncreWorld;
 
 /**
  *
@@ -119,6 +120,15 @@ public class MySQLJdbcTest {
         t2.setRandomNumber(22);
         t3.setRandomNumber(33);
         source.update(t1, t2, t3);
+
+        source.dropTable(IncreWorld.class);
+        IncreWorld in1 = new IncreWorld();
+        in1.setRandomNumber(11);
+        IncreWorld in2 = new IncreWorld();
+        in2.setRandomNumber(22);
+        source.insert(in1, in2);
+        System.out.println("IncreWorld记录: " + in1);
+        System.out.println("IncreWorld记录: " + in2);
 
         if (true) { //压测
             int count = 500;
