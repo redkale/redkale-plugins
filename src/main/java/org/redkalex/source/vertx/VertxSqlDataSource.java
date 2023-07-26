@@ -35,6 +35,8 @@ import org.redkale.util.*;
 @ResourceType(DataSource.class)
 public class VertxSqlDataSource extends AbstractDataSqlSource {
 
+    protected static final PropertyKind<Long> MYSQL_LAST_INSERTED_ID = PropertyKind.create("last-inserted-id", Long.class);
+
     protected Vertx vertx;
 
     protected boolean dollar;
@@ -340,8 +342,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         }
                     }
                 } else {
-                    i = 0;
-                    long firstId = res.property(io.vertx.mysqlclient.MySQLClient.LAST_INSERTED_ID);
+                    long firstId = res.property(MYSQL_LAST_INSERTED_ID);
                     for (T entity : values) {
                         long id = firstId + (++i);
                         if (primaryType == int.class || primaryType == Integer.class) {
