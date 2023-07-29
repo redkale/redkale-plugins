@@ -101,8 +101,8 @@ public class MySQLJdbcTest {
         System.out.println(source.queryList(OneRecord.class));
         System.out.println(source.findsListAsync(OneRecord.class, Stream.of("11", record2.getRecordid())).join());
         System.out.println(source.findsList(OneRecord.class, Stream.of("11", record2.getRecordid())));
-        System.out.println(source.executeQueryOne(OneRecord.class, "select * from onerecord where recordid = 'rid-1' "));
-        System.out.println(source.executeQueryList(OneRecord.class, "select * from onerecord where recordid = 'rid-1' "));
+        System.out.println(source.nativeQueryOne(OneRecord.class, "select * from onerecord where recordid = 'rid-1' "));
+        System.out.println(source.nativeQueryList(OneRecord.class, "select * from onerecord where recordid = 'rid-1' "));
 
         TwoIntRecord t1 = new TwoIntRecord();
         t1.setId(1);

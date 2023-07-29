@@ -56,7 +56,7 @@ public class MySQLTest {
         //System.out.println("执行结果: " + source.nativeExecute("SET NAMES UTF8MB4"));
         if (false) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
-            System.out.println("执行结果: " + source.executeUpdate("UPDATE World set id =0 where id =0"));
+            System.out.println("执行结果: " + source.nativeUpdate("UPDATE World set id =0 where id =0"));
             System.out.println("随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
             System.out.println("随机获取World记录2: " + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId())).join());
             System.out.println("随机获取World记录3: " + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId()).join()));
@@ -186,7 +186,7 @@ public class MySQLTest {
         List<Integer> list2 = List.of(3);
         System.out.println(Arrays.toString(source.finds(World.class, list2.stream())));
 
-        int[] cs = source.executeUpdate("update world set randomNumber =11 where id =2", "update world set randomNumber =11 where id =-1");
+        int[] cs = source.nativeUpdate("update world set randomNumber =11 where id =2", "update world set randomNumber =11 where id =-1");
         System.out.println("批量处理结果: " + Arrays.toString(cs));
 
         //if (true) return;

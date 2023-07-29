@@ -824,7 +824,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int executeUpdate(String sql) {
+    public int nativeUpdate(String sql) {
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currentWorkThread();
@@ -840,9 +840,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int[] executeUpdate(String... sqls) {
+    public int[] nativeUpdate(String... sqls) {
         if (sqls.length == 1) {
-            return new int[]{executeUpdate(sqls[0])};
+            return new int[]{nativeUpdate(sqls[0])};
         }
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
@@ -858,7 +858,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public <V> V executeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
+    public <V> V nativeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
         return executeQuery(null, sql).thenApply((DataResultSet dataset) -> {
             V rs = handler.apply(dataset);

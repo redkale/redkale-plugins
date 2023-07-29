@@ -57,7 +57,7 @@ public class PgSQLTest {
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         final PgsqlDataSource source = new PgsqlDataSource();
-        PgsqlDataSource.debug = true;
+        PgsqlDataSource.debug = false;
 
         Properties prop = new Properties();
         if (rwSeparate) { //读写分离
@@ -105,11 +105,11 @@ public class PgSQLTest {
 
             System.out.println("查询模板数据: " + source.queryList(Fortune.class));
 
-            source.executeQuery("SELECT COUNT(*) FROM World", rs -> {
+            source.nativeQuery("SELECT COUNT(*) FROM World", rs -> {
                 System.out.println("获得World总数: " + (rs.next() ? rs.getObject(1) : null));
                 return null;
             });
-            System.out.println("执行结果应该是(3): " + source.executeUpdate("UPDATE World SET randomNumber = id WHERE id < 3"));
+            System.out.println("执行结果应该是(3): " + source.nativeUpdate("UPDATE World SET randomNumber = id WHERE id < 3"));
 
             final CompletableFuture[] futures = new CompletableFuture[Utility.cpus()];
             for (int i = 0; i < futures.length; i++) {
@@ -127,15 +127,12 @@ public class PgSQLTest {
                 System.out.println("可写池resp等待数: " + getRespWaitingCount(source.writePool()));
             }
         }
-        try {
-            source.dropTable(IncreWorld.class);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        source.dropTable(IncreWorld.class);
         IncreWorld in1 = new IncreWorld();
         in1.setRandomNumber(11);
         IncreWorld in2 = new IncreWorld();
         in2.setRandomNumber(22);
+        System.out.println("准备新增");
         source.insert(in1, in2);
         System.out.println("IncreWorld记录: " + in1);
         System.out.println("IncreWorld记录: " + in2);
