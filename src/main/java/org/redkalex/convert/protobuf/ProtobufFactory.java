@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.Stream;
 import org.redkale.convert.*;
-import org.redkale.util.*;
+import org.redkale.util.AnyValue;
 
 /**
  *
@@ -19,7 +19,10 @@ import org.redkale.util.*;
  */
 public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWriter> {
 
-    private static final ProtobufFactory instance = new ProtobufFactory(null, getSystemPropertyBoolean("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true), Boolean.parseBoolean(System.getProperty("redkale.convert.protobuf.enumtostring", "true")));
+    private static final ProtobufFactory instance = new ProtobufFactory(null,
+        getSystemPropertyBoolean("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true),
+        getSystemPropertyBoolean("redkale.convert.protobuf.nullable", "redkale.convert.nullable", false),
+        Boolean.parseBoolean(System.getProperty("redkale.convert.protobuf.enumtostring", "true")));
 
     static final Decodeable objectDecoder = instance.loadDecoder(Object.class);
 
@@ -38,8 +41,8 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    private ProtobufFactory(ProtobufFactory parent, boolean tiny, boolean enumtostring) {
-        super(parent, tiny);
+    private ProtobufFactory(ProtobufFactory parent, boolean tiny, boolean nullable, boolean enumtostring) {
+        super(parent, tiny, nullable);
         this.enumtostring = enumtostring;
         if (parent == null) { //root
             this.register(String[].class, this.createArrayDecoder(String[].class));
@@ -52,7 +55,10 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     public static ProtobufFactory create() {
-        return new ProtobufFactory(null, getSystemPropertyBoolean("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true), Boolean.parseBoolean(System.getProperty("redkale.convert.protobuf.enumtostring", "true")));
+        return new ProtobufFactory(null,
+            getSystemPropertyBoolean("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true),
+            getSystemPropertyBoolean("redkale.convert.protobuf.nullable", "redkale.convert.nullable", false),
+            Boolean.parseBoolean(System.getProperty("redkale.convert.protobuf.enumtostring", "true")));
     }
 
     @Override
@@ -112,18 +118,20 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     @Override
     public final ProtobufConvert getConvert() {
-        if (convert == null) convert = new ProtobufConvert(this, tiny);
+        if (convert == null) {
+            convert = new ProtobufConvert(this, tiny, nullable);
+        }
         return (ProtobufConvert) convert;
     }
 
     @Override
     public ProtobufFactory createChild() {
-        return new ProtobufFactory(this, this.tiny, this.enumtostring);
+        return new ProtobufFactory(this, this.tiny, this.nullable, this.enumtostring);
     }
 
     @Override
-    public ProtobufFactory createChild(boolean tiny) {
-        return new ProtobufFactory(this, tiny, this.enumtostring);
+    public ProtobufFactory createChild(boolean tiny, boolean nullable) {
+        return new ProtobufFactory(this, tiny, nullable, this.enumtostring);
     }
 
     @Override
@@ -148,7 +156,9 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     protected static Reader getItemReader(boolean string, boolean simple, Reader in, DeMember member, boolean enumtostring, boolean first) {
         if (string) {
-            if (member == null || first) return in;
+            if (member == null || first) {
+                return in;
+            }
             ProtobufReader reader = (ProtobufReader) in;
             int tag = reader.readTag();
             if (tag != member.getTag()) {
@@ -181,48 +191,110 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     public static int wireType(Type javaType, boolean enumtostring) {
-        if (javaType == double.class || javaType == Double.class) return 1;
-        if (javaType == float.class || javaType == Float.class) return 5;
-        if (javaType == boolean.class || javaType == Boolean.class) return 0;
+        if (javaType == double.class || javaType == Double.class) {
+            return 1;
+        }
+        if (javaType == float.class || javaType == Float.class) {
+            return 5;
+        }
+        if (javaType == boolean.class || javaType == Boolean.class) {
+            return 0;
+        }
         if (javaType instanceof Class) {
             Class javaClazz = (Class) javaType;
-            if (javaClazz.isEnum()) return enumtostring ? 2 : 0;
-            if (javaClazz.isPrimitive() || Number.class.isAssignableFrom(javaClazz)) return 0;
+            if (javaClazz.isEnum()) {
+                return enumtostring ? 2 : 0;
+            }
+            if (javaClazz.isPrimitive() || Number.class.isAssignableFrom(javaClazz)) {
+                return 0;
+            }
         }
         return 2;
     }
 
     public static String wireTypeString(Type javaType, boolean enumtostring) {
-        if (javaType == double.class || javaType == Double.class) return "double";
-        if (javaType == long.class || javaType == Long.class) return "sint64";
-        if (javaType == float.class || javaType == Float.class) return "float";
-        if (javaType == int.class || javaType == Integer.class) return "sint32";
-        if (javaType == short.class || javaType == Short.class) return "sint32";
-        if (javaType == char.class || javaType == Character.class) return "sint32";
-        if (javaType == byte.class || javaType == Byte.class) return "sint32";
-        if (javaType == boolean.class || javaType == Boolean.class) return "bool";
-        if (javaType == AtomicLong.class) return "sint64";
-        if (javaType == AtomicInteger.class) return "sint32";
-        if (javaType == AtomicBoolean.class) return "bool";
+        if (javaType == double.class || javaType == Double.class) {
+            return "double";
+        }
+        if (javaType == long.class || javaType == Long.class) {
+            return "sint64";
+        }
+        if (javaType == float.class || javaType == Float.class) {
+            return "float";
+        }
+        if (javaType == int.class || javaType == Integer.class) {
+            return "sint32";
+        }
+        if (javaType == short.class || javaType == Short.class) {
+            return "sint32";
+        }
+        if (javaType == char.class || javaType == Character.class) {
+            return "sint32";
+        }
+        if (javaType == byte.class || javaType == Byte.class) {
+            return "sint32";
+        }
+        if (javaType == boolean.class || javaType == Boolean.class) {
+            return "bool";
+        }
+        if (javaType == AtomicLong.class) {
+            return "sint64";
+        }
+        if (javaType == AtomicInteger.class) {
+            return "sint32";
+        }
+        if (javaType == AtomicBoolean.class) {
+            return "bool";
+        }
 
-        if (javaType == double[].class || javaType == Double[].class) return "repeated double";
-        if (javaType == long[].class || javaType == Long[].class) return "repeated sint64";
-        if (javaType == float[].class || javaType == Float[].class) return "repeated float";
-        if (javaType == int[].class || javaType == Integer[].class) return "repeated sint32";
-        if (javaType == short[].class || javaType == Short[].class) return "repeated sint32";
-        if (javaType == char[].class || javaType == Character[].class) return "repeated sint32";
-        if (javaType == byte[].class || javaType == Byte[].class) return "bytes";
-        if (javaType == boolean[].class || javaType == Boolean[].class) return "repeated bool";
-        if (javaType == AtomicLong[].class) return "repeated sint64";
-        if (javaType == AtomicInteger[].class) return "repeated sint32";
-        if (javaType == AtomicBoolean[].class) return "repeated bool";
+        if (javaType == double[].class || javaType == Double[].class) {
+            return "repeated double";
+        }
+        if (javaType == long[].class || javaType == Long[].class) {
+            return "repeated sint64";
+        }
+        if (javaType == float[].class || javaType == Float[].class) {
+            return "repeated float";
+        }
+        if (javaType == int[].class || javaType == Integer[].class) {
+            return "repeated sint32";
+        }
+        if (javaType == short[].class || javaType == Short[].class) {
+            return "repeated sint32";
+        }
+        if (javaType == char[].class || javaType == Character[].class) {
+            return "repeated sint32";
+        }
+        if (javaType == byte[].class || javaType == Byte[].class) {
+            return "bytes";
+        }
+        if (javaType == boolean[].class || javaType == Boolean[].class) {
+            return "repeated bool";
+        }
+        if (javaType == AtomicLong[].class) {
+            return "repeated sint64";
+        }
+        if (javaType == AtomicInteger[].class) {
+            return "repeated sint32";
+        }
+        if (javaType == AtomicBoolean[].class) {
+            return "repeated bool";
+        }
 
-        if (javaType == java.util.Properties.class) return "map<string,string>";
+        if (javaType == java.util.Properties.class) {
+            return "map<string,string>";
+        }
         if (javaType instanceof Class) {
             Class javaClazz = (Class) javaType;
-            if (javaClazz.isArray()) return "repeated " + wireTypeString(javaClazz.getComponentType(), enumtostring);
-            if (javaClazz.isEnum()) return enumtostring ? "string" : javaClazz.getSimpleName();
-            if (CharSequence.class.isAssignableFrom(javaClazz)) return "string";
+            if (javaClazz.isArray()) {
+                return "repeated " + wireTypeString(javaClazz.getComponentType(), enumtostring);
+            }
+            if (javaClazz.isEnum()) {
+                return enumtostring ? "string" : javaClazz.getSimpleName();
+            }
+            if (CharSequence.class.isAssignableFrom(javaClazz)) {
+                return "string";
+            }
             return javaClazz == Object.class ? "Any" : javaClazz.getSimpleName();
         } else if (javaType instanceof ParameterizedType) { //Collection、Stream、Map 必须是泛型
             final ParameterizedType pt = (ParameterizedType) javaType;

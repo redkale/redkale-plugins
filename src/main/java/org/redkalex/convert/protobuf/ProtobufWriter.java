@@ -28,6 +28,8 @@ public class ProtobufWriter extends Writer implements ByteTuple {
 
     protected boolean tiny;
 
+    protected boolean nullable;
+
     protected int initOffset;
 
     protected boolean enumtostring;
@@ -59,6 +61,7 @@ public class ProtobufWriter extends Writer implements ByteTuple {
         this.objFieldFunc = out.objFieldFunc;
         this.objExtFunc = out.objExtFunc;
         this.tiny = out.tiny;
+        this.nullable = out.nullable;
         this.enumtostring = out.enumtostring;
         return this;
     }
@@ -144,6 +147,16 @@ public class ProtobufWriter extends Writer implements ByteTuple {
 
     public ProtobufWriter tiny(boolean tiny) {
         this.tiny = tiny;
+        return this;
+    }
+
+    @Override
+    public final boolean nullable() {
+        return nullable;
+    }
+
+    public ProtobufWriter nullable(boolean nullable) {
+        this.nullable = nullable;
         return this;
     }
 
@@ -420,6 +433,8 @@ public class ProtobufWriter extends Writer implements ByteTuple {
             value = objFieldFunc.apply(member.getAttribute(), obj);
         }
         if (value == null) {
+            this.writeFieldName(member);
+            writeNull();
             return;
         }
         if (tiny()) {

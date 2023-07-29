@@ -6,7 +6,7 @@
 package org.redkalex.convert.protobuf;
 
 import java.io.*;
-import org.redkale.convert.*;
+import org.redkale.convert.ConvertException;
 
 /**
  *
@@ -18,8 +18,8 @@ class ProtobufStreamWriter extends ProtobufByteBufferWriter {
 
     private OutputStream out;
 
-    protected ProtobufStreamWriter(boolean tiny, boolean enumtostring, OutputStream out) {
-        super(tiny, enumtostring, null);
+    protected ProtobufStreamWriter(boolean tiny, boolean nullable, boolean enumtostring, OutputStream out) {
+        super(tiny, nullable, enumtostring, null);
         this.out = out;
     }
 

@@ -22,12 +22,13 @@ public class ProtobufByteBufferWriter extends ProtobufWriter {
     private int index;
 
     public ProtobufByteBufferWriter(boolean enumtostring, Supplier<ByteBuffer> supplier) {
-        this(false, enumtostring, supplier);
+        this(false, false, enumtostring, supplier);
     }
 
-    protected ProtobufByteBufferWriter(boolean tiny, boolean enumtostring, Supplier<ByteBuffer> supplier) {
+    protected ProtobufByteBufferWriter(boolean tiny, boolean nullable, boolean enumtostring, Supplier<ByteBuffer> supplier) {
         super((byte[]) null);
         this.tiny = tiny;
+        this.nullable = nullable;
         this.enumtostring = enumtostring;
         this.supplier = supplier;
     }
@@ -42,17 +43,23 @@ public class ProtobufByteBufferWriter extends ProtobufWriter {
 
     @Override
     public ByteBuffer[] toBuffers() {
-        if (buffers == null) return new ByteBuffer[0];
+        if (buffers == null) {
+            return new ByteBuffer[0];
+        }
         for (int i = index; i < this.buffers.length; i++) {
             ByteBuffer buf = this.buffers[i];
-            if (buf.position() != 0) buf.flip();
+            if (buf.position() != 0) {
+                buf.flip();
+            }
         }
         return this.buffers;
     }
 
     @Override
     public byte[] toArray() {
-        if (buffers == null) return new byte[0];
+        if (buffers == null) {
+            return new byte[0];
+        }
         int pos = 0;
         byte[] bytes = new byte[this.count];
         for (ByteBuffer buf : toBuffers()) {
@@ -72,6 +79,12 @@ public class ProtobufByteBufferWriter extends ProtobufWriter {
     @Override
     public ProtobufByteBufferWriter tiny(boolean tiny) {
         this.tiny = tiny;
+        return this;
+    }
+
+    @Override
+    public ProtobufByteBufferWriter nullable(boolean nullable) {
+        this.nullable = nullable;
         return this;
     }
 
