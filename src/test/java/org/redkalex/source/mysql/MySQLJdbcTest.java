@@ -4,14 +4,14 @@
 package org.redkalex.source.mysql;
 
 import java.sql.*;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
-import org.redkale.convert.json.JsonConvert;
+import org.redkale.convert.json.*;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.persistence.*;
 import org.redkale.source.*;
@@ -103,6 +103,8 @@ public class MySQLJdbcTest {
         System.out.println(source.findsList(OneRecord.class, Stream.of("11", record2.getRecordid())));
         System.out.println(source.nativeQueryOne(OneRecord.class, "select * from onerecord where recordid = 'rid-1' "));
         System.out.println(source.nativeQueryList(OneRecord.class, "select * from onerecord where recordid = 'rid-1' "));
+        System.out.println("Map-List: " + source.nativeQueryList(Map.class, "select * from onerecord where recordid = 'rid-1' "));
+        System.out.println("JsonObject-List: " + source.nativeQueryList(JsonObject.class, "select * from onerecord where recordid = 'rid-1' "));
 
         TwoIntRecord t1 = new TwoIntRecord();
         t1.setId(1);

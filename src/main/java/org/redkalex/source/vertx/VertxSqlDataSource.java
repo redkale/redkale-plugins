@@ -856,7 +856,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int[] nativeUpdate(final String... sqls) {
+    public int[] nativeUpdates(final String... sqls) {
         final long s = System.currentTimeMillis();
         final int[] rs = new int[sqls.length];
         writePool().withTransaction(conn -> {
@@ -883,6 +883,16 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             slowLog(s, sql);
             return handler.apply(set);
         }).join();
+    }
+
+    @Override
+    public int nativeUpdate(String sql, Map<String, Object> params) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public <V> V nativeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 }

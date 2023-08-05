@@ -847,7 +847,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int[] nativeUpdate(String... sqls) {
+    public int[] nativeUpdates(String... sqls) {
         if (sqls.length == 1) {
             return new int[]{nativeUpdate(sqls[0])};
         }
@@ -873,6 +873,16 @@ public class MysqlDataSource extends AbstractDataSqlSource {
             slowLog(s, sql);
             return rs;
         }).join();
+    }
+
+    @Override
+    public int nativeUpdate(String sql, Map<String, Object> params) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public <V> V nativeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 }

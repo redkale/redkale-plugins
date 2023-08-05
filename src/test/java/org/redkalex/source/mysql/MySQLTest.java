@@ -186,7 +186,7 @@ public class MySQLTest {
         List<Integer> list2 = List.of(3);
         System.out.println(Arrays.toString(source.finds(World.class, list2.stream())));
 
-        int[] cs = source.nativeUpdate("update world set randomNumber =11 where id =2", "update world set randomNumber =11 where id =-1");
+        int[] cs = source.nativeUpdates("update world set randomNumber =11 where id =2", "update world set randomNumber =11 where id =-1");
         System.out.println("批量处理结果: " + Arrays.toString(cs));
 
         //if (true) return;
