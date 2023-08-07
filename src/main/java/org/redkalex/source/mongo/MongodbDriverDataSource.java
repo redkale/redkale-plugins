@@ -42,8 +42,6 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    protected String name;
-
     protected String readdb;
 
     protected String writedb;
@@ -1084,7 +1082,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     @Override
     public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
         final EntityInfo<T> info = loadEntityInfo(clazz);
-        Serializable[] ids = pks.toArray(serialArrayFunc); 
+        Serializable[] ids = pks.toArray(serialArrayFunc);
         return queryListAsync(info.getType(), null, null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
     }
 
@@ -1351,11 +1349,6 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         if (this.writeMongoClient != null && this.readMongoClient != this.writeMongoClient) {
             this.writeMongoClient.close();
         }
-    }
-
-    @Override
-    public String resourceName() {
-        return name;
     }
 
     public static class ReatorFuture<T> extends CompletableFuture<T> implements Subscriber<T> {

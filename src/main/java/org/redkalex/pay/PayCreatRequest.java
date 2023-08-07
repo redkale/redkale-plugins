@@ -17,7 +17,7 @@ import org.redkale.util.*;
  */
 public class PayCreatRequest extends PayRequest {
 
-    private static final Reproduce<PayPreRequest, PayCreatRequest> reproduce = Reproduce.create(PayPreRequest.class, PayCreatRequest.class);
+    private static final Copier<PayCreatRequest, PayPreRequest> copier = Copier.create(PayCreatRequest.class, PayPreRequest.class);
 
     protected long payMoney; //  支付金额。 单位:分 
 
@@ -34,7 +34,7 @@ public class PayCreatRequest extends PayRequest {
     protected Map<String, String> attach; //扩展信息
 
     public PayPreRequest createPayPreRequest() {
-        return reproduce.apply(new PayPreRequest(), this);
+        return copier.apply(this, new PayPreRequest());
     }
 
     @Override

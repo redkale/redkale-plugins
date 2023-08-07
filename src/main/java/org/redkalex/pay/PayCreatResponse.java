@@ -7,7 +7,7 @@ package org.redkalex.pay;
 
 import java.util.Map;
 import org.redkale.convert.ConvertDisabled;
-import org.redkale.util.Reproduce;
+import org.redkale.util.Copier;
 
 /**
  *
@@ -17,7 +17,7 @@ import org.redkale.util.Reproduce;
  */
 public class PayCreatResponse extends PayResponse {
 
-    private static final Reproduce<PayCreatResponse, PayPreResponse> reproduce = Reproduce.create(PayCreatResponse.class, PayPreResponse.class);
+    private static final Copier< PayPreResponse, PayCreatResponse> copier = Copier.create(PayPreResponse.class, PayCreatResponse.class);
 
     private String thirdPayno = ""; //第三方的支付流水号
 
@@ -25,7 +25,7 @@ public class PayCreatResponse extends PayResponse {
     }
 
     public PayCreatResponse(PayPreResponse resp) {
-        reproduce.apply(this, resp);
+        copier.apply(resp, this);
     }
 
     @Override
@@ -37,7 +37,9 @@ public class PayCreatResponse extends PayResponse {
 
     @Override
     public PayCreatResponse retinfo(String retinfo) {
-        if (retinfo != null) this.retinfo = retinfo;
+        if (retinfo != null) {
+            this.retinfo = retinfo;
+        }
         return this;
     }
 
