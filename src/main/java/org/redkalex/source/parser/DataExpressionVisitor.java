@@ -11,6 +11,7 @@ import net.sf.jsqlparser.parser.CCJSqlParser;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.update.Update;
+import org.redkale.annotation.*;
 import org.redkale.util.Utility;
 
 /**
@@ -48,8 +49,8 @@ public class DataExpressionVisitor extends ExpressionVisitorAdapter {
             PlainSelect selectBody = (PlainSelect) stmt.getSelectBody();
             Expression where = selectBody.getWhere();
             if (where != null) {
-                Set<String> paramNamedSet = new HashSet<>();
-                new DataExpressionVisitor(fullNamedSet, fullInNamedMap).parse(where, paramNamedSet, params);
+                List<String> paramNames = new ArrayList<>();
+                new DataExpressionVisitor(fullNamedSet, fullInNamedMap).parse(where, paramNames, params);
                 selectBody.setWhere(trimExpr(where));
             }
             System.out.println(sql);
@@ -66,21 +67,21 @@ public class DataExpressionVisitor extends ExpressionVisitorAdapter {
     }
 
     //构造函数
-    public DataExpressionVisitor(Set<String> fullNamedSet, Map<String, List<InExpression>> fullInNamedMap) {
+    public DataExpressionVisitor(@Nonnull Set<String> fullNamedSet, @Nonnull Map<String, List<InExpression>> fullInNamedMap) {
         Objects.requireNonNull(fullNamedSet);
         Objects.requireNonNull(fullInNamedMap);
         this.fullNamedSet = fullNamedSet;
         this.fullInNamedMap = fullInNamedMap;
     }
 
-    public Expression parse(Expression where, Set<String> paramNamedSet, Map<String, Object> params) {
+    public Expression parse(Expression where, @Nullable List<String> paramNames, @Nullable Map<String, Object> params) {
         this.paramValues = params;
         if (where != null) {
             where.accept(this);
             if (params != null) {
                 where = trimExpr(where);
             }
-            if (where != null && paramNamedSet != null) {
+            if (where != null && paramNames != null) {
                 //类似Between这种条件可能存在多个:name参数的
                 //不能排除其他条件包含，或者前一个参数存在, 所以不能在此处写进namedSet
                 where.accept(new ExpressionVisitorAdapter() {
@@ -88,7 +89,7 @@ public class DataExpressionVisitor extends ExpressionVisitorAdapter {
                     @Override
                     public void visit(JdbcNamedParameter expr) {
                         super.visit(expr);
-                        paramNamedSet.add(expr.getName());
+                        paramNames.add(expr.getName());
                     }
                 });
             }
@@ -207,8 +208,30 @@ public class DataExpressionVisitor extends ExpressionVisitorAdapter {
         super.visit(expr);
         relations.pop();
     }
-
-    //--------------------------------------------------
+//
+//    //--------------------------------------------------
+//    public static Expression cloneConditionExpression(Expression expr) {
+//        if (expr instanceof AndExpression) {
+//            AndExpression old = (AndExpression) expr;
+//            return new AndExpression()
+//                .withUseOperator(old.isUseOperator())
+//                .withLeftExpression(cloneConditionExpression(old.getLeftExpression()))
+//                .withRightExpression(cloneConditionExpression(old.getRightExpression()));
+//        } else if (expr instanceof OrExpression) {
+//            OrExpression old = (OrExpression) expr;
+//            return new OrExpression()
+//                .withLeftExpression(cloneConditionExpression(old.getLeftExpression()))
+//                .withRightExpression(cloneConditionExpression(old.getRightExpression()));
+//        } else if (expr instanceof XorExpression) {
+//            XorExpression old = (XorExpression) expr;
+//            return new XorExpression()
+//                .withLeftExpression(cloneConditionExpression(old.getLeftExpression()))
+//                .withRightExpression(cloneConditionExpression(old.getRightExpression()));
+//        } else {
+//            return expr;
+//        }
+//    }
+//
     public static Expression trimExpr(Expression expr) {
         if (expr instanceof Parenthesis) {
             Parenthesis hesis = (Parenthesis) expr;
