@@ -22,6 +22,7 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
+import org.redkalex.source.parser.DataParseSqlSource;
 
 /**
  * 只实现了 Mysql 和 Postgresql <br>
@@ -33,7 +34,7 @@ import org.redkale.util.*;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class VertxSqlDataSource extends AbstractDataSqlSource {
+public class VertxSqlDataSource extends DataParseSqlSource {
 
     protected static final PropertyKind<Long> MYSQL_LAST_INSERTED_ID = PropertyKind.create("last-inserted-id", Long.class);
 

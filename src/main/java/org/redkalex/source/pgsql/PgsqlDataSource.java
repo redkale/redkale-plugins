@@ -18,6 +18,7 @@ import org.redkale.net.client.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
+import org.redkalex.source.parser.DataParseSqlSource;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
 /**
@@ -31,7 +32,7 @@ import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class PgsqlDataSource extends AbstractDataSqlSource {
+public class PgsqlDataSource extends DataParseSqlSource {
 
     static boolean debug = false; //true false
 
