@@ -7,11 +7,13 @@ import java.util.*;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.*;
 import net.sf.jsqlparser.expression.operators.relational.*;
-import net.sf.jsqlparser.parser.CCJSqlParser;
+import net.sf.jsqlparser.parser.*;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.update.Update;
+import net.sf.jsqlparser.util.deparser.*;
 import org.redkale.annotation.*;
+import org.redkale.source.SourceException;
 import org.redkale.util.Utility;
 
 /**
@@ -44,8 +46,7 @@ public class DataExpressionVisitor extends ExpressionVisitorAdapter {
             Set<String> fullNamedSet = new LinkedHashSet<>();
             Map<String, List<InExpression>> fullInNamedMap = new LinkedHashMap<>();
             Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
-            CCJSqlParser parser = new CCJSqlParser(sql).withAllowComplexParsing(true);
-            Select stmt = (Select) parser.Statement();
+            Select stmt = (Select) CCJSqlParserUtil.parse(sql, p -> p.withAllowComplexParsing(true));
             PlainSelect selectBody = (PlainSelect) stmt.getSelectBody();
             Expression where = selectBody.getWhere();
             if (where != null) {
@@ -62,6 +63,25 @@ public class DataExpressionVisitor extends ExpressionVisitorAdapter {
             Statement stmt = parser.Statement();
             Update up = (Update) stmt;
             System.out.println(stmt.toString());
+        }
+        {
+            String sql = "SELECT DISTINCT col1 AS a, col2 AS b, col3 AS c FROM table T WHERE col1 = 10 AND (col2 = :c2 OR col3 = MAX(:c3)) AND name LIKE '%' AND seqid IS NULL AND (gameid IN :gameids OR gameName IN ('%', 'zzz')) AND time BETWEEN :min AND :range_max AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";
+            Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
+            final ExpressionDeParser exprDeParser = new ExpressionDeParser() {
+                @Override
+                public void visit(EqualsTo equalsTo) {
+                    super.visit(equalsTo);
+                }
+            };
+            final SelectDeParser selectParser = new SelectDeParser(exprDeParser, exprDeParser.getBuffer());
+            exprDeParser.setSelectVisitor(selectParser);
+            CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
+            Select stmt = (Select) sqlParser.Statement();
+            PlainSelect selectBody = (PlainSelect) stmt.getSelectBody();
+            selectBody.accept(selectParser);
+            System.out.println(stmt.toString());
+            System.out.println(selectParser.getBuffer());
+
         }
 
     }
@@ -118,6 +138,11 @@ public class DataExpressionVisitor extends ExpressionVisitorAdapter {
                 }
             }
         }
+    }
+
+    @Override
+    public void visit(JdbcParameter jdbcParameter) {
+        throw new SourceException("Cannot contains ? JdbcParameter");
     }
 
     private void visitConditionExpression(final BinaryExpression expr) {
@@ -232,6 +257,7 @@ public class DataExpressionVisitor extends ExpressionVisitorAdapter {
 //        }
 //    }
 //
+
     public static Expression trimExpr(Expression expr) {
         if (expr instanceof Parenthesis) {
             Parenthesis hesis = (Parenthesis) expr;

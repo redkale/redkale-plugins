@@ -210,7 +210,7 @@ public final class SearchInfo<T> {
         }
         this.tableStrategy = dts;
 
-        this.arrayer = Creator.arrayFunction(type);
+        this.arrayer = Creator.funcArray(type);
         this.creator = Creator.create(type);
         ConstructorParameters cp = null;
         try {
