@@ -612,7 +612,7 @@ public class PgsqlDataSource extends DataParseSqlSource {
     }
 
     protected <T> CompletableFuture<PgResultSet> thenApplyInsertStrategy(final EntityInfo<T> info, final CompletableFuture<PgResultSet> future,
-        final ObjectReference<PgClientRequest> reqRef, final ObjectReference<ClientConnection> connRef, final T[] values) {
+        final ObjectRef<PgClientRequest> reqRef, final ObjectRef<ClientConnection> connRef, final T[] values) {
         if (info == null || (info.getTableStrategy() == null && !autoddl())) {
             return future;
         }
@@ -779,8 +779,8 @@ public class PgsqlDataSource extends DataParseSqlSource {
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currentWorkThread();
-        ObjectReference<PgClientRequest> reqRef = new ObjectReference();
-        ObjectReference<ClientConnection> connRef = new ObjectReference();
+        ObjectRef<PgClientRequest> reqRef = new ObjectRef();
+        ObjectRef<ClientConnection> connRef = new ObjectRef();
         Function<PgClientConnection, CompletableFuture<PgResultSet>> futureFunc = conn -> {
             PgClientRequest req;
             if (sqls.length == 1) {

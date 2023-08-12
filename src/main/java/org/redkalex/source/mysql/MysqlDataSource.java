@@ -205,8 +205,8 @@ public class MysqlDataSource extends DataParseSqlSource {
                 ? (info.getInsertQuestionPrepareSQL(entitys[0]) + " RETURNING " + info.getPrimarySQLColumn())
                 : info.getInsertQuestionPrepareSQL(entitys[0]);
             WorkThread workThread = WorkThread.currentWorkThread();
-            ObjectReference<MyClientRequest> reqRef = new ObjectReference();
-            ObjectReference<ClientConnection> connRef = new ObjectReference();
+            ObjectRef<MyClientRequest> reqRef = new ObjectRef();
+            ObjectRef<ClientConnection> connRef = new ObjectRef();
             return thenApplyInsertStrategy(info, pool.connect().thenCompose(conn -> {
                 MyReqExtended req = conn.pollReqExtended(workThread, info);
                 req.prepare(MyClientRequest.REQ_TYPE_EXTEND_INSERT, sql, 0, attrs, objs);
@@ -608,7 +608,7 @@ public class MysqlDataSource extends DataParseSqlSource {
     }
 
     protected <T> CompletableFuture<MyResultSet> thenApplyInsertStrategy(final EntityInfo<T> info, final CompletableFuture<MyResultSet> future,
-        final ObjectReference<MyClientRequest> reqRef, final ObjectReference<ClientConnection> connRef, final T[] values) {
+        final ObjectRef<MyClientRequest> reqRef, final ObjectRef<ClientConnection> connRef, final T[] values) {
         if (info == null || (info.getTableStrategy() == null && !autoddl())) {
             return future;
         }
@@ -775,8 +775,8 @@ public class MysqlDataSource extends DataParseSqlSource {
         final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
         WorkThread workThread = WorkThread.currentWorkThread();
-        ObjectReference<MyClientRequest> reqRef = new ObjectReference();
-        ObjectReference<ClientConnection> connRef = new ObjectReference();
+        ObjectRef<MyClientRequest> reqRef = new ObjectRef();
+        ObjectRef<ClientConnection> connRef = new ObjectRef();
         Function<MyClientConnection, CompletableFuture<MyResultSet>> futureFunc = conn -> {
             connRef.set(conn);
             if (sqls.length == 1) {
