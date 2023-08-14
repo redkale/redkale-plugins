@@ -18,7 +18,6 @@ import org.redkale.net.client.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import org.redkalex.source.parser.DataParseSqlSource;
 
 /**
  * 部分协议格式参考： http://wp1i.cn/archives/78556.html
@@ -29,7 +28,7 @@ import org.redkalex.source.parser.DataParseSqlSource;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class MysqlDataSource extends DataParseSqlSource {
+public class MysqlDataSource extends AbstractDataSqlSource {
 
     static boolean debug = false; //System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
 
