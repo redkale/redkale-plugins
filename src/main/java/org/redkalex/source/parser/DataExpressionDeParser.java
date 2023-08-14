@@ -3,6 +3,8 @@
  */
 package org.redkalex.source.parser;
 
+import java.lang.reflect.Array;
+import java.math.*;
 import java.util.*;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.*;
@@ -11,6 +13,7 @@ import net.sf.jsqlparser.parser.CCJSqlParser;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.util.deparser.*;
 import org.redkale.annotation.Nonnull;
+import org.redkale.source.SourceException;
 import org.redkale.util.Utility;
 
 /**
@@ -34,36 +37,29 @@ public class DataExpressionDeParser extends ExpressionDeParser {
     //参数
     protected Map<String, Object> paramValues;
 
+    //当前BinaryExpression缺失参数
+    protected boolean paramLosing;
+
     public static void main(String[] args) throws Throwable {
-        String sql = "SELECT DISTINCT col1 AS a, col2 AS b, col3 AS c FROM table T WHERE col1 = 10 AND (col2 = :c2 OR col3 = MAX(:c3)) AND name LIKE '%' AND seqid IS NULL AND (gameid IN :gameids OR gameName IN ('%', 'zzz')) AND time BETWEEN :min AND :range_max AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";
+        String sql = "SELECT DISTINCT col1 AS a, col2 AS b, col3 AS c FROM table T "
+            + "WHERE col1 = 10 AND (col2 = :c2 OR col3 = MAX(:c3)) AND name LIKE '%'"
+            + " AND seqid IS NULL AND (gameid IN :gameids OR gameName IN ('%', 'zzz'))"
+            + " AND time BETWEEN :min AND :range_max AND col2 >= :c2"
+            + " AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";
         Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
-        final ExpressionDeParser exprDeParser = new DataExpressionDeParser();
+        final DataExpressionDeParser exprDeParser = new DataExpressionDeParser();
         final SelectDeParser selectParser = new SelectDeParser(exprDeParser, exprDeParser.getBuffer());
         exprDeParser.setSelectVisitor(selectParser);
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
         Select stmt = (Select) sqlParser.Statement();
         PlainSelect selectBody = (PlainSelect) stmt.getSelectBody();
-        selectBody.accept(selectParser);
-        System.out.println(stmt.toString());
-        System.out.println(selectParser.getBuffer());
+        //System.out.println(stmt.toString());
 
-        {
-            StringBuilder buffer = new StringBuilder();
-            int start1 = buffer.length();
-            buffer.append("1=2");
-            int end1 = buffer.length();
-            if (end1 > start1) {
-                buffer.append(" AND ");
-            }
-            int start2 = buffer.length();
-            buffer.append("3=4");
-            int end2 = buffer.length();
-            if (start2 == end2) { //没有right
-                buffer.delete(end1, end2);
-            }
-            System.out.println("buffer = " + buffer);
-        }
-
+        System.out.println(selectBody.getWhere());
+        List<String> paramNames = new ArrayList<>();
+        System.out.println(exprDeParser.deParser(selectBody.getWhere(), paramNames, params));
+        System.out.println("应该是有两个： [c2, c2]");
+        System.out.println("paramNames = " + paramNames);
     }
 
     public String deParser(Expression where, @Nonnull List<String> paramNames, @Nonnull Map<String, Object> params) {
@@ -83,7 +79,8 @@ public class DataExpressionDeParser extends ExpressionDeParser {
     @Override
     public void visit(JdbcNamedParameter expr) {
         Object val = paramValues.get(expr.getName());
-        if (val == null) { //没有参数值
+        if (val == null) { //没有参数值            
+            paramLosing = true;
             return;
         }
         paramNames.add(expr.getName());
@@ -93,66 +90,114 @@ public class DataExpressionDeParser extends ExpressionDeParser {
 
     @Override
     public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expr, String operator) {
-        boolean relate = expr.getClass().getPackage() == relationalPkg;
-        if (relate) {
-            relations.push(expr);
+        if (expr.getClass().getPackage() != relationalPkg) {
+            throw new SourceException("Not support expression (" + expr + ") ");
         }
+        paramLosing = false;
+        relations.push(expr);
 
-        int start1 = buffer.length();
+        int size1 = paramNames.size();
+        final int start1 = buffer.length();
         expr.getLeftExpression().accept(this);
         int end1 = buffer.length();
-        if (end1 > start1) {
+        int size2 = paramNames.size();
+        if (!paramLosing) {
             if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_RIGHT) {
                 buffer.append("(+)");
             }
             end1 = buffer.length();
         }
-        if (end1 > start1) {
+        if (!paramLosing) {
             buffer.append(operator);
+        } else {
+            for (int i = size1; i < size2; i++) {
+                paramNames.remove(paramNames.size() - 1);
+            }
         }
-        int start2 = buffer.length();
+
+        size1 = paramNames.size();
         expr.getRightExpression().accept(this);
         int end2 = buffer.length();
-        if (start2 == end2) { //没有right
-            buffer.delete(end1, end2);
+        size2 = paramNames.size();
+        if (paramLosing) { //没有right
+            buffer.delete(start1, end2);
+            //多个paramNames里中一个不存在，需要删除另外几个
+            for (int i = size1; i < size2; i++) {
+                paramNames.remove(paramNames.size() - 1);
+            }
         } else {
             if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_LEFT) {
                 buffer.append("(+)");
             }
         }
 
-        if (relate) {
-            relations.pop();
-        }
+        relations.pop();
+        paramLosing = false;
     }
 
     @Override
     protected void visitBinaryExpression(BinaryExpression expr, String operator) {
-        boolean condit = expr.getClass().getPackage() == conditionalPkg;
-        boolean relate = !condit && expr.getClass().getPackage() == relationalPkg;
-        if (condit) {
+        if (expr.getClass().getPackage() == conditionalPkg) {
+            paramLosing = false;
             conditions.push(expr);
-        } else if (relate) {
-            relations.push(expr);
-        }
 
-        int start1 = buffer.length();
-        expr.getLeftExpression().accept(this);
-        int end1 = buffer.length();
-        if (end1 > start1) {
-            buffer.append(operator);
-        }
-        int start2 = buffer.length();
-        expr.getRightExpression().accept(this);
-        int end2 = buffer.length();
-        if (start2 == end2) { //没有right
-            buffer.delete(end1, end2);
-        }
+            int size1 = paramNames.size();
+            final int start1 = buffer.length();
+            expr.getLeftExpression().accept(this);
+            final int end1 = buffer.length();
+            int size2 = paramNames.size();
+            if (end1 > start1) {
+                buffer.append(operator);
+            } else {
+                for (int i = size1; i < size2; i++) {
+                    String s = paramNames.remove(paramNames.size() - 1);
+                }
+            }
 
-        if (condit) {
+            size1 = paramNames.size();
+            final int start2 = buffer.length();
+            expr.getRightExpression().accept(this);
+            final int end2 = buffer.length();
+            size2 = paramNames.size();
+            if (end2 == start2) { //没有right
+                buffer.delete(end1, end2);
+                for (int i = size1; i < size2; i++) {
+                    String s = paramNames.remove(paramNames.size() - 1);
+                }
+            }
+
             conditions.pop();
-        } else if (relate) {
+            paramLosing = false;
+        } else if (expr.getClass().getPackage() == relationalPkg) {
+            paramLosing = false;
+            relations.push(expr);
+
+            int size1 = paramNames.size();
+            final int start1 = buffer.length();
+            expr.getLeftExpression().accept(this);
+            if (!paramLosing) {
+                buffer.append(operator);
+
+                expr.getRightExpression().accept(this);
+                final int end1 = buffer.length();
+                if (paramLosing) { //没有right
+                    buffer.delete(start1, end1);
+                    int size2 = paramNames.size();
+                    for (int i = size1; i < size2; i++) {
+                        paramNames.remove(paramNames.size() - 1);
+                    }
+                }
+            } else {
+                int size2 = paramNames.size();
+                for (int i = size1; i < size2; i++) {
+                    paramNames.remove(paramNames.size() - 1);
+                }
+            }
+
             relations.pop();
+            paramLosing = false;
+        } else {
+            throw new SourceException("Not support expression (" + expr + ") ");
         }
 
     }
@@ -188,12 +233,14 @@ public class DataExpressionDeParser extends ExpressionDeParser {
     //--------------------------------------------------
     @Override
     public void visit(Between expr) {
+        paramLosing = false;
         relations.push(expr);
 
+        final int size = paramNames.size();
         final int start = buffer.length();
         expr.getLeftExpression().accept(this);
         int end = buffer.length();
-        if (end > start) {
+        if (!paramLosing) {
             if (expr.isNot()) {
                 buffer.append(" NOT");
             }
@@ -201,32 +248,40 @@ public class DataExpressionDeParser extends ExpressionDeParser {
             int start2 = buffer.length();
             expr.getBetweenExpressionStart().accept(this);
             int end2 = buffer.length();
-            if (end2 > start2) {
+            if (!paramLosing) {
                 buffer.append(" AND ");
                 start2 = buffer.length();
                 expr.getBetweenExpressionEnd().accept(this);
                 end2 = buffer.length();
-                if (end2 == start2) {
-                    if (expr.getBetweenExpressionStart() instanceof JdbcNamedParameter) {
+                if (paramLosing) {
+                    buffer.delete(start, end2);
+                    final int size2 = paramNames.size();
+                    for (int i = size; i < size2; i++) {
                         paramNames.remove(paramNames.size() - 1);
                     }
-                    buffer.delete(start, end2);
                 }
             } else {
                 buffer.delete(start, end2);
+                final int size2 = paramNames.size();
+                for (int i = size; i < size2; i++) {
+                    paramNames.remove(paramNames.size() - 1);
+                }
             }
         }
 
         relations.pop();
+        paramLosing = false;
     }
 
     @Override
     public void visit(InExpression expr) {
+        paramLosing = false;
         relations.push(expr);
+        final int size1 = paramNames.size();
         final int start = buffer.length();
         expr.getLeftExpression().accept(this);
         int end = buffer.length();
-        if (end > start) {
+        if (!paramLosing) {
             if (expr.getOldOracleJoinSyntax() == SupportsOldOracleJoinSyntax.ORACLE_JOIN_RIGHT) {
                 buffer.append("(+)");
             }
@@ -235,35 +290,93 @@ public class DataExpressionDeParser extends ExpressionDeParser {
             }
             buffer.append(" IN ");
             if (expr.getRightExpression() != null) {
-                int start2 = buffer.length();
-                expr.getRightExpression().accept(this);
-                int ends2 = buffer.length();
-                
+                if (expr.getRightExpression() instanceof SubSelect) {
+                    expr.getRightExpression().accept(this);
+                } else if (expr.getRightExpression() instanceof JdbcNamedParameter) {
+                    String name = ((JdbcNamedParameter) expr.getRightExpression()).getName();
+                    Object val = paramValues.get(name);
+                    if (val == null) { //没有参数值            
+                        throw new SourceException("Not found parameter (name=" + name + ") ");
+                    }
+                    if (val instanceof Collection) {
+                        if (((Collection) val).isEmpty()) {
+                            throw new SourceException("Parameter (name=" + name + ") is empty");
+                        }
+                    } else if (val.getClass().isArray()) {
+                        int len = Array.getLength(val);
+                        if (len < 1) {
+                            throw new SourceException("Parameter (name=" + name + ") is empty");
+                        }
+                        Collection list = new ArrayList();
+                        for (int i = 0; i < len; i++) {
+                            list.add(Array.get(val, i));
+                        }
+                        val = list;
+                    } else {
+                        throw new SourceException("Parameter (name=" + name + ") is not Collection or Array");
+                    }
+                    List<Expression> itemList = new ArrayList();
+                    for (Object item : (Collection) val) {
+                        if (item == null) {
+                            itemList.add(new NullValue());
+                        } else if (item instanceof String) {
+                            itemList.add(new StringValue(item.toString()));
+                        } else if (item instanceof Short || item instanceof Integer || item instanceof Long) {
+                            itemList.add(new LongValue(item.toString()));
+                        } else if (item instanceof Float || item instanceof Double) {
+                            itemList.add(new DoubleValue(item.toString()));
+                        } else if (item instanceof BigInteger || item instanceof BigDecimal) {
+                            itemList.add(new StringValue(item.toString()));
+                        } else if (item instanceof java.sql.Date) {
+                            itemList.add(new DateValue((java.sql.Date) item));
+                        } else if (item instanceof java.sql.Time) {
+                            itemList.add(new TimeValue(item.toString()));
+                        } else {
+                            throw new SourceException("Not support parameter: " + val);
+                        }
+                    }
+                    new ExpressionList(itemList).accept(this);
+                } else {
+                    throw new SourceException("Not support expression (" + expr.getRightExpression() + ") ");
+                }
             } else {
                 expr.getRightItemsList().accept(this);
             }
+        } else {
+            buffer.delete(start, end);
+            final int size2 = paramNames.size();
+            for (int i = size1; i < size2; i++) {
+                paramNames.remove(paramNames.size() - 1);
+            }
         }
         relations.pop();
+        paramLosing = false;
     }
 
     @Override
     public void visit(IsNullExpression expr) {
+        paramLosing = false;
         relations.push(expr);
         super.visit(expr);
         relations.pop();
+        paramLosing = false;
     }
 
     @Override
     public void visit(IsBooleanExpression expr) {
+        paramLosing = false;
         relations.push(expr);
         super.visit(expr);
         relations.pop();
+        paramLosing = false;
     }
 
     @Override
     public void visit(ExistsExpression expr) {
+        paramLosing = false;
         relations.push(expr);
         super.visit(expr);
         relations.pop();
+        paramLosing = false;
     }
 }
