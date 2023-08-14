@@ -12,8 +12,7 @@ import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.parser.CCJSqlParser;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.util.deparser.*;
-import org.redkale.annotation.Nonnull;
-import org.redkale.source.SourceException;
+import org.redkale.source.*;
 import org.redkale.util.Utility;
 
 /**
@@ -32,7 +31,9 @@ public class DataExpressionDeParser extends ExpressionDeParser {
     private final Deque<Expression> relations = new ArrayDeque<>();
 
     //需要预编译的参数名, 数量与sql中的?数量一致
-    protected List<String> paramNames;
+    protected List<String> paramNames = new ArrayList<>();
+
+    protected java.util.function.Function<Integer, String> signFunc;
 
     //参数
     protected Map<String, Object> paramValues;
@@ -41,13 +42,14 @@ public class DataExpressionDeParser extends ExpressionDeParser {
     protected boolean paramLosing;
 
     public static void main(String[] args) throws Throwable {
+        final java.util.function.Function<Integer, String> signFunc = index -> "?";
         String sql = "SELECT DISTINCT col1 AS a, col2 AS b, col3 AS c FROM table T "
             + "WHERE col1 = 10 AND (col2 = :c2 OR col3 = MAX(:c3)) AND name LIKE '%'"
             + " AND seqid IS NULL AND (gameid IN :gameids OR gameName IN ('%', 'zzz'))"
             + " AND time BETWEEN :min AND :range_max AND col2 >= :c2"
             + " AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";
         Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
-        final DataExpressionDeParser exprDeParser = new DataExpressionDeParser();
+        final DataExpressionDeParser exprDeParser = new DataExpressionDeParser(index -> "?", params);
         final SelectDeParser selectParser = new SelectDeParser(exprDeParser, exprDeParser.getBuffer());
         exprDeParser.setSelectVisitor(selectParser);
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
@@ -56,24 +58,37 @@ public class DataExpressionDeParser extends ExpressionDeParser {
         //System.out.println(stmt.toString());
 
         System.out.println(selectBody.getWhere());
-        List<String> paramNames = new ArrayList<>();
-        System.out.println(exprDeParser.deParser(selectBody.getWhere(), paramNames, params));
+        System.out.println(exprDeParser.deParser(selectBody.getWhere()));
         System.out.println("应该是有两个： [c2, c2]");
-        System.out.println("paramNames = " + paramNames);
+        System.out.println("paramNames = " + exprDeParser.getParamNames());
+        
+        
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlParser.NativeSqlStatement statement = parser.parse(signFunc, sql, params);
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
     }
 
-    public String deParser(Expression where, @Nonnull List<String> paramNames, @Nonnull Map<String, Object> params) {
-        Objects.requireNonNull(paramNames);
+    public DataExpressionDeParser(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
+        Objects.requireNonNull(signFunc);
         Objects.requireNonNull(params);
-        this.buffer.delete(0, this.buffer.length());
-        this.paramNames = paramNames;
+        this.signFunc = signFunc;
         this.paramValues = params;
+    }
+
+    public String deParser(Expression where) {
         if (where != null) {
             where.accept(this);
         }
-        this.paramNames = null;
-        this.paramValues = null;
         return this.buffer.toString();
+    }
+
+    public List<String> getParamNames() {
+        return paramNames;
+    }
+
+    public Map<String, Object> getParamValues() {
+        return paramValues;
     }
 
     @Override
@@ -85,7 +100,7 @@ public class DataExpressionDeParser extends ExpressionDeParser {
         }
         paramNames.add(expr.getName());
         //使用JdbcParameter代替JdbcNamedParameter
-        buffer.append("?");
+        buffer.append(signFunc.apply(paramNames.size()));
     }
 
     @Override
@@ -150,7 +165,7 @@ public class DataExpressionDeParser extends ExpressionDeParser {
                 buffer.append(operator);
             } else {
                 for (int i = size1; i < size2; i++) {
-                    String s = paramNames.remove(paramNames.size() - 1);
+                    paramNames.remove(paramNames.size() - 1);
                 }
             }
 
@@ -162,7 +177,7 @@ public class DataExpressionDeParser extends ExpressionDeParser {
             if (end2 == start2) { //没有right
                 buffer.delete(end1, end2);
                 for (int i = size1; i < size2; i++) {
-                    String s = paramNames.remove(paramNames.size() - 1);
+                    paramNames.remove(paramNames.size() - 1);
                 }
             }
 
