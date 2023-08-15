@@ -15,7 +15,7 @@ import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.update.*;
-import net.sf.jsqlparser.util.deparser.*;
+import net.sf.jsqlparser.util.deparser.UpdateDeParser;
 import org.redkale.source.*;
 
 /**
@@ -63,7 +63,8 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
                 final Set<String> fullNames = new HashSet<String>();
                 final Set<String> mustNames = new HashSet<String>();
                 final AtomicBoolean containsInName = new AtomicBoolean();
-                ExpressionVisitorAdapter adapter = new ExpressionVisitorAdapter() {
+                ExpressionVisitorAdapter exprAdapter = new ExpressionVisitorAdapter() {
+
                     @Override
                     public void visit(JdbcNamedParameter expr) {
                         super.visit(expr);
@@ -85,25 +86,36 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
                         throw new SourceException("Cannot contains ? JdbcParameter");
                     }
                 };
+                SelectVisitorAdapter selectAdapter = new SelectVisitorAdapter() {
+                    @Override
+                    public void visit(PlainSelect plainSelect) {
+                        Expression where = plainSelect.getWhere();
+                        if (where != null) {
+                            where.accept(exprAdapter);
+                        }
+                    }
+                };
+                exprAdapter.setSelectVisitor(selectAdapter);
                 if (where != null) {
-                    where.accept(adapter);
+                    where.accept(exprAdapter);
                     mustNames.clear(); //where不存在必需的参数名
                 }
                 if (updateSets != null) {
                     for (UpdateSet set : updateSets) {
                         for (Expression expr : set.getExpressions()) {
-                            expr.accept(adapter);
+                            expr.accept(exprAdapter);
                         }
                     }
                 }
                 if (clearWhere != null) {
                     clearWhere.run(); //必须清空where条件
                 }
+                
                 String updateSql = null;
                 List<String> updateNamedSet = new ArrayList<>();
                 if (updateSets != null) {
                     Map<String, Object> params = new HashMap<>();
-                    Object val = new Object();
+                    Object val = List.of(1); //虚构一个参数值，IN需要Collection
                     for (String name : mustNames) {
                         params.put(name, val);
                     }
@@ -120,7 +132,7 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
         });
     }
 
-    private static class NativeParserInfo {
+    protected static class NativeParserInfo {
 
         //原始sql
         protected final String nativeSql;
@@ -131,9 +143,11 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
         //Statement对象
         protected final Statement stmt;
 
+        //where条件
         protected final Expression fullWhere;
 
-        protected final String updaateSql;
+        //没有where的UPDATE语句
+        protected final String updateSql;
 
         //修改项，只有UPDATE语句才有值
         protected final List<String> updateNamedSet;
@@ -144,15 +158,16 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
         //所有参数名，包含了mustNamedSet
         protected final Set<String> fullNamedSet;
 
+        //缓存
         private final ConcurrentHashMap<String, NativeSqlStatement> statements = new ConcurrentHashMap();
 
         public NativeParserInfo(String nativeSql, boolean containsInNamed, Statement stmt, Expression fullWhere,
-            Set<String> fullNamedSet, Set<String> mustNamedSet, String updaateSql, List<String> updateNamedSet) {
+            Set<String> fullNamedSet, Set<String> mustNamedSet, String updateSql, List<String> updateNamedSet) {
             this.nativeSql = nativeSql;
             this.existInNamed = containsInNamed;
             this.stmt = stmt;
             this.fullWhere = fullWhere;
-            this.updaateSql = updaateSql;
+            this.updateSql = updateSql;
             this.updateNamedSet = updateNamedSet;
             this.fullNamedSet = Collections.unmodifiableSet(fullNamedSet);
             this.mustNamedSet = Collections.unmodifiableSet(mustNamedSet);
@@ -180,8 +195,6 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
 
         private NativeSqlStatement createStatement(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
             final DataExpressionDeParser exprDeParser = new DataExpressionDeParser(signFunc, params);
-            final SelectDeParser selectParser = new SelectDeParser(exprDeParser, exprDeParser.getBuffer());
-            exprDeParser.setSelectVisitor(selectParser);
             if (updateNamedSet != null) {
                 exprDeParser.getParamNames().addAll(updateNamedSet);
             }
@@ -191,9 +204,9 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
             statement.setParamNames(exprDeParser.getParamNames());
             statement.setParamValues(params);
             if (whereSql.isEmpty()) {
-                statement.setNativeSql(updaateSql == null ? stmt.toString() : updaateSql);
+                statement.setNativeSql(updateSql == null ? stmt.toString() : updateSql);
             } else {
-                statement.setNativeSql((updaateSql == null ? stmt.toString() : updaateSql) + " WHERE " + whereSql);
+                statement.setNativeSql((updateSql == null ? stmt.toString() : updateSql) + " WHERE " + whereSql);
             }
             return statement;
         }
