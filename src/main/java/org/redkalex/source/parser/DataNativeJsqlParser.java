@@ -15,7 +15,7 @@ import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.update.*;
-import net.sf.jsqlparser.util.deparser.UpdateDeParser;
+import net.sf.jsqlparser.util.deparser.*;
 import org.redkale.source.*;
 
 /**
@@ -86,15 +86,8 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
                         throw new SourceException("Cannot contains ? JdbcParameter");
                     }
                 };
-                SelectVisitorAdapter selectAdapter = new SelectVisitorAdapter() {
-                    @Override
-                    public void visit(PlainSelect plainSelect) {
-                        Expression where = plainSelect.getWhere();
-                        if (where != null) {
-                            where.accept(exprAdapter);
-                        }
-                    }
-                };
+                SelectDeParser selectAdapter = new SelectDeParser();
+                selectAdapter.setExpressionVisitor(exprAdapter);
                 exprAdapter.setSelectVisitor(selectAdapter);
                 if (where != null) {
                     where.accept(exprAdapter);
@@ -110,7 +103,7 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
                 if (clearWhere != null) {
                     clearWhere.run(); //必须清空where条件
                 }
-                
+
                 String updateSql = null;
                 List<String> updateNamedSet = new ArrayList<>();
                 if (updateSets != null) {

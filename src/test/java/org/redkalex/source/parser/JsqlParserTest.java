@@ -105,7 +105,7 @@ public class JsqlParserTest {
 
     @Test
     public void run6() throws Exception {
-        String sql = "UPDATE dayrecord SET id = SELECT MAX(id) FROM tt WHERE status IN :sts, remark = :remark, name = CASE WHEN type = 1 THEN :v1 WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
+        String sql = "UPDATE dayrecord SET id = SELECT MAX(:id) FROM tt WHERE status IN :sts, remark = :remark, name = CASE WHEN type = 1 THEN :v1 WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
         Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "sts", List.of(2, 3), "ids", List.of(2, 3));
 
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
