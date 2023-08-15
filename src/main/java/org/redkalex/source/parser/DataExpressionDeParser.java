@@ -97,8 +97,8 @@ public class DataExpressionDeParser extends ExpressionDeParser {
         }
         {
             String sql = "UPDATE dayrecord SET id = MAX(:id), remark = :remark, name = CASE WHEN type = 1 THEN :v1 WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
-            Map<String, Object> params = Utility.ofMap("startTime", 1, "ids", List.of(2, 3));
-            
+            Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "ids", List.of(2, 3));
+
             CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
             System.out.println(sqlParser.Statement());
 
