@@ -307,7 +307,7 @@ public class DataExpressionDeParser extends ExpressionDeParser {
                         if (item == null) {
                             itemList.add(new NullValue());
                         } else if (item instanceof String) {
-                            itemList.add(new StringValue(item.toString()));
+                            itemList.add(new StringValue(item.toString().replace("'", "\\'")));
                         } else if (item instanceof Short || item instanceof Integer || item instanceof Long) {
                             itemList.add(new LongValue(item.toString()));
                         } else if (item instanceof Float || item instanceof Double) {
