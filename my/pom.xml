@@ -20,6 +20,7 @@
         <maven-surefire-plugin.version>3.0.0</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.0.0</maven-failsafe-plugin.version>
 
+        <jsqlparser.version>4.6</jsqlparser.version>
         <netty.version>4.1.94.Final</netty.version>
         <enjoy.version>5.1.1</enjoy.version>
         <freemarker.version>2.3.32</freemarker.version>
@@ -40,6 +41,11 @@
             <groupId>org.redkale</groupId>  
             <artifactId>redkale</artifactId>  
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>${jsqlparser.version}</version>
         </dependency>
         <!--
         <dependency>
