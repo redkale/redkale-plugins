@@ -882,9 +882,9 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
         NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = writePool();
         if (!sinfo.isEmptyNamed()) {
-            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(conn -> {
                 MyReqExtended req = conn.pollReqExtended(workThread, null);
                 Stream<Object> pstream = sinfo.getParamNames().stream().map(n -> params.get(n));
@@ -897,7 +897,6 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                 return pool.writeChannel(conn, req).thenApply(transfer);
             });
         } else {
-            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(conn -> {
                 MyReqExtended req = conn.pollReqExtended(workThread, null);
                 req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, sinfo.getNativeSql(), 0, (Stream) null);
@@ -916,31 +915,84 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
         long s = System.currentTimeMillis();
         NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = readPool();
+        Function<MyResultSet, V> transfer = dataset -> {
+            V rs = handler.apply(dataset);
+            slowLog(s, sinfo.getNativeSql());
+            return rs;
+        };
         if (!sinfo.isEmptyNamed()) {
-            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(conn -> {
                 MyReqExtended req = conn.pollReqExtended(workThread, null);
                 Stream<Object> pstream = sinfo.getParamNames().stream().map(n -> params.get(n));
                 req.prepare(MyClientRequest.REQ_TYPE_EXTEND_UPDATE, sinfo.getNativeSql(), 0, pstream);
-                Function<MyResultSet, V> transfer = dataset -> {
-                    V rs = handler.apply(dataset);
-                    slowLog(s, sinfo.getNativeSql());
-                    return rs;
-                };
                 return pool.writeChannel(conn, req).thenApply(transfer);
             });
         } else {
-            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(conn -> {
-                MyReqExtended req = conn.pollReqExtended(workThread, null);
-                req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, sinfo.getNativeSql(), 0, (Stream) null);
-                Function<MyResultSet, V> transfer = dataset -> {
-                    V rs = handler.apply(dataset);
-                    slowLog(s, sinfo.getNativeSql());
-                    return rs;
-                };
+                MyReqQuery req = conn.pollReqQuery(workThread, null);
+                req.prepare(sinfo.getNativeSql());
                 return pool.writeChannel(conn, req).thenApply(transfer);
+            });
+        }
+    }
+
+    public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
+        long s = System.currentTimeMillis();
+        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        MyClient pool = readPool();
+        Function<MyResultSet, Long> countTransfer = dataset -> {
+            long rs = dataset.next() ? dataset.getLongValue(1) : 0;
+            slowLog(s, sinfo.getNativeCountSql());
+            return rs;
+        };
+        if (!sinfo.isEmptyNamed()) {
+            return pool.connect().thenCompose(conn -> {
+                MyReqExtended countReq = conn.pollReqExtended(workThread, null);
+                Stream<Object> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
+                countReq.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, sinfo.getNativeCountSql(), 0, pstream);
+                return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
+                    if (total < 1) {
+                        return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
+                    } else {
+                        long s2 = System.currentTimeMillis();
+                        String listSql = sinfo.getNativeCountSql()
+                            + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                        MyReqExtended req = conn.pollReqExtended(workThread, null);
+                        Stream<Object> pstream2 = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
+                        req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, listSql, flipper == null ? 0 : flipper.getLimit(), pstream2);
+                        Function<MyResultSet, Sheet<V>> sheetTransfer = dataset -> {
+                            List<V> list = EntityBuilder.getListValue(type, dataset);
+                            slowLog(s2, listSql);
+                            return new Sheet<>(total, list);
+                        };
+                        return pool.writeChannel(conn, req, sheetTransfer);
+                    }
+                });
+            });
+        } else {
+            return pool.connect().thenCompose(conn -> {
+                MyReqQuery countReq = conn.pollReqQuery(workThread, null);
+                countReq.prepare(sinfo.getNativeCountSql());
+                return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
+                    if (total < 1) {
+                        return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
+                    } else {
+                        long s2 = System.currentTimeMillis();
+                        String listSql = sinfo.getNativeCountSql()
+                            + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                        MyReqQuery req = conn.pollReqQuery(workThread, null);
+                        req.prepare(listSql);
+                        Function<MyResultSet, Sheet<V>> sheetTransfer = dataset -> {
+                            List<V> list = EntityBuilder.getListValue(type, dataset);
+                            slowLog(s2, listSql);
+                            return new Sheet<>(total, list);
+                        };
+                        return pool.writeChannel(conn, req, sheetTransfer);
+                    }
+                });
             });
         }
     }

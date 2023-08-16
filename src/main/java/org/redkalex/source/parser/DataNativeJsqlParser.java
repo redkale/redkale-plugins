@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.*;
 import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.*;
-import net.sf.jsqlparser.expression.operators.relational.InExpression;
+import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.parser.*;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.delete.Delete;
@@ -19,6 +19,7 @@ import net.sf.jsqlparser.statement.update.*;
 import net.sf.jsqlparser.util.deparser.*;
 import org.redkale.annotation.ResourceType;
 import org.redkale.source.*;
+import org.redkale.util.Utility;
 
 /**
  *
@@ -32,19 +33,21 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
     private final ConcurrentHashMap<String, NativeParserInfo> parserInfo = new ConcurrentHashMap();
 
     @Override
-    public NativeSqlStatement parse(java.util.function.Function<Integer, String> signFunc, String nativeSql, Map<String, Object> params) {
-        NativeSqlStatement statement = loadParser(signFunc, nativeSql).loadStatement(signFunc, params);
+    public NativeSqlStatement parse(java.util.function.Function<Integer, String> signFunc, String dbtype, String nativeSql, Map<String, Object> params) {
+        NativeSqlStatement statement = loadParser(signFunc, dbtype, nativeSql).loadStatement(signFunc, params);
         if (logger.isLoggable(Level.FINE)) {
-            logger.log(Level.FINE, "sql = " + nativeSql + ", nativeSql = " + statement.getNativeSql() + ", paramNames = " + statement.getParamNames());
+            logger.log(Level.FINE, "sql = " + nativeSql + ", nativeSql = " + statement.getNativeSql()
+                + ", nativeCountSql = " + statement.getNativeCountSql() + ", paramNames = " + statement.getParamNames());
         }
         return statement;
     }
 
-    private NativeParserInfo loadParser(java.util.function.Function<Integer, String> signFunc, String nativeSql) {
+    private NativeParserInfo loadParser(java.util.function.Function<Integer, String> signFunc, String dbtype, String nativeSql) {
         return parserInfo.computeIfAbsent(nativeSql, sql -> {
             try {
                 CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
                 Statement stmt = sqlParser.Statement();
+                Statement countStmt = null;
                 Expression where = null;
                 Runnable clearWhere = null;
                 List<UpdateSet> updateSets = null;
@@ -52,6 +55,22 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
                     PlainSelect selectBody = (PlainSelect) ((Select) stmt).getSelectBody();
                     where = selectBody.getWhere();
                     clearWhere = () -> selectBody.setWhere(null);
+                    { //创建COUNT总数sql
+                        CCJSqlParser countParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
+                        Select countSelect = (Select) countParser.Statement();
+                        PlainSelect countBody = (PlainSelect) countSelect.getSelectBody();
+                        if (countBody.getDistinct() == null) {
+                            Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withParameters(new ExpressionList(new LongValue(1)));
+                            countBody.setSelectItems(Utility.ofList(new SelectExpressionItem(countFunc)));
+                        } else {
+                            Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
+                                .withParameters(new ExpressionList((List) countBody.getSelectItems()));
+                            countBody.setSelectItems(Utility.ofList(new SelectExpressionItem(countFunc)));
+                            countBody.setDistinct(null);
+                        }
+                        countBody.setWhere(null);
+                        countStmt = countSelect;
+                    }
                 } else if (stmt instanceof Insert) {
                     Select select = ((Insert) stmt).getSelect();
                     SelectBody selectBody = select.getSelectBody();
@@ -127,7 +146,7 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
                     updateSql = exprDeParser.getBuffer().toString();
                     updateNamedSet = exprDeParser.getParamNames();
                 }
-                return new NativeParserInfo(sql, containsInName.get(), stmt, where, fullNames, mustNames, updateSql, updateNamedSet);
+                return new NativeParserInfo(sql, containsInName.get(), stmt, countStmt, where, fullNames, mustNames, updateSql, updateNamedSet);
             } catch (ParseException e) {
                 throw new SourceException("Parse error, sql: " + sql, e);
             }
@@ -137,13 +156,16 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
     protected static class NativeParserInfo {
 
         //原始sql
-        protected final String nativeSql;
+        protected final String rowSql;
 
         //是否包含InExpression参数名
         protected final boolean existInNamed;
 
         //Statement对象
         protected final Statement stmt;
+
+        //原始sql的 COUNT(1) 版
+        protected final Statement countStmt;
 
         //where条件
         protected final Expression fullWhere;
@@ -163,11 +185,12 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
         //缓存
         private final ConcurrentHashMap<String, NativeSqlStatement> statements = new ConcurrentHashMap();
 
-        public NativeParserInfo(String nativeSql, boolean containsInNamed, Statement stmt, Expression fullWhere,
+        public NativeParserInfo(String rowSql, boolean containsInNamed, Statement stmt, Statement countStmt, Expression fullWhere,
             Set<String> fullNamedSet, Set<String> mustNamedSet, String updateSql, List<String> updateNamedSet) {
-            this.nativeSql = nativeSql;
+            this.rowSql = rowSql;
             this.existInNamed = containsInNamed;
             this.stmt = stmt;
+            this.countStmt = countStmt;
             this.fullWhere = fullWhere;
             this.updateSql = updateSql;
             this.updateNamedSet = updateNamedSet;
@@ -207,8 +230,14 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
             statement.setParamValues(params);
             if (whereSql.isEmpty()) {
                 statement.setNativeSql(updateSql == null ? stmt.toString() : updateSql);
+                if (countStmt != null) {
+                    statement.setNativeCountSql(countStmt.toString());
+                }
             } else {
                 statement.setNativeSql((updateSql == null ? stmt.toString() : updateSql) + " WHERE " + whereSql);
+                if (countStmt != null) {
+                    statement.setNativeCountSql(countStmt.toString() + " WHERE " + whereSql);
+                }
             }
             return statement;
         }

@@ -7,7 +7,7 @@ package org.redkalex.source.vertx;
 
 import java.util.*;
 import org.redkale.boot.LoggingBaseHandler;
-import org.redkale.source.FilterNode;
+import org.redkale.source.*;
 import org.redkale.util.*;
 import org.redkalex.source.base.IncreWorld;
 import org.redkalex.source.parser.DataNativeJsqlParser;
@@ -80,6 +80,17 @@ public class VertxMysqlTest {
         System.out.println("修改结果数: " + rs);
         System.out.println(source.find(TestRecord.class, entity.getRecordid()));
 
+        String sheetSql = "SELECT * FROM TestRecord WHERE name LIKE :name OR recordid IN :ids";
+        Flipper flipper = new Flipper(2);
+        Sheet<TestRecord> sheet = source.nativeQuerySheet(TestRecord.class, sheetSql, flipper, params);
+        System.out.println(sheet);
+        System.out.println("获得总数: " + sheet.getTotal());
+
+        sheetSql = "SELECT * FROM TestRecord WHERE recordid IN :ids";
+        sheet = source.nativeQuerySheet(TestRecord.class, sheetSql, flipper, params);
+        System.out.println(sheet);
+        System.out.println("获得总数: " + sheet.getTotal());
+        
         System.out.println("运行完成");
         source.destroy(null);
     }

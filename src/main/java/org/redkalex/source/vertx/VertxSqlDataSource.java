@@ -946,6 +946,51 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         return future;
     }
 
+    public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
+        long s = System.currentTimeMillis();
+        final CompletableFuture<Sheet<V>> future = new CompletableFuture<>();
+        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        Pool pool = readPool();
+        Handler<AsyncResult<RowSet<Row>>> countHandler = (AsyncResult<RowSet<Row>> evt) -> {
+            slowLog(s, sinfo.getNativeCountSql());
+            if (evt.failed()) {
+                future.completeExceptionally(evt.cause());
+            } else {
+                long total = 0;
+                RowIterator<Row> it = evt.result().iterator();
+                if (it.hasNext()) {
+                    total = it.next().getLong(0);
+                }
+                if (total < 1) {
+                    future.complete(new Sheet<>(total, new ArrayList<>()));
+                }
+                final long count = total;
+                String listSql = sinfo.getNativeCountSql()
+                    + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                Handler<AsyncResult<RowSet<Row>>> listHandler = (AsyncResult<RowSet<Row>> event) -> {
+                    slowLog(s, sinfo.getNativeCountSql());
+                    if (event.failed()) {
+                        future.completeExceptionally(event.cause());
+                    } else {
+                        List<V> list = EntityBuilder.getListValue(type, new VertxResultSet(null, null, event.result()));
+                        future.complete(new Sheet<>(count, list));
+                    }
+                };
+                if (!sinfo.isEmptyNamed()) {
+                    pool.preparedQuery(listSql).execute(tupleParameter(sinfo, params), listHandler);
+                } else {
+                    pool.preparedQuery(listSql).execute(listHandler);
+                }
+            }
+        };
+        if (!sinfo.isEmptyNamed()) {
+            pool.preparedQuery(sinfo.getNativeCountSql()).execute(tupleParameter(sinfo, params), countHandler);
+        } else {
+            pool.preparedQuery(sinfo.getNativeCountSql()).execute(countHandler);
+        }
+        return future;
+    }
+
     protected Tuple tupleParameter(NativeSqlStatement sinfo, Map<String, Object> params) {
         List<Object> objs = new ArrayList<>();
         for (String name : sinfo.getParamNames()) {

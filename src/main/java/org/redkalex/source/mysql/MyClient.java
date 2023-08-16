@@ -7,6 +7,7 @@ package org.redkalex.source.mysql;
 
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.logging.Logger;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
@@ -56,6 +57,11 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
     @Override
     protected CompletableFuture<MyResultSet> writeChannel(ClientConnection conn, MyClientRequest request) {
         return super.writeChannel(conn, request);
+    }
+
+    @Override
+    protected <T> CompletableFuture<T> writeChannel(ClientConnection conn, MyClientRequest request, Function<MyResultSet, T> respTransfer) {
+        return super.writeChannel(conn, request, respTransfer);
     }
 
     @Override

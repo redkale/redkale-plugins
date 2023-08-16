@@ -875,9 +875,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
         NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = writePool();
         if (!sinfo.isEmptyNamed()) {
-            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, null);
                 Stream<Serializable> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
@@ -891,7 +891,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 return pool.writeChannel(conn, req, transfer);
             });
         } else {
-            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, null);
                 req.prepare(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0);
@@ -911,33 +910,84 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
         long s = System.currentTimeMillis();
         NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = readPool();
+        Function<PgResultSet, V> transfer = dataset -> {
+            V rs = handler.apply(dataset);
+            slowLog(s, sinfo.getNativeSql());
+            return rs;
+        };
         if (!sinfo.isEmptyNamed()) {
-            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, null);
                 Stream<Serializable> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
                 req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0, sinfo.getParamNames().size(), pstream);
-                Function<PgResultSet, V> transfer = dataset -> {
-                    V rs = handler.apply(dataset);
-                    conn.offerResultSet(req, dataset);
-                    slowLog(s, sinfo.getNativeSql());
-                    return rs;
-                };
                 return pool.writeChannel(conn, req, transfer);
             });
         } else {
-            WorkThread workThread = WorkThread.currentWorkThread();
             return pool.connect().thenCompose(conn -> {
-                PgReqExtended req = conn.pollReqExtended(workThread, null);
-                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0);
-                Function<PgResultSet, V> transfer = dataset -> {
-                    V rs = handler.apply(dataset);
-                    conn.offerResultSet(req, dataset);
-                    slowLog(s, sinfo.getNativeSql());
-                    return rs;
-                };
+                PgReqQuery req = conn.pollReqQuery(workThread, null);
+                req.prepare(sinfo.getNativeSql());
                 return pool.writeChannel(conn, req, transfer);
+            });
+        }
+    }
+
+    public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
+        long s = System.currentTimeMillis();
+        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        PgClient pool = readPool();
+        Function<PgResultSet, Long> countTransfer = dataset -> {
+            long rs = dataset.next() ? dataset.getLongValue(1) : 0;
+            slowLog(s, sinfo.getNativeCountSql());
+            return rs;
+        };
+        if (!sinfo.isEmptyNamed()) {
+            return pool.connect().thenCompose(conn -> {
+                PgReqExtended countReq = conn.pollReqExtended(workThread, null);
+                Stream<Serializable> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
+                countReq.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, sinfo.getNativeCountSql(), 0, sinfo.getParamNames().size(), pstream);
+                return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
+                    if (total < 1) {
+                        return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
+                    } else {
+                        long s2 = System.currentTimeMillis();
+                        String listSql = sinfo.getNativeCountSql()
+                            + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                        PgReqExtended req = conn.pollReqExtended(workThread, null);
+                        Stream<Serializable> pstream2 = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
+                        req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, listSql, flipper == null ? 0 : flipper.getLimit(), sinfo.getParamNames().size(), pstream2);
+                        Function<PgResultSet, Sheet<V>> sheetTransfer = dataset -> {
+                            List<V> list = EntityBuilder.getListValue(type, dataset);
+                            slowLog(s2, listSql);
+                            return new Sheet<>(total, list);
+                        };
+                        return pool.writeChannel(conn, req, sheetTransfer);
+                    }
+                });
+            });
+        } else {
+            return pool.connect().thenCompose(conn -> {
+                PgReqQuery countReq = conn.pollReqQuery(workThread, null);
+                countReq.prepare(sinfo.getNativeCountSql());
+                return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
+                    if (total < 1) {
+                        return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
+                    } else {
+                        long s2 = System.currentTimeMillis();
+                        String listSql = sinfo.getNativeCountSql()
+                            + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                        PgReqQuery req = conn.pollReqQuery(workThread, null);
+                        req.prepare(listSql);
+                        Function<PgResultSet, Sheet<V>> sheetTransfer = dataset -> {
+                            List<V> list = EntityBuilder.getListValue(type, dataset);
+                            slowLog(s2, listSql);
+                            return new Sheet<>(total, list);
+                        };
+                        return pool.writeChannel(conn, req, sheetTransfer);
+                    }
+                });
             });
         }
     }

@@ -189,6 +189,11 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
         return this;
     }
 
+    @ConvertDisabled
+    public long getLongValue(int columnIndex) {
+        return ((Number) this.currRow.getObject(rowDesc, columnIndex - 1)).longValue();
+    }
+
     @Override
     public boolean next() {
         if (this.rowData.isEmpty()) {

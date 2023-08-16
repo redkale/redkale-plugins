@@ -17,6 +17,8 @@ import org.redkale.persistence.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import org.redkalex.source.base.IncreWorld;
+import org.redkalex.source.parser.DataNativeJsqlParser;
+import org.redkalex.source.vertx.TestRecord;
 
 /**
  *
@@ -31,6 +33,7 @@ public class MySQLJdbcTest {
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
+        factory.register("", new DataNativeJsqlParser());
 
         Properties prop = new Properties();
         prop.setProperty("redkale.datasource.default.url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
@@ -51,6 +54,37 @@ public class MySQLJdbcTest {
 
         System.out.println("当前机器CPU核数: " + Utility.cpus());
         System.out.println("清空DayRecord表: " + source.clearTable(OneRecord.class));
+        {
+            //source.dropTable(TestRecord.class);
+            TestRecord entity = new TestRecord();
+            entity.setRecordid("r223" + System.currentTimeMillis());
+            entity.setScore(200);
+            entity.setStatus((short) 10);
+            entity.setName("myname2");
+            entity.setCreateTime(System.currentTimeMillis());
+            source.insert(entity);
+
+            Map<String, Object> params = Utility.ofMap("name", "%", "ids", Utility.ofList(entity.getRecordid()));
+            String sql = "SELECT * FROM TestRecord WHERE name LIKE :name OR recordid IN :ids";
+            TestRecord one = source.nativeQueryOne(TestRecord.class, sql, params);
+            System.out.println(one);
+
+            String upsql = "UPDATE TestRecord SET name='aa' WHERE name LIKE :name OR recordid IN :ids";
+            int rs = source.nativeUpdate(upsql, params);
+            System.out.println("修改结果数: " + rs);
+            System.out.println(source.find(TestRecord.class, entity.getRecordid()));
+
+            String sheetSql = "SELECT * FROM TestRecord WHERE name LIKE :name OR recordid IN :ids";
+            Flipper flipper = new Flipper(2);
+            Sheet<TestRecord> sheet = source.nativeQuerySheet(TestRecord.class, sheetSql, flipper, params);
+            System.out.println(sheet);
+            System.out.println("获得总数: " + sheet.getTotal());
+
+            sheetSql = "SELECT * FROM TestRecord WHERE recordid IN :ids";
+            sheet = source.nativeQuerySheet(TestRecord.class, sheetSql, flipper, params);
+            System.out.println(sheet);
+            System.out.println("获得总数: " + sheet.getTotal());
+        }
 
         OneRecord record1 = new OneRecord();
         record1.setCreateTime(11);

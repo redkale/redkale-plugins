@@ -75,6 +75,17 @@ public class MySQLTest {
             int rs = source.nativeUpdate(upsql, params);
             System.out.println("修改结果数: " + rs);
             System.out.println(source.find(TestRecord.class, entity.getRecordid()));
+
+            String sheetSql = "SELECT * FROM TestRecord WHERE name LIKE :name OR recordid IN :ids";
+            Flipper flipper = new Flipper(2);
+            Sheet<TestRecord> sheet = source.nativeQuerySheet(TestRecord.class, sheetSql, flipper, params);
+            System.out.println(sheet);
+            System.out.println("获得总数: " + sheet.getTotal());
+
+            sheetSql = "SELECT * FROM TestRecord WHERE recordid IN :ids";
+            sheet = source.nativeQuerySheet(TestRecord.class, sheetSql, flipper, params);
+            System.out.println(sheet);
+            System.out.println("获得总数: " + sheet.getTotal());
         }
         if (false) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());

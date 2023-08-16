@@ -158,6 +158,11 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
         return this.currRow == null;
     }
 
+    @ConvertDisabled
+    public long getLongValue(int columnIndex) {
+        return ((Number) this.currRow.getObject(rowDesc, columnIndex - 1)).longValue();
+    }
+
     private Map<String, Integer> colmap() {
         if (colmap != null) {
             return colmap;
