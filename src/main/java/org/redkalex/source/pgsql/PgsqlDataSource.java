@@ -11,11 +11,13 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;
+import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
@@ -824,25 +826,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int nativeUpdate(String sql) {
-        final long s = System.currentTimeMillis();
-        final PgClient pool = writePool();
-        WorkThread workThread = WorkThread.currentWorkThread();
-        CompletableFuture<PgResultSet> future = pool.connect().thenCompose(conn -> {
-            PgReqUpdate req = conn.pollReqUpdate(workThread, null);
-            return pool.writeChannel(conn, req.prepare(sql));
-        });
-        return future.thenApply(g -> {
-            slowLog(s, sql);
-            return g.getUpdateEffectCount();
-        }).join();
-    }
-
-    @Local
-    @Override
-    public int[] nativeUpdates(String... sqls) {
+    public CompletableFuture<int[]> nativeUpdatesAsync(String... sqls) {
         if (sqls.length == 1) {
-            return new int[]{nativeUpdate(sqls[0])};
+            return nativeUpdateAsync(sqls[0]).thenApply(v -> new int[]{v});
         }
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
@@ -853,29 +839,107 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         return future.thenApply(g -> {
             slowLog(s, sqls);
             return g.getBatchEffectCounts();
-        }).join();
+        });
     }
 
     @Local
     @Override
-    public <V> V nativeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
+    public CompletableFuture<Integer> nativeUpdateAsync(String sql) {
+        final long s = System.currentTimeMillis();
+        final PgClient pool = writePool();
+        WorkThread workThread = WorkThread.currentWorkThread();
+        CompletableFuture<PgResultSet> future = pool.connect().thenCompose(conn -> {
+            PgReqUpdate req = conn.pollReqUpdate(workThread, null);
+            return pool.writeChannel(conn, req.prepare(sql));
+        });
+        return future.thenApply(g -> {
+            slowLog(s, sql);
+            return g.getUpdateEffectCount();
+        });
+    }
+
+    @Local
+    @Override
+    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
         return executeQuery(null, sql).thenApply((DataResultSet dataset) -> {
             V rs = handler.apply(dataset);
             dataset.close();
             slowLog(s, sql);
             return rs;
-        }).join();
+        });
     }
 
+    @Local
     @Override
-    public int nativeUpdate(String sql, Map<String, Object> params) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
+        long s = System.currentTimeMillis();
+        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        PgClient pool = writePool();
+        if (!sinfo.isEmptyNamed()) {
+            WorkThread workThread = WorkThread.currentWorkThread();
+            return pool.connect().thenCompose(conn -> {
+                PgReqExtended req = conn.pollReqExtended(workThread, null);
+                Stream<Serializable> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
+                req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0, sinfo.getParamNames().size(), pstream);
+                Function<PgResultSet, Integer> transfer = dataset -> {
+                    int rs = dataset.getUpdateEffectCount();
+                    conn.offerResultSet(req, dataset);
+                    slowLog(s, sinfo.getNativeSql());
+                    return rs;
+                };
+                return pool.writeChannel(conn, req, transfer);
+            });
+        } else {
+            WorkThread workThread = WorkThread.currentWorkThread();
+            return pool.connect().thenCompose(conn -> {
+                PgReqExtended req = conn.pollReqExtended(workThread, null);
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0);
+                Function<PgResultSet, Integer> transfer = dataset -> {
+                    int rs = dataset.getUpdateEffectCount();
+                    conn.offerResultSet(req, dataset);
+                    slowLog(s, sinfo.getNativeSql());
+                    return rs;
+                };
+                return pool.writeChannel(conn, req, transfer);
+            });
+        }
     }
 
+    @Local
     @Override
-    public <V> V nativeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
+        long s = System.currentTimeMillis();
+        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        PgClient pool = readPool();
+        if (!sinfo.isEmptyNamed()) {
+            WorkThread workThread = WorkThread.currentWorkThread();
+            return pool.connect().thenCompose(conn -> {
+                PgReqExtended req = conn.pollReqExtended(workThread, null);
+                Stream<Serializable> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
+                req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0, sinfo.getParamNames().size(), pstream);
+                Function<PgResultSet, V> transfer = dataset -> {
+                    V rs = handler.apply(dataset);
+                    conn.offerResultSet(req, dataset);
+                    slowLog(s, sinfo.getNativeSql());
+                    return rs;
+                };
+                return pool.writeChannel(conn, req, transfer);
+            });
+        } else {
+            WorkThread workThread = WorkThread.currentWorkThread();
+            return pool.connect().thenCompose(conn -> {
+                PgReqExtended req = conn.pollReqExtended(workThread, null);
+                req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0);
+                Function<PgResultSet, V> transfer = dataset -> {
+                    V rs = handler.apply(dataset);
+                    conn.offerResultSet(req, dataset);
+                    slowLog(s, sinfo.getNativeSql());
+                    return rs;
+                };
+                return pool.writeChannel(conn, req, transfer);
+            });
+        }
     }
 
 }

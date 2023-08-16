@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
 import org.redkale.service.Local;
+import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
@@ -272,7 +273,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected String prepareParamSign(int index) {
-        return "$" + index;
+        return dollar ? ("$" + index) : "?";
     }
 
     @Override
@@ -850,17 +851,17 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int nativeUpdate(String sql) {
-        return executeUpdate(null, new String[]{sql}, null, 0, false, null, null).join();
+    public CompletableFuture<Integer> nativeUpdateAsync(String sql) {
+        return nativeUpdatesAsync(new String[]{sql}).thenApply(v -> v[0]);
     }
 
     @Local
     @Override
-    public int[] nativeUpdates(final String... sqls) {
+    public CompletableFuture<int[]> nativeUpdatesAsync(String... sqls) {
         final long s = System.currentTimeMillis();
         final int[] rs = new int[sqls.length];
-        writePool().withTransaction(conn -> {
-            CompletableFuture[] futures = new CompletableFuture[rs.length];
+        CompletableFuture[] futures = new CompletableFuture[rs.length];
+        return writePool().withTransaction(conn -> {
             for (int i = 0; i < rs.length; i++) {
                 final int index = i;
                 futures[i] = conn.query(sqls[i]).execute().map(rset -> {
@@ -870,29 +871,86 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 }).toCompletionStage().toCompletableFuture();
             }
             return io.vertx.core.Future.fromCompletionStage(CompletableFuture.allOf(futures));
-        }).toCompletionStage().toCompletableFuture().join();
-        slowLog(s, sqls);
-        return rs;
+        }).toCompletionStage().toCompletableFuture()
+            .thenApply(v -> {
+                slowLog(s, sqls);
+                return rs;
+            });
     }
 
     @Local
     @Override
-    public <V> V nativeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
+    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
         return queryResultSet(null, sql).thenApply((VertxResultSet set) -> {
             slowLog(s, sql);
             return handler.apply(set);
-        }).join();
+        });
     }
 
+    @Local
     @Override
-    public int nativeUpdate(String sql, Map<String, Object> params) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
+        long s = System.currentTimeMillis();
+        final CompletableFuture<Integer> future = new CompletableFuture<>();
+        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        if (!sinfo.isEmptyNamed()) {
+            writePool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
+                slowLog(s, sinfo.getNativeSql());
+                if (event.failed()) {
+                    future.completeExceptionally(event.cause());
+                    return;
+                }
+                future.complete(event.result().rowCount());
+            });
+        } else {
+            writePool().query(sinfo.getNativeSql()).execute((AsyncResult<RowSet<Row>> event) -> {
+                slowLog(s, sinfo.getNativeSql());
+                if (event.failed()) {
+                    future.completeExceptionally(event.cause());
+                    return;
+                }
+                future.complete(event.result().rowCount());
+            });
+        }
+        return future;
     }
 
+    @Local
     @Override
-    public <V> V nativeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
+        long s = System.currentTimeMillis();
+        final CompletableFuture<V> future = new CompletableFuture<>();
+        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        if (!sinfo.isEmptyNamed()) {
+            readPool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
+                slowLog(s, sinfo.getNativeSql());
+                if (event.failed()) {
+                    future.completeExceptionally(event.cause());
+                } else {
+                    future.complete(handler.apply(new VertxResultSet(null, null, event.result())));
+                }
+            }
+            );
+        } else {
+            readPool().preparedQuery(sinfo.getNativeSql()).execute((AsyncResult<RowSet<Row>> event) -> {
+                slowLog(s, sinfo.getNativeSql());
+                if (event.failed()) {
+                    future.completeExceptionally(event.cause());
+                } else {
+                    future.complete(handler.apply(new VertxResultSet(null, null, event.result())));
+                }
+            }
+            );
+        }
+        return future;
     }
 
+    protected Tuple tupleParameter(NativeSqlStatement sinfo, Map<String, Object> params) {
+        List<Object> objs = new ArrayList<>();
+        for (String name : sinfo.getParamNames()) {
+            objs.add(params.get(name));
+        }
+        return Tuple.from(objs);
+    }
 }

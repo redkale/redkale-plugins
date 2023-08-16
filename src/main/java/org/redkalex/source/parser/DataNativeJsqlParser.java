@@ -6,6 +6,7 @@ package org.redkalex.source.parser;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.*;
 import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
@@ -16,19 +17,27 @@ import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.*;
 import net.sf.jsqlparser.statement.update.*;
 import net.sf.jsqlparser.util.deparser.*;
+import org.redkale.annotation.ResourceType;
 import org.redkale.source.*;
 
 /**
  *
  * @author zhangjx
  */
+@ResourceType(DataNativeSqlParser.class)
 public class DataNativeJsqlParser implements DataNativeSqlParser {
+
+    protected final Logger logger = Logger.getLogger(DataNativeJsqlParser.class.getSimpleName());
 
     private final ConcurrentHashMap<String, NativeParserInfo> parserInfo = new ConcurrentHashMap();
 
     @Override
     public NativeSqlStatement parse(java.util.function.Function<Integer, String> signFunc, String nativeSql, Map<String, Object> params) {
-        return loadParser(signFunc, nativeSql).loadStatement(signFunc, params);
+        NativeSqlStatement statement = loadParser(signFunc, nativeSql).loadStatement(signFunc, params);
+        if (logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, "sql = " + nativeSql + ", nativeSql = " + statement.getNativeSql() + ", paramNames = " + statement.getParamNames());
+        }
+        return statement;
     }
 
     private NativeParserInfo loadParser(java.util.function.Function<Integer, String> signFunc, String nativeSql) {

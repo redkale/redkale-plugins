@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.*;
+import java.util.stream.Stream;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
@@ -57,6 +58,14 @@ public class MyReqExtended extends MyClientRequest {
         this.fetchSize = fetchSize;
         this.attrs = attrs;
         this.parameters = parameters;
+    }
+
+    public <T> void prepare(int type, String sql, int fetchSize, final Stream<Object> stream) {
+        super.prepare();
+        this.type = type;
+        this.sql = sql;
+        this.fetchSize = fetchSize;
+        this.parameters = stream == null ? null : new Object[][]{stream.toArray(v -> new Object[v])};
     }
 
     @Override

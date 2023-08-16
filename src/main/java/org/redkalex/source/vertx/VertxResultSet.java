@@ -12,6 +12,7 @@ import java.net.URL;
 import java.sql.*;
 import java.time.*;
 import java.util.*;
+import org.redkale.annotation.Nullable;
 import org.redkale.convert.ConvertDisabled;
 import org.redkale.source.*;
 
@@ -21,6 +22,7 @@ import org.redkale.source.*;
  */
 public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
 
+    @Nullable
     private EntityInfo info;
 
     private SqlConnection conn;
@@ -31,7 +33,7 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
 
     private List<String> columnsNames;
 
-    public VertxResultSet(EntityInfo info, SqlConnection conn, RowSet<Row> rowSet) {
+    public VertxResultSet(@Nullable EntityInfo info, SqlConnection conn, RowSet<Row> rowSet) {
         this.info = info;
         this.conn = conn;
         this.it = rowSet == null ? null : rowSet.iterator();
@@ -40,7 +42,9 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
 
     @Override
     public boolean next() {
-        if (it == null) return false;
+        if (it == null) {
+            return false;
+        }
         boolean has = it.hasNext();
         this.currentRow = has ? it.next() : null;
         return has;
@@ -54,11 +58,15 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
 
     @Override
     public void close() {
-        if (conn != null) conn.close();
+        if (conn != null) {
+            conn.close();
+        }
     }
 
     public void dispose() {
-        if (conn != null) conn.close();
+        if (conn != null) {
+            conn.close();
+        }
     }
 
     @Override
@@ -69,7 +77,9 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     @Override
     public Object getObject(String columnName) {
         int columnIndex = currentRow.getColumnIndex(columnName);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnName.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnName.toLowerCase());
+        }
         return currentRow.getValue(columnIndex);
     }
 
@@ -94,9 +104,13 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         io.vertx.core.buffer.Buffer buf = currentRow.getBuffer(columnIndex);
-        if (buf == null) return null;
+        if (buf == null) {
+            return null;
+        }
         byte[] bs = buf.getBytes();
         return bs == null ? null : new VertxBlob(bs);
     }
@@ -190,56 +204,72 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     @Override
     public String getString(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return currentRow.getString(columnIndex);
     }
 
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return currentRow.getBoolean(columnIndex);
     }
 
     @Override
     public byte getByte(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return currentRow.getInteger(columnIndex).byteValue();
     }
 
     @Override
     public short getShort(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return currentRow.getInteger(columnIndex).shortValue();
     }
 
     @Override
     public int getInt(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return currentRow.getInteger(columnIndex);
     }
 
     @Override
     public long getLong(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return currentRow.getLong(columnIndex);
     }
 
     @Override
     public float getFloat(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return currentRow.getFloat(columnIndex);
     }
 
     @Override
     public double getDouble(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return currentRow.getDouble(columnIndex);
     }
 
@@ -247,14 +277,18 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     @Deprecated
     public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return currentRow.getBigDecimal(columnIndex);
     }
 
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         io.vertx.core.buffer.Buffer buf = currentRow.getBuffer(columnIndex);
         return buf == null ? null : buf.getBytes();
     }
@@ -262,7 +296,9 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     @Override
     public java.sql.Date getDate(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         LocalDate date = currentRow.getLocalDate(columnIndex);
         return date == null ? null : java.sql.Date.valueOf(date);
     }
@@ -270,7 +306,9 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     @Override
     public Time getTime(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         LocalTime date = currentRow.getLocalTime(columnIndex);
         return date == null ? null : java.sql.Time.valueOf(date);
     }
@@ -278,7 +316,9 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         LocalDateTime date = currentRow.getLocalDateTime(columnIndex);
         return date == null ? null : java.sql.Timestamp.valueOf(date);
     }
@@ -1047,7 +1087,9 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
     @Override
     public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
         int columnIndex = currentRow.getColumnIndex(columnLabel);
-        if (columnIndex < 0) columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
         return getObject(columnIndex, type);
     }
 
@@ -1076,7 +1118,9 @@ public class VertxResultSet implements java.sql.ResultSet, DataResultSet {
 
         @Override
         public byte[] getBytes(long pos, int length) throws SQLException {
-            if (pos == 0 && length == bytes.length) return bytes;
+            if (pos == 0 && length == bytes.length) {
+                return bytes;
+            }
             byte[] bs = new byte[length];
             System.arraycopy(bytes, (int) pos - 1, bs, 0, length);
             return bs;

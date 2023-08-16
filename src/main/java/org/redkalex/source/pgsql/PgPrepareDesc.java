@@ -17,7 +17,7 @@ import static org.redkalex.source.pgsql.PgClientRequest.writeUTF8String;
 public class PgPrepareDesc {
 
     public static enum PgExtendMode {
-        FIND_ENTITY, FINDS_ENTITY, INSERT_ENTITY, UPDATE_ENTITY, UPCASE_ENTITY, LISTALL_ENTITY;
+        FIND_ENTITY, FINDS_ENTITY, INSERT_ENTITY, UPDATE_ENTITY, UPCASE_ENTITY, LISTALL_ENTITY, OTHER_NATIVE;
     }
 
     private final int type;
@@ -62,7 +62,7 @@ public class PgPrepareDesc {
         this.resultAttrs = resultAttrs;
         this.paramFormats = new PgColumnFormat[paramAttrs.length];
         for (int i = 0; i < paramAttrs.length; i++) {
-            this.paramFormats[i] = PgColumnFormat.valueOf(paramAttrs[i], paramCols[i]);
+            this.paramFormats[i] = paramAttrs[i] == null ? null : PgColumnFormat.valueOf(paramAttrs[i], paramCols[i]);
         }
         this.resultFormats = new PgColumnFormat[resultAttrs.length];
         for (int i = 0; i < resultAttrs.length; i++) {
@@ -80,7 +80,7 @@ public class PgPrepareDesc {
             int paramLen = pformats.length;
             array.putShort(paramLen);
             for (PgColumnFormat f : pformats) {
-                array.putShort(f.supportsBinary() ? 1 : 0);
+                array.putShort(f != null && f.supportsBinary() ? 1 : 0);
             }
             array.putShort(paramLen);
             this.bindPrefixBytes = array.getBytes();
@@ -128,7 +128,7 @@ public class PgPrepareDesc {
         } else {
             array.putShort(formats.length);
             for (PgColumnFormat f : formats) {
-                array.putInt(f.oid());
+                array.putInt(f == null ? PgsqlOid.UNKNOWN : f.oid());
             }
         }
         array.putInt(start, array.length() - start);

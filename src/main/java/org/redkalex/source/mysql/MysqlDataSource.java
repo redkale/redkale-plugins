@@ -11,11 +11,13 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;
+import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
@@ -831,7 +833,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public int nativeUpdate(String sql) {
+    public CompletableFuture<Integer> nativeUpdateAsync(String sql) {
         final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
         WorkThread workThread = WorkThread.currentWorkThread();
@@ -842,14 +844,14 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         return future.thenApply(g -> {
             slowLog(s, sql);
             return g.getUpdateEffectCount();
-        }).join();
+        });
     }
 
     @Local
     @Override
-    public int[] nativeUpdates(String... sqls) {
+    public CompletableFuture<int[]> nativeUpdatesAsync(String... sqls) {
         if (sqls.length == 1) {
-            return new int[]{nativeUpdate(sqls[0])};
+            return nativeUpdateAsync(sqls[0]).thenApply(v -> new int[]{v});
         }
         final long s = System.currentTimeMillis();
         final MyClient pool = writePool();
@@ -860,29 +862,87 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         return future.thenApply(g -> {
             slowLog(s, sqls);
             return g.getBatchEffectCounts();
-        }).join();
+        });
     }
 
     @Local
     @Override
-    public <V> V nativeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
+    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
         return executeQuery(null, sql).thenApply((DataResultSet dataset) -> {
             V rs = handler.apply(dataset);
             dataset.close();
             slowLog(s, sql);
             return rs;
-        }).join();
+        });
     }
 
+    @Local
     @Override
-    public int nativeUpdate(String sql, Map<String, Object> params) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
+        long s = System.currentTimeMillis();
+        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        MyClient pool = writePool();
+        if (!sinfo.isEmptyNamed()) {
+            WorkThread workThread = WorkThread.currentWorkThread();
+            return pool.connect().thenCompose(conn -> {
+                MyReqExtended req = conn.pollReqExtended(workThread, null);
+                Stream<Object> pstream = sinfo.getParamNames().stream().map(n -> params.get(n));
+                req.prepare(MyClientRequest.REQ_TYPE_EXTEND_UPDATE, sinfo.getNativeSql(), 0, pstream);
+                Function<MyResultSet, Integer> transfer = dataset -> {
+                    int rs = dataset.getUpdateEffectCount();
+                    slowLog(s, sinfo.getNativeSql());
+                    return rs;
+                };
+                return pool.writeChannel(conn, req).thenApply(transfer);
+            });
+        } else {
+            WorkThread workThread = WorkThread.currentWorkThread();
+            return pool.connect().thenCompose(conn -> {
+                MyReqExtended req = conn.pollReqExtended(workThread, null);
+                req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, sinfo.getNativeSql(), 0, (Stream) null);
+                Function<MyResultSet, Integer> transfer = dataset -> {
+                    int rs = dataset.getUpdateEffectCount();
+                    slowLog(s, sinfo.getNativeSql());
+                    return rs;
+                };
+                return pool.writeChannel(conn, req).thenApply(transfer);
+            });
+        }
     }
 
+    @Local
     @Override
-    public <V> V nativeQuery(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
+        long s = System.currentTimeMillis();
+        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        MyClient pool = readPool();
+        if (!sinfo.isEmptyNamed()) {
+            WorkThread workThread = WorkThread.currentWorkThread();
+            return pool.connect().thenCompose(conn -> {
+                MyReqExtended req = conn.pollReqExtended(workThread, null);
+                Stream<Object> pstream = sinfo.getParamNames().stream().map(n -> params.get(n));
+                req.prepare(MyClientRequest.REQ_TYPE_EXTEND_UPDATE, sinfo.getNativeSql(), 0, pstream);
+                Function<MyResultSet, V> transfer = dataset -> {
+                    V rs = handler.apply(dataset);
+                    slowLog(s, sinfo.getNativeSql());
+                    return rs;
+                };
+                return pool.writeChannel(conn, req).thenApply(transfer);
+            });
+        } else {
+            WorkThread workThread = WorkThread.currentWorkThread();
+            return pool.connect().thenCompose(conn -> {
+                MyReqExtended req = conn.pollReqExtended(workThread, null);
+                req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, sinfo.getNativeSql(), 0, (Stream) null);
+                Function<MyResultSet, V> transfer = dataset -> {
+                    V rs = handler.apply(dataset);
+                    slowLog(s, sinfo.getNativeSql());
+                    return rs;
+                };
+                return pool.writeChannel(conn, req).thenApply(transfer);
+            });
+        }
     }
 
 }

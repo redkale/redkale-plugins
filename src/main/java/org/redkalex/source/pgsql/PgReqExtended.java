@@ -6,6 +6,7 @@ package org.redkalex.source.pgsql;
 import java.io.Serializable;
 import java.util.*;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
@@ -27,6 +28,8 @@ public class PgReqExtended extends PgClientRequest {
     protected boolean sendPrepare;
 
     protected int fetchSize;
+
+    protected int paramLen = -1;
 
     protected Serializable[][] paramValues;
 
@@ -85,6 +88,12 @@ public class PgReqExtended extends PgClientRequest {
         this.paramValues = paramValues;
     }
 
+    public <T> void prepareParams(int type, PgExtendMode mode, String sql, int fetchSize, int paramLen, final Stream<Serializable> stream) {
+        prepare(type, mode, sql, fetchSize);
+        this.paramLen = paramLen;
+        this.paramValues = new Serializable[][]{stream.toArray(v -> new Serializable[v])};
+    }
+
     private void writeBind(ByteArray array, PgPrepareDesc prepareDesc, Serializable... params) { // BIND
         // BIND
         array.putByte('B');
@@ -112,7 +121,8 @@ public class PgReqExtended extends PgClientRequest {
             } else {
                 int s2 = array.length();
                 array.putInt(0); //value-length
-                pformats[c].encoder().encode(array, pattrs[c], param);
+                PgColumnFormat f = pformats[c];
+                (f == null ? PgColumnFormat.VARCHAR : f).encoder().encode(array, pattrs[c], param);
                 array.putInt(s2, array.length() - s2 - 4);
             }
         }
@@ -171,7 +181,7 @@ public class PgReqExtended extends PgClientRequest {
                 logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
         } else {
-            prepareDesc = pgconn.createPgPrepareDesc(type, mode, info, sql);
+            prepareDesc = pgconn.createPgPrepareDesc(type, mode, info, sql, paramLen);
             this.sendPrepare = true;
             prepareDesc.writeTo(conn, array);
             // SYNC      

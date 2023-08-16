@@ -25,6 +25,8 @@ import static org.redkale.source.AbstractDataSource.DATA_SOURCE_MAXCONNS;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import org.redkalex.source.base.IncreWorld;
+import org.redkalex.source.parser.DataNativeJsqlParser;
+import org.redkalex.source.vertx.TestRecord;
 
 /**
  *
@@ -55,6 +57,7 @@ public class PgSQLTest {
         asyncGroup.start();
         ResourceFactory factory = ResourceFactory.create();
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
+        factory.register("", new DataNativeJsqlParser());
 
         final PgsqlDataSource source = new PgsqlDataSource();
         PgsqlDataSource.debug = false;
@@ -80,6 +83,26 @@ public class PgSQLTest {
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
         System.out.println("-------------------- " + (forFortune ? "Fortune" : "World") + " " + (rwSeparate ? "读写分离" : "读写合并") + " --------------------");
         System.out.println("-------------------- " + "当前内核数: " + Utility.cpus() + " --------------------");
+        {
+            //source.dropTable(TestRecord.class);
+            TestRecord entity = new TestRecord();
+            entity.setRecordid("r223" + System.currentTimeMillis());
+            entity.setScore(200);
+            entity.setStatus((short) 10);
+            entity.setName("myname2");
+            entity.setCreateTime(System.currentTimeMillis());
+            source.insert(entity);
+
+            Map<String, Object> params = Utility.ofMap("name", "%", "s", 10, "ids", Utility.ofList(entity.getRecordid()));
+            String sql = "SELECT * FROM TestRecord WHERE name LIKE :name OR recordid IN :ids";
+            TestRecord one = source.nativeQueryOne(TestRecord.class, sql, params);
+            System.out.println(one);
+
+            String upsql = "UPDATE TestRecord SET name='aa' WHERE name LIKE :name OR status = :s OR recordid IN :ids";
+            int rs = source.nativeUpdate(upsql, params);
+            System.out.println("修改结果数: " + rs);
+            System.out.println(source.find(TestRecord.class, entity.getRecordid()));
+        }
         if (true) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
             System.out.println("随机获取World记录1: " + source.findAsync(World.class, randomId()).join());

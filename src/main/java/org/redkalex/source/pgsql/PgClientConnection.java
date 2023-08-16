@@ -54,7 +54,7 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         return desc;
     }
 
-    public PgPrepareDesc createPgPrepareDesc(int type, PgExtendMode mode, EntityInfo info, String sql) {
+    public PgPrepareDesc createPgPrepareDesc(int type, PgExtendMode mode, EntityInfo info, String sql, int paramLen) {
         Attribute[] paramAttrs;
         EntityColumn[] paramCols;
         Attribute[] resultAttrs;
@@ -101,6 +101,11 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
                     paramCols[size * j + i] = cols[j - 1];
                 }
             }
+            resultAttrs = new Attribute[0];
+            resultCols = new EntityColumn[0];
+        } else if (mode == PgExtendMode.OTHER_NATIVE) {
+            paramAttrs = new Attribute[paramLen];
+            paramCols = new EntityColumn[paramLen];
             resultAttrs = new Attribute[0];
             resultCols = new EntityColumn[0];
         } else {

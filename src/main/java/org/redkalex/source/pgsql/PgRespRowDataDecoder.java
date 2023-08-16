@@ -7,7 +7,6 @@ package org.redkalex.source.pgsql;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkalex.source.pgsql.PgClientCodec.*;
 import static org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode.*;
@@ -44,18 +43,18 @@ public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
         Attribute[] attrs = prepareDesc.resultAttrs();
         Serializable[] realValues = new Serializable[buffer.getShort()];
         for (int i = 0; i < realValues.length; i++) {
-            realValues[i] = formats[i].decoder().decode(buffer, array, attrs[i], buffer.getInt());
+            PgColumnFormat f = i < formats.length ? formats[i] : PgColumnFormat.VARCHAR;
+            Attribute attr = i < attrs.length ? attrs[i] : null;
+            realValues[i] = f.decoder().decode(buffer, array, attr, buffer.getInt());
         }
-        EntityInfo info = request.info;
-        EntityBuilder builder = info.getBuilder();
         if (mode == FIND_ENTITY) {
-            dataset.oneEntity = builder.getFullEntityValue(realValues);
+            dataset.oneEntity = request.info.getBuilder().getFullEntityValue(realValues);
             return PgRowData.NIL;
         } else if (mode == FINDS_ENTITY) {
-            dataset.addEntity(builder.getFullEntityValue(realValues));
+            dataset.addEntity(request.info.getBuilder().getFullEntityValue(realValues));
             return PgRowData.NIL;
         } else if (mode == LISTALL_ENTITY) {
-            dataset.addEntity(builder.getFullEntityValue(realValues));
+            dataset.addEntity(request.info.getBuilder().getFullEntityValue(realValues));
             return PgRowData.NIL;
         } else {
             return new PgRowData(null, realValues);

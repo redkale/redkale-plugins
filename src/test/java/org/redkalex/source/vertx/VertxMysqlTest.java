@@ -5,10 +5,12 @@
  */
 package org.redkalex.source.vertx;
 
-import java.util.Properties;
+import java.util.*;
+import org.redkale.boot.LoggingBaseHandler;
 import org.redkale.source.FilterNode;
-import org.redkale.util.AnyValue;
+import org.redkale.util.*;
 import org.redkalex.source.base.IncreWorld;
+import org.redkalex.source.parser.DataNativeJsqlParser;
 
 /**
  *
@@ -30,7 +32,11 @@ public class VertxMysqlTest {
             prop.setProperty("redkale.datasource.default.user", "postgres");
             prop.setProperty("redkale.datasource.default.password", "1234");
         }
+        LoggingBaseHandler.initDebugLogConfig();
+        ResourceFactory factory = ResourceFactory.create();
+        factory.register("", new DataNativeJsqlParser());
         final VertxSqlDataSource source = new VertxSqlDataSource();
+        factory.inject(source);
         source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
 
         source.dropTable(IncreWorld.class);
@@ -62,6 +68,16 @@ public class VertxMysqlTest {
         entity.setName(entity.getName() + "-new2");
         source.updateColumn(entity, "name");
         System.out.println(source.queryList(TestRecord.class));
+        System.out.println(source.find(TestRecord.class, entity.getRecordid()));
+
+        Map<String, Object> params = Utility.ofMap("name", "%", "ids", Utility.ofList(entity.getRecordid()));
+        String sql = "SELECT * FROM TestRecord WHERE name LIKE :name OR recordid IN :ids";
+        TestRecord one = source.nativeQueryOne(TestRecord.class, sql, params);
+        System.out.println(one);
+
+        String upsql = "UPDATE TestRecord SET name='aa' WHERE name LIKE :name OR recordid IN :ids";
+        int rs = source.nativeUpdate(upsql, params);
+        System.out.println("修改结果数: " + rs);
         System.out.println(source.find(TestRecord.class, entity.getRecordid()));
 
         System.out.println("运行完成");
