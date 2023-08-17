@@ -12,6 +12,7 @@ import org.redkale.util.Attribute;
  *
  * @author zhangjx
  */
+@SuppressWarnings("unchecked")
 public class NativeSqlParameter {
 
     private static final ConcurrentHashMap<String, Attribute> attrCache = new ConcurrentHashMap<>();

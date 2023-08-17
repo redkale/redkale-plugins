@@ -2,9 +2,9 @@
  */
 package org.redkalex.test.protobuf;
 
-import java.lang.annotation.*;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import java.lang.annotation.*;
 import java.util.Arrays;
 import java.util.function.*;
 import org.junit.jupiter.api.*;
@@ -17,6 +17,7 @@ import org.redkalex.convert.protobuf.*;
  *
  * @author zhangjx
  */
+@SuppressWarnings("unchecked")
 public class PBCustMessage2Test {
 
     private boolean main;

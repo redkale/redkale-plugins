@@ -22,6 +22,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
+@SuppressWarnings("unchecked")
 public class NativeParserInfo {
 
     //原始sql语句
@@ -126,7 +127,7 @@ public class NativeParserInfo {
     }
 
     public boolean isDynamic() {
-        return !numberSignNames.isEmpty();
+        return jdbcSql == null;
     }
 
     public Map<String, Object> createNamedParams(ObjectRef<String> newSql, Map<String, Object> params) {
@@ -155,122 +156,121 @@ public class NativeParserInfo {
         return newParams;
     }
 
-    public NativeParserNode loadParserNode(java.util.function.Function<Integer, String> signFunc, String dbtype, final boolean dynamic, final String nativeSql) {
-        return parserNodes.computeIfAbsent(nativeSql, sql -> {
-            try {
-                CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
-                Statement stmt = sqlParser.Statement();
-                Statement countStmt = null;
-                Expression where = null;
-                Runnable clearWhere = null;
-                List<UpdateSet> updateSets = null;
-                if (stmt instanceof Select) {
-                    PlainSelect selectBody = (PlainSelect) ((Select) stmt).getSelectBody();
-                    where = selectBody.getWhere();
-                    clearWhere = () -> selectBody.setWhere(null);
-                    { //创建COUNT总数sql
-                        CCJSqlParser countParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
-                        Select countSelect = (Select) countParser.Statement();
-                        PlainSelect countBody = (PlainSelect) countSelect.getSelectBody();
-                        if (countBody.getDistinct() == null) {
-                            Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withParameters(new ExpressionList(new LongValue(1)));
-                            countBody.setSelectItems(Utility.ofList(new SelectExpressionItem(countFunc)));
-                        } else {
-                            Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
-                                .withParameters(new ExpressionList((List) countBody.getSelectItems()));
-                            countBody.setSelectItems(Utility.ofList(new SelectExpressionItem(countFunc)));
-                            countBody.setDistinct(null);
-                        }
-                        countBody.setWhere(null);
-                        countStmt = countSelect;
-                    }
-                } else if (stmt instanceof Insert) {
-                    Select select = ((Insert) stmt).getSelect();
-                    SelectBody selectBody = select.getSelectBody();
-                    if (selectBody instanceof PlainSelect) {
-                        where = ((PlainSelect) selectBody).getWhere();
-                        clearWhere = () -> ((PlainSelect) selectBody).setWhere(null);
-                    }
-                } else if (stmt instanceof Delete) {
-                    where = ((Delete) stmt).getWhere();
-                    clearWhere = () -> ((Delete) stmt).setWhere(null);
-                } else if (stmt instanceof Update) {
-                    updateSets = ((Update) stmt).getUpdateSets();
-                    where = ((Update) stmt).getWhere();
-                    clearWhere = () -> ((Update) stmt).setWhere(null);
-                } else {
-                    throw new SourceException("Not support sql (" + rowSql + ") ");
-                }
-                final Set<String> fullNames = new HashSet<String>();
-                final Set<String> mustNames = new HashSet<String>();
-                final AtomicBoolean containsInName = new AtomicBoolean();
-                ExpressionVisitorAdapter exprAdapter = new ExpressionVisitorAdapter() {
-
-                    @Override
-                    public void visit(JdbcNamedParameter expr) {
-                        super.visit(expr);
-                        mustNames.add(expr.getName());
-                        fullNames.add(expr.getName());
-                    }
-
-                    @Override
-                    public void visit(InExpression expr) {
-                        int size = fullNames.size();
-                        super.visit(expr);
-                        if (fullNames.size() > size) {
-                            containsInName.set(true);
-                        }
-                    }
-
-                    @Override
-                    public void visit(JdbcParameter jdbcParameter) {
-                        throw new SourceException("Cannot contains ? JdbcParameter");
-                    }
-                };
-                SelectDeParser selectAdapter = new SelectDeParser();
-                selectAdapter.setExpressionVisitor(exprAdapter);
-                exprAdapter.setSelectVisitor(selectAdapter);
-                if (where != null) {
-                    where.accept(exprAdapter);
-                    mustNames.clear(); //where不存在必需的参数名
-                }
-                if (updateSets != null) {
-                    for (UpdateSet set : updateSets) {
-                        for (Expression expr : set.getExpressions()) {
-                            expr.accept(exprAdapter);
-                        }
-                    }
-                }
-                if (clearWhere != null) {
-                    clearWhere.run(); //必须清空where条件
-                }
-
-                String updateSql = null;
-                List<String> updateNamedSet = new ArrayList<>();
-                if (updateSets != null) {
-                    Map<String, Object> params = new HashMap<>();
-                    Object val = List.of(1); //虚构一个参数值，IN需要Collection
-                    for (String name : mustNames) {
-                        params.put(name, val);
-                    }
-                    final DataExpressionDeParser exprDeParser = new DataExpressionDeParser(signFunc, params);
-                    UpdateDeParser deParser = new UpdateDeParser(exprDeParser, exprDeParser.getBuffer());
-                    deParser.deParse((Update) stmt);
-                    updateSql = exprDeParser.getBuffer().toString();
-                    updateNamedSet = exprDeParser.getParamNames();
-                }
-                return new NativeParserNode(stmt, countStmt, where, jdbcDollarNames,
-                    fullNames, mustNames, dynamic || containsInName.get(), updateSql, updateNamedSet);
-            } catch (ParseException e) {
-                throw new SourceException("Parse error, sql: " + rowSql, e);
-            }
-        });
+    public NativeParserNode loadParserNode(java.util.function.Function<Integer, String> signFunc, String dbtype, final String nativeSql) {
+        if (isDynamic()) {
+            return createParserNode(signFunc, dbtype, nativeSql);
+        }
+        return parserNodes.computeIfAbsent(nativeSql, sql -> createParserNode(signFunc, dbtype, nativeSql));
     }
 
-    public static void main(String[] args) throws Throwable {
-        String sql = "SELECT * FROM table#{gaga} WHERE name > ${param_name} AND id IN ${ids}";
-        NativeParserInfo info = new NativeParserInfo(sql);
-        System.out.println(info.fragments);
+    private NativeParserNode createParserNode(java.util.function.Function<Integer, String> signFunc, String dbtype, final String nativeSql) {
+        try {
+            CCJSqlParser sqlParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
+            Statement stmt = sqlParser.Statement();
+            Statement countStmt = null;
+            Expression where = null;
+            Runnable clearWhere = null;
+            List<UpdateSet> updateSets = null;
+            if (stmt instanceof Select) {
+                PlainSelect selectBody = (PlainSelect) ((Select) stmt).getSelectBody();
+                where = selectBody.getWhere();
+                clearWhere = () -> selectBody.setWhere(null);
+                { //创建COUNT总数sql
+                    CCJSqlParser countParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
+                    Select countSelect = (Select) countParser.Statement();
+                    PlainSelect countBody = (PlainSelect) countSelect.getSelectBody();
+                    if (countBody.getDistinct() == null) {
+                        Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withParameters(new ExpressionList(new LongValue(1)));
+                        countBody.setSelectItems(Utility.ofList(new SelectExpressionItem(countFunc)));
+                    } else {
+                        Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
+                            .withParameters(new ExpressionList((List) countBody.getSelectItems()));
+                        countBody.setSelectItems(Utility.ofList(new SelectExpressionItem(countFunc)));
+                        countBody.setDistinct(null);
+                    }
+                    countBody.setWhere(null);
+                    countStmt = countSelect;
+                }
+            } else if (stmt instanceof Insert) {
+                Select select = ((Insert) stmt).getSelect();
+                SelectBody selectBody = select.getSelectBody();
+                if (selectBody instanceof PlainSelect) {
+                    where = ((PlainSelect) selectBody).getWhere();
+                    clearWhere = () -> ((PlainSelect) selectBody).setWhere(null);
+                }
+            } else if (stmt instanceof Delete) {
+                where = ((Delete) stmt).getWhere();
+                clearWhere = () -> ((Delete) stmt).setWhere(null);
+            } else if (stmt instanceof Update) {
+                updateSets = ((Update) stmt).getUpdateSets();
+                where = ((Update) stmt).getWhere();
+                clearWhere = () -> ((Update) stmt).setWhere(null);
+            } else {
+                throw new SourceException("Not support sql (" + rowSql + ") ");
+            }
+            final Set<String> fullNames = new HashSet<String>();
+            final Set<String> mustNames = new HashSet<String>();
+            final AtomicBoolean containsInName = new AtomicBoolean();
+            ExpressionVisitorAdapter exprAdapter = new ExpressionVisitorAdapter() {
+
+                @Override
+                public void visit(JdbcNamedParameter expr) {
+                    super.visit(expr);
+                    mustNames.add(expr.getName());
+                    fullNames.add(expr.getName());
+                }
+
+                @Override
+                public void visit(InExpression expr) {
+                    int size = fullNames.size();
+                    super.visit(expr);
+                    if (fullNames.size() > size) {
+                        containsInName.set(true);
+                    }
+                }
+
+                @Override
+                public void visit(JdbcParameter jdbcParameter) {
+                    throw new SourceException("Cannot contains ? JdbcParameter");
+                }
+            };
+            SelectDeParser selectAdapter = new SelectDeParser();
+            selectAdapter.setExpressionVisitor(exprAdapter);
+            exprAdapter.setSelectVisitor(selectAdapter);
+            if (where != null) {
+                where.accept(exprAdapter);
+                mustNames.clear(); //where不存在必需的参数名
+            }
+            if (updateSets != null) {
+                for (UpdateSet set : updateSets) {
+                    for (Expression expr : set.getExpressions()) {
+                        expr.accept(exprAdapter);
+                    }
+                }
+            }
+            if (clearWhere != null) {
+                clearWhere.run(); //必须清空where条件
+            }
+
+            String updateSql = null;
+            List<String> updateNamedSet = new ArrayList<>();
+            if (updateSets != null) {
+                Map<String, Object> params = new HashMap<>();
+                Object val = List.of(1); //虚构一个参数值，IN需要Collection
+                for (String name : mustNames) {
+                    params.put(name, val);
+                }
+                final DataExpressionDeParser exprDeParser = new DataExpressionDeParser(signFunc, params);
+                UpdateDeParser deParser = new UpdateDeParser(exprDeParser, exprDeParser.getBuffer());
+                deParser.deParse((Update) stmt);
+                updateSql = exprDeParser.getBuffer().toString();
+                updateNamedSet = exprDeParser.getParamNames();
+            }
+            return new NativeParserNode(stmt, countStmt, where, jdbcDollarNames,
+                fullNames, mustNames, isDynamic() || containsInName.get(), updateSql, updateNamedSet);
+        } catch (ParseException e) {
+            throw new SourceException("Parse error, sql: " + rowSql, e);
+        }
     }
 
 }

@@ -30,7 +30,7 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
             logger.log(Level.FINER, DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql
                 + ", dynamic: " + info.isDynamic() + ", newSql: " + newSql.get());
         }
-        NativeParserNode node = info.loadParserNode(signFunc, dbtype, info.isDynamic(), newSql.get());
+        NativeParserNode node = info.loadParserNode(signFunc, dbtype, newSql.get());
         NativeSqlStatement statement = node.loadStatement(signFunc, newParams);
         if (logger.isLoggable(Level.FINE)) {
             logger.log(Level.FINE, DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql + ", nativeSql: " + statement.getNativeSql()
