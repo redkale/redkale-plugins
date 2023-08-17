@@ -31,7 +31,7 @@ public class JsqlParser2Test {
     @Test
     public void run1() throws Exception {
         String sql = "SELECT DISTINCT col1 AS a, col2 AS b, col3 AS c FROM table_#{mytab} T "
-            + "WHERE col1 = 10 AND (col2 = #${c2} OR col3 = MAX(${c3})) AND name LIKE '%'"
+            + "WHERE col1 = 10 AND (col2 = $${c2} OR col3 = MAX(${c3})) AND name LIKE '%'"
             + " AND seqid IS NULL AND (gameid IN :gameids OR gameName IN ('%', 'zzz'))"
             + " AND time BETWEEN ${time.min} AND ${time.max} AND col2 >= ${c2}"
             + " AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";

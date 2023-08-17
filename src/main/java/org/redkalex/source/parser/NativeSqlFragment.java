@@ -9,19 +9,19 @@ package org.redkalex.source.parser;
  */
 public class NativeSqlFragment {
 
-    //是否是参数
-    private final boolean paramable;
+    //是否是#{xx.xx}参数
+    private final boolean signable;
 
     //sql语句片段或者#{}参数名
     private final String text;
 
-    public NativeSqlFragment(boolean paramable, String text) {
-        this.paramable = paramable;
+    public NativeSqlFragment(boolean signable, String text) {
+        this.signable = signable;
         this.text = text;
     }
 
-    public boolean isParamable() {
-        return paramable;
+    public boolean isSignable() {
+        return signable;
     }
 
     public String getText() {
@@ -30,6 +30,6 @@ public class NativeSqlFragment {
 
     @Override
     public String toString() {
-        return paramable ? ("#{" + text + "}") : text;
+        return signable ? ("#{" + text + "}") : text;
     }
 }

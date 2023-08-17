@@ -27,8 +27,8 @@ public class NativeParserInfo {
     //原始sql语句
     private final String rowSql;
 
-    //sql是否根据参数值动态生成的，包含了IN或#{xx.xx}参数的
-    final boolean dynamic;
+    //jdbc版的sql语句, 只有numberSignNames为空时才有值
+    private final String jdbcSql;
 
     //#{xx.xx}的参数名
     private final Map<String, NativeSqlParameter> numberSignNames = new HashMap<>();
@@ -36,7 +36,7 @@ public class NativeParserInfo {
     //${xx.xx}参数名对应jdbc参数名:argxxx, 包含了requiredDollarNames
     private final Map<String, NativeSqlParameter> dollarJdbcNames = new HashMap<>();
 
-    //必需的#${xx.xx}参数名
+    //必需的$${xx.xx}参数名
     private final Map<String, NativeSqlParameter> requiredDollarNames = new HashMap<>();
 
     //jdbc参数名:argxxx对应${xx.xx}参数名
@@ -57,7 +57,7 @@ public class NativeParserInfo {
         final char[] chars = Utility.charArray(rawSql);
         char last = 0;
         boolean dyn = false;
-        int type = 0; //1:#{xx.xx}, 2:${xx.xx}, 3:#${xx.xx}
+        int type = 0; //1:#{xx.xx}, 2:${xx.xx}, 3:$${xx.xx}
         for (int i = 0; i < chars.length; i++) {
             char ch = chars[i];
             if (ch == '{') {
@@ -70,7 +70,7 @@ public class NativeParserInfo {
                     type = 1;
                     paraming = true;
                 } else if (last == '$') {
-                    type = chars[i - 2] == '#' ? 3 : 2;
+                    type = chars[i - 2] == '$' ? 3 : 2;
                     fragments.add(new NativeSqlFragment(false, sb.substring(0, sb.length() + 1 - type)));
                     sb.delete(0, sb.length());
                     paraming = true;
@@ -85,11 +85,12 @@ public class NativeParserInfo {
                     numberSignNames.put(name, new NativeSqlParameter(name, name, true));
                     fragments.add(new NativeSqlFragment(true, name));
                     dyn = true;
-                } else if (type >= 2) { //${xx.xx}、#${xx.xx}
+                } else if (type >= 2) { //${xx.xx}、$${xx.xx}
                     NativeSqlParameter old = dollarJdbcNames.get(name);
                     String jdbc = old == null ? null : old.getJdbcName();
                     if (jdbc == null) {
-                        jdbc = "arg" + (dollarJdbcNames.size() >= 9 ? (1 + dollarJdbcNames.size()) : ("0" + (1 + dollarJdbcNames.size())));
+                        int seqno = dollarJdbcNames.size() + 1;
+                        jdbc = "arg" + (seqno >= 10 ? seqno : ("0" + seqno));
                         NativeSqlParameter p = new NativeSqlParameter(name, jdbc, type == 3);
                         dollarJdbcNames.put(name, p);
                         jdbcDollarNames.put(jdbc, name);
@@ -111,9 +112,21 @@ public class NativeParserInfo {
         if (sb.length() > 0) {
             fragments.add(new NativeSqlFragment(false, sb.toString()));
         }
-        this.dynamic = dyn;
+        if (numberSignNames.isEmpty()) {
+            StringBuilder ss = new StringBuilder();
+            for (NativeSqlFragment fragment : fragments) {
+                ss.append(fragment.getText());
+            }
+            this.jdbcSql = ss.toString();
+        } else {
+            this.jdbcSql = null;
+        }
         this.allNamedParameters.addAll(numberSignNames.values());
         this.allNamedParameters.addAll(dollarJdbcNames.values());
+    }
+
+    public boolean isDynamic() {
+        return !numberSignNames.isEmpty();
     }
 
     public Map<String, Object> createNamedParams(ObjectRef<String> newSql, Map<String, Object> params) {
@@ -126,15 +139,19 @@ public class NativeParserInfo {
             newParams.put(p.getDollarName(), val);
             newParams.put(p.getJdbcName(), val);
         }
-        StringBuilder sb = new StringBuilder();
-        for (NativeSqlFragment fragment : fragments) {
-            if (fragment.isParamable()) {
-                sb.append(newParams.get(fragment.getText()));
-            } else {
-                sb.append(fragment.getText());
+        if (jdbcSql == null) {
+            StringBuilder sb = new StringBuilder();
+            for (NativeSqlFragment fragment : fragments) {
+                if (fragment.isSignable()) {
+                    sb.append(newParams.get(fragment.getText()));
+                } else {
+                    sb.append(fragment.getText());
+                }
             }
+            newSql.set(sb.toString());
+        } else {
+            newSql.set(jdbcSql);
         }
-        newSql.set(sb.toString());
         return newParams;
     }
 

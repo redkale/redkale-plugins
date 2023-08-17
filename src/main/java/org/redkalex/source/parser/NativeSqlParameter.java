@@ -16,7 +16,7 @@ public class NativeSqlParameter {
 
     private static final ConcurrentHashMap<String, Attribute> attrCache = new ConcurrentHashMap<>();
 
-    //${xxx}、#${xxx}参数名
+    //${xxx}、$${xxx}参数名
     private String dollarName;
 
     //jdbc参数名 :xxx
