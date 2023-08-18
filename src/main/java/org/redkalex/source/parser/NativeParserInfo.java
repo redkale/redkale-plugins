@@ -260,7 +260,7 @@ public class NativeParserInfo {
                 for (String name : mustNames) {
                     params.put(name, val);
                 }
-                final NativeExpressionDeParser exprDeParser = new NativeExpressionDeParser(signFunc, params);
+                final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
                 UpdateDeParser deParser = new UpdateDeParser(exprDeParser, exprDeParser.getBuffer());
                 deParser.deParse((Update) stmt);
                 updateSql = exprDeParser.getBuffer().toString();

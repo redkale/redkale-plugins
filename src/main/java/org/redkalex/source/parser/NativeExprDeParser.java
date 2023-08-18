@@ -17,7 +17,7 @@ import org.redkale.source.SourceException;
  *
  * @author zhangjx
  */
-public class NativeExpressionDeParser extends ExpressionDeParser {
+public class NativeExprDeParser extends ExpressionDeParser {
 
     private static final Package relationalPkg = Between.class.getPackage();
 
@@ -39,7 +39,7 @@ public class NativeExpressionDeParser extends ExpressionDeParser {
     //当前BinaryExpression缺失参数
     protected boolean paramLosing;
 
-    public NativeExpressionDeParser(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
+    public NativeExprDeParser(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
         Objects.requireNonNull(signFunc);
         Objects.requireNonNull(params);
         this.signFunc = signFunc;
