@@ -17,7 +17,7 @@ import org.redkale.source.SourceException;
  *
  * @author zhangjx
  */
-public class DataExpressionDeParser extends ExpressionDeParser {
+public class NativeExpressionDeParser extends ExpressionDeParser {
 
     private static final Package relationalPkg = Between.class.getPackage();
 
@@ -39,7 +39,7 @@ public class DataExpressionDeParser extends ExpressionDeParser {
     //当前BinaryExpression缺失参数
     protected boolean paramLosing;
 
-    public DataExpressionDeParser(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
+    public NativeExpressionDeParser(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
         Objects.requireNonNull(signFunc);
         Objects.requireNonNull(params);
         this.signFunc = signFunc;
@@ -280,54 +280,30 @@ public class DataExpressionDeParser extends ExpressionDeParser {
                 if (expr.getRightExpression() instanceof SubSelect) {
                     expr.getRightExpression().accept(this);
                 } else if (expr.getRightExpression() instanceof JdbcNamedParameter) {
-                    String name = ((JdbcNamedParameter) expr.getRightExpression()).getName();
-                    Object val = paramValues.get(name);
-                    if (val == null) { //没有参数值            
-                        throw new SourceException("Not found parameter (name=" + name + ") ");
-                    }
-                    if (val instanceof Collection) {
-                        if (((Collection) val).isEmpty()) {
-                            throw new SourceException("Parameter (name=" + name + ") is empty");
-                        }
-                    } else if (val.getClass().isArray()) {
-                        int len = Array.getLength(val);
-                        if (len < 1) {
-                            throw new SourceException("Parameter (name=" + name + ") is empty");
-                        }
-                        Collection list = new ArrayList();
-                        for (int i = 0; i < len; i++) {
-                            list.add(Array.get(val, i));
-                        }
-                        val = list;
-                    } else {
-                        throw new SourceException("Parameter (name=" + name + ") is not Collection or Array, value = " + val);
-                    }
-                    List<Expression> itemList = new ArrayList();
-                    for (Object item : (Collection) val) {
-                        if (item == null) {
-                            itemList.add(new NullValue());
-                        } else if (item instanceof String) {
-                            itemList.add(new StringValue(item.toString().replace("'", "\\'")));
-                        } else if (item instanceof Short || item instanceof Integer || item instanceof Long) {
-                            itemList.add(new LongValue(item.toString()));
-                        } else if (item instanceof Float || item instanceof Double) {
-                            itemList.add(new DoubleValue(item.toString()));
-                        } else if (item instanceof BigInteger || item instanceof BigDecimal) {
-                            itemList.add(new StringValue(item.toString()));
-                        } else if (item instanceof java.sql.Date) {
-                            itemList.add(new DateValue((java.sql.Date) item));
-                        } else if (item instanceof java.sql.Time) {
-                            itemList.add(new TimeValue(item.toString()));
-                        } else {
-                            throw new SourceException("Not support parameter: " + val);
-                        }
-                    }
+                    List<Expression> itemList = createInParamItemList((JdbcNamedParameter) expr.getRightExpression());
                     new ExpressionList(itemList).accept(this);
                 } else {
                     throw new SourceException("Not support expression (" + expr.getRightExpression() + ") ");
                 }
             } else {
-                expr.getRightItemsList().accept(this);
+                if (expr.getRightItemsList() instanceof ExpressionList) {
+                    List<Expression> newList = new ArrayList<>(((ExpressionList) expr.getRightItemsList()).getExpressions());
+                    for (int i = newList.size() - 1; i >= 0; i--) {
+                        Expression item = newList.get(i);
+                        if (item instanceof JdbcNamedParameter) {
+                            List<Expression> es = createInParamItemList((JdbcNamedParameter) item);
+                            newList.remove(i);
+                            newList.addAll(i, es);
+                        }
+                    }
+                    new ExpressionList(newList).accept(this);
+                } else {
+                    int size2 = paramNames.size();
+                    expr.getRightItemsList().accept(this);
+                    if (paramNames.size() > size2) {
+                        throw new SourceException("Not support expression (" + expr.getRightItemsList().getClass() + "," + expr.getRightItemsList() + ") ");
+                    }
+                }
             }
         } else {
             buffer.delete(start, end);
@@ -338,6 +314,52 @@ public class DataExpressionDeParser extends ExpressionDeParser {
         }
         relations.pop();
         paramLosing = false;
+    }
+
+    private List<Expression> createInParamItemList(JdbcNamedParameter namedParam) {
+        String name = namedParam.getName();
+        Object val = paramValues.get(name);
+        if (val == null) { //没有参数值            
+            throw new SourceException("Not found parameter (name=" + name + ") ");
+        }
+        if (val instanceof Collection) {
+            if (((Collection) val).isEmpty()) {
+                throw new SourceException("Parameter (name=" + name + ") is empty");
+            }
+        } else if (val.getClass().isArray()) {
+            int len = Array.getLength(val);
+            if (len < 1) {
+                throw new SourceException("Parameter (name=" + name + ") is empty");
+            }
+            Collection list = new ArrayList();
+            for (int i = 0; i < len; i++) {
+                list.add(Array.get(val, i));
+            }
+            val = list;
+        } else {
+            throw new SourceException("Parameter (name=" + name + ") is not Collection or Array, value = " + val);
+        }
+        List<Expression> itemList = new ArrayList();
+        for (Object item : (Collection) val) {
+            if (item == null) {
+                itemList.add(new NullValue());
+            } else if (item instanceof String) {
+                itemList.add(new StringValue(item.toString().replace("'", "\\'")));
+            } else if (item instanceof Short || item instanceof Integer || item instanceof Long) {
+                itemList.add(new LongValue(item.toString()));
+            } else if (item instanceof Float || item instanceof Double) {
+                itemList.add(new DoubleValue(item.toString()));
+            } else if (item instanceof BigInteger || item instanceof BigDecimal) {
+                itemList.add(new StringValue(item.toString()));
+            } else if (item instanceof java.sql.Date) {
+                itemList.add(new DateValue((java.sql.Date) item));
+            } else if (item instanceof java.sql.Time) {
+                itemList.add(new TimeValue(item.toString()));
+            } else {
+                throw new SourceException("Not support parameter: " + val);
+            }
+        }
+        return itemList;
     }
 
     @Override
