@@ -63,7 +63,7 @@ public class NativeParserNode {
     public NativeSqlStatement loadStatement(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
         Set<String> miss = null;
         for (String mustName : requiredNamedSet) {
-            if (!params.containsKey(mustName)) {
+            if (params.get(mustName) == null) {
                 if (miss == null) {
                     miss = new LinkedHashSet<>();
                 }

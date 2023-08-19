@@ -137,8 +137,10 @@ public class NativeParserInfo {
             if (p.isRequired() && val == null) {
                 throw new SourceException("Missing parameter " + p.getDollarName());
             }
-            newParams.put(p.getDollarName(), val);
-            newParams.put(p.getJdbcName(), val);
+            if (val != null) {
+                newParams.put(p.getDollarName(), val);
+                newParams.put(p.getJdbcName(), val);
+            }
         }
         if (jdbcSql == null) {
             StringBuilder sb = new StringBuilder();
@@ -167,10 +169,38 @@ public class NativeParserInfo {
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
             Statement stmt = sqlParser.Statement();
+            final Set<String> fullNames = new HashSet<String>();
+            final Set<String> requiredNamedSet = new HashSet<String>();
+            final AtomicBoolean containsInName = new AtomicBoolean();
+            ExpressionVisitorAdapter exprAdapter = new ExpressionVisitorAdapter() {
+
+                @Override
+                public void visit(JdbcNamedParameter expr) {
+                    super.visit(expr);
+                    requiredNamedSet.add(expr.getName());
+                    fullNames.add(expr.getName());
+                }
+
+                @Override
+                public void visit(InExpression expr) {
+                    int size = fullNames.size();
+                    super.visit(expr);
+                    if (fullNames.size() > size) {
+                        containsInName.set(true);
+                    }
+                }
+
+                @Override
+                public void visit(JdbcParameter jdbcParameter) {
+                    throw new SourceException("Cannot contains ? JdbcParameter");
+                }
+            };
+
             Statement countStmt = null;
             Expression where = null;
             Runnable clearWhere = null;
             List<UpdateSet> updateSets = null;
+            List<SelectBody> insertSets = null;
             if (stmt instanceof Select) {
                 PlainSelect selectBody = (PlainSelect) ((Select) stmt).getSelectBody();
                 where = selectBody.getWhere();
@@ -197,6 +227,10 @@ public class NativeParserInfo {
                 if (selectBody instanceof PlainSelect) {
                     where = ((PlainSelect) selectBody).getWhere();
                     clearWhere = () -> ((PlainSelect) selectBody).setWhere(null);
+                } else if (selectBody instanceof SetOperationList) {
+                    insertSets = ((SetOperationList) selectBody).getSelects();
+                } else {
+                    throw new SourceException("Not support sql (" + rowSql + ") ");
                 }
             } else if (stmt instanceof Delete) {
                 where = ((Delete) stmt).getWhere();
@@ -208,38 +242,18 @@ public class NativeParserInfo {
             } else {
                 throw new SourceException("Not support sql (" + rowSql + ") ");
             }
-            final Set<String> fullNames = new HashSet<String>();
-            final Set<String> mustNames = new HashSet<String>();
-            final AtomicBoolean containsInName = new AtomicBoolean();
-            ExpressionVisitorAdapter exprAdapter = new ExpressionVisitorAdapter() {
 
-                @Override
-                public void visit(JdbcNamedParameter expr) {
-                    super.visit(expr);
-                    mustNames.add(expr.getName());
-                    fullNames.add(expr.getName());
-                }
-
-                @Override
-                public void visit(InExpression expr) {
-                    int size = fullNames.size();
-                    super.visit(expr);
-                    if (fullNames.size() > size) {
-                        containsInName.set(true);
-                    }
-                }
-
-                @Override
-                public void visit(JdbcParameter jdbcParameter) {
-                    throw new SourceException("Cannot contains ? JdbcParameter");
-                }
-            };
             SelectDeParser selectAdapter = new SelectDeParser();
             selectAdapter.setExpressionVisitor(exprAdapter);
             exprAdapter.setSelectVisitor(selectAdapter);
             if (where != null) {
                 where.accept(exprAdapter);
-                mustNames.clear(); //where不存在必需的参数名
+                requiredNamedSet.clear(); //where不存在必需的参数名
+            }
+            if (insertSets != null) {
+                for (SelectBody body : insertSets) {
+                    body.accept(selectAdapter);
+                }
             }
             if (updateSets != null) {
                 for (UpdateSet set : updateSets) {
@@ -257,7 +271,7 @@ public class NativeParserInfo {
             if (updateSets != null) {
                 Map<String, Object> params = new HashMap<>();
                 Object val = List.of(1); //虚构一个参数值，IN需要Collection
-                for (String name : mustNames) {
+                for (String name : requiredNamedSet) {
                     params.put(name, val);
                 }
                 final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
@@ -267,7 +281,7 @@ public class NativeParserInfo {
                 updateNamedSet = exprDeParser.getParamNames();
             }
             return new NativeParserNode(stmt, countStmt, where, jdbcDollarNames,
-                fullNames, mustNames, isDynamic() || containsInName.get(), updateSql, updateNamedSet);
+                fullNames, requiredNamedSet, isDynamic() || containsInName.get(), updateSql, updateNamedSet);
         } catch (ParseException e) {
             throw new SourceException("Parse error, sql: " + rowSql, e);
         }
