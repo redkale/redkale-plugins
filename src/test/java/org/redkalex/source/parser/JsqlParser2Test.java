@@ -135,16 +135,27 @@ public class JsqlParser2Test {
     @Test
     public void run8() throws Exception {
         String sql = "SELECT * FROM userdetail WHERE id = ${id} AND MOD(${t1},${t2}) = 3";
-        Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t2", 4);
+        Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        String repect = "SELECT * FROM userdetail WHERE id = ?";
+        Assertions.assertEquals(repect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
     }
 
     @Test
     public void run9() throws Exception {
+        String sql = "SELECT * FROM userdetail WHERE id = ${id} AND type = MOD(${t1},${t2})";
+        Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        String repect = "SELECT * FROM userdetail WHERE id = ?";
+        Assertions.assertEquals(repect, statement.getNativeSql());
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
     }
 
     @Test
