@@ -18,16 +18,16 @@ public class NativeSqlParameter {
     private static final ConcurrentHashMap<String, Attribute> attrCache = new ConcurrentHashMap<>();
 
     //${xxx}、$${xxx}参数名
-    private String dollarName;
+    private final String dollarName;
 
     //jdbc参数名 :xxx
-    private String jdbcName;
+    private final String jdbcName;
 
     //是否必需 
-    private boolean required;
+    private final boolean required;
 
     //${xxx}参数名按.分隔
-    private String[] dollars;
+    private final String[] dollars;
 
     public NativeSqlParameter(String dollarName, String jdbcName, boolean required) {
         this.dollarName = dollarName;
@@ -46,9 +46,9 @@ public class NativeSqlParameter {
             return val;
         }
         for (int i = 1; i < subs.length; i++) {
-            String subname = subs[i];
+            String fieldName = subs[i];
             Class clz = val.getClass();
-            Attribute attr = attrCache.computeIfAbsent(clz.getName() + ":" + subname, k -> Attribute.create(clz, subname));
+            Attribute attr = attrCache.computeIfAbsent(clz.getName() + ":" + fieldName, k -> Attribute.create(clz, fieldName));
             val = attr.get(val);
             if (val == null) {
                 return val;
@@ -61,32 +61,16 @@ public class NativeSqlParameter {
         return dollarName;
     }
 
-    public void setDollarName(String dollarName) {
-        this.dollarName = dollarName;
-    }
-
     public String getJdbcName() {
         return jdbcName;
-    }
-
-    public void setJdbcName(String jdbcName) {
-        this.jdbcName = jdbcName;
     }
 
     public boolean isRequired() {
         return required;
     }
 
-    public void setRequired(boolean required) {
-        this.required = required;
-    }
-
     public String[] getDollars() {
         return dollars;
-    }
-
-    public void setDollars(String[] dollars) {
-        this.dollars = dollars;
     }
 
     @Override

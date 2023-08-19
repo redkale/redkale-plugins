@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.Statement;
 import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
-import org.redkale.source.*;
+import org.redkale.source.SourceException;
 
 /**
  *
@@ -86,7 +86,7 @@ public class NativeParserNode {
             exprDeParser.getParamNames().addAll(updateNamedSet);
         }
         String whereSql = exprDeParser.deParser(fullWhere);
-        DataNativeSqlParser.NativeSqlStatement statement = new DataNativeSqlParser.NativeSqlStatement();
+        NativeSqlStatement statement = new NativeSqlStatement();
         statement.setParamNames(exprDeParser.getParamNames());
         statement.setParamValues(params);
         if (whereSql.isEmpty()) {
