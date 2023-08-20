@@ -30,44 +30,44 @@ public class NativeParserNode {
     private final Expression fullWhere;
 
     //jdbc参数名:argxxx对应${xx.xx}参数名
-    private final Map<String, String> jdbcDollarNames;
+    private final Map<String, String> jdbcDollarMap;
 
     //没有where的UPDATE语句
     private final String updateSql;
 
     //修改项，只有UPDATE语句才有值
-    private final List<String> updateNamedSet;
+    private final List<String> updateJdbcNames;
 
-    //必须要有的参数名, 包含了updateNamedSet
-    private final Set<String> requiredNamedSet;
+    //必须要有的参数名, 包含了updateJdbcNames
+    private final Set<String> requiredJdbcNames;
 
-    //所有参数名，包含了requiredNamedSet
-    private final Set<String> fullNamedSet;
+    //所有参数名，包含了requiredJdbcNames
+    private final Set<String> fullJdbcNames;
 
     //缓存
     private final ConcurrentHashMap<String, NativeSqlStatement> statements = new ConcurrentHashMap();
 
-    public NativeParserNode(Statement stmt, Statement countStmt, Expression fullWhere, Map<String, String> jdbcDollarNames,
-        Set<String> fullNamedSet, Set<String> requiredNamedSet, boolean dynamic, String updateSql, List<String> updateNamedSet) {
+    public NativeParserNode(Statement stmt, Statement countStmt, Expression fullWhere, Map<String, String> jdbcDollarMap,
+        Set<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateSql, List<String> updateJdbcNames) {
         this.stmt = stmt;
         this.dynamic = dynamic;
         this.countStmt = countStmt;
         this.fullWhere = fullWhere;
-        this.jdbcDollarNames = jdbcDollarNames;
+        this.jdbcDollarMap = jdbcDollarMap;
         this.updateSql = updateSql;
-        this.updateNamedSet = updateNamedSet;
-        this.fullNamedSet = Collections.unmodifiableSet(fullNamedSet);
-        this.requiredNamedSet = Collections.unmodifiableSet(requiredNamedSet);
+        this.updateJdbcNames = updateJdbcNames;
+        this.fullJdbcNames = Collections.unmodifiableSet(fullJdbcNames);
+        this.requiredJdbcNames = Collections.unmodifiableSet(requiredJdbcNames);
     }
 
     public NativeSqlStatement loadStatement(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
         Set<String> miss = null;
-        for (String mustName : requiredNamedSet) {
+        for (String mustName : requiredJdbcNames) {
             if (params.get(mustName) == null) {
                 if (miss == null) {
                     miss = new LinkedHashSet<>();
                 }
-                miss.add(jdbcDollarNames.getOrDefault(mustName, mustName));
+                miss.add(jdbcDollarMap.getOrDefault(mustName, mustName));
             }
         }
         if (miss != null) {
@@ -81,13 +81,18 @@ public class NativeParserNode {
     }
 
     private NativeSqlStatement createStatement(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
-        final NativeExprDeParser exprDeParser = new NativeExprDeParser(jdbcDollarNames, signFunc, params);
-        if (updateNamedSet != null) {
-            exprDeParser.getParamNames().addAll(updateNamedSet);
+        final NativeExprDeParser exprDeParser = new NativeExprDeParser(jdbcDollarMap, signFunc, params);
+        if (updateJdbcNames != null) {
+            exprDeParser.getJdbcNames().addAll(updateJdbcNames);
         }
         String whereSql = exprDeParser.deParser(fullWhere);
         NativeSqlStatement statement = new NativeSqlStatement();
-        statement.setParamNames(exprDeParser.getParamNames());
+        statement.setJdbcNames(exprDeParser.getJdbcNames());
+        List<String> paramNames = new ArrayList<>();
+        for (String name : statement.getJdbcNames()) {
+            paramNames.add(jdbcDollarMap == null ? name : jdbcDollarMap.getOrDefault(name, name));
+        }
+        statement.setParamNames(paramNames);
         statement.setParamValues(params);
         if (whereSql.isEmpty()) {
             statement.setNativeSql(updateSql == null ? stmt.toString() : updateSql);
@@ -104,7 +109,7 @@ public class NativeParserNode {
     }
 
     private String cacheKey(Map<String, Object> params) {
-        List<String> list = fullNamedSet.stream().filter(v -> params.containsKey(v)).collect(Collectors.toList());
+        List<String> list = fullJdbcNames.stream().filter(v -> params.containsKey(v)).collect(Collectors.toList());
         if (list.isEmpty()) {
             return "";
         }

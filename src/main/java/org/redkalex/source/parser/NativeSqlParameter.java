@@ -20,7 +20,7 @@ public class NativeSqlParameter {
     //${xxx}、$${xxx}参数名
     private final String dollarName;
 
-    //jdbc参数名 :xxx
+    //jdbc参数名 :argxxx
     private final String jdbcName;
 
     //是否必需 

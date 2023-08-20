@@ -41,7 +41,7 @@ public class NativeParserInfo {
     private final Map<String, NativeSqlParameter> requiredDollarNames = new HashMap<>();
 
     //jdbc参数名:argxxx对应${xx.xx}参数名
-    private final Map<String, String> jdbcDollarNames = new HashMap<>();
+    private final Map<String, String> jdbcDollarMap = new HashMap<>();
 
     //根据#{xx.xx}分解并将${xx.xx}替换成:argxxx的sql片段
     private final List<NativeSqlFragment> fragments = new ArrayList<>();
@@ -94,7 +94,7 @@ public class NativeParserInfo {
                         jdbc = "arg" + (seqno >= 10 ? seqno : ("0" + seqno));
                         NativeSqlParameter p = new NativeSqlParameter(name, jdbc, type == 3);
                         dollarJdbcNames.put(name, p);
-                        jdbcDollarNames.put(jdbc, name);
+                        jdbcDollarMap.put(jdbc, name);
                         if (p.isRequired()) {
                             requiredDollarNames.put(name, p);
                         }
@@ -274,13 +274,13 @@ public class NativeParserInfo {
                 for (String name : requiredNamedSet) {
                     params.put(name, val);
                 }
-                final NativeExprDeParser exprDeParser = new NativeExprDeParser(jdbcDollarNames, signFunc, params);
+                final NativeExprDeParser exprDeParser = new NativeExprDeParser(jdbcDollarMap, signFunc, params);
                 UpdateDeParser deParser = new UpdateDeParser(exprDeParser, exprDeParser.getBuffer());
                 deParser.deParse((Update) stmt);
                 updateSql = exprDeParser.getBuffer().toString();
-                updateNamedSet = exprDeParser.getParamNames();
+                updateNamedSet = exprDeParser.getJdbcNames();
             }
-            return new NativeParserNode(stmt, countStmt, where, jdbcDollarNames,
+            return new NativeParserNode(stmt, countStmt, where, jdbcDollarMap,
                 fullNames, requiredNamedSet, isDynamic() || containsInName.get(), updateSql, updateNamedSet);
         } catch (ParseException e) {
             throw new SourceException("Parse error, sql: " + rowSql, e);

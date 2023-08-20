@@ -28,12 +28,13 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
     private final Deque<Expression> relations = new ArrayDeque<>();
 
+    //key: jdbc参数名:argxxx;  value: ${xx.xx}参数名
     private final Map<String, String> jdbcDollarNames;
 
-    //需要预编译的参数名, 数量与sql中的?数量一致
-    private List<String> paramNames = new ArrayList<>();
-
     private java.util.function.Function<Integer, String> signFunc;
+
+    //需要预编译的jdbc参数名:argxxx, 数量与sql中的?数量一致
+    private List<String> jdbcNames = new ArrayList<>();
 
     //参数
     private Map<String, Object> paramValues;
@@ -58,8 +59,8 @@ public class NativeExprDeParser extends ExpressionDeParser {
         return this.buffer.toString();
     }
 
-    public List<String> getParamNames() {
-        return paramNames;
+    public List<String> getJdbcNames() {
+        return jdbcNames;
     }
 
     public Map<String, Object> getParamValues() {
@@ -73,9 +74,9 @@ public class NativeExprDeParser extends ExpressionDeParser {
             paramLosing = true;
             return;
         }
-        paramNames.add(jdbcDollarNames == null ? expr.getName() : jdbcDollarNames.getOrDefault(expr.getName(), expr.getName()));
+        jdbcNames.add(expr.getName());
         //使用JdbcParameter代替JdbcNamedParameter
-        buffer.append(signFunc.apply(paramNames.size()));
+        buffer.append(signFunc.apply(jdbcNames.size()));
     }
 
     @Override
@@ -86,11 +87,11 @@ public class NativeExprDeParser extends ExpressionDeParser {
         paramLosing = false;
         relations.push(expr);
 
-        int size1 = paramNames.size();
+        int size1 = jdbcNames.size();
         final int start1 = buffer.length();
         expr.getLeftExpression().accept(this);
         int end1 = buffer.length();
-        int size2 = paramNames.size();
+        int size2 = jdbcNames.size();
         if (!paramLosing) {
             if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_RIGHT) {
                 buffer.append("(+)");
@@ -101,19 +102,19 @@ public class NativeExprDeParser extends ExpressionDeParser {
             buffer.append(operator);
         } else {
             for (int i = size1; i < size2; i++) {
-                paramNames.remove(paramNames.size() - 1);
+                jdbcNames.remove(jdbcNames.size() - 1);
             }
         }
 
-        size1 = paramNames.size();
+        size1 = jdbcNames.size();
         expr.getRightExpression().accept(this);
         int end2 = buffer.length();
-        size2 = paramNames.size();
+        size2 = jdbcNames.size();
         if (paramLosing) { //没有right
             buffer.delete(start1, end2);
             //多个paramNames里中一个不存在，需要删除另外几个
             for (int i = size1; i < size2; i++) {
-                paramNames.remove(paramNames.size() - 1);
+                jdbcNames.remove(jdbcNames.size() - 1);
             }
         } else {
             if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_LEFT) {
@@ -131,28 +132,28 @@ public class NativeExprDeParser extends ExpressionDeParser {
             paramLosing = false;
             conditions.push(expr);
 
-            int size1 = paramNames.size();
+            int size1 = jdbcNames.size();
             final int start1 = buffer.length();
             expr.getLeftExpression().accept(this);
             final int end1 = buffer.length();
-            int size2 = paramNames.size();
+            int size2 = jdbcNames.size();
             if (end1 > start1) {
                 buffer.append(operator);
             } else {
                 for (int i = size1; i < size2; i++) {
-                    paramNames.remove(paramNames.size() - 1);
+                    jdbcNames.remove(jdbcNames.size() - 1);
                 }
             }
 
-            size1 = paramNames.size();
+            size1 = jdbcNames.size();
             final int start2 = buffer.length();
             expr.getRightExpression().accept(this);
             final int end2 = buffer.length();
-            size2 = paramNames.size();
+            size2 = jdbcNames.size();
             if (end2 == start2) { //没有right
                 buffer.delete(end1, end2);
                 for (int i = size1; i < size2; i++) {
-                    paramNames.remove(paramNames.size() - 1);
+                    jdbcNames.remove(jdbcNames.size() - 1);
                 }
             }
 
@@ -162,7 +163,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
             paramLosing = false;
             relations.push(expr);
 
-            int size1 = paramNames.size();
+            int size1 = jdbcNames.size();
             final int start1 = buffer.length();
             expr.getLeftExpression().accept(this);
             if (!paramLosing) {
@@ -172,15 +173,15 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 final int end1 = buffer.length();
                 if (paramLosing) { //没有right
                     buffer.delete(start1, end1);
-                    int size2 = paramNames.size();
+                    int size2 = jdbcNames.size();
                     for (int i = size1; i < size2; i++) {
-                        paramNames.remove(paramNames.size() - 1);
+                        jdbcNames.remove(jdbcNames.size() - 1);
                     }
                 }
             } else {
-                int size2 = paramNames.size();
+                int size2 = jdbcNames.size();
                 for (int i = size1; i < size2; i++) {
-                    paramNames.remove(paramNames.size() - 1);
+                    jdbcNames.remove(jdbcNames.size() - 1);
                 }
             }
 
@@ -226,7 +227,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
         paramLosing = false;
         relations.push(expr);
 
-        final int size = paramNames.size();
+        final int size = jdbcNames.size();
         final int start = buffer.length();
         expr.getLeftExpression().accept(this);
         int end = buffer.length();
@@ -245,16 +246,16 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 end2 = buffer.length();
                 if (paramLosing) {
                     buffer.delete(start, end2);
-                    final int size2 = paramNames.size();
+                    final int size2 = jdbcNames.size();
                     for (int i = size; i < size2; i++) {
-                        paramNames.remove(paramNames.size() - 1);
+                        jdbcNames.remove(jdbcNames.size() - 1);
                     }
                 }
             } else {
                 buffer.delete(start, end2);
-                final int size2 = paramNames.size();
+                final int size2 = jdbcNames.size();
                 for (int i = size; i < size2; i++) {
-                    paramNames.remove(paramNames.size() - 1);
+                    jdbcNames.remove(jdbcNames.size() - 1);
                 }
             }
         }
@@ -267,7 +268,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
     public void visit(InExpression expr) {
         paramLosing = false;
         relations.push(expr);
-        final int size1 = paramNames.size();
+        final int size1 = jdbcNames.size();
         final int start = buffer.length();
         expr.getLeftExpression().accept(this);
         int end = buffer.length();
@@ -301,18 +302,18 @@ public class NativeExprDeParser extends ExpressionDeParser {
                     }
                     new ExpressionList(newList).accept(this);
                 } else {
-                    int size2 = paramNames.size();
+                    int size2 = jdbcNames.size();
                     expr.getRightItemsList().accept(this);
-                    if (paramNames.size() > size2) {
+                    if (jdbcNames.size() > size2) {
                         throw new SourceException("Not support expression (" + expr.getRightItemsList().getClass() + "," + expr.getRightItemsList() + ") ");
                     }
                 }
             }
         } else {
             buffer.delete(start, end);
-            final int size2 = paramNames.size();
+            final int size2 = jdbcNames.size();
             for (int i = size1; i < size2; i++) {
-                paramNames.remove(paramNames.size() - 1);
+                jdbcNames.remove(jdbcNames.size() - 1);
             }
         }
         relations.pop();
