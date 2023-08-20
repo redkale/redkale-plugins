@@ -81,7 +81,7 @@ public class NativeParserNode {
     }
 
     private NativeSqlStatement createStatement(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
-        final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
+        final NativeExprDeParser exprDeParser = new NativeExprDeParser(jdbcDollarNames, signFunc, params);
         if (updateNamedSet != null) {
             exprDeParser.getParamNames().addAll(updateNamedSet);
         }

@@ -28,20 +28,23 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
     private final Deque<Expression> relations = new ArrayDeque<>();
 
-    //需要预编译的参数名, 数量与sql中的?数量一致
-    protected List<String> paramNames = new ArrayList<>();
+    private final Map<String, String> jdbcDollarNames;
 
-    protected java.util.function.Function<Integer, String> signFunc;
+    //需要预编译的参数名, 数量与sql中的?数量一致
+    private List<String> paramNames = new ArrayList<>();
+
+    private java.util.function.Function<Integer, String> signFunc;
 
     //参数
-    protected Map<String, Object> paramValues;
+    private Map<String, Object> paramValues;
 
     //当前BinaryExpression缺失参数
-    protected boolean paramLosing;
+    private boolean paramLosing;
 
-    public NativeExprDeParser(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
+    public NativeExprDeParser(Map<String, String> jdbcDollarNames, java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
         Objects.requireNonNull(signFunc);
         Objects.requireNonNull(params);
+        this.jdbcDollarNames = jdbcDollarNames;
         this.signFunc = signFunc;
         this.paramValues = params;
         SelectDeParser selParser = new SelectDeParser(this, buffer);
@@ -70,7 +73,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
             paramLosing = true;
             return;
         }
-        paramNames.add(expr.getName());
+        paramNames.add(jdbcDollarNames == null ? expr.getName() : jdbcDollarNames.getOrDefault(expr.getName(), expr.getName()));
         //使用JdbcParameter代替JdbcNamedParameter
         buffer.append(signFunc.apply(paramNames.size()));
     }

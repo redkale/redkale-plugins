@@ -274,7 +274,7 @@ public class NativeParserInfo {
                 for (String name : requiredNamedSet) {
                     params.put(name, val);
                 }
-                final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
+                final NativeExprDeParser exprDeParser = new NativeExprDeParser(jdbcDollarNames, signFunc, params);
                 UpdateDeParser deParser = new UpdateDeParser(exprDeParser, exprDeParser.getBuffer());
                 deParser.deParse((Update) stmt);
                 updateSql = exprDeParser.getBuffer().toString();
