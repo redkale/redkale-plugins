@@ -90,6 +90,8 @@ public class JsqlParser2Test {
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        String expect = "INSERT INTO dayrecord (recordid, content, createTime) SELECT recordid, content, NOW() FROM hourrecord WHERE createTime BETWEEN ? AND ? AND id > 0";
+        Assertions.assertEquals(expect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
     }
@@ -101,6 +103,8 @@ public class JsqlParser2Test {
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        String expect = "UPDATE dayrecord SET id = MAX(100), remark = ?, name = CASE WHEN type = 1 THEN ? WHEN type = 2 THEN ? ELSE ? END WHERE id IN (2, 3)";
+        Assertions.assertEquals(expect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
     }
@@ -112,6 +116,8 @@ public class JsqlParser2Test {
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        String expect = "UPDATE dayrecord SET id = SELECT MAX(?) FROM tt WHERE status IN (1), remark = ?, name = CASE WHEN type = 1 THEN ? WHEN type = 2 THEN ? ELSE ? END WHERE id IN (2, 3)";
+        Assertions.assertEquals(expect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
     }

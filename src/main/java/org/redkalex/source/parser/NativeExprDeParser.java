@@ -363,6 +363,28 @@ public class NativeExprDeParser extends ExpressionDeParser {
     }
 
     @Override
+    public void visit(FullTextSearch expr) {
+        //@TODO 
+        paramLosing = false;
+        relations.push(expr);
+        super.visit(expr);
+        relations.pop();
+        paramLosing = false;
+    }
+
+    @Override
+    public void visit(LikeExpression expr) {
+        final int start = buffer.length();
+        visitBinaryExpression(expr, (expr.isNot() ? " NOT" : "") + (expr.isCaseInsensitive() ? " ILIKE " : " LIKE "));
+        final int end = buffer.length();
+        Expression escape = expr.getEscape();
+        if (end > start && escape != null) {
+            buffer.append(" ESCAPE ");
+            expr.getEscape().accept(this);
+        }
+    }
+
+    @Override
     public void visit(IsNullExpression expr) {
         paramLosing = false;
         relations.push(expr);
