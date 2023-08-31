@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.*;
@@ -307,7 +308,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return list;
     }
 
-    protected Collection<CacheScoredValue.NumberScoredValue> getSortedCollectionValue(String key, RedisCryptor cryptor, Response gresp, AtomicLong cursor, boolean set, Type scoreType) {
+    protected Collection<CacheScoredValue.NumberScoredValue> getSortedCollectionValue(String key,
+        RedisCryptor cryptor, Response gresp, AtomicLong cursor, boolean set, Type scoreType) {
         Collection<CacheScoredValue.NumberScoredValue> list = set ? new LinkedHashSet<>() : new ArrayList<>();
         int gsize = gresp.size();
         if (gsize == 0) {
@@ -491,7 +493,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             || Number.class.isAssignableFrom(clz) || CharSequence.class.isAssignableFrom(clz)) {
             return String.valueOf(value);
         }
-        String val = (convert0 instanceof TextConvert) ? ((TextConvert) convert0).convertTo(type, value) : new String(convert0.convertToBytes(type, value), StandardCharsets.UTF_8);
+        String val = (convert0 instanceof TextConvert)
+            ? ((TextConvert) convert0).convertTo(type, value)
+            : new String(convert0.convertToBytes(type, value), StandardCharsets.UTF_8);
         if (val != null && val.length() > 1 && type instanceof Class && !CharSequence.class.isAssignableFrom((Class) type)) {
             if (val.charAt(0) == '"' && val.charAt(val.length() - 1) == '"') {
                 val = val.substring(1, val.length() - 1);
@@ -503,6 +507,27 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Boolean> isOpenAsync() {
         return CompletableFuture.completedFuture(client != null);
+    }
+
+    //------------------------ 订阅发布 SUB/PUB ------------------------     
+    @Override
+    public CompletableFuture<List<String>> pubsubChannelsAsync(@Nullable String pattern) {
+        CompletableFuture<Response> future = pattern == null ? sendAsync(Command.PUBSUB, "CHANNELS")
+            : sendAsync(Command.PUBSUB, "CHANNELS", pattern);
+        return future.thenApply(v -> (List) getCollectionValue("CHANNELS", null, v, false, String.class));
+    }
+
+    @Override
+    public CompletableFuture<Void> subscribeAsync(CacheEventListener<byte[]> listener, String... topics) {
+        Objects.requireNonNull(listener);
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public CompletableFuture<Integer> publishAsync(String topic, byte[] message) {
+        Objects.requireNonNull(topic);
+        Objects.requireNonNull(message);
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     //--------------------- exists ------------------------------

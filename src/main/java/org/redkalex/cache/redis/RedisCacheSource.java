@@ -138,6 +138,25 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return CompletableFuture.completedFuture(client != null);
     }
 
+    //------------------------ 订阅发布 SUB/PUB ------------------------     
+    @Override
+    public CompletableFuture<List<String>> pubsubChannelsAsync(@Nullable String pattern) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public CompletableFuture<Void> subscribeAsync(CacheEventListener<byte[]> listener, String... topics) {
+        Objects.requireNonNull(listener);
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public CompletableFuture<Integer> publishAsync(String topic, byte[] message) {
+        Objects.requireNonNull(topic);
+        Objects.requireNonNull(message);
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     //--------------------- exists ------------------------------
     @Override
     public CompletableFuture<Boolean> existsAsync(String key) {

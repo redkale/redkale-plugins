@@ -21,14 +21,9 @@ public class ProtobufByteBufferWriter extends ProtobufWriter {
 
     private int index;
 
-    public ProtobufByteBufferWriter(boolean enumtostring, Supplier<ByteBuffer> supplier) {
-        this(false, false, enumtostring, supplier);
-    }
-
-    protected ProtobufByteBufferWriter(boolean tiny, boolean nullable, boolean enumtostring, Supplier<ByteBuffer> supplier) {
+    public ProtobufByteBufferWriter(int features, boolean enumtostring, Supplier<ByteBuffer> supplier) {
         super((byte[]) null);
-        this.tiny = tiny;
-        this.nullable = nullable;
+        this.features = features;
         this.enumtostring = enumtostring;
         this.supplier = supplier;
     }
@@ -74,18 +69,6 @@ public class ProtobufByteBufferWriter extends ProtobufWriter {
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + "[count=" + this.count + "]";
-    }
-
-    @Override
-    public ProtobufByteBufferWriter tiny(boolean tiny) {
-        this.tiny = tiny;
-        return this;
-    }
-
-    @Override
-    public ProtobufByteBufferWriter nullable(boolean nullable) {
-        this.nullable = nullable;
-        return this;
     }
 
     @Override

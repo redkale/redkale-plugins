@@ -20,8 +20,8 @@ import org.redkale.util.AnyValue;
 public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWriter> {
 
     private static final ProtobufFactory instance = new ProtobufFactory(null,
-        getSystemPropertyBoolean("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true),
-        getSystemPropertyBoolean("redkale.convert.protobuf.nullable", "redkale.convert.nullable", false),
+        getSystemPropertyInt("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true, FEATURE_TINY)
+       | getSystemPropertyInt("redkale.convert.protobuf.nullable", "redkale.convert.nullable", false, FEATURE_NULLABLE),
         Boolean.parseBoolean(System.getProperty("redkale.convert.protobuf.enumtostring", "true")));
 
     static final Decodeable objectDecoder = instance.loadDecoder(Object.class);
@@ -41,8 +41,8 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    private ProtobufFactory(ProtobufFactory parent, boolean tiny, boolean nullable, boolean enumtostring) {
-        super(parent, tiny, nullable);
+    private ProtobufFactory(ProtobufFactory parent,  int features, boolean enumtostring) {
+        super(parent, features);
         this.enumtostring = enumtostring;
         if (parent == null) { //root
             this.register(String[].class, this.createArrayDecoder(String[].class));
@@ -55,10 +55,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     public static ProtobufFactory create() {
-        return new ProtobufFactory(null,
-            getSystemPropertyBoolean("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true),
-            getSystemPropertyBoolean("redkale.convert.protobuf.nullable", "redkale.convert.nullable", false),
-            Boolean.parseBoolean(System.getProperty("redkale.convert.protobuf.enumtostring", "true")));
+        return new ProtobufFactory(null, instance.features, instance.enumtostring);
     }
 
     @Override
@@ -119,19 +116,19 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     @Override
     public final ProtobufConvert getConvert() {
         if (convert == null) {
-            convert = new ProtobufConvert(this, tiny, nullable);
+            convert = new ProtobufConvert(this, features);
         }
         return (ProtobufConvert) convert;
     }
 
     @Override
     public ProtobufFactory createChild() {
-        return new ProtobufFactory(this, this.tiny, this.nullable, this.enumtostring);
+        return new ProtobufFactory(this, features, this.enumtostring);
     }
 
     @Override
-    public ProtobufFactory createChild(boolean tiny, boolean nullable) {
-        return new ProtobufFactory(this, tiny, nullable, this.enumtostring);
+    public ProtobufFactory createChild(int features) {
+        return new ProtobufFactory(this, features, this.enumtostring);
     }
 
     @Override

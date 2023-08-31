@@ -32,18 +32,12 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     private final ThreadLocal<ProtobufReader> readerPool = ThreadLocal.withInitial(ProtobufReader::new);
 
-    private final boolean tiny;
-
-    private final boolean nullable;
-
     private Encodeable lastConvertEncodeable;
 
     private Decodeable lastConvertDecodeable;
 
-    protected ProtobufConvert(ConvertFactory<ProtobufReader, ProtobufWriter> factory, boolean tiny, boolean nullable) {
-        super(factory);
-        this.tiny = tiny;
-        this.nullable = nullable;
+    protected ProtobufConvert(ConvertFactory<ProtobufReader, ProtobufWriter> factory, int features) {
+        super(factory, features);
     }
 
     @Override
@@ -72,7 +66,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
 
     @Override
     public ProtobufConvert newConvert(final BiFunction<Attribute, Object, Object> fieldFunc, BiFunction<Object, Object, Object> mapFieldFunc, Function<Object, ConvertField[]> objExtFunc) {
-        return new ProtobufConvert(getFactory(), tiny, nullable) {
+        return new ProtobufConvert(getFactory(), features) {
             @Override
             protected <S extends ProtobufWriter> S configWrite(S writer) {
                 super.configWrite(writer);
@@ -108,11 +102,11 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     }
 
     public ProtobufByteBufferWriter pollProtobufWriter(final Supplier<ByteBuffer> supplier) {
-        return configWrite(new ProtobufByteBufferWriter(tiny, nullable, ((ProtobufFactory) factory).enumtostring, supplier));
+        return configWrite(new ProtobufByteBufferWriter(features, ((ProtobufFactory) factory).enumtostring, supplier));
     }
 
     public ProtobufWriter pollProtobufWriter(final OutputStream out) {
-        return configWrite(new ProtobufStreamWriter(tiny, nullable, ((ProtobufFactory) factory).enumtostring, out));
+        return configWrite(new ProtobufStreamWriter(features, ((ProtobufFactory) factory).enumtostring, out));
     }
 
     @Override
@@ -123,7 +117,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         } else {
             writerPool.set(null);
         }
-        return configWrite(writer.tiny(tiny).nullable(nullable).enumtostring(((ProtobufFactory) factory).enumtostring));
+        return configWrite(writer.features(features).enumtostring(((ProtobufFactory) factory).enumtostring));
     }
 
     @Override
@@ -670,7 +664,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     @Override
     public void convertToBytes(final ByteArray array, final Type type, final Object value) {
         Objects.requireNonNull(array);
-        final ProtobufWriter writer = configWrite(new ProtobufWriter(array).tiny(tiny).tiny(nullable).enumtostring(((ProtobufFactory) factory).enumtostring));
+        final ProtobufWriter writer = configWrite(new ProtobufWriter(array).features(features).enumtostring(((ProtobufFactory) factory).enumtostring));
         if (value == null) {
             writer.writeNull();
         } else {

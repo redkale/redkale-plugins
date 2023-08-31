@@ -26,10 +26,6 @@ public class ProtobufWriter extends Writer implements ByteTuple {
 
     protected int count;
 
-    protected boolean tiny;
-
-    protected boolean nullable;
-
     protected int initOffset;
 
     protected boolean enumtostring;
@@ -40,9 +36,10 @@ public class ProtobufWriter extends Writer implements ByteTuple {
         return ObjectPool.createSafePool(max, (Object... params) -> new ProtobufWriter(), null, (t) -> t.recycle());
     }
 
-    protected ProtobufWriter(ProtobufWriter parent) {
+    protected ProtobufWriter(ProtobufWriter parent, int features) {
         this();
         this.parent = parent;
+        this.features = features;
         if (parent != null) {
             this.enumtostring = parent.enumtostring;
         }
@@ -50,6 +47,11 @@ public class ProtobufWriter extends Writer implements ByteTuple {
 
     protected ProtobufWriter(byte[] bs) {
         this.content = bs;
+    }
+
+    public ProtobufWriter features(int features) {
+        super.features(features);
+        return this;
     }
 
     protected ProtobufWriter configFieldFunc(Writer writer) {
@@ -60,8 +62,7 @@ public class ProtobufWriter extends Writer implements ByteTuple {
         this.mapFieldFunc = out.mapFieldFunc;
         this.objFieldFunc = out.objFieldFunc;
         this.objExtFunc = out.objExtFunc;
-        this.tiny = out.tiny;
-        this.nullable = out.nullable;
+        this.features = out.features;
         this.enumtostring = out.enumtostring;
         return this;
     }
@@ -138,26 +139,6 @@ public class ProtobufWriter extends Writer implements ByteTuple {
         byte[] newdata = new byte[count];
         System.arraycopy(content, 0, newdata, 0, count);
         return newdata;
-    }
-
-    @Override
-    public final boolean tiny() {
-        return tiny;
-    }
-
-    public ProtobufWriter tiny(boolean tiny) {
-        this.tiny = tiny;
-        return this;
-    }
-
-    @Override
-    public final boolean nullable() {
-        return nullable;
-    }
-
-    public ProtobufWriter nullable(boolean nullable) {
-        this.nullable = nullable;
-        return this;
     }
 
     public ProtobufWriter enumtostring(boolean enumtostring) {
