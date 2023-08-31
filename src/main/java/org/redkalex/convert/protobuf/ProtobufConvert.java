@@ -117,7 +117,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
         } else {
             writerPool.set(null);
         }
-        return configWrite(writer.features(features).enumtostring(((ProtobufFactory) factory).enumtostring));
+        return configWrite(writer.withFeatures(features).enumtostring(((ProtobufFactory) factory).enumtostring));
     }
 
     @Override
@@ -664,7 +664,7 @@ public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWrite
     @Override
     public void convertToBytes(final ByteArray array, final Type type, final Object value) {
         Objects.requireNonNull(array);
-        final ProtobufWriter writer = configWrite(new ProtobufWriter(array).features(features).enumtostring(((ProtobufFactory) factory).enumtostring));
+        final ProtobufWriter writer = configWrite(new ProtobufWriter(array).withFeatures(features).enumtostring(((ProtobufFactory) factory).enumtostring));
         if (value == null) {
             writer.writeNull();
         } else {

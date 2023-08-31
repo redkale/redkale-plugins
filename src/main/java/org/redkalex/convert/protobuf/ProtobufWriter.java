@@ -49,8 +49,8 @@ public class ProtobufWriter extends Writer implements ByteTuple {
         this.content = bs;
     }
 
-    public ProtobufWriter features(int features) {
-        super.features(features);
+    public ProtobufWriter withFeatures(int features) {
+        super.withFeatures(features);
         return this;
     }
 
