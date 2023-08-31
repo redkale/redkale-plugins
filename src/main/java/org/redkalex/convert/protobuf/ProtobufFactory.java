@@ -20,8 +20,8 @@ import org.redkale.util.AnyValue;
 public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWriter> {
 
     private static final ProtobufFactory instance = new ProtobufFactory(null,
-        getSystemPropertyInt("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true, FEATURE_TINY)
-       | getSystemPropertyInt("redkale.convert.protobuf.nullable", "redkale.convert.nullable", false, FEATURE_NULLABLE),
+        getSystemPropertyInt("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true, Convert.FEATURE_TINY)
+        | getSystemPropertyInt("redkale.convert.protobuf.nullable", "redkale.convert.nullable", false, Convert.FEATURE_NULLABLE),
         Boolean.parseBoolean(System.getProperty("redkale.convert.protobuf.enumtostring", "true")));
 
     static final Decodeable objectDecoder = instance.loadDecoder(Object.class);
@@ -41,7 +41,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     }
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    private ProtobufFactory(ProtobufFactory parent,  int features, boolean enumtostring) {
+    private ProtobufFactory(ProtobufFactory parent, int features, boolean enumtostring) {
         super(parent, features);
         this.enumtostring = enumtostring;
         if (parent == null) { //root
@@ -52,6 +52,31 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
 
     public static ProtobufFactory root() {
         return instance;
+    }
+
+    @Override
+    public ProtobufFactory withFeatures(int features) {
+        return super.withFeatures(features);
+    }
+
+    @Override
+    public ProtobufFactory addFeature(int feature) {
+        return super.addFeature(feature);
+    }
+
+    @Override
+    public ProtobufFactory removeFeature(int feature) {
+        return super.removeFeature(feature);
+    }
+
+    @Override
+    public ProtobufFactory withTinyFeature(boolean tiny) {
+        return super.withTinyFeature(tiny);
+    }
+
+    @Override
+    public ProtobufFactory withNullableFeature(boolean nullable) {
+        return super.withNullableFeature(nullable);
     }
 
     public static ProtobufFactory create() {
