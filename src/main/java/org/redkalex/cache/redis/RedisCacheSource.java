@@ -14,8 +14,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
-import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.*;
+import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
@@ -147,6 +147,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> subscribeAsync(CacheEventListener<byte[]> listener, String... topics) {
         Objects.requireNonNull(listener);
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

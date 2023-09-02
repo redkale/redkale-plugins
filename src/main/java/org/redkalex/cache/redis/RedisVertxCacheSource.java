@@ -2,27 +2,50 @@
  */
 package org.redkalex.cache.redis;
 
-import io.vertx.core.*;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.redis.client.Command;
-import io.vertx.redis.client.*;
+import io.vertx.redis.client.Redis;
+import io.vertx.redis.client.RedisClientType;
+import io.vertx.redis.client.RedisConnection;
+import io.vertx.redis.client.RedisOptions;
+import io.vertx.redis.client.RedisReplicas;
+import io.vertx.redis.client.Request;
+import io.vertx.redis.client.Response;
+import io.vertx.redis.client.ResponseType;
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.redkale.annotation.AutoLoad;
-import org.redkale.annotation.*;
+import org.redkale.annotation.Nullable;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
-import org.redkale.convert.*;
+import org.redkale.convert.Convert;
+import org.redkale.convert.TextConvert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
-import org.redkale.source.*;
-import org.redkale.util.*;
+import org.redkale.source.CacheEventListener;
+import org.redkale.source.CacheScoredValue;
+import org.redkale.source.CacheScoredValue.NumberScoredValue;
+import org.redkale.source.CacheSource;
+import org.redkale.util.AnyValue;
+import org.redkale.util.RedkaleException;
+import org.redkale.util.ResourceEvent;
+import org.redkale.util.Utility;
 import static org.redkale.util.Utility.*;
 
 /**
@@ -34,15 +57,17 @@ import static org.redkale.util.Utility.*;
 @ResourceType(CacheSource.class)
 public class RedisVertxCacheSource extends AbstractRedisSource {
 
-    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+    private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    protected Type objValueType = String.class;
+    private List<String> nodeAddrs;
 
-    protected List<String> nodeAddrs;
+    private Vertx vertx;
 
-    protected Vertx vertx;
+    private Redis client;
 
-    protected io.vertx.redis.client.Redis client;
+    private RedisConnection subConn;
+
+    private final ReentrantLock pubsubLock = new ReentrantLock();
 
     @Override
     public void init(AnyValue conf) {
@@ -87,6 +112,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         redisConfig.setEndpoints(config.getAddresses());
         Redis old = this.client;
         this.client = Redis.createClient(this.vertx, redisConfig);
+        this.subConn = null;
         if (old != null) {
             old.close();
         }
@@ -100,7 +126,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         }
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
-            sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+            sb.append("CacheSource(name=").append(resourceName()).append(") change '")
+                .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
         initClient(this.conf);
         if (sb.length() > 0) {
@@ -134,6 +161,37 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         }
     }
 
+    protected CompletableFuture<RedisConnection> subConn() {
+        RedisConnection conn = this.subConn;
+        if (conn != null) {
+            return CompletableFuture.completedFuture(conn);
+        }
+        CompletableFuture<RedisConnection> future = new CompletableFuture<>();
+        redisClient().connect(r -> {
+            pubsubLock.lock();
+            try {
+                if (r.succeeded()) {
+                    if (subConn == null) {
+                        subConn = r.result();
+                        future.complete(subConn);
+                    } else {
+                        future.complete(subConn);
+                        r.result().close();
+                    }
+                } else {
+                    if (subConn == null) {
+                        future.completeExceptionally(r.cause());
+                    } else {
+                        future.complete(subConn);
+                    }
+                }
+            } finally {
+                pubsubLock.unlock();
+            }
+        });
+        return future;
+    }
+
     protected <T> CompletableFuture<T> completableFuture(io.vertx.core.Future<T> rf) {
         return rf.toCompletionStage().toCompletableFuture();
     }
@@ -143,6 +201,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         for (String arg : args) {
             request.arg(arg);
         }
+        return completableFuture(redisClient().send(request));
+    }
+
+    protected CompletableFuture<Response> sendAsync(Command cmd, String arg1, byte[] arg2) {
+        Request request = Request.cmd(cmd);
+        request.arg(arg1);
+        request.arg(arg2);
         return completableFuture(redisClient().send(request));
     }
 
@@ -520,6 +585,24 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> subscribeAsync(CacheEventListener<byte[]> listener, String... topics) {
         Objects.requireNonNull(listener);
+        if (topics == null || topics.length < 1) {
+            throw new RedkaleException("topics is empty");
+        }
+        return subConn().thenCompose(conn -> {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            conn.send(Request.cmd(Command.SUBSCRIBE, topics)).onComplete(r -> {
+                if (r.failed()) {
+                    future.completeExceptionally(r.cause());
+                    return;
+                }
+                //待实现
+            });
+            return future;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -527,7 +610,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     public CompletableFuture<Integer> publishAsync(String topic, byte[] message) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(message);
-        throw new UnsupportedOperationException("Not supported yet.");
+        return sendAsync(Command.PUBLISH, topic, message).thenApply(v -> getIntValue(v, 0));
     }
 
     //--------------------- exists ------------------------------
@@ -605,7 +688,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "NX", "EX", String.valueOf(expireSeconds)).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
+        return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "NX", "EX", String.valueOf(expireSeconds))
+            .thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
     }
 
     //--------------------- expire ------------------------------    
@@ -821,7 +905,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Long> sdiffstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
-        return sendAsync(Command.SDIFFSTORE, Utility.append(key, srcKey, srcKey2s)).thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
+        return sendAsync(Command.SDIFFSTORE, Utility.append(key, srcKey, srcKey2s))
+            .thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
     }
 
     @Override
@@ -831,7 +916,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Long> sinterstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
-        return sendAsync(Command.SINTERSTORE, Utility.append(key, srcKey, srcKey2s)).thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
+        return sendAsync(Command.SINTERSTORE, Utility.append(key, srcKey, srcKey2s))
+            .thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
     }
 
     @Override
@@ -841,7 +927,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<Long> sunionstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
-        return sendAsync(Command.SUNIONSTORE, Utility.append(key, srcKey, srcKey2s)).thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
+        return sendAsync(Command.SUNIONSTORE, Utility.append(key, srcKey, srcKey2s))
+            .thenCompose(t -> sendAsync(Command.SCARD, key).thenApply(v -> getLongValue(v, 0L)));
     }
 
     @Override
@@ -911,7 +998,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     //--------------------- existsItem ------------------------------  
     @Override
     public <T> CompletableFuture<Boolean> sismemberAsync(String key, final Type componentType, T value) {
-        return sendAsync(Command.SISMEMBER, key, formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> getIntValue(v, 0) > 0);
+        return sendAsync(Command.SISMEMBER, key, formatValue(key, cryptor, (Convert) null, componentType, value))
+            .thenApply(v -> getIntValue(v, 0) > 0);
     }
 
     //--------------------- rpush ------------------------------  
@@ -938,22 +1026,26 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     //--------------------- lrem ------------------------------ 
     @Override
     public <T> CompletableFuture<T> lindexAsync(String key, Type componentType, int index) {
-        return sendAsync(Command.LINDEX, key, String.valueOf(index)).thenApply(v -> getObjectValue(key, cryptor, v, componentType));
+        return sendAsync(Command.LINDEX, key, String.valueOf(index))
+            .thenApply(v -> getObjectValue(key, cryptor, v, componentType));
     }
 
     @Override
     public <T> CompletableFuture<Long> linsertBeforeAsync(String key, Type componentType, T pivot, T value) {
-        return sendAsync(Command.LINSERT, keyArgs(key, "BEFORE", componentType, pivot, value)).thenApply(v -> getLongValue(v, 0L));
+        return sendAsync(Command.LINSERT, keyArgs(key, "BEFORE", componentType, pivot, value))
+            .thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
     public <T> CompletableFuture<Long> linsertAfterAsync(String key, Type componentType, T pivot, T value) {
-        return sendAsync(Command.LINSERT, keyArgs(key, "AFTER", componentType, pivot, value)).thenApply(v -> getLongValue(v, 0L));
+        return sendAsync(Command.LINSERT, keyArgs(key, "AFTER", componentType, pivot, value))
+            .thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
     public <T> CompletableFuture<Long> lremAsync(String key, final Type componentType, T value) {
-        return sendAsync(Command.LREM, key, "0", formatValue(key, cryptor, (Convert) null, componentType, value)).thenApply(v -> getLongValue(v, 0L));
+        return sendAsync(Command.LREM, key, "0", formatValue(key, cryptor, (Convert) null, componentType, value))
+            .thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
@@ -989,12 +1081,14 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T> CompletableFuture<Set<T>> spopAsync(String key, int count, Type componentType) {
-        return sendAsync(Command.SPOP, key, String.valueOf(count)).thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
+        return sendAsync(Command.SPOP, key, String.valueOf(count))
+            .thenApply(v -> (Set) getCollectionValue(key, cryptor, v, true, componentType));
     }
 
     @Override
     public <T> CompletableFuture<Long> sremAsync(String key, final Type componentType, T... values) {
-        return sendAsync(Command.SREM, keyArgs(key, componentType, values)).thenApply(v -> getLongValue(v, 0L));
+        return sendAsync(Command.SREM, keyArgs(key, componentType, values))
+            .thenApply(v -> getLongValue(v, 0L));
     }
 
     //--------------------- sorted set ------------------------------ 
@@ -1005,22 +1099,26 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public <T extends Number> CompletableFuture<T> zincrbyAsync(String key, CacheScoredValue value) {
-        return sendAsync(Command.ZINCRBY, keyArgs(key, value)).thenApply(v -> getObjectValue(key, null, v, value.getScore().getClass()));
+        return sendAsync(Command.ZINCRBY, keyArgs(key, value))
+            .thenApply(v -> getObjectValue(key, null, v, value.getScore().getClass()));
     }
 
     @Override
     public CompletableFuture<Long> zremAsync(String key, String... members) {
-        return sendAsync(Command.ZREM, keyArgs(key, members)).thenApply(v -> getLongValue(v, 0L));
+        return sendAsync(Command.ZREM, keyArgs(key, members))
+            .thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
     public <T extends Number> CompletableFuture<List<T>> zmscoreAsync(String key, Class<T> scoreType, String... members) {
-        return sendAsync(Command.ZMSCORE, keyArgs(key, members)).thenApply(v -> (List) getCollectionValue(key, null, v, false, scoreType));
+        return sendAsync(Command.ZMSCORE, keyArgs(key, members))
+            .thenApply(v -> (List) getCollectionValue(key, null, v, false, scoreType));
     }
 
     @Override
     public <T extends Number> CompletableFuture<T> zscoreAsync(String key, Class<T> scoreType, String member) {
-        return sendAsync(Command.ZSCORE, keyArgs(key, member)).thenApply(v -> getObjectValue(key, null, v, scoreType));
+        return sendAsync(Command.ZSCORE, keyArgs(key, member))
+            .thenApply(v -> getObjectValue(key, null, v, scoreType));
     }
 
     @Override
@@ -1040,23 +1138,27 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     @Override
     public CompletableFuture<List<String>> zrangeAsync(String key, int start, int stop) {
-        return sendAsync(Command.ZRANGE, keyArgs(key, start, stop)).thenApply(v -> (List) getCollectionValue(key, (RedisCryptor) null, v, false, String.class));
+        return sendAsync(Command.ZRANGE, keyArgs(key, start, stop))
+            .thenApply(v -> (List) getCollectionValue(key, (RedisCryptor) null, v, false, String.class));
     }
 
     @Override
-    public CompletableFuture<List<CacheScoredValue.NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
-        return sendAsync(Command.ZSCAN, keyArgs(key, cursor, limit, pattern)).thenApply(v -> (List) getSortedCollectionValue(key, cryptor, v, cursor, false, scoreType));
+    public CompletableFuture<List<NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
+        return sendAsync(Command.ZSCAN, keyArgs(key, cursor, limit, pattern))
+            .thenApply(v -> (List) getSortedCollectionValue(key, cryptor, v, cursor, false, scoreType));
     }
 
     //--------------------- keys ------------------------------  
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
-        return sendAsync(Command.KEYS, isEmpty(pattern) ? "*" : pattern).thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
+        return sendAsync(Command.KEYS, isEmpty(pattern) ? "*" : pattern)
+            .thenApply(v -> (List) getCollectionValue(null, null, v, false, String.class));
     }
 
     @Override
     public CompletableFuture<List<String>> scanAsync(AtomicLong cursor, int limit, String pattern) {
-        return sendAsync(Command.SCAN, keyArgs(null, cursor, limit, pattern)).thenApply(v -> getKeysValue(v, cursor));
+        return sendAsync(Command.SCAN, keyArgs(null, cursor, limit, pattern))
+            .thenApply(v -> getKeysValue(v, cursor));
     }
 
     //--------------------- dbsize ------------------------------  

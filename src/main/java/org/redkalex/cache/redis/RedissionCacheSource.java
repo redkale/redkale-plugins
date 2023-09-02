@@ -289,14 +289,29 @@ public class RedissionCacheSource extends AbstractRedisSource {
         for (int i = 0; i < topics.length; i++) {
             futures[i] = toFuture(client.getReliableTopic(topics[i], ByteArrayCodec.INSTANCE)
                 .addListenerAsync(byte[].class, msgListener).thenApply(v -> {
-                    
+
                 return null;
             }));
         }
         return futures.length == 1 ? futures[0] : CompletableFuture.allOf(futures);
     }
 
-    public CompletableFuture<Void> unsubscribeAsync(CacheEventListener<byte[]> listener, String... topics) {
+    @Override
+    public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
+        if (listener == null) {
+            if (topics == null || topics.length < 1) {
+                return toFuture(client.getReliableTopic("*", ByteArrayCodec.INSTANCE).removeAllListenersAsync().thenApply(v -> 1));
+            } else {
+                CompletableFuture<Integer>[] futures = new CompletableFuture[topics.length];
+                for (int i = 0; i < topics.length; i++) {
+                    futures[i] = toFuture(client.getReliableTopic(topics[i], ByteArrayCodec.INSTANCE)
+                        .removeAllListenersAsync().thenApply(v -> 1));
+                }
+                return futures.length == 1 ? futures[0] : CompletableFuture.allOf(futures).thenApply(v -> 1);
+            }
+        } else {
+
+        }
         return CompletableFuture.completedFuture(null);
     }
 
