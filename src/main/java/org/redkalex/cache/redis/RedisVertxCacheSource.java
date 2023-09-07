@@ -2,6 +2,7 @@
  */
 package org.redkalex.cache.redis;
 
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.redis.client.Command;
@@ -18,7 +19,9 @@ import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -26,6 +29,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -69,6 +74,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     private final ReentrantLock pubsubLock = new ReentrantLock();
 
+    //key: topic
+    private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubsubListeners = new ConcurrentHashMap<>();
+
     @Override
     public void init(AnyValue conf) {
         super.init(conf);
@@ -87,7 +95,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         RedisOptions redisConfig = new RedisOptions();
         redisConfig.setMaxPoolWaiting(-1);
         if (config.getMaxconns() > 0) {
-            redisConfig.setMaxPoolSize(Math.max(config.getAddresses().size(), config.getMaxconns()));
+            redisConfig.setMaxPoolSize(Math.max(config.getAddresses().size(), config.getMaxconns(2)));
             redisConfig.setMaxPoolWaiting(Math.max(8, redisConfig.getMaxPoolSize()) * 100);
         }
         if (config.getPassword() != null) {
@@ -112,9 +120,13 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         redisConfig.setEndpoints(config.getAddresses());
         Redis old = this.client;
         this.client = Redis.createClient(this.vertx, redisConfig);
+        boolean subing = this.subConn != null;
         this.subConn = null;
         if (old != null) {
             old.close();
+        }
+        if (subing) {
+            subConn().join();
         }
     }
 
@@ -167,7 +179,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             return CompletableFuture.completedFuture(conn);
         }
         CompletableFuture<RedisConnection> future = new CompletableFuture<>();
-        redisClient().connect(r -> {
+        redisClient().connect().onComplete(r -> {
             pubsubLock.lock();
             try {
                 if (r.succeeded()) {
@@ -201,13 +213,10 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         for (String arg : args) {
             request.arg(arg);
         }
-        return completableFuture(redisClient().send(request));
+        return sendAsync(request);
     }
 
-    protected CompletableFuture<Response> sendAsync(Command cmd, String arg1, byte[] arg2) {
-        Request request = Request.cmd(cmd);
-        request.arg(arg1);
-        request.arg(arg2);
+    protected CompletableFuture<Response> sendAsync(Request request) {
         return completableFuture(redisClient().send(request));
     }
 
@@ -590,27 +599,99 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         }
         return subConn().thenCompose(conn -> {
             CompletableFuture<Void> future = new CompletableFuture<>();
-            conn.send(Request.cmd(Command.SUBSCRIBE, topics)).onComplete(r -> {
-                if (r.failed()) {
-                    future.completeExceptionally(r.cause());
-                    return;
+            try {
+                conn.handler(new Handler<Response>() {
+                    @Override
+                    public void handle(Response event) {
+                        if (event.size() != 3) {
+                            return;
+                        }
+                        if (!"message".equals(event.get(0).toString())) {
+                            return;
+                        }
+                        String channel = event.get(1).toString();
+                        byte[] msg = event.get(2).toBytes();
+                        Set<CacheEventListener<byte[]>> set = pubsubListeners.get(channel);
+                        if (set != null) {
+                            for (CacheEventListener item : set) {
+                                subExecutor().execute(() -> {
+                                    try {
+                                        item.onMessage(channel, msg);
+                                    } catch (Throwable t) {
+                                        logger.log(Level.SEVERE, "CacheSource subscribe message error, topic: " + channel, t);
+                                    }
+                                });
+
+                            }
+                        }
+                    }
+                });
+                Request req = Request.cmd(Command.SUBSCRIBE);
+                for (String topic : topics) {
+                    req.arg(topic.getBytes(StandardCharsets.UTF_8));
                 }
-                //待实现
-            });
+                conn.send(req).onComplete(r -> {
+                    if (r.failed()) {
+                        future.completeExceptionally(r.cause());
+                        return;
+                    }
+                    for (String topic : topics) {
+                        pubsubListeners.computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>()).add(listener);
+                    }
+                    future.complete(null);
+                });
+            } catch (Throwable t) {
+                future.completeExceptionally(t);
+            }
             return future;
         });
     }
 
     @Override
     public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (listener == null) { //清掉指定topic的所有订阅者            
+            Set<String> delTopics = new HashSet<>();
+            if (topics == null || topics.length < 1) {
+                delTopics.addAll(pubsubListeners.keySet());
+            } else {
+                delTopics.addAll(Arrays.asList(topics));
+            }
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            delTopics.forEach(topic -> {
+                futures.add(subConn().thenCompose(conn -> completableFuture(conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic)))
+                    .thenApply(r -> {
+                        pubsubListeners.remove(topic);
+                        return null;
+                    })
+                ));
+            });
+            return returnFutureSize(futures);
+        } else {  //清掉指定topic的指定订阅者         
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            for (String topic : topics) {
+                CopyOnWriteArraySet<CacheEventListener<byte[]>> listens = pubsubListeners.get(topic);
+                if (listens == null) {
+                    continue;
+                }
+                listens.remove(listener);
+                if (listens.isEmpty()) {
+                    futures.add(subConn().thenCompose(conn -> completableFuture(conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic)))
+                        .thenApply(r -> {
+                            pubsubListeners.remove(topic);
+                            return null;
+                        })
+                    ));
+                }
+            }
+            return returnFutureSize(futures);
+        }
     }
 
     @Override
     public CompletableFuture<Integer> publishAsync(String topic, byte[] message) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(message);
-        return sendAsync(Command.PUBLISH, topic, message).thenApply(v -> getIntValue(v, 0));
+        return sendAsync(Request.cmd(Command.PUBLISH).arg(topic).arg(message)).thenApply(v -> getIntValue(v, 0));
     }
 
     //--------------------- exists ------------------------------
@@ -1164,17 +1245,17 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     //--------------------- dbsize ------------------------------  
     @Override
     public CompletableFuture<Long> dbsizeAsync() {
-        return sendAsync(Command.DBSIZE).thenApply(v -> getLongValue(v, 0L));
+        return sendAsync(Request.cmd(Command.DBSIZE)).thenApply(v -> getLongValue(v, 0L));
     }
 
     @Override
     public CompletableFuture<Void> flushdbAsync() {
-        return sendAsync(Command.FLUSHDB).thenApply(v -> null);
+        return sendAsync(Request.cmd(Command.FLUSHDB)).thenApply(v -> null);
     }
 
     @Override
     public CompletableFuture<Void> flushallAsync() {
-        return sendAsync(Command.FLUSHALL).thenApply(v -> null);
+        return sendAsync(Request.cmd(Command.FLUSHALL)).thenApply(v -> null);
     }
 
     //-------------------------- 过期方法 ----------------------------------

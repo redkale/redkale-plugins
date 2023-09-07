@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Predicate;
 import java.util.logging.*;
 import java.util.stream.Collectors;
 import org.redisson.Redisson;
@@ -40,13 +41,16 @@ import static org.redkale.util.Utility.*;
 @ResourceType(CacheSource.class)
 public class RedissionCacheSource extends AbstractRedisSource {
 
-    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+    private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    protected List<String> nodeAddrs;
+    private List<String> nodeAddrs;
 
-    protected RedissonClient client;
+    private RedissonClient client;
 
-    protected static final Codec SCAN_CODEC = new Codec() {
+    //<listener, <topic, listenerid>>
+    private final ConcurrentHashMap<CacheEventListener, ConcurrentHashMap<String, Integer>> pubsubListeners = new ConcurrentHashMap<>();
+
+    private static final Codec SCAN_CODEC = new Codec() {
         @Override
         public Decoder<Object> getMapValueDecoder() {
             return ByteArrayCodec.INSTANCE.getMapValueDecoder();
@@ -101,12 +105,13 @@ public class RedissionCacheSource extends AbstractRedisSource {
         ClusterServersConfig clusterConfig = null;
         ReplicatedServersConfig replicateConfig = null;
         SentinelServersConfig sentinelConfig = null;
+        int max = config.getMaxconns(2);
         for (String addr : config.getAddresses()) {
             if (config.getAddresses().size() == 1) { //单体
                 if (singleConfig == null) {
                     singleConfig = redisConfig.useSingleServer();
-                    singleConfig.setConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
-                    singleConfig.setConnectionPoolSize(config.getMaxconns());
+                    singleConfig.setConnectionMinimumIdleSize(max / 2 + 1);
+                    singleConfig.setConnectionPoolSize(max);
                     baseConfig = singleConfig;
                 }
                 singleConfig.setAddress(addr);
@@ -114,20 +119,20 @@ public class RedissionCacheSource extends AbstractRedisSource {
             } else if ("cluster".equalsIgnoreCase(cluster)) { //集群
                 if (clusterConfig == null) {
                     clusterConfig = redisConfig.useClusterServers();
-                    clusterConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
-                    clusterConfig.setMasterConnectionPoolSize(config.getMaxconns());
-                    clusterConfig.setSlaveConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
-                    clusterConfig.setSlaveConnectionPoolSize(config.getMaxconns());
+                    clusterConfig.setMasterConnectionMinimumIdleSize(max / 2 + 1);
+                    clusterConfig.setMasterConnectionPoolSize(max);
+                    clusterConfig.setSlaveConnectionMinimumIdleSize(max / 2 + 1);
+                    clusterConfig.setSlaveConnectionPoolSize(max);
                     baseConfig = clusterConfig;
                 }
                 clusterConfig.addNodeAddress(addr);
             } else if ("replicated".equalsIgnoreCase(cluster)) { //主从             
                 if (replicateConfig == null) {
                     replicateConfig = redisConfig.useReplicatedServers();
-                    replicateConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
-                    replicateConfig.setMasterConnectionPoolSize(config.getMaxconns());
-                    replicateConfig.setSlaveConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
-                    replicateConfig.setSlaveConnectionPoolSize(config.getMaxconns());
+                    replicateConfig.setMasterConnectionMinimumIdleSize(max / 2 + 1);
+                    replicateConfig.setMasterConnectionPoolSize(max);
+                    replicateConfig.setSlaveConnectionMinimumIdleSize(max / 2 + 1);
+                    replicateConfig.setSlaveConnectionPoolSize(max);
                     baseConfig = replicateConfig;
                 }
                 replicateConfig.addNodeAddress(addr);
@@ -135,10 +140,10 @@ public class RedissionCacheSource extends AbstractRedisSource {
             } else if ("sentinel".equalsIgnoreCase(cluster)) { //哨兵
                 if (sentinelConfig == null) {
                     sentinelConfig = redisConfig.useSentinelServers();
-                    sentinelConfig.setMasterConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
-                    sentinelConfig.setMasterConnectionPoolSize(config.getMaxconns());
-                    sentinelConfig.setSlaveConnectionMinimumIdleSize(config.getMaxconns() / 2 + 1);
-                    sentinelConfig.setSlaveConnectionPoolSize(config.getMaxconns());
+                    sentinelConfig.setMasterConnectionMinimumIdleSize(max / 2 + 1);
+                    sentinelConfig.setMasterConnectionPoolSize(max);
+                    sentinelConfig.setSlaveConnectionMinimumIdleSize(max / 2 + 1);
+                    sentinelConfig.setSlaveConnectionPoolSize(max);
                     baseConfig = sentinelConfig;
                 }
                 sentinelConfig.addSentinelAddress(addr);
@@ -282,14 +287,21 @@ public class RedissionCacheSource extends AbstractRedisSource {
         final MessageListener<byte[]> msgListener = new MessageListener<byte[]>() {
             @Override
             public void onMessage(CharSequence channel, byte[] msg) {
-                listener.onMessage(channel.toString(), msg);
+                subExecutor().execute(() -> {
+                    try {
+                        listener.onMessage(channel.toString(), msg);
+                    } catch (Throwable t) {
+                        logger.log(Level.SEVERE, "CacheSource subscribe message error, topic: " + channel.toString(), t);
+                    }
+                });
             }
         };
         CompletableFuture[] futures = new CompletableFuture[topics.length];
         for (int i = 0; i < topics.length; i++) {
-            futures[i] = toFuture(client.getReliableTopic(topics[i], ByteArrayCodec.INSTANCE)
+            String topic = topics[i];
+            futures[i] = toFuture(client.getTopic(topic, ByteArrayCodec.INSTANCE)
                 .addListenerAsync(byte[].class, msgListener).thenApply(v -> {
-
+                pubsubListeners.computeIfAbsent(listener, t -> new ConcurrentHashMap<>()).put(topic, v);
                 return null;
             }));
         }
@@ -297,29 +309,44 @@ public class RedissionCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
-        if (listener == null) {
-            if (topics == null || topics.length < 1) {
-                return toFuture(client.getReliableTopic("*", ByteArrayCodec.INSTANCE).removeAllListenersAsync().thenApply(v -> 1));
-            } else {
-                CompletableFuture<Integer>[] futures = new CompletableFuture[topics.length];
-                for (int i = 0; i < topics.length; i++) {
-                    futures[i] = toFuture(client.getReliableTopic(topics[i], ByteArrayCodec.INSTANCE)
-                        .removeAllListenersAsync().thenApply(v -> 1));
-                }
-                return futures.length == 1 ? futures[0] : CompletableFuture.allOf(futures).thenApply(v -> 1);
-            }
-        } else {
-
-        }
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Override
     public CompletableFuture<Integer> publishAsync(String topic, byte[] message) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(message);
-        return toFuture(client.getReliableTopic(topic, ByteArrayCodec.INSTANCE).publishAsync(message).thenApply(v -> v.intValue()));
+        return toFuture(client.getTopic(topic, ByteArrayCodec.INSTANCE).publishAsync(message).thenApply(v -> v.intValue()));
+    }
+
+    @Override
+    public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
+        if (listener == null) { //清掉指定topic的所有订阅者            
+            Set<String> delTopics = new HashSet<>();
+            if (topics == null || topics.length < 1) {
+                pubsubListeners.values().forEach(m -> delTopics.addAll(m.keySet()));
+            } else {
+                delTopics.addAll(Arrays.asList(topics));
+            }
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            delTopics.forEach(topic -> {
+                futures.add(toFuture(client.getTopic(topic, ByteArrayCodec.INSTANCE).removeAllListenersAsync()));
+            });
+            return returnFutureSize(futures);
+        } else {  //清掉指定topic的指定订阅者         
+            ConcurrentHashMap<String, Integer> topicToIds = pubsubListeners.get(listener);
+            if (topicToIds == null || topicToIds.isEmpty()) {  //没有找到指定订阅者
+                return CompletableFuture.completedFuture(0);
+            } else {  //清掉指定订阅者的指定topic
+                if (topics == null || topics.length < 1) {
+                    return CompletableFuture.failedFuture(new RedkaleException("topics is empty"));
+                }
+                Predicate<String> filter = t -> Utility.contains(topics, t);
+                List<CompletableFuture<Void>> futures = new ArrayList<>();
+                topicToIds.forEach((topic, id) -> {
+                    if (filter.test(topic)) {
+                        futures.add(toFuture(client.getTopic(topic, ByteArrayCodec.INSTANCE).removeListenerAsync(id)));
+                    }
+                });
+                return returnFutureSize(futures);
+            }
+        }
     }
 
     //--------------------- exists ------------------------------

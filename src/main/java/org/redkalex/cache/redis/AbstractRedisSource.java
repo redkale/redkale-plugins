@@ -7,6 +7,13 @@ package org.redkalex.cache.redis;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import org.redkale.annotation.Resource;
 import static org.redkale.boot.Application.RESNAME_APP_NAME;
 import org.redkale.convert.Convert;
@@ -43,6 +50,10 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     protected RedisCryptor cryptor;
 
     protected AnyValue conf;
+
+    private ExecutorService subExecutor;
+
+    private final ReentrantLock subExecutorLock = new ReentrantLock();
 
     @Override
     public void init(AnyValue conf) {
@@ -88,6 +99,32 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
             || getClass().getName().equalsIgnoreCase(config.getValue(CACHE_SOURCE_TYPE))
             || config.getValue(CACHE_SOURCE_NODES, config.getValue("url", "")).startsWith("redis://")
             || config.getValue(CACHE_SOURCE_NODES, config.getValue("url", "")).startsWith("rediss://");
+    }
+
+    protected ExecutorService subExecutor() {
+        ExecutorService executor = subExecutor;
+        if (executor != null) {
+            return executor;
+        }
+        subExecutorLock.lock();
+        try {
+            if (subExecutor == null) {
+                String threadNameFormat = "CacheSource-" + resourceName() + "-SubThread-%s";
+                Function<String, ExecutorService> func = Utility.virtualExecutorFunction();
+                final AtomicInteger counter = new AtomicInteger();
+                subExecutor = func == null ? Executors.newFixedThreadPool(Utility.cpus(), r -> {
+                    Thread t = new Thread(r);
+                    t.setDaemon(true);
+                    int c = counter.incrementAndGet();
+                    t.setName(String.format(threadNameFormat, "Virtual-" + (c < 10 ? ("00" + c) : (c < 100 ? ("0" + c) : c))));
+                    return t;
+                }) : func.apply(threadNameFormat);
+            }
+            executor = subExecutor;
+        } finally {
+            subExecutorLock.unlock();
+        }
+        return executor;
     }
 
     protected String getNodes(AnyValue config) {
@@ -183,5 +220,9 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
         } else {
             return JsonConvert.root().convertFrom(scoreType, score.toString());
         }
+    }
+
+    protected CompletableFuture<Integer> returnFutureSize(List<CompletableFuture<Void>> futures) {
+        return futures == null || futures.isEmpty() ? CompletableFuture.completedFuture(0) : Utility.allOfFutures(futures).thenApply(v -> futures.size());
     }
 }

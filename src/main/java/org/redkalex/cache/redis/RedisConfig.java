@@ -154,6 +154,10 @@ public class RedisConfig {
         return maxconns;
     }
 
+    public int getMaxconns(int min) {
+        return Math.max(maxconns, min);
+    }
+
     public void setMaxconns(int maxconns) {
         this.maxconns = maxconns;
     }

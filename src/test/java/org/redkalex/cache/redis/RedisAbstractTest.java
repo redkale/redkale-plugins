@@ -7,6 +7,7 @@ package org.redkalex.cache.redis;
 
 import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.*;
@@ -14,9 +15,9 @@ import org.junit.jupiter.api.Assertions;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.json.*;
 import org.redkale.net.AsyncIOGroup;
+import org.redkale.source.*;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODES;
-import org.redkale.source.*;
 import org.redkale.util.*;
 
 /**
@@ -687,6 +688,35 @@ public abstract class RedisAbstractTest {
             System.out.println(source.getClass().getSimpleName() + " 压测结束了, 循环" + count + "次耗时: " + e + "ms");
         }
         source.flushdb();
+        System.out.println("------订阅发布功能------");
+        final CountDownLatch cdl = new CountDownLatch(2);
+        final String channel = "hello_topic";
+        final String content = "this is a message content";
+        CacheEventListener<byte[]> listener = new CacheEventListener<byte[]>() {
+            @Override
+            public void onMessage(String topic, byte[] message) {
+                String msg = new String(message, StandardCharsets.UTF_8);
+                System.out.println("订阅到主题: " + topic + ", 消息: " + msg);
+                Assertions.assertEquals(channel, topic);
+                Assertions.assertEquals(content, msg);
+                cdl.countDown();
+            }
+        };
+        source.subscribe(listener, channel);
+        System.out.println("订阅结束");
+        source.publish(channel, content);
+        System.out.println("发布结束");
+        source.unsubscribe(listener, channel);
+        System.out.println("取消订阅结束");
+        source.publish(channel, content);
+        System.out.println("再次发布结束");
+        source.subscribe(listener, channel);
+        System.out.println("再次订阅结束");
+        source.publish(channel, content);
+        System.out.println("再次发布结束");
+        cdl.await();
+        source.unsubscribe(listener, channel);
+        System.out.println("取消订阅结束");
     }
 
     public static void main(String[] args) throws Exception {
@@ -694,6 +724,7 @@ public abstract class RedisAbstractTest {
             .addValue(CACHE_SOURCE_MAXCONNS, "1")
             .addValue(CACHE_SOURCE_NODES, "redis://127.0.0.1:6363");
         final ResourceFactory factory = ResourceFactory.create();
+        boolean press = false;
         {
             final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
             asyncGroup.start();
@@ -704,7 +735,7 @@ public abstract class RedisAbstractTest {
             source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
-                run(source, true);
+                run(source, press);
             } finally {
                 source.close();
             }
@@ -715,7 +746,7 @@ public abstract class RedisAbstractTest {
             source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
-                run(source, true);
+                run(source, press);
             } finally {
                 source.close();
             }
@@ -727,7 +758,7 @@ public abstract class RedisAbstractTest {
             source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
-                run(source, true);
+                run(source, press);
             } finally {
                 source.close();
             }
@@ -737,7 +768,7 @@ public abstract class RedisAbstractTest {
             CacheMemorySource source = new CacheMemorySource("");
             source.init(conf);
             try {
-                run(source, true);
+                run(source, press);
             } finally {
                 source.close();
             }
