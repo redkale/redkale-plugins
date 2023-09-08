@@ -13,14 +13,14 @@ import org.redkale.util.AnyValue;
  *
  * @author zhangjx
  */
-public class RedissionCacheSourceTest extends RedisAbstractTest {
+public class RedissonCacheSourceTest extends RedisAbstractTest {
 
     public static void main(String[] args) throws Exception {
         AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue()
             .addValue(CACHE_SOURCE_MAXCONNS, "1")
             .addValue(CACHE_SOURCE_NODES, "redis://127.0.0.1:6363");
 
-        RedissionCacheSource source = new RedissionCacheSource();
+        RedissonCacheSource source = new RedissonCacheSource();
         source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
         try {

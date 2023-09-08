@@ -39,7 +39,7 @@ import static org.redkale.util.Utility.*;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public class RedissionCacheSource extends AbstractRedisSource {
+public class RedissonCacheSource extends AbstractRedisSource {
 
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -184,9 +184,9 @@ public class RedissionCacheSource extends AbstractRedisSource {
         }
 //        RTopic topic = client.getTopic("__keyevent@" + db + "__:expired", new StringCodec());
 //        topic.addListener(String.class, (CharSequence cs, String key) -> {
-//            if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissionCacheSource.class.getSimpleName() + "." + db + ": expired key=" + key + ", cs=" + cs);
+//            if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissonCacheSource.class.getSimpleName() + "." + db + ": expired key=" + key + ", cs=" + cs);
 //        });
-        //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissionCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
+        //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissonCacheSource.class.getSimpleName() + ": addrs=" + addresses + ", db=" + db);
 
     }
 
@@ -277,8 +277,7 @@ public class RedissionCacheSource extends AbstractRedisSource {
     //------------------------ 订阅发布 SUB/PUB ------------------------     
     @Override
     public CompletableFuture<List<String>> pubsubChannelsAsync(String pattern) {
-        List<String> names = client.getPatternTopic(pattern == null ? "*" : pattern, StringCodec.INSTANCE).getPatternNames();
-        return CompletableFuture.completedFuture(names);
+        throw new UnsupportedOperationException("Not supported yet."); //redission没有实现
     }
 
     @Override

@@ -5,6 +5,7 @@
  */
 package org.redkalex.cache.redis;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -52,4 +53,7 @@ public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, Re
         return rs;
     }
 
+    protected ClientFuture<RedisCacheRequest, RedisCacheResult> pollRespFuture(Serializable requestid) {
+        return super.pollRespFuture(requestid);
+    }
 }

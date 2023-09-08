@@ -221,6 +221,10 @@ public class RedisCacheCodec extends ClientCodec<RedisCacheRequest, RedisCacheRe
         }
     }
 
+    protected RedisCacheRequest nextRequest() {
+        return super.nextRequest();
+    }
+
     private boolean readComplete(ByteBuffer buffer, ByteArray array) {
         while (buffer.hasRemaining()) {
             byte b = buffer.get();

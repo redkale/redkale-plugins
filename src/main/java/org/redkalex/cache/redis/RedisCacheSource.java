@@ -24,6 +24,10 @@ import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.*;
 import org.redkale.net.client.ClientAddress;
+import org.redkale.net.client.ClientConnection;
+import org.redkale.net.client.ClientFuture;
+import org.redkale.net.client.ClientMessageListener;
+import org.redkale.net.client.ClientResponse;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
@@ -48,18 +52,27 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     protected static final byte[] EX = "EX".getBytes();
 
+    protected static final byte[] CHANNELS = "CHANNELS".getBytes();
+
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
     @Resource(name = RESNAME_APP_CLIENT_ASYNCGROUP, required = false)
-    protected AsyncGroup clientAsyncGroup;
+    private AsyncGroup clientAsyncGroup;
 
     //配置<executor threads="0"> APP_EXECUTOR资源为null
     @Resource(name = RESNAME_APP_EXECUTOR, required = false)
-    protected ExecutorService workExecutor;
+    private ExecutorService workExecutor;
 
-    protected RedisCacheClient client;
+    private RedisCacheClient client;
 
-    protected InetSocketAddress address;
+    private InetSocketAddress address;
+
+    private RedisCacheConnection subConn;
+
+    private final ReentrantLock pubsubLock = new ReentrantLock();
+
+    //key: topic
+    private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubsubListeners = new ConcurrentHashMap<>();
 
     @Override
     public void init(AnyValue conf) {
@@ -133,6 +146,68 @@ public final class RedisCacheSource extends AbstractRedisSource {
         }
     }
 
+    protected CompletableFuture<RedisCacheConnection> subConn() {
+        RedisCacheConnection conn = this.subConn;
+        if (conn != null) {
+            return CompletableFuture.completedFuture(conn);
+        }
+        return client.newConnection().thenApply(r -> {
+            pubsubLock.lock();
+            try {
+                if (subConn == null) {
+                    subConn = r;
+                    r.getCodec().withMessageListener(new ClientMessageListener() {
+                        @Override
+                        public void onMessage(ClientConnection conn, ClientResponse resp) {
+                            if (resp.getCause() == null) {
+                                RedisCacheResult result = (RedisCacheResult) resp.getMessage();
+                                if (result.getFrameValue() == null) {
+                                    List<byte[]> events = result.getListValue(null, null, byte[].class);
+                                    String type = new String(events.get(0), StandardCharsets.UTF_8);
+                                    if (events.size() == 3 && "message".equals(type)) {
+                                        String channel = new String(events.get(1), StandardCharsets.UTF_8);
+                                        Set<CacheEventListener<byte[]>> set = pubsubListeners.get(channel);
+                                        if (set != null) {
+                                            byte[] msg = events.get(2);
+                                            for (CacheEventListener item : set) {
+                                                subExecutor().execute(() -> {
+                                                    try {
+                                                        item.onMessage(channel, msg);
+                                                    } catch (Throwable t) {
+                                                        logger.log(Level.SEVERE, "CacheSource subscribe message error, topic: " + channel, t);
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    } else {
+                                        RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
+                                        ClientFuture respFuture = ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
+                                        respFuture.complete(result);
+                                    }
+                                } else {
+                                    RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
+                                    ClientFuture respFuture = ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
+                                    respFuture.complete(result);
+                                }
+                            } else {
+                                RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
+                                ClientFuture respFuture = ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
+                                respFuture.completeExceptionally(resp.getCause());
+                            }
+                        }
+
+                        public void onClose(ClientConnection conn) {
+                            subConn = null;
+                        }
+                    });
+                }
+                return subConn;
+            } finally {
+                pubsubLock.unlock();
+            }
+        });
+    }
+
     @Override
     public CompletableFuture<Boolean> isOpenAsync() {
         return CompletableFuture.completedFuture(client != null);
@@ -141,25 +216,76 @@ public final class RedisCacheSource extends AbstractRedisSource {
     //------------------------ 订阅发布 SUB/PUB ------------------------     
     @Override
     public CompletableFuture<List<String>> pubsubChannelsAsync(@Nullable String pattern) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        CompletableFuture<RedisCacheResult> future = pattern == null ? sendAsync(RedisCommand.PUBSUB, "CHANNELS", CHANNELS)
+            : sendAsync(RedisCommand.PUBSUB, "CHANNELS", CHANNELS, pattern.getBytes(StandardCharsets.UTF_8));
+        return future.thenApply(v -> v.getListValue("CHANNELS", null, String.class));
     }
 
     @Override
     public CompletableFuture<Void> subscribeAsync(CacheEventListener<byte[]> listener, String... topics) {
         Objects.requireNonNull(listener);
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (topics == null || topics.length < 1) {
+            throw new RedkaleException("topics is empty");
+        }
+        WorkThread workThread = WorkThread.currentWorkThread();
+        String traceid = Traces.currentTraceid();
+        return subConn()
+            .thenCompose(conn
+                -> conn.writeRequest(conn.pollRequest(workThread, traceid).prepare(RedisCommand.SUBSCRIBE, null, keysArgs(topics)))
+                .thenApply(v -> {
+                    for (String topic : topics) {
+                        pubsubListeners.computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>()).add(listener);
+                    }
+                    return null;
+                })
+            );
     }
 
     @Override
     public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (listener == null) { //清掉指定topic的所有订阅者            
+            Set<String> delTopics = new HashSet<>();
+            if (topics == null || topics.length < 1) {
+                delTopics.addAll(pubsubListeners.keySet());
+            } else {
+                delTopics.addAll(Arrays.asList(topics));
+            }
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            delTopics.forEach(topic -> {
+                futures.add(subConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
+                    .thenApply(r -> {
+                        pubsubListeners.remove(topic);
+                        return null;
+                    })
+                ));
+            });
+            return returnFutureSize(futures);
+        } else {  //清掉指定topic的指定订阅者         
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            for (String topic : topics) {
+                CopyOnWriteArraySet<CacheEventListener<byte[]>> listens = pubsubListeners.get(topic);
+                if (listens == null) {
+                    continue;
+                }
+                listens.remove(listener);
+                if (listens.isEmpty()) {
+                    futures.add(subConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
+                        .thenApply(r -> {
+                            pubsubListeners.remove(topic);
+                            return null;
+                        })
+                    ));
+                }
+            }
+            return returnFutureSize(futures);
+        }
     }
 
     @Override
     public CompletableFuture<Integer> publishAsync(String topic, byte[] message) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(message);
-        throw new UnsupportedOperationException("Not supported yet.");
+        return sendAsync(RedisCommand.PUBLISH, topic, topic.getBytes(StandardCharsets.UTF_8), message).thenApply(v -> v.getIntValue(0));
     }
 
     //--------------------- exists ------------------------------

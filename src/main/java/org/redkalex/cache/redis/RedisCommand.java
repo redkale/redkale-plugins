@@ -90,7 +90,11 @@ public enum RedisCommand {
     KEYS("KEYS", true),
     SCAN("SCAN", true),
     DBSIZE("DBSIZE", true),
-    TYPE("TYPE", true);
+    TYPE("TYPE", true),
+    SUBSCRIBE("SUBSCRIBE", false),
+    UNSUBSCRIBE("UNSUBSCRIBE", false),
+    PUBLISH("PUBLISH", false),
+    PUBSUB("PUBSUB", true);
 
     private final String command;
 

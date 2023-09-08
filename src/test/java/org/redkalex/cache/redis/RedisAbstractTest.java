@@ -706,6 +706,10 @@ public abstract class RedisAbstractTest {
         System.out.println("订阅结束");
         source.publish(channel, content);
         System.out.println("发布结束");
+        if (!source.getClass().getName().contains("Redisson")) { //Redisson不支持
+            List<String> channels = source.pubsubChannels(null);
+            Assertions.assertEquals(List.of(channel), channels);
+        }
         source.unsubscribe(listener, channel);
         System.out.println("取消订阅结束");
         source.publish(channel, content);
@@ -742,7 +746,7 @@ public abstract class RedisAbstractTest {
         }
         {
             System.out.println("############################  开始 Redission ############################");
-            RedissionCacheSource source = new RedissionCacheSource();
+            RedissonCacheSource source = new RedissonCacheSource();
             source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
