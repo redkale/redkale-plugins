@@ -185,6 +185,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
                 if (r.succeeded()) {
                     if (subConn == null) {
                         subConn = r.result();
+                        subConn.exceptionHandler(t -> subConn = null);
                         future.complete(subConn);
                     } else {
                         future.complete(subConn);
