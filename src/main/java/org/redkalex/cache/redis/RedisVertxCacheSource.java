@@ -45,7 +45,6 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
 import org.redkale.source.CacheEventListener;
 import org.redkale.source.CacheScoredValue;
-import org.redkale.source.CacheScoredValue.NumberScoredValue;
 import org.redkale.source.CacheSource;
 import org.redkale.util.AnyValue;
 import org.redkale.util.RedkaleException;
@@ -383,9 +382,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return list;
     }
 
-    protected Collection<CacheScoredValue.NumberScoredValue> getSortedCollectionValue(String key,
+    protected Collection<CacheScoredValue> getSortedCollectionValue(String key,
         RedisCryptor cryptor, Response gresp, AtomicLong cursor, boolean set, Type scoreType) {
-        Collection<CacheScoredValue.NumberScoredValue> list = set ? new LinkedHashSet<>() : new ArrayList<>();
+        Collection<CacheScoredValue> list = set ? new LinkedHashSet<>() : new ArrayList<>();
         int gsize = gresp.size();
         if (gsize == 0) {
             return list;
@@ -400,7 +399,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             int size = resp.size();
             for (int i = 0; i < size; i += 2) {
                 String member = resp.get(i).toString(StandardCharsets.UTF_8);
-                list.add(new CacheScoredValue.NumberScoredValue(getObjectValue(key, cryptor, resp.get(i + 1), scoreType), member));
+                list.add(CacheScoredValue.create(getObjectValue(key, cryptor, resp.get(i + 1), scoreType), member));
             }
         }
         return list;
@@ -1225,7 +1224,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<List<NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
+    public CompletableFuture<List<CacheScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
         return sendAsync(Command.ZSCAN, keyArgs(key, cursor, limit, pattern))
             .thenApply(v -> (List) getSortedCollectionValue(key, cryptor, v, cursor, false, scoreType));
     }

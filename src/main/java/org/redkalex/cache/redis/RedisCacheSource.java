@@ -776,9 +776,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<List<CacheScoredValue.NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
+    public CompletableFuture<List<CacheScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
         return sendAsync(RedisCommand.ZSCAN, null, keyArgs(key, cursor, limit, pattern)).thenApply(v -> {
-            List<CacheScoredValue.NumberScoredValue> set = v.getScoreListValue(null, (RedisCryptor) null, scoreType);
+            List<CacheScoredValue> set = v.getScoreListValue(null, (RedisCryptor) null, scoreType);
             cursor.set(v.getCursor());
             return set;
         });

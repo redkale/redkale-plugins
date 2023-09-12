@@ -143,17 +143,17 @@ public class RedisCacheResult {
         return set;
     }
 
-    protected List<CacheScoredValue.NumberScoredValue> getScoreListValue(String key, RedisCryptor cryptor, Type scoreType) {
+    protected List<CacheScoredValue> getScoreListValue(String key, RedisCryptor cryptor, Type scoreType) {
         if (frameList == null || frameList.isEmpty()) {
             return new ArrayList<>();
         }
-        List<CacheScoredValue.NumberScoredValue> set = new ArrayList<>();
+        List<CacheScoredValue> set = new ArrayList<>();
         for (int i = 0; i < frameList.size(); i += 2) {
             byte[] bs1 = frameList.get(i);
             byte[] bs2 = frameList.get(i + 1);
             Number val = decodeValue(key, cryptor, bs2, scoreType);
             if (val != null) {
-                set.add(new CacheScoredValue.NumberScoredValue(val, new String(bs1, StandardCharsets.UTF_8)));
+                set.add(CacheScoredValue.create(val, new String(bs1, StandardCharsets.UTF_8)));
             }
         }
         return set;

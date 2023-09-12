@@ -1087,7 +1087,7 @@ public class RedissonCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<List<CacheScoredValue.NumberScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
+    public CompletableFuture<List<CacheScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
         RFuture<List> future;
         RScript script = client.getScript(SCAN_CODEC);
         if (isEmpty(pattern)) {
@@ -1108,13 +1108,13 @@ public class RedissonCacheSource extends AbstractRedisSource {
             }
         }
         return toFuture(future.thenApply(result -> {
-            final List<CacheScoredValue.NumberScoredValue> rs = new ArrayList<>();
+            final List<CacheScoredValue> rs = new ArrayList<>();
             List<byte[]> kvs = (List) result.get(1);
             for (int i = 0; i < kvs.size(); i += 2) {
                 String field = new String(kvs.get(i), StandardCharsets.UTF_8);
                 byte[] bs = kvs.get(i + 1);
                 if (bs != null) {
-                    rs.add(new CacheScoredValue.NumberScoredValue(decryptValue(key, cryptor, scoreType, bs), field));
+                    rs.add(CacheScoredValue.create(decryptValue(key, cryptor, scoreType, bs), field));
                 }
             }
             cursor.set(Long.parseLong(new String((byte[]) result.get(0))));
