@@ -182,6 +182,9 @@ public class RedissonCacheSource extends AbstractRedisSource {
         if (old != null) {
             old.shutdown();
         }
+        if (!pubsubListeners.isEmpty()) {
+            reloadSubConn();
+        }
 //        RTopic topic = client.getTopic("__keyevent@" + db + "__:expired", new StringCodec());
 //        topic.addListener(String.class, (CharSequence cs, String key) -> {
 //            if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedissonCacheSource.class.getSimpleName() + "." + db + ": expired key=" + key + ", cs=" + cs);
@@ -266,6 +269,19 @@ public class RedissonCacheSource extends AbstractRedisSource {
         super.destroy(conf);
         if (client != null) {
             client.shutdown();
+        }
+    }
+
+    protected void reloadSubConn() {
+        //重连时重新订阅
+        if (!pubsubListeners.isEmpty()) {
+            final Map<CacheEventListener<byte[]>, HashSet<String>> listeners = new HashMap<>();
+            pubsubListeners.forEach((l, s) -> {
+                listeners.computeIfAbsent(l, x -> new HashSet<>()).addAll(s.keySet());
+            });
+            listeners.forEach((listener, topics) -> {
+                subscribeAsync(listener, topics.toArray(Creator.funcStringArray()));
+            });
         }
     }
 

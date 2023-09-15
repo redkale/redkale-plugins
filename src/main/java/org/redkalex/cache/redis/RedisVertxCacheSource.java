@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -47,6 +48,7 @@ import org.redkale.source.CacheEventListener;
 import org.redkale.source.CacheScoredValue;
 import org.redkale.source.CacheSource;
 import org.redkale.util.AnyValue;
+import org.redkale.util.Creator;
 import org.redkale.util.RedkaleException;
 import org.redkale.util.ResourceEvent;
 import org.redkale.util.Utility;
@@ -119,12 +121,14 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         redisConfig.setEndpoints(config.getAddresses());
         Redis old = this.client;
         this.client = Redis.createClient(this.vertx, redisConfig);
-        boolean subing = this.subConn != null;
-        this.subConn = null;
+        if (this.subConn != null) {
+            this.subConn.close();
+            this.subConn = null;
+        }
         if (old != null) {
             old.close();
         }
-        if (subing) {
+        if (!pubsubListeners.isEmpty()) {
             subConn().join();
         }
     }
@@ -186,6 +190,16 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
                         subConn = r.result();
                         subConn.exceptionHandler(t -> subConn = null);
                         future.complete(subConn);
+                        //重连时重新订阅
+                        if (!pubsubListeners.isEmpty()) {
+                            final Map<CacheEventListener<byte[]>, HashSet<String>> listeners = new HashMap<>();
+                            pubsubListeners.forEach((t, s) -> {
+                                s.forEach(l -> listeners.computeIfAbsent(l, x -> new HashSet<>()).add(t));
+                            });
+                            listeners.forEach((listener, topics) -> {
+                                subscribeAsync(listener, topics.toArray(Creator.funcStringArray()));
+                            });
+                        }
                     } else {
                         future.complete(subConn);
                         r.result().close();

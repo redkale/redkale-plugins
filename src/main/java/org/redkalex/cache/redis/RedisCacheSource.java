@@ -106,8 +106,15 @@ public final class RedisCacheSource extends AbstractRedisSource {
             new ClientAddress(address), config.getMaxconns(2), config.getPipelines(),
             isEmpty(config.getPassword()) ? null : new RedisCacheReqAuth(config.getPassword()),
             config.getDb() < 1 ? null : new RedisCacheReqDB(config.getDb()));
+        if (this.subConn != null) {
+            this.subConn.dispose(null);
+            this.subConn = null;
+        }
         if (old != null) {
             old.close();
+        }
+        if (!pubsubListeners.isEmpty()) {
+            subConn().join();
         }
         //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" + db);
     }
@@ -200,6 +207,16 @@ public final class RedisCacheSource extends AbstractRedisSource {
                             subConn = null;
                         }
                     });
+                    //重连时重新订阅
+                    if (!pubsubListeners.isEmpty()) {
+                        final Map<CacheEventListener<byte[]>, HashSet<String>> listeners = new HashMap<>();
+                        pubsubListeners.forEach((t, s) -> {
+                            s.forEach(l -> listeners.computeIfAbsent(l, x -> new HashSet<>()).add(t));
+                        });
+                        listeners.forEach((listener, topics) -> {
+                            subscribeAsync(listener, topics.toArray(Creator.funcStringArray()));
+                        });
+                    }
                 }
                 return subConn;
             } finally {
