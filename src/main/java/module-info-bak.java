@@ -41,7 +41,6 @@ module redkalex.plugins {
     exports org.redkalex.apns;
     exports org.redkalex.cache.redis;
     exports org.redkalex.cluster.consul;
-    exports org.redkalex.convert.protobuf;
     exports org.redkalex.htel;
     exports org.redkalex.mq.kafka;
     exports org.redkalex.net.mqtt;
