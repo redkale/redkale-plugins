@@ -15,12 +15,12 @@ import org.redkale.util.AnyValue;
 
 /**
  *
- * @deprecated 
+ * @deprecated
  * @see org.redkale.convert.protobuf.ProtobufFactory
- * 
+ *
  * @author zhangjx
  */
-@Deprecated
+@Deprecated(since = "2.8.0")
 public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWriter> {
 
     private static final ProtobufFactory instance = new ProtobufFactory(null,

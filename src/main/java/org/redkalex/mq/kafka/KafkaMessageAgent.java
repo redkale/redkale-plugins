@@ -196,4 +196,13 @@ public class KafkaMessageAgent extends MessageAgent {
         return new KafkaMessageClientProducer(producerName, this, servers, this.partitions, this.producerConfig);
     }
 
+    @Override
+    protected MessageProducer createMessageProducer() {
+        return new KafkaMessageProducer(this, servers, this.producerConfig);
+    }
+
+    @Override
+    protected void closeMessageProducer(MessageProducer messageProducer) throws Exception {
+        ((KafkaMessageProducer) messageProducer).close();
+    }
 }

@@ -27,7 +27,7 @@ import org.redkale.util.*;
  *
  * @author zhangjx
  */
-@Deprecated
+@Deprecated(since = "2.8.0")
 public class ProtobufConvert extends BinaryConvert<ProtobufReader, ProtobufWriter> {
 
     private final ThreadLocal<ProtobufWriter> writerPool = ThreadLocal.withInitial(ProtobufWriter::new);
