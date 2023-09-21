@@ -52,8 +52,8 @@ public class KafkaMessageProducer implements MessageProducer, AutoCloseable {
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
 
         this.producer = new KafkaProducer<>(props, new StringSerializer(), new ByteArraySerializer());
-        if (logger.isLoggable(Level.FINE)) {
-            logger.log(Level.FINE, MessageProducer.class.getSimpleName() + "(mq=" + messageAgent.getName() + ") startuped");
+        if (logger.isLoggable(Level.INFO)) {
+            logger.log(Level.INFO, MessageProducer.class.getSimpleName() + "(mq=" + messageAgent.getName() + ") startuped");
         }
     }
 
