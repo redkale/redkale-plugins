@@ -47,18 +47,19 @@ public class KafkaMessageAgent extends MessageAgent {
         this.controllers = cs == null ? this.servers : cs.getValue("value", this.servers);
         this.checkIntervals = config.getAnyValue("servers").getIntValue("checkIntervals", 10);
 
-        AnyValue consumerAnyValue = config.getAnyValue("consumer");
-        if (consumerAnyValue != null) {
-            for (AnyValue val : consumerAnyValue.getAnyValues("property")) {
-                this.consumerConfig.put(val.getValue("name"), val.getValue("value"));
-            }
-        }
-
-        AnyValue producerAnyValue = config.getAnyValue("producer");
-        if (producerAnyValue != null) {
-            this.partitions = producerAnyValue.getIntValue("partitions", 0);
-            for (AnyValue val : producerAnyValue.getAnyValues("property")) {
-                this.producerConfig.put(val.getValue("name"), val.getValue("value"));
+        AnyValue[] propConfigValues = config.getAnyValues("config");
+        if (propConfigValues != null) {
+            for (AnyValue confValues : propConfigValues) {
+                if ("consumer".equals(confValues.getValue("type"))) {
+                    for (AnyValue val : confValues.getAnyValues("property")) {
+                        this.consumerConfig.put(val.getValue("name"), val.getValue("value"));
+                    }
+                } else if ("producer".equals(confValues.getValue("type"))) {
+                    this.partitions = confValues.getIntValue("partitions", 0);
+                    for (AnyValue val : confValues.getAnyValues("property")) {
+                        this.producerConfig.put(val.getValue("name"), val.getValue("value"));
+                    }
+                }
             }
         }
         Properties props = new Properties();

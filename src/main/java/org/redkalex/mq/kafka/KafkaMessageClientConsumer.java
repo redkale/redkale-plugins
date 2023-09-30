@@ -7,7 +7,6 @@ package org.redkalex.mq.kafka;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.*;
 import java.util.logging.Level;
 import org.apache.kafka.clients.consumer.*;
@@ -25,10 +24,6 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
     protected Properties config;
 
     protected Thread thread;
-
-    protected CompletableFuture<Void> startFuture;
-
-    protected CompletableFuture<Void> closeFuture;
 
     protected KafkaConsumer<String, MessageRecord> consumer;
 
@@ -82,7 +77,6 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
         } catch (InvalidTopicException e) {
             messageAgent.createTopic(this.topics);
         }
-        this.startFuture.complete(null);
         if (logger.isLoggable(Level.FINE)) {
             logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuped");
         }
@@ -189,54 +183,39 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             if (this.consumer != null) {
                 this.consumer.close();
             }
-            if (this.closeFuture != null) {
-                this.closeFuture.complete(null);
-                if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
-                }
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
             }
         } catch (Throwable t) {
-            if (this.closeFuture != null && !this.closeFuture.isDone()) {
-                this.closeFuture.complete(null);
-                if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
-                }
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdowned");
             }
             logger.log(Level.SEVERE, MessageClientConsumer.class.getSimpleName() + "(" + Arrays.toString(this.topics) + ") occur error", t);
         }
     }
 
     @Override
-    public CompletableFuture<Void> startup() {
+    public void startup() {
         startCloseLock.lock();
         try {
-            if (this.startFuture != null) {
-                return this.startFuture;
-            }
             this.thread = new Thread(this);
-            this.thread.setName("MQ-" + consumerid + "-Thread");
-            this.startFuture = new CompletableFuture<>();
+            this.thread.setName(MessageClientConsumer.class.getSimpleName() + "-" + consumerid + "-Thread");
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuping");
             }
             this.thread.start();
-            return this.startFuture;
         } finally {
             startCloseLock.unlock();
         }
     }
 
     @Override
-    public CompletableFuture<Void> shutdown() {
+    public void shutdown() {
         startCloseLock.lock();
         try {
-            if (this.consumer == null) {
-                return CompletableFuture.completedFuture(null);
+            if (this.consumer == null || this.closed) {
+                return;
             }
-            if (this.closeFuture != null) {
-                return this.closeFuture;
-            }
-            this.closeFuture = new CompletableFuture<>();
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdownling");
             }
@@ -247,7 +226,6 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             } finally {
                 resumeLock.unlock();
             }
-            return this.closeFuture;
         } finally {
             startCloseLock.unlock();
         }
