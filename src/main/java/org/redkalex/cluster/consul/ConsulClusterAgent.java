@@ -55,16 +55,11 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected ScheduledFuture taskFuture4;
 
-    protected ScheduledFuture taskFuture5;
-
     //可能被HttpMessageClient用到的服务 key: serviceName
     protected final ConcurrentHashMap<String, Set<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
 
     //可能被sncp用到的服务 key: serviceName
     protected final ConcurrentHashMap<String, Set<InetSocketAddress>> sncpAddressMap = new ConcurrentHashMap<>();
-
-    //可能被mqtp用到的服务 key: serviceName
-    protected final ConcurrentHashMap<String, Set<InetSocketAddress>> mqtpAddressMap = new ConcurrentHashMap<>();
 
     @Override
     public void init(AnyValue config) {
@@ -158,20 +153,13 @@ public class ConsulClusterAgent extends ClusterAgent {
             this.taskFuture3.cancel(true);
         }
         this.taskFuture3 = this.scheduler.scheduleAtFixedRate(() -> {
-            reloadMqtpAddressHealth();
-        }, 88 * 2, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+            reloadHttpAddressHealth();
+        }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
 
         if (this.taskFuture4 != null) {
             this.taskFuture4.cancel(true);
         }
         this.taskFuture4 = this.scheduler.scheduleAtFixedRate(() -> {
-            reloadHttpAddressHealth();
-        }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
-
-        if (this.taskFuture5 != null) {
-            this.taskFuture5.cancel(true);
-        }
-        this.taskFuture5 = this.scheduler.scheduleAtFixedRate(() -> {
             remoteEntrys.values().stream().filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol)).forEach(entry -> {
                 updateSncpAddress(entry);
             });
@@ -198,28 +186,6 @@ public class ConsulClusterAgent extends ClusterAgent {
             });
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "reloadSncpAddressHealth check error", ex);
-        }
-    }
-
-    protected void reloadMqtpAddressHealth() {
-        try {
-            String content = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/agent/services", StandardCharsets.UTF_8, httpHeaders);
-            final Map<String, ServiceEntry> map = JsonConvert.root().convertFrom(MAP_STRING_SERVICEENTRY, content);
-            Set<String> mqtpkeys = new HashSet<>();
-            map.forEach((key, en) -> {
-                if (en.Service.startsWith("mqtp:")) {
-                    mqtpkeys.add(en.Service);
-                }
-            });
-            mqtpkeys.forEach(serviceName -> {
-                try {
-                    this.mqtpAddressMap.put(serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
-                } catch (Exception e) {
-                    logger.log(Level.SEVERE, "reloadMqtpAddressHealth check " + serviceName + " error", e);
-                }
-            });
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, "reloadMqtpAddressHealth check error", ex);
         }
     }
 
@@ -260,15 +226,6 @@ public class ConsulClusterAgent extends ClusterAgent {
             sncpAddressMap.put(serviceName, t);
             return t;
         });
-    }
-
-    @Override //获取MQTP的HTTP远程服务的可用ip列表, key = serviceName的后半段
-    public CompletableFuture<Map<String, Set<InetSocketAddress>>> queryMqtpAddress(String protocol, String module, String resname) {
-        final Map<String, Set<InetSocketAddress>> rsmap = new ConcurrentHashMap<>();
-        final String serviceNamePrefix = generateHttpServiceName(protocol, module, null) + ":";
-        mqtpAddressMap.keySet().stream().filter(k -> k.startsWith(serviceNamePrefix))
-            .forEach(sn -> rsmap.put(sn.substring(serviceNamePrefix.length()), mqtpAddressMap.get(sn)));
-        return CompletableFuture.completedFuture(rsmap);
     }
 
     @Override //获取HTTP远程服务的可用ip列表
@@ -429,9 +386,6 @@ public class ConsulClusterAgent extends ClusterAgent {
             }
             if (!rs.isEmpty()) {
                 logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
-            }
-            if (!"mqtp".equals(protocol) && currEntry != null && currEntry.submqtp) {
-                deregister(ns, "mqtp", service, realcanceled);
             }
         } catch (Exception ex) {
             logger.log(Level.SEVERE, serviceid + " deregister error，protocol=" + protocol + ", service=" + service + ", currEntry=" + currEntry, ex);
