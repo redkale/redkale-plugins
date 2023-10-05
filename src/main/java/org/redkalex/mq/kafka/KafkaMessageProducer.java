@@ -99,7 +99,7 @@ public class KafkaMessageProducer implements MessageProducer, AutoCloseable {
         }
     }
 
-    public void close() throws Exception {
+    public void close() {
         startCloseLock.lock();
         try {
             if (this.closed.compareAndSet(false, true)) {

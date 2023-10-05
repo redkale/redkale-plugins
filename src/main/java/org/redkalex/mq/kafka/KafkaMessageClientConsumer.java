@@ -37,17 +37,9 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
 
     protected final Condition resumeCondition = resumeLock.newCondition();
 
-    public KafkaMessageClientConsumer(MessageAgent agent, String[] topics, String group,
-        MessageClientProcessor processor, String servers, Properties consumerConfig) {
-        super(agent, topics, group, processor);
-        final Properties props = new Properties();
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerid);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");// 当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
-        props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, "1000");
-        props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
-        props.putAll(consumerConfig);
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
+    public KafkaMessageClientConsumer(KafkaMessageAgent messageAgent, String[] topics, String group, MessageClientProcessor processor) {
+        super(messageAgent, topics, group, processor);
+        final Properties props = messageAgent.createConsumerProperties(consumerid);
         this.autoCommit = "true".equalsIgnoreCase(props.getOrDefault(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true").toString());
         this.config = props;
     }
@@ -69,7 +61,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
 
     @Override
     public void run() {
-        this.consumer = new KafkaConsumer<>(this.config, new StringDeserializer(), new MessageRecordDeserializer(messageAgent.getMessageCoder()));
+        this.consumer = new KafkaConsumer<>(this.config, new StringDeserializer(), new MessageRecordDeserializer(messageAgent.getClientMessageCoder()));
         this.consumer.subscribe(Arrays.asList(this.topics));
         ConsumerRecords<String, MessageRecord> records0 = null;
         try {
@@ -195,7 +187,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
     }
 
     @Override
-    public void startup() {
+    public void start() {
         startCloseLock.lock();
         try {
             this.thread = new Thread(this);
@@ -210,7 +202,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
     }
 
     @Override
-    public void shutdown() {
+    public void stop() {
         startCloseLock.lock();
         try {
             if (this.consumer == null || this.closed) {

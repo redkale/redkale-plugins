@@ -27,8 +27,6 @@ public class KafkaMessageClientProducer extends MessageClientProducer implements
 
     protected Thread thread;
 
-    protected CompletableFuture<Void> startFuture;
-
     protected KafkaProducer<String, MessageRecord> producer;
 
     protected final ConcurrentHashMap<String, Integer[]> partionsMap = new ConcurrentHashMap<>();
@@ -41,21 +39,12 @@ public class KafkaMessageClientProducer extends MessageClientProducer implements
 
     private final ReentrantLock startCloseLock = new ReentrantLock();
 
-    public KafkaMessageClientProducer(String producerName, MessageAgent messageAgent, String servers, int partitions, Properties producerConfig) {
+    public KafkaMessageClientProducer(KafkaMessageAgent messageAgent, String producerName, int partitions) {
         super(producerName, messageAgent.getLogger());
         this.partitions = partitions;
         Objects.requireNonNull(messageAgent);
         this.messageAgent = messageAgent;
-
-        final Properties props = new Properties();
-        props.put(ProducerConfig.RETRIES_CONFIG, 0);
-        props.put(ProducerConfig.BATCH_SIZE_CONFIG, 1024);
-        props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
-        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
-        props.put(ProducerConfig.ACKS_CONFIG, "0");//all:所有follower都响应了才认为消息提交成功，即"committed"
-        props.putAll(producerConfig);
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
-        this.config = props;
+        this.config = messageAgent.createProducerProperties();
     }
 
     public void retryConnect() {
@@ -64,8 +53,7 @@ public class KafkaMessageClientProducer extends MessageClientProducer implements
 
     @Override
     public void run() {
-        this.producer = new KafkaProducer<>(this.config, new StringSerializer(), new MessageRecordSerializer(messageAgent.getMessageCoder()));
-        this.startFuture.complete(null);
+        this.producer = new KafkaProducer<>(this.config, new StringSerializer(), new MessageRecordSerializer(messageAgent.getClientMessageCoder()));
         if (logger.isLoggable(Level.FINE)) {
             logger.log(Level.FINE, MessageClientProducer.class.getSimpleName() + "(name=" + this.name + ") startuped");
         }
@@ -132,27 +120,22 @@ public class KafkaMessageClientProducer extends MessageClientProducer implements
     }
 
     @Override
-    public CompletableFuture<Void> startup() {
+    public void startup() {
         startCloseLock.lock();
         try {
-            if (this.startFuture != null) {
-                return this.startFuture;
-            }
             this.thread = new Thread(this);
             this.thread.setName("MQ-Producer-Thread");
-            this.startFuture = new CompletableFuture<>();
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE, MessageClientProducer.class.getSimpleName() + " [" + this.name + "] startuping");
             }
             this.thread.start();
-            return this.startFuture;
         } finally {
             startCloseLock.unlock();
         }
     }
 
     @Override
-    public CompletableFuture<Void> shutdown() {
+    public void shutdown() {
         startCloseLock.lock();
         try {
             if (this.closed.compareAndSet(false, true)) {
@@ -166,7 +149,6 @@ public class KafkaMessageClientProducer extends MessageClientProducer implements
                     logger.log(Level.FINE, MessageClientProducer.class.getSimpleName() + " [" + this.name + "] shutdowned");
                 }
             }
-            return CompletableFuture.completedFuture(null);
         } finally {
             startCloseLock.unlock();
         }
