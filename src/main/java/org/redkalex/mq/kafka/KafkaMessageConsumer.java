@@ -32,7 +32,7 @@ class KafkaMessageConsumer implements Runnable {
 
     private final KafkaMessageAgent messageAgent;
 
-    private final Logger logger;
+    private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
     private final Map<String, MessageConsumerWrapper> consumerMap;
 
@@ -48,7 +48,6 @@ class KafkaMessageConsumer implements Runnable {
 
     protected KafkaMessageConsumer(KafkaMessageAgent messageAgent, String group, Map<String, MessageConsumerWrapper> consumerMap) {
         this.messageAgent = messageAgent;
-        this.logger = messageAgent.getLogger();
         this.group = group;
         this.consumerMap = consumerMap;
         this.topics = new ArrayList<>(consumerMap.keySet());

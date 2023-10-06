@@ -27,7 +27,7 @@ import org.redkale.mq.MessageProducer;
  */
 public class KafkaMessageProducer implements MessageProducer, AutoCloseable {
 
-    protected final Logger logger;
+    protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
     private final AtomicBoolean closed = new AtomicBoolean();
 
@@ -39,7 +39,6 @@ public class KafkaMessageProducer implements MessageProducer, AutoCloseable {
 
     public KafkaMessageProducer(MessageAgent messageAgent, String servers, Properties producerConfig) {
         Objects.requireNonNull(messageAgent);
-        this.logger = messageAgent.getLogger();
         this.messageAgent = messageAgent;
 
         final Properties props = new Properties();
