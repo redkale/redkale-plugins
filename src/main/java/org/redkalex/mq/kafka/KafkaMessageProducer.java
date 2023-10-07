@@ -25,7 +25,7 @@ import org.redkale.mq.MessageProducer;
  *
  * @author zhangjx
  */
-public class KafkaMessageProducer implements MessageProducer, AutoCloseable {
+public class KafkaMessageProducer implements MessageProducer {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -98,18 +98,18 @@ public class KafkaMessageProducer implements MessageProducer, AutoCloseable {
         }
     }
 
-    public void close() {
+    public void stop() {
         startCloseLock.lock();
         try {
             if (this.closed.compareAndSet(false, true)) {
                 if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + messageAgent.getName() + "] shutdowning");
+                    logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + messageAgent.getName() + "] closing");
                 }
                 if (this.producer != null) {
                     this.producer.close();
                 }
                 if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + messageAgent.getName() + "] shutdowned");
+                    logger.log(Level.FINE, MessageProducer.class.getSimpleName() + " [" + messageAgent.getName() + "] closed");
                 }
             }
         } finally {

@@ -20,8 +20,8 @@ import java.util.stream.Stream;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
 import org.redkale.service.Local;
-import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.source.*;
+import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.util.*;
 
 /**
@@ -304,9 +304,9 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     future.completeExceptionally(event.cause());
                     return;
                 }
-                if (info.getTableStrategy() == null) { //单库单表
+                if (info.getTableStrategy() == null) { //单表模式
                     String[] tableSqls = createTableSqls(info);
-                    if (tableSqls == null) {
+                    if (tableSqls == null) { //没有建表DDL
                         future.completeExceptionally(event.cause());
                         return;
                     }
@@ -325,8 +325,20 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     };
                     createHandlerRef.set(createHandler);
                     writePool().query(tableSqls[createIndex.get()]).execute(createHandler);
-                } else { //分库分表待处理
-                    future.completeExceptionally(event.cause());
+                } else { //分表模式
+                    //执行一遍复制表操作
+                    final String copySql = getTableCopySQL(info, info.getTable(values[0]));
+                    final ObjectRef<Handler<AsyncResult<RowSet<Row>>>> copySqlHandlerRef = new ObjectRef<>();
+                    final Handler<AsyncResult<RowSet<Row>>> copySqlHandler = (AsyncResult<RowSet<Row>> event2) -> {
+                        if (event2.failed()) {
+                            future.completeExceptionally(event2.cause());
+                        } else {
+                            //重新提交新增记录
+                            writePool().preparedQuery(sql).executeBatch(objs, selfHandlerRef.get());
+                        }
+                    };
+                    copySqlHandlerRef.set(copySqlHandler);
+                    writePool().query(copySql).execute(copySqlHandler);
                 }
                 return;
             }
@@ -841,6 +853,9 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             }
             if ("42000".equals(code)) {
                 return false;
+            }
+            if ("42S02".equals(code)) {
+                return true;
             }
         }
         if (code == null) {

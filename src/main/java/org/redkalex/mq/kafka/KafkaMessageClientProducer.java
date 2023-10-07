@@ -19,7 +19,7 @@ import org.redkale.mq.*;
  *
  * @author zhangjx
  */
-public class KafkaMessageClientProducer extends MessageClientProducer implements Runnable {
+public class KafkaMessageClientProducer extends MessageClientProducer {
 
     protected MessageAgent messageAgent;
 
@@ -45,14 +45,6 @@ public class KafkaMessageClientProducer extends MessageClientProducer implements
         Objects.requireNonNull(messageAgent);
         this.messageAgent = messageAgent;
         this.config = messageAgent.createProducerProperties();
-    }
-
-    public void retryConnect() {
-
-    }
-
-    @Override
-    public void run() {
         this.producer = new KafkaProducer<>(this.config, new StringSerializer(), new MessageRecordSerializer(messageAgent.getClientMessageCoder()));
         if (logger.isLoggable(Level.FINE)) {
             logger.log(Level.FINE, MessageClientProducer.class.getSimpleName() + "(name=" + this.name + ") startuped");
@@ -120,33 +112,18 @@ public class KafkaMessageClientProducer extends MessageClientProducer implements
     }
 
     @Override
-    public void startup() {
-        startCloseLock.lock();
-        try {
-            this.thread = new Thread(this);
-            this.thread.setName("MQ-Producer-Thread");
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, MessageClientProducer.class.getSimpleName() + " [" + this.name + "] startuping");
-            }
-            this.thread.start();
-        } finally {
-            startCloseLock.unlock();
-        }
-    }
-
-    @Override
-    public void shutdown() {
+    public void stop() {
         startCloseLock.lock();
         try {
             if (this.closed.compareAndSet(false, true)) {
                 if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, MessageClientProducer.class.getSimpleName() + " [" + this.name + "] shutdowning");
+                    logger.log(Level.FINE, MessageClientProducer.class.getSimpleName() + " [" + this.name + "] closing");
                 }
                 if (this.producer != null) {
                     this.producer.close();
                 }
                 if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, MessageClientProducer.class.getSimpleName() + " [" + this.name + "] shutdowned");
+                    logger.log(Level.FINE, MessageClientProducer.class.getSimpleName() + " [" + this.name + "] closed");
                 }
             }
         } finally {

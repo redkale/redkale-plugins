@@ -7,6 +7,7 @@ package org.redkalex.mq.kafka;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.*;
 import java.util.logging.Level;
 import org.apache.kafka.clients.consumer.*;
@@ -27,15 +28,15 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
 
     protected KafkaConsumer<String, MessageRecord> consumer;
 
+    private CompletableFuture<Void> startFuture;
+
+    private CompletableFuture<Void> closeFuture;
+    
     protected boolean reconnecting;
 
     protected boolean autoCommit;
 
     private final ReentrantLock startCloseLock = new ReentrantLock();
-
-    protected final ReentrantLock resumeLock = new ReentrantLock();
-
-    protected final Condition resumeCondition = resumeLock.newCondition();
 
     public KafkaMessageClientConsumer(KafkaMessageAgent messageAgent, String[] topics, String group, MessageClientProcessor processor) {
         super(messageAgent, topics, group, processor);
@@ -44,25 +45,11 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
         this.config = props;
     }
 
-    public void retryConnect() {
-        if (!this.reconnecting) {
-            return;
-        }
-        KafkaConsumer one = new KafkaConsumer<>(this.config);
-        one.subscribe(Arrays.asList(this.topics));
-        this.consumer = one;
-        resumeLock.lock();
-        try {
-            resumeCondition.signalAll();
-        } finally {
-            resumeLock.unlock();
-        }
-    }
-
     @Override
     public void run() {
         this.consumer = new KafkaConsumer<>(this.config, new StringDeserializer(), new MessageRecordDeserializer(messageAgent.getClientMessageCoder()));
         this.consumer.subscribe(Arrays.asList(this.topics));
+        this.startFuture.complete(null);
         ConsumerRecords<String, MessageRecord> records0 = null;
         try {
             records0 = consumer.poll(Duration.ofMillis(1));
@@ -114,17 +101,6 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     logger.log(Level.WARNING, getClass().getSimpleName() + " poll error", ex);
                     this.consumer.close();
                     this.consumer = null;
-                    if (!this.closed) {
-                        this.reconnecting = true;
-                        ((KafkaMessageAgent) messageAgent).startReconnect();
-                        resumeLock.lock();
-                        try {
-                            resumeCondition.await();
-                        } catch (Exception e) {
-                        } finally {
-                            resumeLock.unlock();
-                        }
-                    }
                     continue;
                 }
                 if (this.reconnecting) {
@@ -195,7 +171,9 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] startuping");
             }
+            this.startFuture = new CompletableFuture<>();
             this.thread.start();
+            this.startFuture.join();
         } finally {
             startCloseLock.unlock();
         }
@@ -205,19 +183,19 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
     public void stop() {
         startCloseLock.lock();
         try {
+            if (this.closeFuture != null) {
+                this.closeFuture.join();
+                return;
+            }
             if (this.consumer == null || this.closed) {
                 return;
             }
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " [" + Arrays.toString(this.topics) + "] shutdownling");
             }
+            this.closeFuture = new CompletableFuture<>();
             this.closed = true;
-            resumeLock.lock();
-            try {
-                resumeCondition.signalAll();
-            } finally {
-                resumeLock.unlock();
-            }
+            this.closeFuture.join();
         } finally {
             startCloseLock.unlock();
         }
