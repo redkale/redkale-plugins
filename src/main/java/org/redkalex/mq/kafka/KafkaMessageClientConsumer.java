@@ -31,7 +31,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
     private CompletableFuture<Void> startFuture;
 
     private CompletableFuture<Void> closeFuture;
-    
+
     protected boolean reconnecting;
 
     protected boolean autoCommit;
@@ -98,10 +98,10 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                 try {
                     records = this.consumer.poll(Duration.ofMillis(10_000));
                 } catch (Exception ex) {
-                    logger.log(Level.WARNING, getClass().getSimpleName() + " poll error", ex);
-                    this.consumer.close();
-                    this.consumer = null;
-                    continue;
+                    if (!this.closed) {
+                        logger.log(Level.WARNING, getClass().getSimpleName() + " poll error", ex);
+                    }
+                    break;
                 }
                 if (this.reconnecting) {
                     this.reconnecting = false;
@@ -158,7 +158,13 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE, MessageClientConsumer.class.getSimpleName() + " " + Arrays.toString(this.topics) + " shutdowned");
             }
-            logger.log(Level.SEVERE, MessageClientConsumer.class.getSimpleName() + " " + Arrays.toString(this.topics) + " occur error", t);
+            if (!this.closed) {
+                logger.log(Level.SEVERE, MessageClientConsumer.class.getSimpleName() + " " + Arrays.toString(this.topics) + " occur error", t);
+            }
+        } finally {
+            if (this.closeFuture != null) {
+                this.closeFuture.complete(null);
+            }
         }
     }
 
@@ -195,6 +201,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             }
             this.closeFuture = new CompletableFuture<>();
             this.closed = true;
+            this.thread.interrupt();
             this.closeFuture.join();
         } finally {
             startCloseLock.unlock();

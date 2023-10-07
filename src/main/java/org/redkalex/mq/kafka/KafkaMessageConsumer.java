@@ -71,7 +71,9 @@ class KafkaMessageConsumer implements Runnable {
                 try {
                     records = this.consumer.poll(Duration.ofMillis(10_000));
                 } catch (Exception ex) {
-                    logger.log(Level.WARNING, getClass().getSimpleName() + " poll error", ex);
+                    if (!this.closed) {
+                        logger.log(Level.WARNING, getClass().getSimpleName() + " poll error", ex);
+                    }
                     break;
                 }
                 int count = records.count();
@@ -117,8 +119,11 @@ class KafkaMessageConsumer implements Runnable {
                 logger.log(Level.FINE, getClass().getSimpleName() + " " + this.topics + " shutdowned");
             }
             logger.log(Level.SEVERE, getClass().getSimpleName() + "" + this.topics + " occur error", t);
+        } finally {
+            if (this.closeFuture != null) {
+                this.closeFuture.complete(null);
+            }
         }
-        this.closeFuture.complete(null);
     }
 
     public void start() {
@@ -159,6 +164,7 @@ class KafkaMessageConsumer implements Runnable {
             }
             this.closeFuture = new CompletableFuture<>();
             this.closed = true;
+            this.thread.interrupt();
             this.closeFuture.join();
         } finally {
             startCloseLock.unlock();
