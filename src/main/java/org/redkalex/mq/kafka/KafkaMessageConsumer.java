@@ -65,7 +65,7 @@ class KafkaMessageConsumer implements Runnable {
         this.consumer.subscribe(this.topics);
         this.startFuture.complete(null);
         if (logger.isLoggable(Level.FINE)) {
-            logger.log(Level.FINE, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ") started");
+            logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") started");
         }
         try {
             Map<String, Map<Integer, List<byte[]>>> map = new LinkedHashMap<>();
@@ -76,7 +76,7 @@ class KafkaMessageConsumer implements Runnable {
                     records = this.consumer.poll(Duration.ofMillis(10_000));
                 } catch (Exception ex) {
                     if (!this.closed) {
-                        logger.log(Level.WARNING, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ") poll error", ex);
+                        logger.log(Level.WARNING, getClass().getSimpleName() + "(topics=" + this.topics + ") poll error", ex);
                     }
                     break;
                 }
@@ -88,8 +88,8 @@ class KafkaMessageConsumer implements Runnable {
                     long cs = System.currentTimeMillis();
                     this.consumer.commitSync();
                     long ce = System.currentTimeMillis() - cs;
-                    if (logger.isLoggable(Level.FINEST) && ce > 100) {
-                        logger.log(Level.FINEST, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ") processor async commit in " + ce + "ms");
+                    if (ce > 100 && logger.isLoggable(Level.FINE))   {
+                        logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") processor async commit in " + ce + "ms");
                     }
                 }
                 map.clear();
@@ -108,15 +108,15 @@ class KafkaMessageConsumer implements Runnable {
                         }
                     });
                 } catch (Throwable e) {
-                    logger.log(Level.SEVERE, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ") process " + map + " error", e);
+                    logger.log(Level.SEVERE, getClass().getSimpleName() + "(topics=" + this.topics + ") process " + map + " error", e);
                 }
                 long e = System.currentTimeMillis() - s;
                 if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ").consumer (mqs.count = " + count + ", mqs.costs = " + e + " ms)， msgs=" + map);
+                    logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mqs.count = " + count + ", mqs.costs = " + e + " ms)， msgs=" + map);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.costs = " + e + " ms)， msgs=" + map);
+                    logger.log(Level.FINER, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.costs = " + e + " ms)， msgs=" + map);
                 } else if (logger.isLoggable(Level.FINEST)) {
-                    logger.log(Level.FINEST, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
+                    logger.log(Level.FINEST, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
                 }
                 map.clear();
             }
@@ -124,13 +124,13 @@ class KafkaMessageConsumer implements Runnable {
                 this.consumer.close();
             }
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ") stoped");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") stoped");
             }
         } catch (Throwable t) {
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ") stoped");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") stoped");
             }
-            logger.log(Level.SEVERE, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ") occur error", t);
+            logger.log(Level.SEVERE, getClass().getSimpleName() + "(topics=" + this.topics + ") occur error", t);
         } finally {
             if (this.closeFuture != null) {
                 this.closeFuture.complete(null);
@@ -149,7 +149,7 @@ class KafkaMessageConsumer implements Runnable {
             this.startFuture = new CompletableFuture<>();
             this.thread.setName(MessageConsumer.class.getSimpleName() + "-[" + group + "]-Thread");
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ") starting");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") starting");
             }
             this.thread.start();
             this.startFuture.join();
@@ -172,7 +172,7 @@ class KafkaMessageConsumer implements Runnable {
                 return;
             }
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Kafka." + MessageConsumer.class.getSimpleName() + "(topics=" + this.topics + ") stoping");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") stoping");
             }
             this.closeFuture = new CompletableFuture<>();
             this.closed = true;

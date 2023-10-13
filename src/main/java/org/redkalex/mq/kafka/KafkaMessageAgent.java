@@ -7,7 +7,6 @@ package org.redkalex.mq.kafka;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.*;
@@ -37,9 +36,9 @@ public class KafkaMessageAgent extends MessageAgent {
 
     protected int partitions;
 
-    protected ScheduledFuture reconnectFuture;
+    protected MessageClientConsumer httpMessageClientConsumer;
 
-    protected final AtomicBoolean reconnecting = new AtomicBoolean();
+    protected MessageClientConsumer sncpMessageClientConsumer;
 
     private final List<KafkaMessageConsumer> kafkaConsumers = new ArrayList<>();
 
@@ -91,16 +90,10 @@ public class KafkaMessageAgent extends MessageAgent {
         }
     }
 
-    public void startReconnect() {
-        if (this.reconnecting.compareAndSet(false, true)) {
-            this.reconnectFuture = this.timeoutExecutor.scheduleAtFixedRate(() -> retryConnect(), 0, this.checkIntervals, TimeUnit.SECONDS);
-        }
-    }
-
-    protected Properties createConsumerProperties(String consumerid) {
+    protected Properties createConsumerProperties(String group) {
         final Properties props = new Properties();
-        if (consumerid != null) {
-            props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerid);
+        if (group != null) {
+            props.put(ConsumerConfig.GROUP_ID_CONFIG, group);
         }
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");// 当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
         props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, "1000");
@@ -121,25 +114,6 @@ public class KafkaMessageAgent extends MessageAgent {
         props.putAll(producerConfig);
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         return props;
-    }
-
-    private void retryConnect() {
-        if (this.adminClient != null) {
-            this.adminClient.close();
-        }
-        Properties props = new Properties();
-        props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, controllers);
-        this.adminClient = KafkaAdminClient.create(props);
-        if (queryTopic() != null) {
-            logger.log(Level.INFO, getClass().getSimpleName() + " resume connect");
-            this.reconnecting.set(false);
-            if (this.reconnectFuture != null) {
-                this.reconnectFuture.cancel(true);
-                this.reconnectFuture = null;
-            }
-            //this.getMessageClientConsumers().forEach(c -> ((KafkaMessageClientConsumer) c).retryConnect());
-            //this.getMessageClientProducers().forEach(c -> ((KafkaMessageClientProducer) c).retryConnect());
-        }
     }
 
     public int getCheckIntervals() {
@@ -217,9 +191,26 @@ public class KafkaMessageAgent extends MessageAgent {
         return null;
     }
 
-    @Override //创建指定topic的消费处理器
-    public MessageClientConsumer createMessageClientConsumer(String topic, String consumerid, MessageClientProcessor processor) {
-        return new KafkaMessageClientConsumer(this, topic, consumerid, processor);
+    @Override
+    protected void startMessageClientConsumers() {
+        if (!this.httpMessageClient.isEmpty()) {
+            this.httpMessageClientConsumer = new KafkaMessageClientConsumer(this, this.httpMessageClient);
+            this.httpMessageClientConsumer.start();
+        }
+        if (!this.sncpMessageClient.isEmpty()) {
+            this.sncpMessageClientConsumer = new KafkaMessageClientConsumer(this, this.sncpMessageClient);
+            this.sncpMessageClientConsumer.start();
+        }
+    }
+
+    @Override
+    protected void stopMessageClientConsumers() {
+        if (this.httpMessageClientConsumer != null) {
+            this.httpMessageClientConsumer.stop();
+        }
+        if (this.sncpMessageClientConsumer != null) {
+            this.httpMessageClientConsumer.stop();
+        }
     }
 
     @Override //创建指定topic的生产处理器
@@ -229,7 +220,7 @@ public class KafkaMessageAgent extends MessageAgent {
 
     @Override
     protected void startMessageProducer() {
-        this.messageBaseProducer = new KafkaMessageProducer(this, servers, this.producerConfig);
+        this.messageBaseProducer = new KafkaMessageProducer(this);
     }
 
     @Override

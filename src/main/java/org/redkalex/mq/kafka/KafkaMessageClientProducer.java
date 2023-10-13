@@ -7,7 +7,7 @@ package org.redkalex.mq.kafka;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.producer.*;
@@ -21,23 +21,17 @@ import org.redkale.mq.*;
  */
 public class KafkaMessageClientProducer extends MessageClientProducer {
 
-    protected MessageAgent messageAgent;
+    private final AtomicBoolean closed = new AtomicBoolean();
+
+    private MessageAgent messageAgent;
 
     protected Properties config;
 
-    protected Thread thread;
-
-    protected KafkaProducer<String, MessageRecord> producer;
+    private KafkaProducer<String, MessageRecord> producer;
 
     protected final ConcurrentHashMap<String, Integer[]> partionsMap = new ConcurrentHashMap<>();
 
-    protected int partitions;
-
-    protected boolean reconnecting;
-
-    protected final ReentrantLock resumeLock = new ReentrantLock();
-
-    private final ReentrantLock startCloseLock = new ReentrantLock();
+    private int partitions;
 
     public KafkaMessageClientProducer(KafkaMessageAgent messageAgent, String producerName, int partitions) {
         super(producerName);
@@ -46,18 +40,18 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
         this.messageAgent = messageAgent;
         this.config = messageAgent.createProducerProperties();
         this.producer = new KafkaProducer<>(this.config, new StringSerializer(), new MessageRecordSerializer(messageAgent.getClientMessageCoder()));
-        if (logger.isLoggable(Level.FINE)) {
-            logger.log(Level.FINE, "Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") started");
+        if (logger.isLoggable(Level.INFO)) {
+            logger.log(Level.INFO, getClass().getSimpleName() + "(mq=" + messageAgent.getName() + "， name=" + producerName + ") started");
         }
     }
 
     @Override
     public CompletableFuture<Void> apply(MessageRecord message) {
         if (closed.get()) {
-            throw new IllegalStateException("Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") is closed when send " + message);
+            throw new IllegalStateException(getClass().getSimpleName() + "(name=" + name + ") is closed when send " + message);
         }
         if (this.producer == null) {
-            throw new IllegalStateException("Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") not started when send " + message);
+            throw new IllegalStateException(getClass().getSimpleName() + "(name=" + name + ") not started when send " + message);
         }
         final CompletableFuture future = new CompletableFuture();
         Integer partition = null;
@@ -79,11 +73,11 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
 
             long e = System.currentTimeMillis() - message.getCreateTime();
             if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") (mqs.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + name + ") (mqs.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                logger.log(Level.FINER, "Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") (mq.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+                logger.log(Level.FINER, getClass().getSimpleName() + "(name=" + name + ") (mq.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST, "Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") (mq.cost = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+                logger.log(Level.FINEST, getClass().getSimpleName() + "(name=" + name + ") (mq.cost = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             }
         });
         return future;
@@ -101,11 +95,11 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
                 }
                 Arrays.sort(parts);
                 if (logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, "Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") Topic(" + topic + ") load partitions = " + list);
+                    logger.log(Level.FINER, getClass().getSimpleName() + "(name=" + name + ") Topic(" + topic + ") load partitions = " + list);
                 }
                 return parts;
             } catch (Exception ex) {
-                logger.log(Level.SEVERE, "Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") Topic(" + topic + ")  load partitions error", ex);
+                logger.log(Level.SEVERE, getClass().getSimpleName() + "(name=" + name + ") Topic(" + topic + ")  load partitions error", ex);
                 return new Integer[0];
             }
         });
@@ -113,21 +107,16 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
 
     @Override
     public void stop() {
-        startCloseLock.lock();
-        try {
-            if (this.closed.compareAndSet(false, true)) {
-                if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, "Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") closing");
-                }
-                if (this.producer != null) {
-                    this.producer.close();
-                }
-                if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, "Kafka." + MessageClientProducer.class.getSimpleName() + "(name=" + name + ") closed");
-                }
+        if (this.closed.compareAndSet(false, true)) {
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + name + ") closing");
             }
-        } finally {
-            startCloseLock.unlock();
+            if (this.producer != null) {
+                this.producer.close();
+            }
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + name + ") closed");
+            }
         }
     }
 

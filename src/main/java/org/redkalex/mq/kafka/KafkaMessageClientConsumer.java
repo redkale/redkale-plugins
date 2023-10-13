@@ -33,31 +33,35 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
 
     private boolean autoCommit;
 
+    private boolean closed;
+
     private final ReentrantLock startCloseLock = new ReentrantLock();
 
-    public KafkaMessageClientConsumer(KafkaMessageAgent messageAgent, String topic, String group, MessageClientProcessor processor) {
-        super(messageAgent, topic, group, processor);
-        final Properties props = messageAgent.createConsumerProperties(consumerid);
+    public KafkaMessageClientConsumer(KafkaMessageAgent messageAgent, MessageClient messageClient) {
+        super(messageClient);
+        final Properties props = messageAgent.createConsumerProperties("redkale-message");
         this.autoCommit = "true".equalsIgnoreCase(props.getOrDefault(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true").toString());
         this.config = props;
     }
 
     @Override
     public void run() {
-        this.consumer = new KafkaConsumer<>(this.config, new StringDeserializer(), new MessageRecordDeserializer(messageAgent.getClientMessageCoder()));
-        this.consumer.subscribe(this.topics);
+        this.consumer = new KafkaConsumer<>(this.config, new StringDeserializer(), new MessageRecordDeserializer(messageClient.getClientMessageCoder()));
+        Collection<String> topics = getTopics();
+        this.consumer.subscribe(topics);
         this.startFuture.complete(null);
         if (logger.isLoggable(Level.FINE)) {
-            logger.log(Level.FINE, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") started");
+            logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") started");
         }
         try {
+            MessageProcessor processor = this.messageClient;
             ConsumerRecords<String, MessageRecord> records;
             while (!this.closed) {
                 try {
                     records = this.consumer.poll(Duration.ofMillis(10_000));
                 } catch (Exception ex) {
                     if (!this.closed) {
-                        logger.log(Level.WARNING, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") poll error", ex);
+                        logger.log(Level.WARNING, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") poll error", ex);
                     }
                     break;
                 }
@@ -69,52 +73,50 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     long cs = System.currentTimeMillis();
                     this.consumer.commitAsync((map, exp) -> {
                         if (exp != null) {
-                            logger.log(Level.SEVERE, this.topics + " consumer commitAsync error: " + map, exp);
+                            logger.log(Level.SEVERE, topics + " consumer commitAsync error: " + map, exp);
                         }
                     });
                     long ce = System.currentTimeMillis() - cs;
                     if (logger.isLoggable(Level.FINEST) && ce > 100) {
-                        logger.log(Level.FINEST, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") processor async commit in " + ce + "ms");
+                        logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") processor async commit in " + ce + "ms");
                     }
                 }
                 long s = System.currentTimeMillis();
                 MessageRecord msg = null;
                 try {
-                    processor.begin(count, s);
                     for (ConsumerRecord<String, MessageRecord> r : records) {
                         msg = r.value();
                         Traces.computeIfAbsent(msg.getTraceid());
-                        processor.process(msg, null);
+                        processor.process(msg, s);
                     }
-                    processor.commit();
                     long e = System.currentTimeMillis() - s;
                     if (logger.isLoggable(Level.FINEST) && e > 10) {
-                        logger.log(Level.FINEST, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
+                        logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
                     }
                 } catch (Throwable e) {
-                    logger.log(Level.SEVERE, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") process " + msg + " error", e);
+                    logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") process " + msg + " error", e);
                 }
                 long e = System.currentTimeMillis() - s;
                 if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ").consumer (mqs.count = " + count + ", mqs.costs = " + e + " ms)， msg=" + msg);
+                    logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mqs.count = " + count + ", mqs.costs = " + e + " ms)， msg=" + msg);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.costs = " + e + " ms)， msg=" + msg);
+                    logger.log(Level.FINER, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.costs = " + e + " ms)， msg=" + msg);
                 } else if (logger.isLoggable(Level.FINEST)) {
-                    logger.log(Level.FINEST, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
+                    logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
                 }
             }
             if (this.consumer != null) {
                 this.consumer.close();
             }
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") stoped");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") stoped");
             }
         } catch (Throwable t) {
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") stoped");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") stoped");
             }
             if (!this.closed) {
-                logger.log(Level.SEVERE, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") occur error", t);
+                logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") occur error", t);
             }
         } finally {
             if (this.closeFuture != null) {
@@ -127,10 +129,14 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
     public void start() {
         startCloseLock.lock();
         try {
+            if (messageClient.isEmpty()) {
+                this.closed = true;
+                return;
+            }
             this.thread = new Thread(this);
-            this.thread.setName(MessageClientConsumer.class.getSimpleName() + "-" + consumerid + "-Thread");
+            this.thread.setName(MessageClientConsumer.class.getSimpleName() + "-" + messageClient.getAppRespTopic() + "-Thread");
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") starting");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") starting");
             }
             this.startFuture = new CompletableFuture<>();
             this.thread.start();
@@ -152,7 +158,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                 return;
             }
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, "Kafka." + MessageClientConsumer.class.getSimpleName() + "(topics=" + this.topics + ") stoping");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") stoping");
             }
             this.closeFuture = new CompletableFuture<>();
             this.closed = true;
