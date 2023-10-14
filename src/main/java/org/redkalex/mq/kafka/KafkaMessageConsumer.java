@@ -112,9 +112,9 @@ class KafkaMessageConsumer implements Runnable {
                 }
                 long e = System.currentTimeMillis() - s;
                 if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mqs.count = " + count + ", mqs.costs = " + e + " ms)， msgs=" + map);
+                    logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slower = " + e + " ms)， msgs=" + map);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.costs = " + e + " ms)， msgs=" + map);
+                    logger.log(Level.FINER, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msgs=" + map);
                 } else if (logger.isLoggable(Level.FINEST)) {
                     logger.log(Level.FINEST, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
                 }

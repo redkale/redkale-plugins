@@ -69,39 +69,40 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                 if (count == 0) {
                     continue;
                 }
+                final boolean finest = logger.isLoggable(Level.FINEST);
                 if (!this.autoCommit) {
-                    long cs = System.currentTimeMillis();
-                    this.kafkaConsumer.commitAsync((map, exp) -> {
-                        if (exp != null) {
-                            logger.log(Level.SEVERE, topics + " consumer commitAsync error: " + map, exp);
+                    try {
+                        long cs = System.currentTimeMillis();
+                        this.kafkaConsumer.commitSync(Duration.ofSeconds(3));
+                        long ce = System.currentTimeMillis() - cs;
+                        if (logger.isLoggable(Level.FINEST) && ce > 100) {
+                            logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") processor async commit in " + ce + "ms");
                         }
-                    });
-                    long ce = System.currentTimeMillis() - cs;
-                    if (logger.isLoggable(Level.FINEST) && ce > 100) {
-                        logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") processor async commit in " + ce + "ms");
+                    } catch (Throwable e) {
+                        logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") commitSync error", e);
                     }
                 }
                 long s = System.currentTimeMillis();
                 MessageRecord msg = null;
-                try {
-                    for (ConsumerRecord<String, MessageRecord> r : records) {
+                for (ConsumerRecord<String, MessageRecord> r : records) {
+                    try {
                         msg = r.value();
                         Traces.computeIfAbsent(msg.getTraceid());
                         processor.process(msg, s);
+                    } catch (Throwable e) {
+                        logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") process " + msg + " error", e);
                     }
-                    long e = System.currentTimeMillis() - s;
-                    if (logger.isLoggable(Level.FINEST) && e > 10) {
-                        logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e + "ms");
-                    }
-                } catch (Throwable e) {
-                    logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") process " + msg + " error", e);
+                }
+                long e2 = System.currentTimeMillis() - s;
+                if (e2 > 100 && finest) {
+                    logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") processor run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e2 + "ms");
                 }
                 long e = System.currentTimeMillis() - s;
                 if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mqs.count = " + count + ", mqs.costs = " + e + " ms)， msg=" + msg);
+                    logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mqs.cost-slower = " + e + " ms)， msg=" + msg);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.costs = " + e + " ms)， msg=" + msg);
-                } else if (logger.isLoggable(Level.FINEST)) {
+                    logger.log(Level.FINER, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msg=" + msg);
+                } else if (finest) {
                     logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
                 }
             }

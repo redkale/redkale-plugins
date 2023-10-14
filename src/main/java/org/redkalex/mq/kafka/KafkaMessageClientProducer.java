@@ -73,9 +73,9 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
 
             long e = System.currentTimeMillis() - message.getCreateTime();
             if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + name + ") (mqs.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + name + ") (mqs.cost-slower = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                logger.log(Level.FINER, getClass().getSimpleName() + "(name=" + name + ") (mq.costs = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+                logger.log(Level.FINER, getClass().getSimpleName() + "(name=" + name + ") (mq.cost-slowly = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (logger.isLoggable(Level.FINEST)) {
                 logger.log(Level.FINEST, getClass().getSimpleName() + "(name=" + name + ") (mq.cost = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             }
