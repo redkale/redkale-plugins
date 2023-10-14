@@ -39,7 +39,7 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
         Objects.requireNonNull(messageAgent);
         this.messageAgent = messageAgent;
         this.config = messageAgent.createProducerProperties();
-        this.producer = new KafkaProducer<>(this.config, new StringSerializer(), new MessageRecordSerializer(messageAgent.getClientMessageCoder()));
+        this.producer = new KafkaProducer<>(this.config, new StringSerializer(), new MessageRecordSerializer(messageAgent.getMessageRecordCoder()));
         if (logger.isLoggable(Level.INFO)) {
             logger.log(Level.INFO, getClass().getSimpleName() + "(mq=" + messageAgent.getName() + "， name=" + producerName + ") started");
         }

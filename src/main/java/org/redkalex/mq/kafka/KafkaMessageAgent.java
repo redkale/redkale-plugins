@@ -110,7 +110,7 @@ public class KafkaMessageAgent extends MessageAgent {
         props.put(ProducerConfig.BATCH_SIZE_CONFIG, 1024);
         props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
         props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
-        props.put(ProducerConfig.ACKS_CONFIG, "0");//all:所有follower都响应了才认为消息提交成功，即"committed"
+        props.put(ProducerConfig.ACKS_CONFIG, "1");//all:所有follower都响应了才认为消息提交成功，即"committed"
         props.putAll(producerConfig);
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         return props;
@@ -192,7 +192,7 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override
-    protected void startMessageClientConsumers() {
+    protected void startMessageClientConsumer() {
         if (!this.httpMessageClient.isEmpty()) {
             this.httpMessageClientConsumer = new KafkaMessageClientConsumer(this, this.httpMessageClient);
             this.httpMessageClientConsumer.start();
@@ -204,7 +204,7 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override
-    protected void stopMessageClientConsumers() {
+    protected void stopMessageClientConsumer() {
         if (this.httpMessageClientConsumer != null) {
             this.httpMessageClientConsumer.stop();
         }
@@ -214,8 +214,8 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override //创建指定topic的生产处理器
-    protected MessageClientProducer createMessageClientProducer(String producerName) {
-        return new KafkaMessageClientProducer(this, producerName, this.partitions);
+    protected MessageClientProducer startMessageClientProducer() {
+        return new KafkaMessageClientProducer(this, "redkale-message", this.partitions);
     }
 
     @Override

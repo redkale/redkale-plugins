@@ -25,7 +25,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
 
     private Thread thread;
 
-    private KafkaConsumer<String, MessageRecord> consumer;
+    private KafkaConsumer<String, MessageRecord> kafkaConsumer;
 
     private CompletableFuture<Void> startFuture;
 
@@ -46,9 +46,9 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
 
     @Override
     public void run() {
-        this.consumer = new KafkaConsumer<>(this.config, new StringDeserializer(), new MessageRecordDeserializer(messageClient.getClientMessageCoder()));
+        this.kafkaConsumer = new KafkaConsumer<>(this.config, new StringDeserializer(), new MessageRecordDeserializer(messageClient.getClientMessageCoder()));
         Collection<String> topics = getTopics();
-        this.consumer.subscribe(topics);
+        this.kafkaConsumer.subscribe(topics);
         this.startFuture.complete(null);
         if (logger.isLoggable(Level.FINE)) {
             logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") started");
@@ -58,7 +58,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             ConsumerRecords<String, MessageRecord> records;
             while (!this.closed) {
                 try {
-                    records = this.consumer.poll(Duration.ofMillis(10_000));
+                    records = this.kafkaConsumer.poll(Duration.ofMillis(10_000));
                 } catch (Exception ex) {
                     if (!this.closed) {
                         logger.log(Level.WARNING, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") poll error", ex);
@@ -71,7 +71,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                 }
                 if (!this.autoCommit) {
                     long cs = System.currentTimeMillis();
-                    this.consumer.commitAsync((map, exp) -> {
+                    this.kafkaConsumer.commitAsync((map, exp) -> {
                         if (exp != null) {
                             logger.log(Level.SEVERE, topics + " consumer commitAsync error: " + map, exp);
                         }
@@ -105,8 +105,8 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost = " + e + " ms)");
                 }
             }
-            if (this.consumer != null) {
-                this.consumer.close();
+            if (this.kafkaConsumer != null) {
+                this.kafkaConsumer.close();
             }
             if (logger.isLoggable(Level.FINE)) {
                 logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") stoped");
@@ -154,7 +154,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                 this.closeFuture.join();
                 return;
             }
-            if (this.consumer == null || this.closed) {
+            if (this.kafkaConsumer == null || this.closed) {
                 return;
             }
             if (logger.isLoggable(Level.FINE)) {
