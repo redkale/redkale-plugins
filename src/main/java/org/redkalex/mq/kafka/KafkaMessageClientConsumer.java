@@ -51,17 +51,17 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
         this.kafkaConsumer.subscribe(topics);
         this.startFuture.complete(null);
         if (logger.isLoggable(Level.FINE)) {
-            logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") started");
+            logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") started");
         }
         try {
             MessageProcessor processor = this.messageClient;
             ConsumerRecords<String, MessageRecord> records;
             while (!this.closed) {
                 try {
-                    records = this.kafkaConsumer.poll(Duration.ofMillis(10_000));
-                } catch (Exception ex) {
+                    records = this.kafkaConsumer.poll(Duration.ofMillis(Long.MAX_VALUE));
+                } catch (Throwable ex) {
                     if (!this.closed) {
-                        logger.log(Level.WARNING, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") poll error", ex);
+                        logger.log(Level.WARNING, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") poll error", ex);
                     }
                     break;
                 }
@@ -73,15 +73,15 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                 if (!this.autoCommit) {
                     try {
                         long cs = System.currentTimeMillis();
-                        this.kafkaConsumer.commitSync(Duration.ofSeconds(3));
+                        this.kafkaConsumer.commitSync(Duration.ofMillis(3000));
                         long ce = System.currentTimeMillis() - cs;
                         if (ce > 1000 && logger.isLoggable(Level.FINE)) {
-                            logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") commitSync cost-slower = " + ce + " ms");
+                            logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") commitSync cost-slower = " + ce + " ms");
                         } else if (ce > 100 && finest) {
-                            logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") commitSync cost-slowly = " + ce + "ms");
+                            logger.log(Level.FINEST, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") commitSync cost-slowly = " + ce + "ms");
                         }
                     } catch (Throwable e) {
-                        logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") commitSync error", e);
+                        logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") commitSync error", e);
                     }
                 }
                 long s = System.currentTimeMillis();
@@ -92,34 +92,34 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                         Traces.computeIfAbsent(msg.getTraceid());
                         processor.process(msg, s);
                     } catch (Throwable e) {
-                        logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") consumer " + msg + " error", e);
+                        logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") consumer " + msg + " error", e);
                     }
                 }
                 long e2 = System.currentTimeMillis() - s;
                 if (e2 > 100 && finest) {
-                    logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") consumer run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e2 + "ms");
+                    logger.log(Level.FINEST, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") consumer run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e2 + "ms");
                 }
                 long e = System.currentTimeMillis() - s;
                 if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-slower = " + e + " ms)， msg=" + msg);
+                    logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-slower = " + e + " ms)， msg=" + msg);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msg=" + msg);
+                    logger.log(Level.FINER, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msg=" + msg);
                 } else if (finest) {
-                    logger.log(Level.FINEST, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-normal = " + e + " ms)");
+                    logger.log(Level.FINEST, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-normal = " + e + " ms)");
                 }
             }
             if (this.kafkaConsumer != null) {
                 this.kafkaConsumer.close();
             }
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") stoped");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") stoped");
             }
         } catch (Throwable t) {
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") stoped");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") stoped");
             }
             if (!this.closed) {
-                logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") occur error", t);
+                logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") occur error", t);
             }
         } finally {
             if (this.closeFuture != null) {
@@ -139,7 +139,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             this.thread = new Thread(this);
             this.thread.setName(MessageClientConsumer.class.getSimpleName() + "-" + messageClient.getAppRespTopic() + "-Thread");
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") starting");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") starting");
             }
             this.startFuture = new CompletableFuture<>();
             this.thread.start();
@@ -161,7 +161,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                 return;
             }
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(" + Objects.hashCode(this) + ") stoping");
+                logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") stoping");
             }
             this.closeFuture = new CompletableFuture<>();
             this.closed = true;

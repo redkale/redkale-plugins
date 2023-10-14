@@ -73,7 +73,7 @@ class KafkaMessageConsumer implements Runnable {
             ConsumerRecords<String, byte[]> records;
             while (!this.closed) {
                 try {
-                    records = this.consumer.poll(Duration.ofMillis(10_000));
+                    records = this.consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
                 } catch (Exception ex) {
                     if (!this.closed) {
                         logger.log(Level.WARNING, getClass().getSimpleName() + "(topics=" + this.topics + ") poll error", ex);
