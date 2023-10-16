@@ -56,9 +56,9 @@ public class KafkaMessageProducer implements MessageProducer {
         //if (finest) logger.log(Level.FINEST, "Kafka.producer prepare send partition=" + partition + ", msg=" + message);
         producer.send(new ProducerRecord<>(topic, partition, null, convertMessage(convert, type, value)), (metadata, exp) -> {
             if (exp != null) {
-                future.completeExceptionally(exp);
+                messageAgent.execute(() -> future.completeExceptionally(exp));
             } else {
-                future.complete(null);
+                messageAgent.execute(() -> future.complete(null));
             }
 
             long e = System.currentTimeMillis() - s;

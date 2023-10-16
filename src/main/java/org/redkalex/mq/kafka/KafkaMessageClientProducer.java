@@ -66,9 +66,9 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
         //if (finest) logger.log(Level.FINEST, "Kafka.producer prepare send partition=" + partition0 + ", msg=" + message);
         producer.send(new ProducerRecord<>(message.getTopic(), partition, null, message), (metadata, exp) -> {
             if (exp != null) {
-                future.completeExceptionally(exp);
+                messageAgent.execute(() -> future.completeExceptionally(exp));
             } else {
-                future.complete(null);
+                messageAgent.execute(() -> future.complete(null));
             }
 
             long e = System.currentTimeMillis() - message.getCreateTime();
