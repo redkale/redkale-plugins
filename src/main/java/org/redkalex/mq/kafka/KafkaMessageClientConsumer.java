@@ -104,7 +104,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-slower = " + e + " ms)， msg=" + msg);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
                     logger.log(Level.FINER, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msg=" + msg);
-                } else if (finest) {
+                } else if (e > 10 && finest) {
                     logger.log(Level.FINEST, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-normal = " + e + " ms)");
                 }
             }

@@ -66,7 +66,7 @@ public class KafkaMessageProducer implements MessageProducer {
                 logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + messageAgent.getName() + ") (mq.cost-slower = " + e + " ms)，partition=" + partition + ", msg=" + value);
             } else if (e > 100 && logger.isLoggable(Level.FINER)) {
                 logger.log(Level.FINER, getClass().getSimpleName() + "(name=" + messageAgent.getName() + ") (mq.cost-slowly = " + e + " ms)，partition=" + partition + ", msg=" + value);
-            } else if (logger.isLoggable(Level.FINEST)) {
+            } else if (e > 10 && logger.isLoggable(Level.FINEST)) {
                 logger.log(Level.FINEST, getClass().getSimpleName() + "(name=" + messageAgent.getName() + ") (mq.cost-normal = " + e + " ms)，partition=" + partition + ", msg=" + value);
             }
         });

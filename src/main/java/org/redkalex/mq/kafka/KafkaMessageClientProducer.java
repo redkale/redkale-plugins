@@ -76,7 +76,7 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
                 logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + name + ") (mq.cost-slower = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (e > 100 && logger.isLoggable(Level.FINER)) {
                 logger.log(Level.FINER, getClass().getSimpleName() + "(name=" + name + ") (mq.cost-slowly = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
-            } else if (logger.isLoggable(Level.FINEST)) {
+            } else if (e > 10 && logger.isLoggable(Level.FINEST)) {
                 logger.log(Level.FINEST, getClass().getSimpleName() + "(name=" + name + ") (mq.cost-normal = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             }
         });

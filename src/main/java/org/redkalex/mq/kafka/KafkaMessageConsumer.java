@@ -88,7 +88,7 @@ class KafkaMessageConsumer implements Runnable {
                     long cs = System.currentTimeMillis();
                     this.consumer.commitSync();
                     long ce = System.currentTimeMillis() - cs;
-                    if (ce > 100 && logger.isLoggable(Level.FINE))   {
+                    if (ce > 100 && logger.isLoggable(Level.FINE)) {
                         logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") processor async commit in " + ce + "ms");
                     }
                 }
@@ -115,7 +115,7 @@ class KafkaMessageConsumer implements Runnable {
                     logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slower = " + e + " ms)， msgs=" + map);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
                     logger.log(Level.FINER, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msgs=" + map);
-                } else if (logger.isLoggable(Level.FINEST)) {
+                } else if (e > 10 && logger.isLoggable(Level.FINEST)) {
                     logger.log(Level.FINEST, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-normal = " + e + " ms)");
                 }
                 map.clear();
