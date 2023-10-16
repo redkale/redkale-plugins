@@ -301,13 +301,13 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             slowLog(s, sql);
             if (event.failed()) {
                 if (!isTableNotExist(info, event.cause())) {
-                    future.completeExceptionally(event.cause());
+                    completeExceptionally(future, event.cause());
                     return;
                 }
                 if (info.getTableStrategy() == null) { //单表模式
                     String[] tableSqls = createTableSqls(info);
                     if (tableSqls == null) { //没有建表DDL
-                        future.completeExceptionally(event.cause());
+                        completeExceptionally(future, event.cause());
                         return;
                     }
                     //创建单表结构
@@ -315,7 +315,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     final ObjectRef<Handler<AsyncResult<RowSet<Row>>>> createHandlerRef = new ObjectRef<>();
                     final Handler<AsyncResult<RowSet<Row>>> createHandler = (AsyncResult<RowSet<Row>> event2) -> {
                         if (event2.failed()) {
-                            future.completeExceptionally(event2.cause());
+                            completeExceptionally(future, event2.cause());
                         } else if (createIndex.incrementAndGet() < tableSqls.length) {
                             writePool().query(tableSqls[createIndex.get()]).execute(createHandlerRef.get());
                         } else {
@@ -331,7 +331,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     final ObjectRef<Handler<AsyncResult<RowSet<Row>>>> copySqlHandlerRef = new ObjectRef<>();
                     final Handler<AsyncResult<RowSet<Row>>> copySqlHandler = (AsyncResult<RowSet<Row>> event2) -> {
                         if (event2.failed()) {
-                            future.completeExceptionally(event2.cause());
+                            completeExceptionally(future, event2.cause());
                         } else {
                             //重新提交新增记录
                             writePool().preparedQuery(sql).executeBatch(objs, selfHandlerRef.get());
@@ -377,7 +377,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     }
                 }
             }
-            future.complete(event.result().rowCount());
+            complete(future, event.result().rowCount());
         };
         selfHandlerRef.set(handler);
         writePool().preparedQuery(sql).executeBatch(objs, handler);
@@ -457,10 +457,10 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         writePool().preparedQuery(sql).executeBatch(objs, (AsyncResult<RowSet<Row>> event) -> {
             slowLog(s, sql);
             if (event.failed()) {
-                future.completeExceptionally(event.cause());
+                completeExceptionally(future, event.cause());
                 return;
             }
-            future.complete(event.result().rowCount());
+            complete(future, event.result().rowCount());
         });
         return future;
     }
@@ -617,22 +617,22 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 if (event.failed()) {
                     final Throwable ex = event.cause();
                     if (!isTableNotExist(info, ex)) {
-                        future.completeExceptionally(ex);
+                        completeExceptionally(future, ex);
                     } else {  //表不存在
                         if (info.getTableStrategy() == null) {  //没有原始表
                             String[] tablesqls = createTableSqls(info);
                             if (tablesqls == null) { //没有建表DDL
-                                future.completeExceptionally(ex);
+                                completeExceptionally(future, ex);
                             } else {
                                 array[index] = null;
                                 if (count.incrementAndGet() == ids.length) {
-                                    future.complete(Arrays.asList(array));
+                                    complete(future, Arrays.asList(array));
                                 }
                             }
                         } else {  //没有分表
                             array[index] = null;
                             if (count.incrementAndGet() == ids.length) {
-                                future.complete(Arrays.asList(array));
+                                complete(future, Arrays.asList(array));
                             }
                         }
                     }
@@ -644,7 +644,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         array[index] = null;
                     }
                     if (count.incrementAndGet() == ids.length) {
-                        future.complete(Arrays.asList(array));
+                        complete(future, Arrays.asList(array));
                     }
                 }
             });
@@ -751,19 +751,19 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 writePool().preparedQuery(sqls[0]).executeBatch(parameters, (AsyncResult<RowSet<Row>> event) -> {
                     slowLog(s, sqls);
                     if (event.failed()) {
-                        future.completeExceptionally(event.cause());
+                        completeExceptionally(future, event.cause());
                         return;
                     }
-                    future.complete(event.result().rowCount());
+                    complete(future, event.result().rowCount());
                 });
             } else {
                 writePool().query(sqls[0]).execute((AsyncResult<RowSet<Row>> event) -> {
                     slowLog(s, sqls);
                     if (event.failed()) {
-                        future.completeExceptionally(event.cause());
+                        completeExceptionally(future, event.cause());
                         return;
                     }
-                    future.complete(event.result().rowCount());
+                    complete(future, event.result().rowCount());
                 });
             }
         } else {
@@ -781,13 +781,13 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 return io.vertx.core.Future.fromCompletionStage(CompletableFuture.allOf(futures));
             }).toCompletionStage().whenComplete((v, t) -> {
                 if (t != null) {
-                    future.completeExceptionally(t);
+                    completeExceptionally(future, t);
                 } else {
                     int c = 0;
                     for (int cc : rs) {
                         c += cc;
                     }
-                    future.complete(c);
+                    complete(future, c);
                 }
             });
         }
@@ -816,27 +816,27 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             if (event.failed()) {
                 final Throwable ex = event.cause();
                 if (info == null || !isTableNotExist(info, ex)) {
-                    future.completeExceptionally(ex);
+                    completeExceptionally(future, ex);
                 } else {  //表不存在
                     if (info.getTableStrategy() == null) {  //没有原始表
                         String[] tablesqls = createTableSqls(info);
                         if (tablesqls == null) { //没有建表DDL
-                            future.completeExceptionally(ex);
+                            completeExceptionally(future, ex);
                         } else {
                             writePool().query(tablesqls[0]).execute((AsyncResult<RowSet<Row>> event2) -> {
                                 if (event2.failed()) {
-                                    future.completeExceptionally(event2.cause());
+                                    completeExceptionally(future, event2.cause());
                                 } else {
-                                    future.complete(new VertxResultSet(info, null, null));
+                                    complete(future, new VertxResultSet(info, null, null));
                                 }
                             });
                         }
                     } else {  //没有分表
-                        future.complete(new VertxResultSet(info, null, null));
+                        complete(future, new VertxResultSet(info, null, null));
                     }
                 }
             } else {
-                future.complete(new VertxResultSet(info, null, event.result()));
+                complete(future, new VertxResultSet(info, null, event.result()));
             }
         };
     }
@@ -913,19 +913,19 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             writePool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
                 if (event.failed()) {
-                    future.completeExceptionally(event.cause());
+                    completeExceptionally(future, event.cause());
                     return;
                 }
-                future.complete(event.result().rowCount());
+                complete(future, event.result().rowCount());
             });
         } else {
             writePool().query(sinfo.getNativeSql()).execute((AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
                 if (event.failed()) {
-                    future.completeExceptionally(event.cause());
+                    completeExceptionally(future, event.cause());
                     return;
                 }
-                future.complete(event.result().rowCount());
+                complete(future, event.result().rowCount());
             });
         }
         return future;
@@ -941,9 +941,10 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             readPool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
                 if (event.failed()) {
-                    future.completeExceptionally(event.cause());
+                    completeExceptionally(future, event.cause());
                 } else {
-                    future.complete(handler.apply(new VertxResultSet(null, null, event.result())));
+                    complete(future, handler.apply(new VertxResultSet(null, null, event.result()))
+                    );
                 }
             }
             );
@@ -951,9 +952,9 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             readPool().preparedQuery(sinfo.getNativeSql()).execute((AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
                 if (event.failed()) {
-                    future.completeExceptionally(event.cause());
+                    completeExceptionally(future, event.cause());
                 } else {
-                    future.complete(handler.apply(new VertxResultSet(null, null, event.result())));
+                    complete(future, handler.apply(new VertxResultSet(null, null, event.result())));
                 }
             }
             );
@@ -969,7 +970,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         Handler<AsyncResult<RowSet<Row>>> countHandler = (AsyncResult<RowSet<Row>> evt) -> {
             slowLog(s, sinfo.getNativeCountSql());
             if (evt.failed()) {
-                future.completeExceptionally(evt.cause());
+                completeExceptionally(future, evt.cause());
             } else {
                 long total = 0;
                 RowIterator<Row> it = evt.result().iterator();
@@ -977,7 +978,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     total = it.next().getLong(0);
                 }
                 if (total < 1) {
-                    future.complete(new Sheet<>(total, new ArrayList<>()));
+                    complete(future, new Sheet<>(total, new ArrayList<>()));
                 }
                 final long count = total;
                 String listSql = sinfo.getNativeCountSql()
@@ -985,10 +986,10 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 Handler<AsyncResult<RowSet<Row>>> listHandler = (AsyncResult<RowSet<Row>> event) -> {
                     slowLog(s, sinfo.getNativeCountSql());
                     if (event.failed()) {
-                        future.completeExceptionally(event.cause());
+                        completeExceptionally(future, event.cause());
                     } else {
                         List<V> list = EntityBuilder.getListValue(type, new VertxResultSet(null, null, event.result()));
-                        future.complete(new Sheet<>(count, list));
+                        complete(future, new Sheet<>(count, list));
                     }
                 };
                 if (!sinfo.isEmptyNamed()) {
