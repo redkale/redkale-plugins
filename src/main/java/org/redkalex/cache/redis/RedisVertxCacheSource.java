@@ -119,6 +119,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             redisConfig.setUseReplicas(RedisReplicas.ALWAYS);
         }
         redisConfig.setEndpoints(config.getAddresses());
+        this.nodeAddrs = config.getAddresses();
+        this.db = config.getDb();
         Redis old = this.client;
         this.client = Redis.createClient(this.vertx, redisConfig);
         if (this.subConn != null) {
