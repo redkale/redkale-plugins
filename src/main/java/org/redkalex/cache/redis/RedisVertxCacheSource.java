@@ -255,7 +255,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     private <T> void completeHandle(WorkThread workThread, CompletableFuture<T> future, AsyncResult<T> event) {
-        if (workThread != null) {
+        if (workThread != null && workThread.getWorkExecutor() != null) {
             if (event.failed()) {
                 workThread.runWork(() -> future.completeExceptionally(event.cause()));
             } else {
