@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import org.redkale.annotation.Resource;
+import static org.redkale.boot.Application.RESNAME_APP_EXECUTOR;
 import static org.redkale.boot.Application.RESNAME_APP_NAME;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
@@ -54,6 +55,9 @@ public abstract class AbstractRedisSource extends AbstractCacheSource {
     private ExecutorService subExecutor;
 
     private final ReentrantLock subExecutorLock = new ReentrantLock();
+
+    @Resource(name = RESNAME_APP_EXECUTOR, required = false)
+    protected ExecutorService workExecutor;
 
     @Override
     public void init(AnyValue conf) {

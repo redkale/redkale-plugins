@@ -2,6 +2,7 @@
  */
 package org.redkalex.cache.redis;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -43,6 +44,7 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
 import org.redkale.convert.TextConvert;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.net.WorkThread;
 import org.redkale.service.Local;
 import org.redkale.source.CacheEventListener;
 import org.redkale.source.CacheScoredValue;
@@ -220,10 +222,6 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return future;
     }
 
-    protected <T> CompletableFuture<T> completableFuture(io.vertx.core.Future<T> rf) {
-        return rf.toCompletionStage().toCompletableFuture();
-    }
-
     protected CompletableFuture<Response> sendAsync(Command cmd, String... args) {
         Request request = Request.cmd(cmd);
         for (String arg : args) {
@@ -233,11 +231,49 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     protected CompletableFuture<Response> sendAsync(Request request) {
-        return completableFuture(redisClient().send(request));
+        CompletableFuture<Response> future = new CompletableFuture<>();
+        WorkThread workThread = WorkThread.currentWorkThread();
+        redisClient().send(request, new Handler<AsyncResult<Response>>() {
+            @Override
+            public void handle(AsyncResult<Response> event) {
+                completeHandle(workThread, future, event);
+            }
+        });
+        return future;
     }
 
     protected CompletableFuture<List<Response>> sendAsync(List<Request> requests) {
-        return completableFuture(redisClient().batch(requests));
+        CompletableFuture<List<Response>> future = new CompletableFuture<>();
+        WorkThread workThread = WorkThread.currentWorkThread();
+        redisClient().batch(requests, new Handler<AsyncResult<List<Response>>>() {
+            @Override
+            public void handle(AsyncResult<List<Response>> event) {
+                completeHandle(workThread, future, event);
+            }
+        });
+        return future;
+    }
+
+    private <T> void completeHandle(WorkThread workThread, CompletableFuture<T> future, AsyncResult<T> event) {
+        if (workThread != null) {
+            if (event.failed()) {
+                workThread.runWork(() -> future.completeExceptionally(event.cause()));
+            } else {
+                workThread.runWork(() -> future.complete(event.result()));
+            }
+        } else if (workExecutor != null) {
+            if (event.failed()) {
+                workExecutor.execute(() -> future.completeExceptionally(event.cause()));
+            } else {
+                workExecutor.execute(() -> future.complete(event.result()));
+            }
+        } else {
+            if (event.failed()) {
+                future.completeExceptionally(event.cause());
+            } else {
+                future.complete(event.result());
+            }
+        }
     }
 
     protected Redis redisClient() {
@@ -674,7 +710,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             delTopics.forEach(topic -> {
-                futures.add(subConn().thenCompose(conn -> completableFuture(conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic)))
+                futures.add(subConn().thenCompose(conn -> conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic))
+                    .toCompletionStage()
                     .thenApply(r -> {
                         pubsubListeners.remove(topic);
                         return null;
@@ -691,7 +728,8 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
                 }
                 listens.remove(listener);
                 if (listens.isEmpty()) {
-                    futures.add(subConn().thenCompose(conn -> completableFuture(conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic)))
+                    futures.add(subConn().thenCompose(conn -> conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic))
+                        .toCompletionStage()
                         .thenApply(r -> {
                             pubsubListeners.remove(topic);
                             return null;
