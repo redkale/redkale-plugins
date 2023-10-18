@@ -229,4 +229,26 @@ public class RedisCacheResult {
         return (T) JsonConvert.root().convertFrom(type, frames);
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{type: ").append(frameType);
+        if (frameValue != null) {
+            sb.append(", value: ").append(new String(frameValue, StandardCharsets.UTF_8));
+        }
+        if (frameList != null) {
+            sb.append(", list: [");
+            boolean first = true;
+            for (byte[] bs : frameList) {
+                if (!first) {
+                    sb.append(", ");
+                }
+                sb.append(bs == null ? null : new String(bs, StandardCharsets.UTF_8));
+                first = false;
+            }
+            sb.append("]");
+        }
+        return sb.append("}").toString();
+    }
+
 }

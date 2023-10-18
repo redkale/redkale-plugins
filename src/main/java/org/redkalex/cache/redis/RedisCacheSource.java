@@ -54,7 +54,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     protected static final byte[] CHANNELS = "CHANNELS".getBytes();
 
-    private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+    private final Logger logger = Logger.getLogger(getClass().getSimpleName());
 
     @Resource(name = RESNAME_APP_CLIENT_ASYNCGROUP, required = false)
     private AsyncGroup clientAsyncGroup;
@@ -838,9 +838,23 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<RedisCacheResult> sendAsync(final RedisCommand command, final String key, final byte[]... args) {
         WorkThread workThread = WorkThread.currentWorkThread();
         String traceid = Traces.currentTraceid();
-        return Utility.orTimeout(client.connect()
-            .thenCompose(conn -> conn.writeRequest(conn.pollRequest(workThread, traceid).prepare(command, key, args))),
-            6, TimeUnit.SECONDS);
+        if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") " + command + " " + key);
+            CompletableFuture<RedisCacheResult> future = client.connect()
+                .thenCompose(conn -> {
+                    RedisCacheRequest req = conn.pollRequest(workThread, traceid).prepare(command, key, args);
+                    logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") request: " + req);
+                    return conn.writeRequest(req).thenApply(v -> {
+                        logger.log(Level.FINEST, "redis.callback(traceid=" + traceid + ") response: " + v);
+                        return v;
+                    });
+                });
+            return Utility.orTimeout(future, 6, TimeUnit.SECONDS);
+        } else {
+            return Utility.orTimeout(client.connect()
+                .thenCompose(conn -> conn.writeRequest(conn.pollRequest(workThread, traceid).prepare(command, key, args))),
+                6, TimeUnit.SECONDS);
+        }
     }
 
     @Local

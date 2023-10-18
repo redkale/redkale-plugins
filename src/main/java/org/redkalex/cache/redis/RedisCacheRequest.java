@@ -99,8 +99,9 @@ public class RedisCacheRequest extends ClientRequest {
         } else {
             StringBuilder sb = new StringBuilder();
             sb.append(command);
+            sb.append(" ").append(key);
             for (final byte[] arg : args) {
-                sb.append(" ").append(new String(arg, StandardCharsets.UTF_8));
+                sb.append(" ").append(arg == null ? null : new String(arg, StandardCharsets.UTF_8));
             }
             return sb.toString();
         }
