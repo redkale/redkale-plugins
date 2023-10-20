@@ -14,6 +14,7 @@ import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.TopicPartitionInfo;
 import org.apache.kafka.common.serialization.*;
 import org.redkale.mq.*;
+import org.redkale.util.Traces;
 
 /**
  *
@@ -63,12 +64,22 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
             }
         }
         final Integer partition0 = partition;
+        String traceid = message.getTraceid();
         //if (finest) logger.log(Level.FINEST, "Kafka.producer prepare send partition=" + partition0 + ", msg=" + message);
         producer.send(new ProducerRecord<>(message.getTopic(), partition, null, message), (metadata, exp) -> {
+            Traces.computeIfAbsent(traceid);
             if (exp != null) {
-                messageAgent.execute(() -> future.completeExceptionally(exp));
+                messageAgent.execute(() -> {
+                    Traces.computeIfAbsent(traceid);
+                    future.completeExceptionally(exp);
+                    Traces.removeTraceid();
+                });
             } else {
-                messageAgent.execute(() -> future.complete(null));
+                messageAgent.execute(() -> {
+                    Traces.computeIfAbsent(traceid);
+                    future.complete(null);
+                    Traces.removeTraceid();
+                });
             }
 
             long e = System.currentTimeMillis() - message.getCreateTime();
@@ -79,6 +90,7 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
             } else if (e > 10 && logger.isLoggable(Level.FINEST)) {
                 logger.log(Level.FINEST, getClass().getSimpleName() + "(name=" + name + ") (mq.cost-normal = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             }
+            Traces.removeTraceid();
         });
         return future;
     }

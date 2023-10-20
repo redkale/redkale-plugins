@@ -838,7 +838,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<RedisCacheResult> sendAsync(final RedisCommand command, final String key, final byte[]... args) {
         WorkThread workThread = WorkThread.currentWorkThread();
         String traceid = Traces.currentTraceid();
-        if (logger.isLoggable(Level.FINEST)) {
+        if (false && logger.isLoggable(Level.FINEST)) {
             logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") " + command + " " + key);
             CompletableFuture<RedisCacheResult> future = client.connect()
                 .thenCompose(conn -> {

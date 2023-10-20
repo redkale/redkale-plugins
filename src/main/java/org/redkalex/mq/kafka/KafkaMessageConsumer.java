@@ -68,7 +68,7 @@ class KafkaMessageConsumer implements Runnable {
             logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") started");
         }
         try {
-            Map<String, Map<Integer, List<byte[]>>> map = new LinkedHashMap<>();
+            Map<String, Map<Integer, List<ConsumerRecord<String, byte[]>>>> map = new LinkedHashMap<>();
             Map<String, Map<Integer, MessageConext>> contexts = new LinkedHashMap<>();
             ConsumerRecords<String, byte[]> records;
             while (!this.closed) {
@@ -96,14 +96,14 @@ class KafkaMessageConsumer implements Runnable {
                 long s = System.currentTimeMillis();
                 try {
                     for (ConsumerRecord<String, byte[]> r : records) {
-                        map.computeIfAbsent(r.topic(), t -> new LinkedHashMap<>()).computeIfAbsent(r.partition(), p -> new ArrayList<>()).add(r.value());
+                        map.computeIfAbsent(r.topic(), t -> new LinkedHashMap<>()).computeIfAbsent(r.partition(), p -> new ArrayList<>()).add(r);
                     }
                     map.forEach((topic, items) -> {
                         MessageConsumerWrapper wrapper = consumerMap.get(topic);
                         if (wrapper != null) {
                             items.forEach((partition, list) -> {
                                 MessageConext context = contexts.computeIfAbsent(topic, t -> new HashMap<>()).computeIfAbsent(partition, p -> messageAgent.createMessageConext(topic, p));
-                                wrapper.onMessage(context, list);
+                                list.forEach(r -> wrapper.onMessage(context, r.key(), r.value()));
                             });
                         }
                     });

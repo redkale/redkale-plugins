@@ -17,6 +17,7 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.redkale.convert.Convert;
 import org.redkale.mq.MessageProducer;
+import org.redkale.util.Traces;
 
 /**
  *
@@ -54,11 +55,21 @@ public class KafkaMessageProducer implements MessageProducer {
         final CompletableFuture future = new CompletableFuture();
         long s = System.currentTimeMillis();
         //if (finest) logger.log(Level.FINEST, "Kafka.producer prepare send partition=" + partition + ", msg=" + message);
-        producer.send(new ProducerRecord<>(topic, partition, null, convertMessage(convert, type, value)), (metadata, exp) -> {
+        String traceid = Traces.currentTraceid();
+        producer.send(new ProducerRecord<>(topic, partition, traceid, convertMessage(convert, type, value)), (metadata, exp) -> {
+            Traces.computeIfAbsent(traceid);
             if (exp != null) {
-                messageAgent.execute(() -> future.completeExceptionally(exp));
+                messageAgent.execute(() -> {
+                    Traces.computeIfAbsent(traceid);
+                    future.completeExceptionally(exp);
+                    Traces.removeTraceid();
+                });
             } else {
-                messageAgent.execute(() -> future.complete(null));
+                messageAgent.execute(() -> {
+                    Traces.computeIfAbsent(traceid);
+                    future.complete(null);
+                    Traces.removeTraceid();
+                });
             }
 
             long e = System.currentTimeMillis() - s;
@@ -69,6 +80,7 @@ public class KafkaMessageProducer implements MessageProducer {
             } else if (e > 10 && logger.isLoggable(Level.FINEST)) {
                 logger.log(Level.FINEST, getClass().getSimpleName() + "(name=" + messageAgent.getName() + ") (mq.cost-normal = " + e + " ms)，partition=" + partition + ", msg=" + value);
             }
+            Traces.removeTraceid();
         });
         return future;
     }

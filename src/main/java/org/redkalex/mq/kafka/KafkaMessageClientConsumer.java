@@ -91,6 +91,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                         msg = r.value();
                         Traces.computeIfAbsent(msg.getTraceid());
                         processor.process(msg, s);
+                        Traces.removeTraceid();
                     } catch (Throwable e) {
                         logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") consumer " + msg + " error", e);
                     }
