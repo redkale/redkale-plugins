@@ -36,6 +36,8 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
         } else {
             this.authenticate = conn -> writeChannel(conn, clientNameReq).thenApply(v -> conn);
         }
+        this.readTimeoutSeconds = 3;
+        this.writeTimeoutSeconds = 3;
     }
 
     @Override

@@ -103,7 +103,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         }
         RedisCacheClient old = this.client;
         this.client = new RedisCacheClient(appName, resourceName(), ioGroup, resourceName() + "." + config.getDb(),
-            new ClientAddress(address), config.getMaxconns(2), config.getPipelines(),
+            new ClientAddress(address), config.getMaxconns(Runtime.getRuntime().availableProcessors()), config.getPipelines(),
             isEmpty(config.getPassword()) ? null : new RedisCacheReqAuth(config.getPassword()),
             config.getDb() < 1 ? null : new RedisCacheReqDB(config.getDb()));
         if (this.subConn != null) {
@@ -842,7 +842,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
             logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") " + command + " " + key);
             CompletableFuture<RedisCacheResult> future = client.connect()
                 .thenCompose(conn -> {
+                    if (isNotEmpty(traceid)) {
+                        Traces.computeIfAbsent(traceid);
+                    }
                     RedisCacheRequest req = conn.pollRequest(workThread, traceid).prepare(command, key, args);
+                    req.traceid(traceid);
                     logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") request: " + req);
                     return conn.writeRequest(req).thenApply(v -> {
                         logger.log(Level.FINEST, "redis.callback(traceid=" + traceid + ") response: " + v);
@@ -852,7 +856,14 @@ public final class RedisCacheSource extends AbstractRedisSource {
             return Utility.orTimeout(future, 6, TimeUnit.SECONDS);
         } else {
             return Utility.orTimeout(client.connect()
-                .thenCompose(conn -> conn.writeRequest(conn.pollRequest(workThread, traceid).prepare(command, key, args))),
+                .thenCompose(conn -> {
+                    if (isNotEmpty(traceid)) {
+                        Traces.computeIfAbsent(traceid);
+                    }
+                    RedisCacheRequest req = conn.pollRequest(workThread, traceid).prepare(command, key, args);
+                    req.traceid(traceid);
+                    return conn.writeRequest(req);
+                }),
                 6, TimeUnit.SECONDS);
         }
     }
@@ -865,7 +876,12 @@ public final class RedisCacheSource extends AbstractRedisSource {
             request.workThread(workThread).traceid(traceid);
         }
         return Utility.orTimeout(client.connect()
-            .thenCompose(conn -> conn.writeRequest(requests)),
+            .thenCompose(conn -> {
+                if (isNotEmpty(traceid)) {
+                    Traces.computeIfAbsent(traceid);
+                }
+                return conn.writeRequest(requests);
+            }),
             6, TimeUnit.SECONDS);
     }
 
