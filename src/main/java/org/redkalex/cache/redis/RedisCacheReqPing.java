@@ -29,4 +29,9 @@ public class RedisCacheReqPing extends RedisCacheRequest {
     public void writeTo(ClientConnection conn, ByteArray writer) {
         writer.put(BYTES);
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{PING}";
+    }
 }

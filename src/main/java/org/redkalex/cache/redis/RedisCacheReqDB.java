@@ -33,4 +33,9 @@ public class RedisCacheReqDB extends RedisCacheRequest {
         writer.put(CRLF);
 
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{SELECT " + db + "}";
+    }
 }

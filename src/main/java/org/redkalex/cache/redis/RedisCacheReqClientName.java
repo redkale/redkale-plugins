@@ -35,4 +35,9 @@ public class RedisCacheReqClientName extends RedisCacheRequest {
         writer.put(ns);
         writer.put(CRLF);
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{CLIENT SETNAME " + clientName + "}";
+    }
 }

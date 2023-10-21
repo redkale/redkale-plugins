@@ -60,6 +60,11 @@ public class RedisCacheRequest extends ClientRequest {
         return this;
     }
 
+    public RedisCacheRequest createTime() {
+        this.createTime = System.currentTimeMillis();
+        return this;
+    }
+
     @Override
     public void writeTo(ClientConnection conn, ByteArray writer) {
         writer.put(mutliLengthBytes(args.length + 1));

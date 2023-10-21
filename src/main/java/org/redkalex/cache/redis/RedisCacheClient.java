@@ -7,6 +7,7 @@ package org.redkalex.cache.redis;
 
 import org.redkale.net.*;
 import org.redkale.net.client.*;
+import org.redkale.util.Traces;
 
 /**
  *
@@ -18,23 +19,30 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
         ClientAddress address, int maxConns, int maxPipelines, RedisCacheReqAuth authReq, RedisCacheReqDB dbReq) {
         super(name, group, true, address, maxConns, maxPipelines, () -> new RedisCacheReqPing(), () -> new RedisCacheReqClose(), null); //maxConns
         RedisCacheReqClientName clientNameReq = new RedisCacheReqClientName(appName, name);
-        if (authReq != null || dbReq != null) {
-            if (authReq != null && dbReq != null) {
-                this.authenticate = conn -> writeChannel(conn, authReq)
-                    .thenCompose(v -> writeChannel(conn, dbReq))
-                    .thenCompose(v -> writeChannel(conn, clientNameReq))
+        if (authReq != null && dbReq != null) {
+            this.authenticate = traceid -> {
+                Traces.currentTraceid(traceid);
+                return conn -> writeChannelBatch(conn, authReq.createTime(), dbReq.createTime(), clientNameReq.createTime())
                     .thenApply(v -> conn);
-            } else if (authReq != null) {
-                this.authenticate = conn -> writeChannel(conn, authReq)
-                    .thenCompose(v -> writeChannel(conn, clientNameReq))
+            };
+        } else if (authReq != null) {
+            this.authenticate = traceid -> {
+                Traces.currentTraceid(traceid);
+                return conn -> writeChannelBatch(conn, authReq.createTime(), clientNameReq.createTime())
                     .thenApply(v -> conn);
-            } else {
-                this.authenticate = conn -> writeChannel(conn, dbReq)
-                    .thenCompose(v -> writeChannel(conn, clientNameReq))
+            };
+        } else if (dbReq != null) {
+            this.authenticate = traceid -> {
+                Traces.currentTraceid(traceid);
+                return conn -> writeChannelBatch(conn, dbReq.createTime(), clientNameReq.createTime())
                     .thenApply(v -> conn);
-            }
+            };
         } else {
-            this.authenticate = conn -> writeChannel(conn, clientNameReq).thenApply(v -> conn);
+            this.authenticate = traceid -> {
+                Traces.currentTraceid(traceid);
+                return conn -> writeChannel(conn, clientNameReq.createTime())
+                    .thenApply(v -> conn);
+            };
         }
         this.readTimeoutSeconds = 3;
         this.writeTimeoutSeconds = 3;

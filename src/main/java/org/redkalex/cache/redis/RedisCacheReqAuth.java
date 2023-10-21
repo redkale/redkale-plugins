@@ -35,4 +35,9 @@ public class RedisCacheReqAuth extends RedisCacheRequest {
         writer.put(CRLF);
 
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{AUTH " + password + "}";
+    }
 }
