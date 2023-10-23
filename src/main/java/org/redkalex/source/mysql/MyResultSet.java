@@ -8,11 +8,12 @@ package org.redkalex.source.mysql;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.sql.Date;
 import java.sql.*;
+import java.sql.Date;
 import java.util.*;
 import org.redkale.convert.ConvertDisabled;
 import org.redkale.net.WorkThread;
+import org.redkale.net.client.ClientResult;
 import org.redkale.source.*;
 import org.redkale.util.ObjectPool;
 
@@ -21,7 +22,7 @@ import org.redkale.util.ObjectPool;
  * @author zhangjx
  */
 @SuppressWarnings("deprecation")
-public class MyResultSet implements java.sql.ResultSet, DataResultSet {
+public class MyResultSet implements java.sql.ResultSet, DataResultSet, ClientResult {
 
     protected static final MyResultSet EMPTY = new MyResultSet() {
         {
@@ -93,6 +94,11 @@ public class MyResultSet implements java.sql.ResultSet, DataResultSet {
     @ConvertDisabled
     public EntityInfo getEntityInfo() {
         return info;
+    }
+
+    @Override
+    public boolean isKeepAlive() {
+        return true;
     }
 
     @Override

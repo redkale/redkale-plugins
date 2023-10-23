@@ -8,10 +8,11 @@ package org.redkalex.source.pgsql;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.sql.Date;
 import java.sql.*;
+import java.sql.Date;
 import java.util.*;
 import org.redkale.convert.ConvertDisabled;
+import org.redkale.net.client.ClientResult;
 import org.redkale.source.*;
 import org.redkale.util.Attribute;
 
@@ -20,7 +21,7 @@ import org.redkale.util.Attribute;
  * @author zhangjx
  */
 @SuppressWarnings("deprecation")
-public class PgResultSet implements java.sql.ResultSet, DataResultSet {
+public class PgResultSet implements java.sql.ResultSet, DataResultSet, ClientResult {
 
     protected static final PgResultSet EMPTY = new PgResultSet() {
         {
@@ -103,6 +104,11 @@ public class PgResultSet implements java.sql.ResultSet, DataResultSet {
             return index > 0 ? currRow.realValues[index - 1] : currRow.realValues[colmap().get(column.toLowerCase())];
         }
         return DataResultSet.getRowColumnValue(this, attr, index, column);
+    }
+
+    @Override
+    public boolean isKeepAlive() {
+        return true;
     }
 
     public void addEntity(Object entity) {

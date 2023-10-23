@@ -10,13 +10,14 @@ import java.math.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.net.client.ClientResult;
 import org.redkale.source.CacheScoredValue;
 
 /**
  *
  * @author zhangjx
  */
-public class RedisCacheResult {
+public class RedisCacheResult implements ClientResult {
 
     //$   块字符串类型
     //*   数组
@@ -37,6 +38,11 @@ public class RedisCacheResult {
         this.frameValue = frameValue;
         this.frameList = frameList;
         return this;
+    }
+
+    @Override
+    public boolean isKeepAlive() {
+        return true;
     }
 
     public Void getVoidValue() {
