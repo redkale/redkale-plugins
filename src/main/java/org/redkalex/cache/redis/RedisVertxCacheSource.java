@@ -269,9 +269,9 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             }
         } else {
             if (event.failed()) {
-                future.completeExceptionally(event.cause());
+                Utility.execute(() -> future.completeExceptionally(event.cause()));
             } else {
-                future.complete(event.result());
+                Utility.execute(() -> future.complete(event.result()));
             }
         }
     }
