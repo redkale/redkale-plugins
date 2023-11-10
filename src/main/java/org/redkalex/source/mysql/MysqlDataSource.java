@@ -17,8 +17,8 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;
-import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.source.*;
+import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.util.*;
 
 /**
@@ -476,7 +476,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                 return rs;
             });
         } else {
-            return queryListAsync(info.getType(), (SelectColumn) null, (Flipper) null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
+            return queryListAsync(info.getType(), (SelectColumn) null, (Flipper) null, FilterNodes.in(info.getPrimarySQLColumn(), ids));
         }
     }
 

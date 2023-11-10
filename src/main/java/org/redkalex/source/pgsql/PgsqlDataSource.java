@@ -17,8 +17,8 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;
-import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.source.*;
+import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
@@ -470,7 +470,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 return pool.writeChannel(conn, req, transfer);
             });
         } else {
-            return queryListAsync(info.getType(), (SelectColumn) null, (Flipper) null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
+            return queryListAsync(info.getType(), (SelectColumn) null, (Flipper) null, FilterNodes.in(info.getPrimarySQLColumn(), ids));
         }
     }
 

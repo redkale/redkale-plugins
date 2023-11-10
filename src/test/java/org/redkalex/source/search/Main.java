@@ -7,10 +7,10 @@ package org.redkalex.source.search;
 
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.source.*;
-import org.redkale.source.Range.LongRange;
-import org.redkale.util.*;
 import static org.redkale.source.AbstractDataSource.*;
+import org.redkale.source.Range.LongRange;
 import static org.redkale.source.SearchQuery.SEARCH_FILTER_NAME;
+import org.redkale.util.*;
 
 /**
  *
@@ -20,10 +20,10 @@ public class Main {
 
     public static void main(String[] args) throws Throwable {
         {
-            FilterNode node = FilterNode.create("power", 7).and(FilterNode.create("type", "words").or("createTime", 1621581722242L));
+            FilterNode node = FilterNodes.eq("power", 7).and(FilterNodes.eq("type", "words").or("createTime", 1621581722242L));
             System.out.println(node.getExpress() + "========" + node.toString());
             System.out.println(new SearchRequest().filterNode(null, node));
-            node = FilterNode.create("power", 7).and("power2", 6).or(FilterNode.create("type", "words").and("createTime", 1621581722242L));
+            node = FilterNodes.eq("power", 7).eq("power2", 6).or(FilterNodes.eq("type", "words").eq("createTime", 1621581722242L));
             System.out.println(node.getExpress() + "========" + node.toString());
             System.out.println(new SearchRequest().filterNode(null, node));
         }
@@ -33,7 +33,7 @@ public class Main {
         final boolean insert = false;
         if (insert) {
             System.out.println("删除表的结果是否成功:" + (source.dropTable(TestPost.class) == 1));
-            Thread.sleep(100);
+            Utility.sleep(100);
             //
             TestPost post = new TestPost();
             post.setType("forum");
@@ -93,19 +93,19 @@ public class Main {
                 source.insert(comment);
             }
             //source.updateMapping(TestPost.class);
-            Thread.sleep(1000);
+            Utility.sleep(1000);
             System.out.println("第1个find结果: " + source.find(TestPost.class, "createTime", post.getCreateTime()));
             System.out.println("第2个find结果: " + source.find(TestPost.class, SelectColumn.excludes("pubContent"), post2.getPostid()));
             System.out.println("第3个find结果: " + source.find(TestPost.class, SelectColumn.includes("pubContent"), post3.getPostid()));
             //System.out.println("第4个delete结果: " + source.delete(TestPost.class, post4.getPostid()));
-            System.out.println(source.queryColumnList("power", TestPost.class, FilterNode.create("createTime", new LongRange(post3.getCreateTime() + 1, -1L))));
+            System.out.println(source.queryColumnList("power", TestPost.class, FilterNodes.between("createTime", new LongRange(post3.getCreateTime() + 1, -1L))));
         }
         //System.out.println(FilterNode.create("power", new int[]{1, 3}).and("createTime", 1621743242363L));
         SearchQuery.SearchSimpleQuery searchBean = SearchQuery.create("dddd内容", "title", "content", "pubContent");
         SearchQuery.SearchSimpleHighlight highlightBean = SearchQuery.createHighlight();
         highlightBean.tag("<font color=red>", "</font>");
         searchBean.setHighlight(highlightBean);
-        System.out.println(source.queryList(TestPost.class, new Flipper(5, 5, "createTime DESC"), FilterNode.create(SEARCH_FILTER_NAME, searchBean).and("createTime", FilterExpress.GREATERTHAN, 1L)));
+        System.out.println(source.queryList(TestPost.class, new Flipper(5, 5, "createTime DESC"), FilterNodes.eq(SEARCH_FILTER_NAME, searchBean).gt("createTime", 1L)));
         //System.out.println(source.queryColumnSet("power", TestPost.class, FilterNode.create("power", new int[]{1, 3}).and("createTime", 1621581722242L)));
         //System.out.println(source.queryColumnMap(TestPost.class, "power", FilterFunc.DISTINCTCOUNT, null));
         //System.out.println(source.getNumberResult(TestPost.class, FilterFunc.MIN, 5, "power", (FilterNode) null));

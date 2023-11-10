@@ -478,38 +478,38 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             throw new IllegalArgumentException("Not supported " + FilterJoinNode.class.getSimpleName());
         }
         switch (node.getExpress()) {
-            case EQUAL: {
+            case EQ: {
                 return Filters.eq(node.getColumn(), formatFilterValue(info, node.getValue()));
             }
-            case IGNORECASEEQUAL: {
+            case IG_EQ: {
                 return Filters.regex(node.getColumn(), "/^" + node.getValue() + "$/i");
             }
-            case NOTEQUAL:
-            case IGNORECASENOTEQUAL: {
+            case NOT_EQ:
+            case IG_NOT_EQ: {
                 return Filters.not(Filters.eq(node.getColumn(), node.getValue()));
             }
-            case GREATERTHAN: {
+            case GT: {
                 return Filters.gt(node.getColumn(), formatFilterValue(info, node.getValue()));
             }
-            case LESSTHAN: {
+            case LT: {
                 return Filters.lt(node.getColumn(), formatFilterValue(info, node.getValue()));
             }
-            case GREATERTHANOREQUALTO: {
+            case GE: {
                 return Filters.gte(node.getColumn(), formatFilterValue(info, node.getValue()));
             }
-            case LESSTHANOREQUALTO: {
+            case LE: {
                 return Filters.lte(node.getColumn(), formatFilterValue(info, node.getValue()));
             }
             case LIKE: {
                 return Filters.regex(node.getColumn(), "/" + node.getValue() + "/");
             }
-            case NOTLIKE: {
+            case NOT_LIKE: {
                 return Filters.not(Filters.regex(node.getColumn(), "/" + node.getValue() + "/"));
             }
             case IN: {
                 return Filters.in(node.getColumn(), node.getValue() instanceof Collection ? (Collection) node.getValue() : List.of((Object[]) node.getValue()));
             }
-            case NOTIN: {
+            case NOT_IN: {
                 return Filters.not(Filters.in(node.getColumn(), node.getValue() instanceof Collection ? (Collection) node.getValue() : (Object[]) node.getValue()));
             }
             case BETWEEN: {
@@ -520,7 +520,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                     return Filters.gte(node.getColumn(), range.getMin());
                 }
             }
-            case NOTBETWEEN: {
+            case NOT_BETWEEN: {
                 Range range = (Range) node.getValue();
                 Bson bson;
                 if (range.getMax() != null && range.getMax().compareTo(range.getMin()) > 0) {
@@ -1057,7 +1057,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             return CompletableFuture.completedFuture(info.getArrayer().apply(0));
         }
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(info.getType(), selects, null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, pks)).thenApply(list -> {
+        return queryListAsync(info.getType(), selects, null, FilterNodes.in(info.getPrimarySQLColumn(), pks)).thenApply(list -> {
             T[] rs = info.getArrayer().apply(pks.length);
             for (int i = 0; i < rs.length; i++) {
                 T t = null;
@@ -1083,7 +1083,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
         final EntityInfo<T> info = loadEntityInfo(clazz);
         Serializable[] ids = pks.toArray(serialArrayFunc);
-        return queryListAsync(info.getType(), null, null, FilterNode.create(info.getPrimarySQLColumn(), FilterExpress.IN, ids));
+        return queryListAsync(info.getType(), null, null, FilterNodes.in(info.getPrimarySQLColumn(), ids));
     }
 
     @Override
@@ -1226,7 +1226,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         final ArrayList<K> pks = new ArrayList<>();
         keyStream.forEach(k -> pks.add(k));
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(clazz, FilterNode.create(primary.field(), pks)).thenApply((List<T> rs) -> {
+        return queryListAsync(clazz, FilterNodes.in(primary.field(), pks)).thenApply((List<T> rs) -> {
             Map<K, T> map = new LinkedHashMap<>();
             if (rs.isEmpty()) {
                 return new LinkedHashMap<>();

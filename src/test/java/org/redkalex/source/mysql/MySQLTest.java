@@ -167,10 +167,10 @@ public class MySQLTest {
             int rs = source.update(record1, record2, record3, record4);
             System.out.println("-------修改成功数: " + rs + "---------");
 
-            FilterNode node = FilterNode.create("createTime", new Range.LongRange(record4.getCreateTime(), record1.getCreateTime()));
+            FilterNode node = FilterNodes.between("createTime", new Range.LongRange(record4.getCreateTime(), record1.getCreateTime()));
             System.out.println("查询结果: " + source.querySheet(DayRecord.class, new Flipper(), node));
 
-            FilterNode pkFilter = FilterNode.create("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid()));
+            FilterNode pkFilter = FilterNodes.in("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid()));
 
             rs = source.updateColumn(record1, pkFilter, SelectColumn.includes("content"));
             System.out.println("-------修改成功数: " + rs + "---------");
@@ -241,7 +241,7 @@ public class MySQLTest {
         //if (true) return;
         System.out.println(source.find(SmsRecord.class, "sms1-1632282662741"));
         System.out.println("--------------继续查询单个记录------------------");
-        SmsRecord sms = source.find(SmsRecord.class, FilterNode.create("smsid", record.getSmsid()));
+        SmsRecord sms = source.find(SmsRecord.class, FilterNodes.eq("smsid", record.getSmsid()));
         System.out.println(sms);
         sms.setCreateTime(System.currentTimeMillis());
         sms.setStatus((short) 3);

@@ -14,7 +14,7 @@ public class SourceTest {
         final long now = 1640966400000L;
         source.dropTable(TestWorld.class);
         source.dropTable(BeanRecord.class);
-        source.dropTable(BeanRecord.class, FilterNode.create("createTime", now));
+        source.dropTable(BeanRecord.class, FilterNodes.eq("createTime", now));
         int count = 100;
         int limit = 20;
         int rs;
@@ -74,19 +74,19 @@ public class SourceTest {
             return;
         }
         System.out.println("开始删除");
-        rs = source.delete(TestWorld.class, new Flipper(limit), FilterNode.create("randomNumber", FilterExpress.GREATERTHANOREQUALTO, 1));
+        rs = source.delete(TestWorld.class, new Flipper(limit), FilterNodes.ge("randomNumber", 1));
         if (rs != limit) {
             new Exception("删除数量应该是" + limit + ", 却是:" + rs).printStackTrace();
             return;
         }
         System.out.println("开始更新到1000");
-        rs = source.updateColumn(TestWorld.class, FilterNode.create("randomNumber", FilterExpress.GREATERTHANOREQUALTO, 1), new Flipper(limit), ColumnValue.mov("randomNumber", 1000));
+        rs = source.updateColumn(TestWorld.class, FilterNodes.ge("randomNumber", 1), new Flipper(limit), ColumnValue.mov("randomNumber", 1000));
         if (rs != limit) {
             new Exception("更新数量应该是" + limit + ", 却是:" + rs).printStackTrace();
             return;
         }
         System.out.println("获取更新后的数量");
-        rs = source.getNumberResult(TestWorld.class, FilterFunc.COUNT, "id", FilterNode.create("randomNumber", 1000)).intValue();
+        rs = source.getNumberResult(TestWorld.class, FilterFunc.COUNT, "id", FilterNodes.eq("randomNumber", 1000)).intValue();
         if (rs != limit) {
             new Exception("更新数量应该是" + limit + ", 却是:" + rs).printStackTrace();
             return;
@@ -98,7 +98,7 @@ public class SourceTest {
             new Exception("更新数量应该是" + 1 + ", 却是:" + rs).printStackTrace();
             return;
         }
-        rs = source.getNumberResult(TestWorld.class, FilterFunc.COUNT, "id", FilterNode.create("randomNumber", FilterExpress.NOTEQUAL, 1000)).intValue();
+        rs = source.getNumberResult(TestWorld.class, FilterFunc.COUNT, "id", FilterNodes.notEq("randomNumber", 1000)).intValue();
         if (rs != (count - limit - limit + 1)) {
             new Exception("一共数量应该是" + (count - limit - limit + 1) + ", 却是:" + rs).printStackTrace();
             return;

@@ -1076,7 +1076,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public <T> CompletableFuture<T> findAsync(Class<T> clazz, String column, Serializable colval) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
-        final String table = info.getTableStrategy() == null ? info.getOriginTable() : info.getTable(FilterNode.create(column, colval));
+        final String table = info.getTableStrategy() == null ? info.getOriginTable() : info.getTable(FilterNodes.create(column, colval));
         final StringBuilder path = new StringBuilder().append('/').append(table).append("/_search");
         SearchRequest bean = new SearchRequest();
         bean.query = new SearchRequest.Query();
@@ -1139,7 +1139,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
             return CompletableFuture.completedFuture(info.getArrayer().apply(0));
         }
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(info.getType(), selects, null, FilterNode.create(primary.field(), FilterExpress.IN, pks)).thenApply(list -> {
+        return queryListAsync(info.getType(), selects, null, FilterNodes.in(primary.field(), pks)).thenApply(list -> {
             T[] rs = info.getArrayer().apply(pks.length);
             for (int i = 0; i < rs.length; i++) {
                 T t = null;
@@ -1165,7 +1165,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
         final SearchInfo<T> info = loadSearchInfo(clazz);
         Serializable[] ids = pks.toArray(serialArrayFunc);
-        return queryListAsync(info.getType(), null, null, FilterNode.create(info.getPrimary().field(), FilterExpress.IN, ids));
+        return queryListAsync(info.getType(), null, null, FilterNodes.in(info.getPrimary().field(), ids));
     }
 
     @Override
@@ -1261,12 +1261,12 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T, V extends Serializable> Set<V> queryColumnSet(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
-        return (Set) queryColumnSetAsync(selectedColumn, clazz, (Flipper) null, FilterNode.create(column, colval)).join();
+        return (Set) queryColumnSetAsync(selectedColumn, clazz, (Flipper) null, FilterNodes.create(column, colval)).join();
     }
 
     @Override
     public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
-        return queryColumnSetAsync(selectedColumn, clazz, (Flipper) null, FilterNode.create(column, colval));
+        return queryColumnSetAsync(selectedColumn, clazz, (Flipper) null, FilterNodes.create(column, colval));
     }
 
     @Override
@@ -1314,7 +1314,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(String selectedColumn, Class<T> clazz, String column, Serializable colval) {
-        return queryColumnListAsync(selectedColumn, clazz, (Flipper) null, FilterNode.create(column, colval));
+        return queryColumnListAsync(selectedColumn, clazz, (Flipper) null, FilterNodes.create(column, colval));
     }
 
     @Override
@@ -1363,7 +1363,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         final ArrayList<K> pks = new ArrayList<>();
         keyStream.forEach(k -> pks.add(k));
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(clazz, FilterNode.create(primary.field(), pks)).thenApply((List<T> rs) -> {
+        return queryListAsync(clazz, FilterNodes.create(primary.field(), pks)).thenApply((List<T> rs) -> {
             Map<K, T> map = new LinkedHashMap<>();
             if (rs.isEmpty()) {
                 return new LinkedHashMap<>();
@@ -1398,12 +1398,12 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T> Set<T> querySet(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
-        return querySetAsync(clazz, (SelectColumn) null, flipper, FilterNode.create(column, colval)).join();
+        return querySetAsync(clazz, (SelectColumn) null, flipper, FilterNodes.create(column, colval)).join();
     }
 
     @Override
     public <T> CompletableFuture<Set<T>> querySetAsync(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
-        return querySetAsync(clazz, (SelectColumn) null, flipper, FilterNode.create(column, colval));
+        return querySetAsync(clazz, (SelectColumn) null, flipper, FilterNodes.create(column, colval));
     }
 
     @Override
@@ -1418,12 +1418,12 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T> List<T> queryList(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
-        return queryListAsync(clazz, (SelectColumn) null, flipper, FilterNode.create(column, colval)).join();
+        return queryListAsync(clazz, (SelectColumn) null, flipper, FilterNodes.create(column, colval)).join();
     }
 
     @Override
     public <T> CompletableFuture<List<T>> queryListAsync(Class<T> clazz, Flipper flipper, String column, Serializable colval) {
-        return queryListAsync(clazz, (SelectColumn) null, flipper, FilterNode.create(column, colval));
+        return queryListAsync(clazz, (SelectColumn) null, flipper, FilterNodes.create(column, colval));
     }
 
     @Override

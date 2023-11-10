@@ -56,36 +56,36 @@ public class SearchRequest extends BaseBean {
         if (node == null || node.getColumn() == null || node.getColumn().charAt(0) == '#') return null;
         if (node instanceof FilterJoinNode) throw new IllegalArgumentException("Not supported " + FilterJoinNode.class.getSimpleName());
         switch (node.getExpress()) {
-            case EQUAL:
-            case IGNORECASEEQUAL: {
+            case EQ:
+            case IG_EQ: {
                 return new QueryFilterItem("term", new QueryFilterItem(node.getColumn(), node.getValue()));
             }
-            case NOTEQUAL:
-            case IGNORECASENOTEQUAL: {
+            case NOT_EQ:
+            case IG_NOT_EQ: {
                 return new QueryFilterItem("bool", new QueryFilterItem("must_not", new QueryFilterItem("term", new QueryFilterItem(node.getColumn(), node.getValue()))));
             }
-            case GREATERTHAN: {
+            case GT: {
                 return new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), Utility.ofMap("gt", node.getValue())));
             }
-            case LESSTHAN: {
+            case LT: {
                 return new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), Utility.ofMap("lt", node.getValue())));
             }
-            case GREATERTHANOREQUALTO: {
+            case GE: {
                 return new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), Utility.ofMap("gte", node.getValue())));
             }
-            case LESSTHANOREQUALTO: {
+            case LE: {
                 return new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), Utility.ofMap("lte", node.getValue())));
             }
             case LIKE: {
                 return new QueryFilterItem("match_phrase", new QueryFilterItem(node.getColumn(), node.getValue()));
             }
-            case NOTLIKE: {
+            case NOT_LIKE: {
                 return new QueryFilterItem("bool", new QueryFilterItem("must_not", new QueryFilterItem("match_phrase", new QueryFilterItem(node.getColumn(), node.getValue()))));
             }
             case IN: {
                 return new QueryFilterItem("terms", new QueryFilterItem(node.getColumn(), node.getValue()));
             }
-            case NOTIN: {
+            case NOT_IN: {
                 return new QueryFilterItem("bool", new QueryFilterItem("must_not", new QueryFilterItem("terms", new QueryFilterItem(node.getColumn(), node.getValue()))));
             }
             case BETWEEN: {
@@ -97,7 +97,7 @@ public class SearchRequest extends BaseBean {
                 }
                 return new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), rangeval));
             }
-            case NOTBETWEEN: {
+            case NOT_BETWEEN: {
                 Range range = (Range) node.getValue();
                 LinkedHashMap rangeval = new LinkedHashMap();
                 rangeval.put("gte", range.getMin());
