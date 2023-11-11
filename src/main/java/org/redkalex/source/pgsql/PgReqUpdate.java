@@ -93,7 +93,7 @@ public class PgReqUpdate extends PgClientRequest {
             }
             writeSync(array); // SYNC     
             if (PgsqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(" + paramValues.length + "), EXECUTE, SYNC");
+                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(" + paramValues.length + "), EXECUTE, SYNC");
             }
         } else {
             { // BIND
@@ -110,7 +110,7 @@ public class PgReqUpdate extends PgClientRequest {
             writeExecute(array, fetchSize); // EXECUTE
             writeSync(array); // SYNC
             if (PgsqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(0), EXECUTE, SYNC");
+                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND(0), EXECUTE, SYNC");
             }
         }
     }

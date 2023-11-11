@@ -66,7 +66,7 @@ public class PgReqBatch extends PgClientRequest {
             }
             writeExecute(array, 0); // EXECUTE
             writeSync(array); // SYNC
-            if (PgsqlDataSource.debug) logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND, EXECUTE, SYNC");
+            if (PgsqlDataSource.debug) logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".PARSE: " + sql + ", DESCRIBE, BIND, EXECUTE, SYNC");
         }
     }
 }

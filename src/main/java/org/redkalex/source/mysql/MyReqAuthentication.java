@@ -114,7 +114,7 @@ public class MyReqAuthentication extends MyClientRequest {
         }
         Mysqls.writeUB3(array, startPos, array.length() - startPos - 4);
         if (MysqlDataSource.debug) {
-            MyClientCodec.logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 发送 MyReqAuthentication length=" + array.length());
+            MyClientCodec.logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 发送 MyReqAuthentication length=" + array.length());
         }
     }
 
@@ -166,7 +166,7 @@ public class MyReqAuthentication extends MyClientRequest {
             array.putByte(3);
             array.put(scrambledPassword);
             if (MysqlDataSource.debug) {
-                MyClientCodec.logger.log(Level.FINEST, Utility.nowMillis() + ": " + conn + ", 发送 MyReqAuthSwitch length=" + array.length());
+                MyClientCodec.logger.log(Level.FINEST, Times.nowMillis() + ": " + conn + ", 发送 MyReqAuthSwitch length=" + array.length());
             }
         }
 

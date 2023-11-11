@@ -13,9 +13,9 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
 import java.util.stream.Collectors;
+import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.*;
 import org.redkale.service.Local;
@@ -170,7 +170,7 @@ public final class AliPayService extends AbstractPayService {
             paramap.put("format", "json");
             paramap.put("sign_type", "RSA2");
             paramap.put("version", "1.0");
-            paramap.put("timestamp", Utility.formatTime(now));
+            paramap.put("timestamp", Times.formatTime(now));
 
             if (request.getPayWay() == PAYWAY_WEB) {
                 paramap.put("qr_pay_mode", "2");
@@ -208,7 +208,7 @@ public final class AliPayService extends AbstractPayService {
                 biz_content.put("quit_url", paramap.get("notify_url")); //返回url 
             }
             if (request.getTimeoutSeconds() > 0) {
-                biz_content.put("time_expire", Utility.formatTime(now + request.getTimeoutSeconds() * 1000));
+                biz_content.put("time_expire", Times.formatTime(now + request.getTimeoutSeconds() * 1000));
             }
             paramap.put("biz_content", convert.convertTo(biz_content));
             paramap.put("sign", createSign(element, paramap, null));

@@ -178,7 +178,7 @@ public class PgReqExtended extends PgClientRequest {
                 writeBind(array, prepareDesc);
             }
             if (PgsqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
         } else {
             prepareDesc = pgconn.createPgPrepareDesc(type, mode, info, sql, paramLen);
@@ -201,7 +201,7 @@ public class PgReqExtended extends PgClientRequest {
                 writeBind(array, prepareDesc);
             }
             if (PgsqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", PARSE, DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", PARSE, DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
         }
     }

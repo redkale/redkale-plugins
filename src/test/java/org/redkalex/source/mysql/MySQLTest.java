@@ -134,31 +134,31 @@ public class MySQLTest {
 
             DayRecord record1 = new DayRecord();
             record1.setCreateTime(System.currentTimeMillis());
-            record1.setContent("这是内容1 " + Utility.formatTime(record1.getCreateTime()));
+            record1.setContent("这是内容1 " + Times.formatTime(record1.getCreateTime()));
             record1.setRecordid("rid-" + record1.getCreateTime());
 
             DayRecord record2 = new DayRecord();
             record2.setCreateTime(record1.getCreateTime() - 24 * 60 * 60 * 1000L - 1);
-            record2.setContent("这是内容2 " + Utility.formatTime(record2.getCreateTime()));
+            record2.setContent("这是内容2 " + Times.formatTime(record2.getCreateTime()));
             record2.setRecordid("rid2-" + record2.getCreateTime());
 
             DayRecord record3 = new DayRecord();
             record3.setCreateTime(record1.getCreateTime() - 48 * 60 * 60 * 1000L - 2);
-            record3.setContent("这是内容3 " + Utility.formatTime(record3.getCreateTime()));
+            record3.setContent("这是内容3 " + Times.formatTime(record3.getCreateTime()));
             record3.setRecordid("rid3-" + record3.getCreateTime());
 
             DayRecord record4 = new DayRecord();
             record4.setCreateTime(record1.getCreateTime() - 72 * 60 * 60 * 1000L - 3);
-            record4.setContent("这是内容4 " + Utility.formatTime(record4.getCreateTime()));
+            record4.setContent("这是内容4 " + Times.formatTime(record4.getCreateTime()));
             record4.setRecordid("rid4-" + record4.getCreateTime());
 
             source.insert(record1, record2);
             System.out.println("-------新增成功---------");
 
-            record1.setContent("这是内容1 xx " + Utility.formatTime(record1.getCreateTime()));
-            record2.setContent("这是内容2 xx " + Utility.formatTime(record2.getCreateTime()));
-            record3.setContent("这是内容3 xx " + Utility.formatTime(record3.getCreateTime()));
-            record4.setContent("这是内容4 xx " + Utility.formatTime(record4.getCreateTime()));
+            record1.setContent("这是内容1 xx " + Times.formatTime(record1.getCreateTime()));
+            record2.setContent("这是内容2 xx " + Times.formatTime(record2.getCreateTime()));
+            record3.setContent("这是内容3 xx " + Times.formatTime(record3.getCreateTime()));
+            record4.setContent("这是内容4 xx " + Times.formatTime(record4.getCreateTime()));
             for (int i = 0; i < 10; i++) {
                 //    record2.setContent(record2.getContent() + " ******** ");
             }

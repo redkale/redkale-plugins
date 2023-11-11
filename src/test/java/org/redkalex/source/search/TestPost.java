@@ -2,7 +2,7 @@ package org.redkalex.source.search;
 
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
-import org.redkale.util.Utility;
+import org.redkale.util.Times;
 
 /**
  *
@@ -45,7 +45,7 @@ public class TestPost {
     private String highlightTitle;
 
     public static String createId(String type, int userid, long createTime) {
-        return type.charAt(0) + Integer.toString(userid, 36) + "-" + Utility.format36time(createTime);
+        return type.charAt(0) + Integer.toString(userid, 36) + "-" + Times.format36time(createTime);
     }
 
     public String getPostid() {

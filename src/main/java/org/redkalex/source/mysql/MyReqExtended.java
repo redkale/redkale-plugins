@@ -92,14 +92,14 @@ public class MyReqExtended extends MyClientRequest {
         if (prepared.get()) {
             this.sendPrepare = false; //此对象会复用，第二次调用
             if (MysqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writeBind: " + this);
+                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writeBind: " + this);
             }
             writeBind(myconn, array);
         } else {
             this.sendPrepare = true;
             prepared.set(true);
             if (MysqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Utility.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writePrepare: " + this);
+                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writePrepare: " + this);
             }
             writePrepare(myconn, array);
         }
