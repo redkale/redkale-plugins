@@ -158,14 +158,14 @@ public class NativeParserInfo {
         return newParams;
     }
 
-    public NativeParserNode loadParserNode(java.util.function.Function<Integer, String> signFunc, String dbtype, final String nativeSql) {
+    public NativeParserNode loadParserNode(java.util.function.IntFunction<String> signFunc, String dbtype, final String nativeSql) {
         if (isDynamic()) {
             return createParserNode(signFunc, dbtype, nativeSql);
         }
         return parserNodes.computeIfAbsent(nativeSql, sql -> createParserNode(signFunc, dbtype, nativeSql));
     }
 
-    private NativeParserNode createParserNode(java.util.function.Function<Integer, String> signFunc, String dbtype, final String nativeSql) {
+    private NativeParserNode createParserNode(java.util.function.IntFunction<String> signFunc, String dbtype, final String nativeSql) {
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
             Statement stmt = sqlParser.Statement();
@@ -274,7 +274,7 @@ public class NativeParserInfo {
                 for (String name : requiredNamedSet) {
                     params.put(name, val);
                 }
-                final NativeExprDeParser exprDeParser = new NativeExprDeParser(jdbcDollarMap, signFunc, params);
+                final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
                 UpdateDeParser deParser = new UpdateDeParser(exprDeParser, exprDeParser.getBuffer());
                 deParser.deParse((Update) stmt);
                 updateSql = exprDeParser.getBuffer().toString();

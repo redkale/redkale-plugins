@@ -4,10 +4,11 @@
 package org.redkalex.source.parser;
 
 import java.util.*;
+import java.util.function.IntFunction;
 import org.junit.jupiter.api.*;
 import org.redkale.boot.LoggingBaseHandler;
-import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.source.*;
+import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.util.Utility;
 
 /**
@@ -16,7 +17,7 @@ import org.redkale.util.Utility;
  */
 public class JsqlParserTest {
 
-    private static final java.util.function.Function<Integer, String> signFunc = index -> "?";
+    private static final IntFunction<String> signFunc = index -> "?";
 
     public static void main(String[] args) throws Throwable {
         LoggingBaseHandler.initDebugLogConfig();

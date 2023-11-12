@@ -4,6 +4,7 @@
 package org.redkalex.source.parser;
 
 import java.util.*;
+import java.util.function.IntFunction;
 import net.sf.jsqlparser.parser.CCJSqlParser;
 import org.junit.jupiter.api.Test;
 import org.redkale.source.DataNativeSqlParser;
@@ -15,7 +16,7 @@ import org.redkale.util.Utility;
  */
 public class JsqlJdbcParserTest {
 
-    private static final java.util.function.Function<Integer, String> signFunc = index -> "?";
+    private static final IntFunction<String> signFunc = index -> "?";
 
     public static void main(String[] args) throws Throwable {
         JsqlJdbcParserTest test = new JsqlJdbcParserTest();

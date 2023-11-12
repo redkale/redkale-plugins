@@ -6,6 +6,7 @@ package org.redkalex.source.parser;
 import java.lang.reflect.Array;
 import java.math.*;
 import java.util.*;
+import java.util.function.IntFunction;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.*;
 import net.sf.jsqlparser.expression.operators.relational.*;
@@ -28,10 +29,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
     private final Deque<Expression> relations = new ArrayDeque<>();
 
-    //key: jdbc参数名:argxxx;  value: ${xx.xx}参数名
-    private final Map<String, String> jdbcDollarNames;
-
-    private java.util.function.Function<Integer, String> signFunc;
+    private java.util.function.IntFunction<String> signFunc;
 
     //需要预编译的jdbc参数名:argxxx, 数量与sql中的?数量一致
     private List<String> jdbcNames = new ArrayList<>();
@@ -42,10 +40,9 @@ public class NativeExprDeParser extends ExpressionDeParser {
     //当前BinaryExpression缺失参数
     private boolean paramLosing;
 
-    public NativeExprDeParser(Map<String, String> jdbcDollarNames, java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
+    public NativeExprDeParser(IntFunction<String> signFunc, Map<String, Object> params) {
         Objects.requireNonNull(signFunc);
         Objects.requireNonNull(params);
-        this.jdbcDollarNames = jdbcDollarNames;
         this.signFunc = signFunc;
         this.paramValues = params;
         SelectDeParser selParser = new SelectDeParser(this, buffer);

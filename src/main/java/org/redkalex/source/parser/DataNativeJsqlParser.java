@@ -22,7 +22,7 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
     private final ConcurrentHashMap<String, NativeParserInfo> parserInfo = new ConcurrentHashMap();
 
     @Override
-    public NativeSqlStatement parse(java.util.function.Function<Integer, String> signFunc, String dbtype, String rawSql, Map<String, Object> params) {
+    public NativeSqlStatement parse(java.util.function.IntFunction<String> signFunc, String dbtype, String rawSql, Map<String, Object> params) {
         NativeParserInfo info = parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql));
         ObjectRef<String> newSql = new ObjectRef<>();
         Map<String, Object> newParams = info.createNamedParams(newSql, params);

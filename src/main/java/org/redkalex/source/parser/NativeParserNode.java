@@ -5,6 +5,7 @@ package org.redkalex.source.parser;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.Statement;
@@ -60,7 +61,7 @@ public class NativeParserNode {
         this.requiredJdbcNames = Collections.unmodifiableSet(requiredJdbcNames);
     }
 
-    public NativeSqlStatement loadStatement(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
+    public NativeSqlStatement loadStatement(IntFunction<String> signFunc, Map<String, Object> params) {
         Set<String> miss = null;
         for (String mustName : requiredJdbcNames) {
             if (params.get(mustName) == null) {
@@ -80,8 +81,8 @@ public class NativeParserNode {
         return statements.computeIfAbsent(key, k -> createStatement(signFunc, params));
     }
 
-    private NativeSqlStatement createStatement(java.util.function.Function<Integer, String> signFunc, Map<String, Object> params) {
-        final NativeExprDeParser exprDeParser = new NativeExprDeParser(jdbcDollarMap, signFunc, params);
+    private NativeSqlStatement createStatement(IntFunction<String> signFunc, Map<String, Object> params) {
+        final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
         if (updateJdbcNames != null) {
             exprDeParser.getJdbcNames().addAll(updateJdbcNames);
         }
