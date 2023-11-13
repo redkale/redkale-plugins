@@ -27,10 +27,9 @@ public class PgRespReadyDecoder extends PgRespDecoder<Boolean> {
 
     @Override
     public Boolean read(PgClientConnection conn, ByteBuffer buffer, int length, ByteArray array, PgClientRequest request, PgResultSet dataset) {
-        if (length <= 4) {
-            return true;
+        if (length > 4) {
+            buffer.position(buffer.position() + length - 4);
         }
-        buffer.position(buffer.position() + length - 4);
         return true;
     }
 

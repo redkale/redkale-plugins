@@ -209,7 +209,7 @@ public class KafkaMessageAgent extends MessageAgent {
             this.httpMessageClientConsumer.stop();
         }
         if (this.sncpMessageClientConsumer != null) {
-            this.httpMessageClientConsumer.stop();
+            this.sncpMessageClientConsumer.stop();
         }
     }
 
@@ -220,12 +220,15 @@ public class KafkaMessageAgent extends MessageAgent {
 
     @Override
     protected void startMessageProducer() {
-        this.messageBaseProducer = new KafkaMessageProducer(this);
+        if (this.messageBaseProducer == null) {
+            this.messageBaseProducer = new KafkaMessageProducer(this);
+        }
     }
 
     @Override
     protected void stopMessageProducer() {
         ((KafkaMessageProducer) this.messageBaseProducer).stop();
+        this.messageBaseProducer = null;
     }
 
     @Override
