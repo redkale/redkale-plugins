@@ -954,8 +954,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             funcols[i] = colname;
             if (colnode instanceof ColumnFuncNode) {
                 ColumnFuncNode cfn = (ColumnFuncNode) colnode;
-                if (cfn.getValue() instanceof ColumnNodeValue) {
-                    throw new UnsupportedOperationException(ColumnNodeValue.class.getSimpleName() + " " + colnode + " not supported yet.");
+                if (cfn.getValue() instanceof ColumnExpNode) {
+                    throw new UnsupportedOperationException(ColumnExpNode.class.getSimpleName() + " " + colnode + " not supported yet.");
                 }
                 fields[i] = createBsonField(cfn.getFunc(), colname, cfn.getValue());
             } else {
