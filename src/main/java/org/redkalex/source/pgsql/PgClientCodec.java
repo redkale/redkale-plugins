@@ -140,7 +140,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         }
         //buffer必然包含一个完整的frame数据
         PgClientRequest request = null;
-        boolean update_1_to_2 = false;
+        boolean update1To2 = false;
         while (buffer.hasRemaining()) {
             while (buffer.hasRemaining()) {
                 if (request == null) {
@@ -388,7 +388,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     halfFrameBytes = null;
                     halfFrameCmd = 0;
                     halfFrameLength = 0;
-                    if (update_1_to_2) {
+                    if (update1To2) {
                         return;
                     }
                     if (lastExc != null) {
@@ -400,15 +400,15 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     lastExc = null;
                     lastCount = 0;
                     request = null;
-                    update_1_to_2 = false;
+                    update1To2 = false;
                     break;
                 } else if (cmd == MESSAGE_TYPE_PARSE_COMPLETE) { // '1' UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,  也可能是1、t、T、Z再发2、D...C/E、Z
                     //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
-                    update_1_to_2 = true;
+                    update1To2 = true;
                     buffer.position(bufpos + length);
                 } else if (cmd == MESSAGE_TYPE_BIND_COMPLETE) { // '2' UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,  也可能是1、t、T、Z再发2、D...C/E、Z
                     //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
-                    update_1_to_2 = false;
+                    update1To2 = false;
                     buffer.position(bufpos + length);
                 } else {
                     //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
