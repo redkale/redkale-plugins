@@ -350,7 +350,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     @Local
     public <T> Bson createUpdateBson(EntityInfo<T> info, ColumnValue colval) {
         String key = colval.getColumn();
-        Serializable val = colval.getValue();
+        ColumnNode val = colval.getValue2();
         switch (colval.getExpress()) {
             case MOV:// col = val
                 return new BsonDocument("$set", new BsonDocument(key, formatToBsonValue(val)));
@@ -402,15 +402,15 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         return createFilter(info, node, false);
     }
 
-    protected BsonValue formatToBsonValue(Serializable val) {
-        return formatToBsonValue(val, false);
+    protected BsonValue formatToBsonValue(ColumnNode node) {
+        return formatToBsonValue(node, false);
     }
 
-    protected BsonValue formatToBsonValue(Serializable val, boolean dec) {
-        if (val == null) {
+    protected BsonValue formatToBsonValue(ColumnNode node, boolean dec) {
+        if (node == null) {
             return null;
-        }
-        if (val instanceof Number) {
+        } else if (node instanceof ColumnNumberNode) {
+            Number val = ((ColumnNumberNode) node).getValue();
             BsonNumber bn = null;
             if (val instanceof Number) {
                 if (val instanceof Float || val instanceof Double) {
@@ -434,10 +434,10 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 }
                 return bn;
             }
-        } else if (val instanceof CharSequence) {
-            return new BsonString("$" + val);
+        } else if (node instanceof ColumnNameNode) {
+            return new BsonString("$" + ((ColumnNameNode) node).getColumn());
         }
-        throw new IllegalArgumentException("Not supported ColumnValue " + val);
+        throw new IllegalArgumentException("Not supported ColumnValue " + node);
     }
 
     private <T> Bson createFilter(EntityInfo<T> info, FilterNode node, boolean sub) {
@@ -904,7 +904,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapAsync(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
-        return (CompletableFuture) queryColumnMapCompose(entityClass, false, false, Utility.ofArray(new ColumnFuncNode(func, funcColumn)), Utility.ofArray(keyColumn), node);
+        return (CompletableFuture) queryColumnMapCompose(entityClass, false, false, Utility.ofArray(ColumnFuncNode.create(func, funcColumn)), Utility.ofArray(keyColumn), node);
     }
 
     @Override
@@ -949,17 +949,17 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         BsonField[] fields = new BsonField[funcNodes.length];
         final String[] funcols = new String[fields.length];
         for (int i = 0; i < fields.length; i++) {
-            ColumnNode colnode = funcNodes[i];
-            String colname = "_func_col_" + (i + 1);
-            funcols[i] = colname;
-            if (colnode instanceof ColumnFuncNode) {
-                ColumnFuncNode cfn = (ColumnFuncNode) colnode;
-                if (cfn.getValue() instanceof ColumnExpNode) {
-                    throw new UnsupportedOperationException(ColumnExpNode.class.getSimpleName() + " " + colnode + " not supported yet.");
+            ColumnNode colNode = funcNodes[i];
+            String colName = "_func_col_" + (i + 1);
+            funcols[i] = colName;
+            if (colNode instanceof ColumnFuncNode) {
+                ColumnFuncNode cfn = (ColumnFuncNode) colNode;
+                if (cfn.getValue2() instanceof ColumnExpNode) {
+                    throw new UnsupportedOperationException(ColumnExpNode.class.getSimpleName() + " " + colNode + " not supported yet.");
                 }
-                fields[i] = createBsonField(cfn.getFunc(), colname, cfn.getValue());
+                fields[i] = createBsonField(cfn.getFunc(), colName, cfn.getValue2());
             } else {
-                throw new UnsupportedOperationException(ColumnNode.class.getSimpleName() + " " + colnode + " not supported yet.");
+                throw new UnsupportedOperationException(ColumnNode.class.getSimpleName() + " " + colNode + " not supported yet.");
             }
         }
         items.add(Aggregates.group(group, fields));

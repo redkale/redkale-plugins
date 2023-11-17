@@ -52,10 +52,10 @@ public class UpdatePart extends BaseBean {
         if (onlymov) {
             Map<String, Object> map = new HashMap<>();
             for (ColumnValue cv : values) {
-                if (!(cv.getValue() instanceof Number) && !(cv.getValue() instanceof String)) {
-                    throw new IllegalArgumentException("Not supported ColumnValue " + cv.getValue());
+                if (!(cv.getValue2() instanceof ColumnNumberNode) && !(cv.getValue2() instanceof ColumnNameNode)) {
+                    throw new IllegalArgumentException("Not supported ColumnValue " + cv.getValue2());
                 }
-                map.put(cv.getColumn(), cv.getValue());
+                map.put(cv.getColumn(), getColumnOrNumberValue(cv.getValue2()));
             }
             this.doc = map;
         } else {
@@ -63,16 +63,25 @@ public class UpdatePart extends BaseBean {
             StringBuilder sb = new StringBuilder();
             Map<String, Serializable> map = new LinkedHashMap<>();
             for (ColumnValue cv : values) {
-                if (!(cv.getValue() instanceof Number) && !(cv.getValue() instanceof String)) {
-                    throw new IllegalArgumentException("Not supported ColumnValue " + cv.getValue());
+                if (!(cv.getValue2() instanceof ColumnNumberNode) && !(cv.getValue2() instanceof ColumnNameNode)) {
+                    throw new IllegalArgumentException("Not supported ColumnValue " + cv.getValue2());
                 }
                 build(sb, cv);
-                map.put(cv.getColumn(), cv.getValue());
+                map.put(cv.getColumn(), getColumnOrNumberValue(cv.getValue2()));
             }
             us.source = sb.toString();
             us.params = map;
             this.script = us;
         }
+    }
+
+    protected Serializable getColumnOrNumberValue(ColumnNode node) {
+        if (node instanceof ColumnNumberNode) {
+            return ((ColumnNumberNode) node).getValue();
+        } else if (node instanceof ColumnNameNode) {
+            return ((ColumnNameNode) node).getColumn();
+        }
+        throw new IllegalArgumentException("Not supported ColumnValue " + node);
     }
 
     private void build(StringBuilder sb, ColumnValue val) {
