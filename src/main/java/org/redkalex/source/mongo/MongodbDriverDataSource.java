@@ -350,7 +350,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     @Local
     public <T> Bson createUpdateBson(EntityInfo<T> info, ColumnValue colval) {
         String key = colval.getColumn();
-        ColumnNode val = colval.getValue2();
+        ColumnNode val = colval.getValue();
         switch (colval.getExpress()) {
             case MOV:// col = val
                 return new BsonDocument("$set", new BsonDocument(key, formatToBsonValue(val)));
@@ -954,10 +954,10 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             funcols[i] = colName;
             if (colNode instanceof ColumnFuncNode) {
                 ColumnFuncNode cfn = (ColumnFuncNode) colNode;
-                if (cfn.getValue2() instanceof ColumnExpNode) {
+                if (cfn.getValue() instanceof ColumnExpNode) {
                     throw new UnsupportedOperationException(ColumnExpNode.class.getSimpleName() + " " + colNode + " not supported yet.");
                 }
-                fields[i] = createBsonField(cfn.getFunc(), colName, cfn.getValue2());
+                fields[i] = createBsonField(cfn.getFunc(), colName, cfn.getValue());
             } else {
                 throw new UnsupportedOperationException(ColumnNode.class.getSimpleName() + " " + colNode + " not supported yet.");
             }

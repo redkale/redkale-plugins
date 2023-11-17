@@ -52,10 +52,10 @@ public class UpdatePart extends BaseBean {
         if (onlymov) {
             Map<String, Object> map = new HashMap<>();
             for (ColumnValue cv : values) {
-                if (!(cv.getValue2() instanceof ColumnNumberNode) && !(cv.getValue2() instanceof ColumnNameNode)) {
-                    throw new IllegalArgumentException("Not supported ColumnValue " + cv.getValue2());
+                if (!(cv.getValue() instanceof ColumnNumberNode) && !(cv.getValue() instanceof ColumnNameNode)) {
+                    throw new IllegalArgumentException("Not supported ColumnValue " + cv.getValue());
                 }
-                map.put(cv.getColumn(), getColumnOrNumberValue(cv.getValue2()));
+                map.put(cv.getColumn(), getColumnOrNumberValue(cv.getValue()));
             }
             this.doc = map;
         } else {
@@ -63,11 +63,11 @@ public class UpdatePart extends BaseBean {
             StringBuilder sb = new StringBuilder();
             Map<String, Serializable> map = new LinkedHashMap<>();
             for (ColumnValue cv : values) {
-                if (!(cv.getValue2() instanceof ColumnNumberNode) && !(cv.getValue2() instanceof ColumnNameNode)) {
-                    throw new IllegalArgumentException("Not supported ColumnValue " + cv.getValue2());
+                if (!(cv.getValue() instanceof ColumnNumberNode) && !(cv.getValue() instanceof ColumnNameNode)) {
+                    throw new IllegalArgumentException("Not supported ColumnValue " + cv.getValue());
                 }
                 build(sb, cv);
-                map.put(cv.getColumn(), getColumnOrNumberValue(cv.getValue2()));
+                map.put(cv.getColumn(), getColumnOrNumberValue(cv.getValue()));
             }
             us.source = sb.toString();
             us.params = map;
