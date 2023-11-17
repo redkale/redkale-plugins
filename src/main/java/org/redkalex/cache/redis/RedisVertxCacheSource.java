@@ -255,24 +255,19 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     private <T> void completeHandle(WorkThread workThread, CompletableFuture<T> future, AsyncResult<T> event) {
+        Runnable task = () -> {
+            if (event.failed()) {
+                future.completeExceptionally(event.cause());
+            } else {
+                future.complete(event.result());
+            }
+        };
         if (workThread != null && workThread.getWorkExecutor() != null) {
-            if (event.failed()) {
-                workThread.runWork(() -> future.completeExceptionally(event.cause()));
-            } else {
-                workThread.runWork(() -> future.complete(event.result()));
-            }
+            workThread.runWork(task);
         } else if (workExecutor != null) {
-            if (event.failed()) {
-                workExecutor.execute(() -> future.completeExceptionally(event.cause()));
-            } else {
-                workExecutor.execute(() -> future.complete(event.result()));
-            }
+            workExecutor.execute(task);
         } else {
-            if (event.failed()) {
-                Utility.execute(() -> future.completeExceptionally(event.cause()));
-            } else {
-                Utility.execute(() -> future.complete(event.result()));
-            }
+            Utility.execute(task);
         }
     }
 
