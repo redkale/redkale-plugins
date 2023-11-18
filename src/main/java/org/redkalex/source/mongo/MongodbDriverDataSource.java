@@ -904,7 +904,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
 
     @Override
     public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapAsync(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
-        return (CompletableFuture) queryColumnMapCompose(entityClass, false, false, Utility.ofArray(ColumnFuncNode.create(func, funcColumn)), Utility.ofArray(keyColumn), node);
+        return (CompletableFuture) queryColumnMapCompose(entityClass, false, false, Utility.ofArray(ColumnNodes.func(func, funcColumn)), Utility.ofArray(keyColumn), node);
     }
 
     @Override
