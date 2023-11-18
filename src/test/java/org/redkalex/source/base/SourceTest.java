@@ -20,7 +20,7 @@ public class SourceTest {
         int rs;
         TestWorld[] worlds = new TestWorld[count];
         BeanRecord[] records = new BeanRecord[count];
-//        if (source.updateColumn(TestRecord.class, FilterNode.filter("createTime", now), ColumnValue.mov("content", "haha")) != -1) {
+//        if (source.updateColumn(TestRecord.class, FilterNode.filter("createTime", now), ColumnValue.set("content", "haha")) != -1) {
 //            System.err.println("更新数量应该是-1");
 //        }
         for (int i = 0; i < count; i++) {
@@ -80,7 +80,7 @@ public class SourceTest {
             return;
         }
         System.out.println("开始更新到1000");
-        rs = source.updateColumn(TestWorld.class, FilterNodes.ge("randomNumber", 1), new Flipper(limit), ColumnValue.mov("randomNumber", 1000));
+        rs = source.updateColumn(TestWorld.class, FilterNodes.ge("randomNumber", 1), new Flipper(limit), ColumnValue.set("randomNumber", 1000));
         if (rs != limit) {
             new Exception("更新数量应该是" + limit + ", 却是:" + rs).printStackTrace();
             return;

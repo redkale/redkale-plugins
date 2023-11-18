@@ -75,7 +75,7 @@ public class MongodbDriverDataSourceTest {
         System.out.println("求总和值: " + source.getNumberResult(TestRecord.class, FilterFunc.SUM, 0, "score"));
         System.out.println("应该存在: " + source.exists(TestRecord.class, entity.getRecordid()));
         System.out.println("数据更新前内容: " + source.find(TestRecord.class, entity.getRecordid()));
-        source.updateColumn(TestRecord.class, entity.getRecordid(), ColumnValue.mov("name", "mynewname1"), ColumnValue.inc("score", 11), ColumnValue.mul("status", 4), ColumnValue.and("createTime", 7));
+        source.updateColumn(TestRecord.class, entity.getRecordid(), ColumnValue.set("name", "mynewname1"), ColumnValue.inc("score", 11), ColumnValue.mul("status", 4), ColumnValue.and("createTime", 7));
         System.out.println("数据更新后内容: " + source.find(TestRecord.class, entity.getRecordid() + "3"));
         //source.updateColumn(TestRecord.class, entity.getRecordid(), ColumnValue.div("status", 10), new ColumnValue("createTime", ColumnExpress.MOD, 3));
         //System.out.println("数据更新后内容: " + source.find(TestRecord.class, entity.getRecordid()));
@@ -111,7 +111,7 @@ public class MongodbDriverDataSourceTest {
                         stc.countDown();
                         stc.await();
                         source.queryColumnList("score", TestRecord.class, (FilterNode) null);
-                        source.updateColumn(TestRecord.class, entity.getRecordid(), ColumnValue.mov("name", "mynewname1" + a.incrementAndGet()));
+                        source.updateColumn(TestRecord.class, entity.getRecordid(), ColumnValue.set("name", "mynewname1" + a.incrementAndGet()));
                     } catch (Exception e) {
                         e.printStackTrace();
                     } finally {

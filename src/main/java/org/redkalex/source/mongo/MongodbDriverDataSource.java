@@ -352,7 +352,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         String key = colval.getColumn();
         ColumnNode val = colval.getValue();
         switch (colval.getExpress()) {
-            case MOV:// col = val
+            case SET:// col = val
                 return new BsonDocument("$set", new BsonDocument(key, formatToBsonValue(val)));
             case INC:// col = col + val
                 return new BsonDocument("$inc", new BsonDocument(key, formatToBsonValue(val)));

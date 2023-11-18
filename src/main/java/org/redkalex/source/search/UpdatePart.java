@@ -44,7 +44,7 @@ public class UpdatePart extends BaseBean {
     public UpdatePart(SearchInfo info, ColumnValue... values) {
         boolean onlymov = true;
         for (ColumnValue cv : values) {
-            if (cv.getExpress() != ColumnExpress.MOV) {
+            if (cv.getExpress() != ColumnExpress.SET) {
                 onlymov = false;
                 break;
             }
@@ -86,7 +86,7 @@ public class UpdatePart extends BaseBean {
 
     private void build(StringBuilder sb, ColumnValue val) {
         switch (val.getExpress()) {
-            case MOV:
+            case SET:
                 sb.append("ctx._source.").append(val.getColumn()).append(" = params.").append(val.getColumn()).append(";");
                 break;
             case INC:

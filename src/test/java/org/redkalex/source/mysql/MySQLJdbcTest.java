@@ -104,7 +104,7 @@ public class MySQLJdbcTest {
         source.insert(record1, record2, record3);
 
         DataBatch batch = DataBatch.create();
-        batch.update(OneRecord.class, record2.getRecordid(), ColumnValue.mov("content", "这是内容2XX"));
+        batch.update(OneRecord.class, record2.getRecordid(), ColumnValue.set("content", "这是内容2XX"));
         batch.insert(record3);
         Exception exception = null;
         try {
@@ -117,8 +117,8 @@ public class MySQLJdbcTest {
         Assertions.assertTrue("这是内容2".equals(r2.getContent()));
 
         batch = DataBatch.create();
-        batch.update(OneRecord.class, record2.getRecordid(), ColumnValue.mov("content", "这是内容2XX"));
-        batch.update(OneRecord.class, record3.getRecordid(), ColumnValue.mov("content", "这是内容3XX"));
+        batch.update(OneRecord.class, record2.getRecordid(), ColumnValue.set("content", "这是内容2XX"));
+        batch.update(OneRecord.class, record3.getRecordid(), ColumnValue.set("content", "这是内容3XX"));
         batch.delete(record3);
         exception = null;
         try {
