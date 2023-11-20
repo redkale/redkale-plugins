@@ -13,9 +13,9 @@ import java.security.cert.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
+import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
@@ -227,7 +227,7 @@ public final class UnionPayService extends AbstractPayService {
         if (element == null) {
             return result.retcode(RETPAY_CONF_ERROR).toFuture();
         }
-        if (!checkSign(element, map, request.getBody(), request.getHeaders())) {
+        if (!checkSign(element, map, request.getBody(), request.getHeaders() == null ? null : request.getHeaders().map())) {
             return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
         }
         //https://open.unionpay.com/upload/download/%E5%B9%B3%E5%8F%B0%E6%8E%A5%E5%85%A5%E6%8E%A5%E5%8F%A3%E8%A7%84%E8%8C%83-%E7%AC%AC5%E9%83%A8%E5%88%86-%E9%99%84%E5%BD%95V2.0.pdf
@@ -550,7 +550,7 @@ public final class UnionPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {  //验证签名
+    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) {  //验证签名
         if (!((UnionPayElement) element).verifycertid.equals(map.get("certId"))) {
             return false;
         }

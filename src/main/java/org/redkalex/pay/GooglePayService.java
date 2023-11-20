@@ -12,9 +12,9 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
+import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
@@ -307,7 +307,7 @@ public final class GooglePayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(AbstractPayService.PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {
+    protected boolean checkSign(AbstractPayService.PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) {
         return checkSign((GoogleElement) element, (String) map.get("purchaseData"), (String) map.get("signature"));
     }
 

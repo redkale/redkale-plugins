@@ -13,9 +13,9 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
 import java.util.regex.Pattern;
+import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
@@ -228,7 +228,7 @@ public final class OppoPayService extends AbstractPayService {
         if (!(map instanceof SortedMap)) {
             map = new TreeMap<>(map);
         }
-        if (!checkSign(element, map, null, request.getHeaders())) {
+        if (!checkSign(element, map, null, request.getHeaders() == null ? null : request.getHeaders().map())) {
             return result.retcode(RETPAY_FALSIFY_ERROR).notifytext(rstext).toFuture();
         }
         String state = map.get("trade_state");
@@ -317,7 +317,7 @@ public final class OppoPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {  //验证签名
+    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) {  //验证签名
         if (!(map instanceof SortedMap)) {
             map = new TreeMap<>(map);
         }

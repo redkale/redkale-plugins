@@ -8,6 +8,7 @@ package org.redkalex.pay;
 import java.util.*;
 import org.redkale.convert.ConvertDisabled;
 import org.redkale.convert.json.JsonFactory;
+import org.redkale.net.http.RestHeaders;
 import org.redkale.util.RedkaleException;
 
 /**
@@ -24,7 +25,7 @@ public class PayNotifyRequest {
 
     protected String body;
 
-    protected Map<String, String> headers;
+    protected RestHeaders headers;
 
     protected Map<String, String> attach;
 
@@ -50,7 +51,7 @@ public class PayNotifyRequest {
         this.payType = paytype;
     }
 
-    public PayNotifyRequest headers(Map<String, String> headers) {
+    public PayNotifyRequest headers(RestHeaders headers) {
         this.headers = headers;
         return this;
     }
@@ -128,11 +129,11 @@ public class PayNotifyRequest {
         this.attach = attach;
     }
 
-    public Map<String, String> getHeaders() {
+    public RestHeaders getHeaders() {
         return headers;
     }
 
-    public void setHeaders(Map<String, String> headers) {
+    public void setHeaders(RestHeaders headers) {
         this.headers = headers;
     }
 

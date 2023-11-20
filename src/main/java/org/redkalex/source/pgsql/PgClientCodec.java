@@ -73,8 +73,6 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
 
     Throwable lastExc = null;
 
-    private final ObjectPool<PgResultSet> resultSetPool = ObjectPool.createUnsafePool(256, t -> new PgResultSet(), PgResultSet::prepare, PgResultSet::recycle);
-
     int lastCount;
 
     public PgClientCodec(ClientConnection connection) {
@@ -82,14 +80,14 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
     }
 
     protected PgResultSet pollResultSet(PgClientRequest request) {
-        PgResultSet rs = resultSetPool.get();
+        PgResultSet rs = new PgResultSet();
         rs.request = request;
         rs.info = request == null ? null : request.info;
         return rs;
     }
 
     protected void offerResultSet(PgResultSet rs) {
-        resultSetPool.accept(rs);
+        //do nothing
     }
 
     protected ByteArray pollArray() {

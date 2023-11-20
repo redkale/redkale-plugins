@@ -5,6 +5,7 @@
  */
 package org.redkalex.cluster.consul;
 
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.net.*;
 import java.net.http.*;
@@ -31,7 +32,7 @@ import org.redkale.util.*;
  */
 public class ConsulClusterAgent extends ClusterAgent {
 
-    protected static final Map<String, String> httpHeaders = Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
+    protected static final Map<String, Serializable> httpHeaders = (Map) Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
 
     protected static final Type MAP_STRING_ADDRESSENTRY = new TypeToken<Map<String, AddressEntry>>() {
     }.getType();
@@ -250,7 +251,15 @@ public class ConsulClusterAgent extends ClusterAgent {
         final HttpClient client = (HttpClient) httpClient;
         String url = this.apiUrl + "/agent/services?filter=" + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
         HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
-        httpHeaders.forEach((n, v) -> builder.header(n, v));
+        httpHeaders.forEach((n, v) -> {
+            if (v instanceof Collection) {
+                for (Object val : (Collection) v) {
+                    builder.header(n, val.toString());
+                }
+            } else {
+                builder.header(n, v.toString());
+            }
+        });
         final Set<InetSocketAddress> set = new CopyOnWriteArraySet<>();
         return client.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenCompose(content -> {
             final Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, (String) content);
@@ -261,7 +270,15 @@ public class ConsulClusterAgent extends ClusterAgent {
             for (Map.Entry<String, AddressEntry> en : map.entrySet()) {
                 String url0 = this.apiUrl + "/agent/health/service/id/" + en.getKey() + "?format=text";
                 HttpRequest.Builder builder0 = HttpRequest.newBuilder().uri(URI.create(url0)).expectContinue(true).timeout(Duration.ofMillis(6000));
-                httpHeaders.forEach((n, v) -> builder0.header(n, v));
+                httpHeaders.forEach((n, v) -> {
+                    if (v instanceof Collection) {
+                        for (Object val : (Collection) v) {
+                            builder0.header(n, val.toString());
+                        }
+                    } else {
+                        builder0.header(n, v.toString());
+                    }
+                });
                 futures.add(client.sendAsync(builder0.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenApply(irs -> {
                     if ("passing".equalsIgnoreCase(irs)) {
                         set.add(en.getValue().createSocketAddress());

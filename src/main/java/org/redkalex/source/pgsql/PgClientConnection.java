@@ -8,8 +8,8 @@ package org.redkalex.source.pgsql;
 import java.util.*;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
-import org.redkale.source.EntityInfo.EntityColumn;
 import org.redkale.source.*;
+import org.redkale.source.EntityInfo.EntityColumn;
 import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
@@ -22,8 +22,6 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
     private PgPrepareDesc lastPrepareDesc;
 
     private final Map<String, PgPrepareDesc> cachePreparedDescs = new HashMap<>();
-
-    private final ObjectPool<PgReqExtended> reqExtendedPool = ObjectPool.createUnsafePool(Thread.currentThread(), 256, ObjectPool.createSafePool(256, t -> new PgReqExtended(), PgReqExtended::prepare, PgReqExtended::recycle));
 
     public PgClientConnection(PgClient client, int index, AsyncConnection channel) {
         super(client, index, channel);
@@ -41,7 +39,6 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
     protected void offerResultSet(PgReqExtended req, PgResultSet rs) {
         PgClientCodec c = getCodec();
         c.offerResultSet(rs);
-        reqExtendedPool.accept(req);
     }
 
     public PgPrepareDesc getPgPrepareDesc(String prepareSql) {
@@ -118,6 +115,7 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
 
     public PgReqInsert pollReqInsert(WorkThread workThread, EntityInfo info) {
         PgReqInsert rs = new PgReqInsert();
+        rs.prepare();
         rs.info = info;
         rs.workThread(workThread);
         return rs;
@@ -125,6 +123,7 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
 
     public PgReqUpdate pollReqUpdate(WorkThread workThread, EntityInfo info) {
         PgReqUpdate rs = new PgReqUpdate();
+        rs.prepare();
         rs.info = info;
         rs.workThread(workThread);
         return rs;
@@ -132,13 +131,15 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
 
     public PgReqQuery pollReqQuery(WorkThread workThread, EntityInfo info) {
         PgReqQuery rs = new PgReqQuery();
+        rs.prepare();
         rs.info = info;
         rs.workThread(workThread);
         return rs;
     }
 
     public PgReqExtended pollReqExtended(WorkThread workThread, EntityInfo info) {
-        PgReqExtended rs = reqExtendedPool.get();
+        PgReqExtended rs = new PgReqExtended();
+        rs.prepare();
         rs.info = info;
         rs.workThread(workThread);
         return rs;

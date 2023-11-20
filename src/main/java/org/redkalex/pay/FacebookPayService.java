@@ -11,9 +11,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.*;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.service.Local;
@@ -247,7 +247,7 @@ public final class FacebookPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {
+    protected boolean checkSign(PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) {
         String[] signatures = text.split("\\.");
         byte[] sig = Base64.getDecoder().decode(signatures[0].replace('-', '+').replace('_', '/'));
         Map<String, String> smp = JsonConvert.root().convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, Base64.getDecoder().decode(signatures[1]));

@@ -38,12 +38,11 @@ public class MyReqExtended extends MyClientRequest {
 
     protected boolean finds;
 
-    public MyReqExtended() {
-    }
-
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', sendPrepare = " + sendPrepare + ", type = " + getType() + ", params = " + (parameters != null && parameters.length > 10 ? ("size " + parameters.length) : JsonConvert.root().convertTo(parameters)) + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', sendPrepare = " + sendPrepare
+            + ", type = " + getType() + ", traceid = " + getTraceid()
+            + ", params = " + (parameters != null && parameters.length > 10 ? ("size " + parameters.length) : JsonConvert.root().convertTo(parameters)) + "}";
     }
 
     @Override
@@ -60,7 +59,7 @@ public class MyReqExtended extends MyClientRequest {
         this.parameters = parameters;
     }
 
-    public <T> void prepare(int type, String sql, int fetchSize, final Stream<Object> stream) {
+    public void prepare(int type, String sql, int fetchSize, final Stream<Object> stream) {
         super.prepare();
         this.type = type;
         this.sql = sql;
@@ -161,7 +160,7 @@ public class MyReqExtended extends MyClientRequest {
                     int t = MysqlType.getTypeFromObject(param);
                     array.putByte(t);
                     array.putByte(0); // parameter flag: signed
-                    //if(t != paramColumns[i].type) System.out.println(i + ", t = " + t + ", type = " +paramColumns[i].type);
+                    //if(t != paramColumns[i].type) System.out .println(i + ", t = " + t + ", type = " +paramColumns[i].type);
                 }
             }
             array.put(nullPos, nullBitmap); //重新赋值

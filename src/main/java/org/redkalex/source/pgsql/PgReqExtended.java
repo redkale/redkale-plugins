@@ -35,12 +35,9 @@ public class PgReqExtended extends PgClientRequest {
 
     protected Serializable[] pkValues;
 
-    public PgReqExtended() {
-    }
-
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', type = " + getType()
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', type = " + getType() + ", traceid = " + getTraceid()
             + (pkValues == null
                 ? (", paramValues = " + (paramValues != null && paramValues.length > 10 ? ("size " + paramValues.length) : JsonConvert.root().convertTo(paramValues)))
                 : (", pkValues = " + (pkValues.length > 10 ? ("size " + pkValues.length) : JsonConvert.root().convertTo(pkValues))))

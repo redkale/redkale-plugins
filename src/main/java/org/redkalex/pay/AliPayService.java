@@ -18,6 +18,8 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.*;
+import org.redkale.net.http.HttpHeader;
+import org.redkale.net.http.RestHeaders;
 import org.redkale.service.Local;
 import org.redkale.util.*;
 import static org.redkalex.pay.PayRetCodes.*;
@@ -34,9 +36,9 @@ import static org.redkalex.pay.Pays.*;
 @Comment("支付宝支付服务")
 public final class AliPayService extends AbstractPayService {
 
-    protected static final String format = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; //yyyy-MM-dd HH:mm:ss
+    protected static final String FORMAT = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; //yyyy-MM-dd HH:mm:ss
 
-    protected static final Map<String, String> headers = Utility.ofMap("Content-Type", "application/x-www-form-urlencoded", "Accept", "application/json");
+    protected static final RestHeaders headers = HttpHeader.of("Content-Type", "application/x-www-form-urlencoded", "Accept", "application/json");
 
     protected static final Charset CHARSET_GBK = Charset.forName("GBK");
 
@@ -240,7 +242,7 @@ public final class AliPayService extends AbstractPayService {
         }
         result.setPayno(map.getOrDefault("out_trade_no", ""));
         result.setThirdPayno(map.getOrDefault("trade_no", ""));
-        if (!checkSign(element, map, request.getBody(), request.getHeaders())) {
+        if (!checkSign(element, map, request.getBody(), request.getHeaders() == null ? null : request.getHeaders().map())) {
             return result.retcode(RETPAY_FALSIFY_ERROR).toFuture();
         }
         String state = map.getOrDefault("trade_status", "");
@@ -274,7 +276,7 @@ public final class AliPayService extends AbstractPayService {
             map.put("format", "JSON");
             map.put("charset", element.charsetname);
             map.put("sign_type", "RSA2");
-            map.put("timestamp", String.format(format, System.currentTimeMillis()));
+            map.put("timestamp", String.format(FORMAT, System.currentTimeMillis()));
             map.put("version", "1.0");
             if (element.notifyurl != null && !element.notifyurl.isEmpty()) {
                 map.put("notify_url", element.notifyurl);
@@ -336,7 +338,7 @@ public final class AliPayService extends AbstractPayService {
             map.put("charset", element.charsetname);
             map.put("format", "json");
             map.put("version", "1.0");
-            map.put("timestamp", String.format(format, System.currentTimeMillis()));
+            map.put("timestamp", String.format(FORMAT, System.currentTimeMillis()));
             map.put("method", "alipay.trade.query");
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
@@ -409,7 +411,7 @@ public final class AliPayService extends AbstractPayService {
             map.put("charset", element.charsetname);
             map.put("format", "json");
             map.put("version", "1.0");
-            map.put("timestamp", String.format(format, System.currentTimeMillis()));
+            map.put("timestamp", String.format(FORMAT, System.currentTimeMillis()));
             map.put("method", "alipay.trade.close");
             if (element.notifyurl != null && !element.notifyurl.isEmpty()) {
                 map.put("notify_url", element.notifyurl);
@@ -464,7 +466,7 @@ public final class AliPayService extends AbstractPayService {
             map.put("charset", element.charsetname);
             map.put("format", "json");
             map.put("version", "1.0");
-            map.put("timestamp", String.format(format, System.currentTimeMillis()));
+            map.put("timestamp", String.format(FORMAT, System.currentTimeMillis()));
             map.put("method", "alipay.trade.refund");
 
             final TreeMap<String, String> biz_content = new TreeMap<>();
@@ -535,7 +537,7 @@ public final class AliPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map0, String text0, Map<String, String> respHeaders) { //支付宝玩另类
+    protected boolean checkSign(final PayElement element, Map<String, ?> map0, String text0, Map<String, Serializable> respHeaders) { //支付宝玩另类
         if (((AliPayElement) element).aliKey == null) {
             return true;
         }

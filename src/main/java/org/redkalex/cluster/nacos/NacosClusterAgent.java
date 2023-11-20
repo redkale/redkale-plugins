@@ -2,6 +2,7 @@
  */
 package org.redkalex.cluster.nacos;
 
+import java.io.Serializable;
 import java.net.*;
 import java.net.http.*;
 import java.net.http.HttpResponse.BodyHandlers;
@@ -28,7 +29,7 @@ import org.redkale.util.*;
  */
 public class NacosClusterAgent extends ClusterAgent {
 
-    protected static final Map<String, String> httpHeaders = Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
+    protected static final Map<String, Serializable> httpHeaders = (Map) Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
 
     protected HttpClient httpClient; //JDK11里面的HttpClient
 
@@ -241,7 +242,15 @@ public class NacosClusterAgent extends ClusterAgent {
         final HttpClient client = httpClient;
         String url = this.apiUrl + "/ns/instance/list?serviceName=" + urlEncode(serviceName) + "&namespaceId=" + urlEncode(namespaceid);
         HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
-        httpHeaders.forEach((n, v) -> builder.header(n, v));
+        httpHeaders.forEach((n, v) -> {
+            if (v instanceof Collection) {
+                for (Object val : (Collection) v) {
+                    builder.header(n, val.toString());
+                }
+            } else {
+                builder.header(n, v.toString());
+            }
+        });
         return client.sendAsync(builder.GET().build(), BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> {
             final ServiceEntry entry = JsonConvert.root().convertFrom(ServiceEntry.class, resp.body());
             final Set<InetSocketAddress> set = new HashSet<>();

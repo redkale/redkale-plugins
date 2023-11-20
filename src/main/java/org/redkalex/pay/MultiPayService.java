@@ -5,11 +5,12 @@
  */
 package org.redkalex.pay;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.*;
 import org.redkale.service.Local;
 import org.redkale.util.*;
 import static org.redkalex.pay.Pays.*;
@@ -305,7 +306,7 @@ public class MultiPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, String> respHeaders) {
+    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

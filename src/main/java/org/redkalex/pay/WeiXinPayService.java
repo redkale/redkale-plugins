@@ -17,11 +17,12 @@ import java.util.logging.*;
 import java.util.regex.Pattern;
 import javax.crypto.Cipher;
 import javax.crypto.spec.*;
+import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.*;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.net.http.HttpHeader;
 import org.redkale.service.Local;
 import org.redkale.util.*;
 import static org.redkalex.pay.PayRetCodes.*;
@@ -163,7 +164,7 @@ public class WeiXinPayService extends AbstractPayService {
         return this.elements != null && this.elements.containsKey(appid);
     }
 
-    protected static Map<String, String> createHttpHeaders(final WeixinPayElement element, PayRequest request, String url, String method, String body) throws Exception {
+    protected static HttpHeader createHttpHeaders(final WeixinPayElement element, PayRequest request, String url, String method, String body) throws Exception {
         String path = url.substring(url.indexOf(".com") + ".com".length());
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
         String nonce = Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime());
@@ -177,7 +178,7 @@ public class WeiXinPayService extends AbstractPayService {
             + "timestamp=\"" + timestamp + "\","
             + "serial_no=\"" + element.certserialno + "\","
             + "signature=\"" + signstr + "\"";
-        return Utility.ofMap("Content-Type", "application/json", "Accept", "application/json", "Authorization", "WECHATPAY2-SHA256-RSA2048 " + token);
+        return HttpHeader.of("Content-Type", "application/json", "Accept", "application/json", "Authorization", "WECHATPAY2-SHA256-RSA2048 " + token);
     }
 
     /**
@@ -238,7 +239,7 @@ public class WeiXinPayService extends AbstractPayService {
                 return result.retcode(RETPAY_PARAM_ERROR).toFuture();
             }
             String body = convert.convertTo(map);
-            Map<String, String> respHeaders = new LinkedHashMap<>();
+            Map<String, Serializable> respHeaders = new LinkedHashMap<>();
             return postHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "POST", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
                 if (logger.isLoggable(Level.FINER)) {
@@ -352,7 +353,7 @@ public class WeiXinPayService extends AbstractPayService {
 
             String url = "https://api.mch.weixin.qq.com/v3/pay/transactions/out-trade-no/" + request.getPayno() + "?mchid=" + element.merchno;
             String body = "";
-            Map<String, String> respHeaders = new LinkedHashMap<>();
+            Map<String, Serializable> respHeaders = new LinkedHashMap<>();
             return getHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "GET", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
                 if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
@@ -410,7 +411,7 @@ public class WeiXinPayService extends AbstractPayService {
 
             String url = "https://api.mch.weixin.qq.com/v3/pay/transactions/out-trade-no/" + request.getPayno() + "/close";
             String body = convert.convertTo(map);
-            Map<String, String> respHeaders = new LinkedHashMap<>();
+            Map<String, Serializable> respHeaders = new LinkedHashMap<>();
             return postHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "POST", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
                 if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
@@ -450,7 +451,7 @@ public class WeiXinPayService extends AbstractPayService {
 
             String url = "https://api.mch.weixin.qq.com/v3/refund/domestic/refunds";
             String body = convert.convertTo(map);
-            Map<String, String> respHeaders = new LinkedHashMap<>();
+            Map<String, Serializable> respHeaders = new LinkedHashMap<>();
             return postHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "POST", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
                 if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
@@ -488,7 +489,7 @@ public class WeiXinPayService extends AbstractPayService {
 
             String url = "https://api.mch.weixin.qq.com/v3/refund/domestic/refunds/" + request.getRefundno();
             String body = "";
-            Map<String, String> respHeaders = new LinkedHashMap<>();
+            Map<String, Serializable> respHeaders = new LinkedHashMap<>();
             return getHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "GET", body), body, respHeaders).thenApply(responseText -> {
                 result.setResponseText(responseText);
                 if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
@@ -516,12 +517,12 @@ public class WeiXinPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map, String responseText, Map<String, String> respHeaders) {  //验证签名
-        String requestid = respHeaders.getOrDefault("Request-ID", respHeaders.get("request-id"));
-        String timestamp = respHeaders.getOrDefault("Wechatpay-Timestamp", respHeaders.get("wechatpay-timestamp"));
-        String nonce = respHeaders.getOrDefault("Wechatpay-Nonce", respHeaders.get("wechatpay-nonce"));
-        String serial = respHeaders.getOrDefault("Wechatpay-Serial", respHeaders.get("wechatpay-serial"));
-        String signature = respHeaders.getOrDefault("Wechatpay-Signature", respHeaders.get("wechatpay-signature"));
+    protected boolean checkSign(final PayElement element, Map<String, ?> map, String responseText, Map<String, Serializable> respHeaders) {  //验证签名
+        String requestid = respHeaders.getOrDefault("Request-ID", respHeaders.get("request-id")).toString();
+        String timestamp = respHeaders.getOrDefault("Wechatpay-Timestamp", respHeaders.get("wechatpay-timestamp")).toString();
+        String nonce = respHeaders.getOrDefault("Wechatpay-Nonce", respHeaders.get("wechatpay-nonce")).toString();
+        String serial = respHeaders.getOrDefault("Wechatpay-Serial", respHeaders.get("wechatpay-serial")).toString();
+        String signature = respHeaders.getOrDefault("Wechatpay-Signature", respHeaders.get("wechatpay-signature")).toString();
         String message = timestamp + "\n" + nonce + "\n" + responseText + "\n";
         if (requestid == null || timestamp == null || nonce == null || serial == null || signature == null) {
             logger.log(Level.WARNING, "WeixinPay checkSign header is half-baked, responseText=" + responseText + ", respHeaders =" + respHeaders);
@@ -698,7 +699,7 @@ public class WeiXinPayService extends AbstractPayService {
         public CompletableFuture<String> updateCertificate(Logger logger) throws Exception {
             String body = "";
             String url = "https://api.mch.weixin.qq.com/v3/certificates";
-            Map<String, String> respHeaders = new LinkedHashMap<>();
+            Map<String, Serializable> respHeaders = new LinkedHashMap<>();
             return getHttpContentAsync(url, 6000, createHttpHeaders(this, null, url, "GET", body), body, respHeaders).thenApply(responseText -> {
                 if (responseText == null || responseText.isEmpty()) {
                     return "";
