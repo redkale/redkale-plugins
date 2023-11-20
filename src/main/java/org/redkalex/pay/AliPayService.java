@@ -18,7 +18,7 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.*;
-import org.redkale.net.http.HttpHeader;
+import org.redkale.net.http.HttpHeaders;
 import org.redkale.net.http.RestHeaders;
 import org.redkale.service.Local;
 import org.redkale.util.*;
@@ -38,7 +38,7 @@ public final class AliPayService extends AbstractPayService {
 
     protected static final String FORMAT = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; //yyyy-MM-dd HH:mm:ss
 
-    protected static final RestHeaders headers = HttpHeader.of("Content-Type", "application/x-www-form-urlencoded", "Accept", "application/json");
+    protected static final RestHeaders headers = HttpHeaders.of("Content-Type", "application/x-www-form-urlencoded", "Accept", "application/json");
 
     protected static final Charset CHARSET_GBK = Charset.forName("GBK");
 

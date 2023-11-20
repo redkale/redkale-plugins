@@ -22,7 +22,7 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
-import org.redkale.net.http.HttpHeader;
+import org.redkale.net.http.HttpHeaders;
 import org.redkale.service.Local;
 import org.redkale.util.*;
 import static org.redkalex.pay.PayRetCodes.*;
@@ -164,7 +164,7 @@ public class WeiXinPayService extends AbstractPayService {
         return this.elements != null && this.elements.containsKey(appid);
     }
 
-    protected static HttpHeader createHttpHeaders(final WeixinPayElement element, PayRequest request, String url, String method, String body) throws Exception {
+    protected static HttpHeaders createHttpHeaders(final WeixinPayElement element, PayRequest request, String url, String method, String body) throws Exception {
         String path = url.substring(url.indexOf(".com") + ".com".length());
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
         String nonce = Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime());
@@ -178,7 +178,7 @@ public class WeiXinPayService extends AbstractPayService {
             + "timestamp=\"" + timestamp + "\","
             + "serial_no=\"" + element.certserialno + "\","
             + "signature=\"" + signstr + "\"";
-        return HttpHeader.of("Content-Type", "application/json", "Accept", "application/json", "Authorization", "WECHATPAY2-SHA256-RSA2048 " + token);
+        return HttpHeaders.of("Content-Type", "application/json", "Accept", "application/json", "Authorization", "WECHATPAY2-SHA256-RSA2048 " + token);
     }
 
     /**
