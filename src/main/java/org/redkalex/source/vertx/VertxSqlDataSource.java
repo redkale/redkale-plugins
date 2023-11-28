@@ -21,7 +21,6 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
 import org.redkale.service.Local;
 import org.redkale.source.*;
-import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.util.*;
 
 /**
@@ -908,7 +907,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
         final CompletableFuture<Integer> future = new CompletableFuture<>();
-        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         if (!sinfo.isEmptyNamed()) {
             writePool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
@@ -936,7 +935,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
         long s = System.currentTimeMillis();
         final CompletableFuture<V> future = new CompletableFuture<>();
-        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         if (!sinfo.isEmptyNamed()) {
             readPool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
@@ -965,7 +964,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
         long s = System.currentTimeMillis();
         final CompletableFuture<Sheet<V>> future = new CompletableFuture<>();
-        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         Pool pool = readPool();
         Handler<AsyncResult<RowSet<Row>>> countHandler = (AsyncResult<RowSet<Row>> evt) -> {
             slowLog(s, sinfo.getNativeCountSql());
@@ -1007,7 +1006,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         return future;
     }
 
-    protected Tuple tupleParameter(NativeSqlStatement sinfo, Map<String, Object> params) {
+    protected Tuple tupleParameter(DataNativeSqlStatement sinfo, Map<String, Object> params) {
         List<Object> objs = new ArrayList<>();
         for (String name : sinfo.getParamNames()) {
             objs.add(params.get(name));

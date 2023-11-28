@@ -18,7 +18,6 @@ import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
-import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.util.*;
 
 /**
@@ -881,7 +880,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     @Override
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = writePool();
         if (!sinfo.isEmptyNamed()) {
@@ -914,7 +913,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     @Override
     public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = readPool();
         Function<MyResultSet, V> transfer = dataset -> {
@@ -940,7 +939,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = readPool();
         Function<MyResultSet, Long> countTransfer = dataset -> {

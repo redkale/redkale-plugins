@@ -9,7 +9,7 @@ import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.Statement;
-import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
+import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.source.SourceException;
 
 /**
@@ -46,7 +46,7 @@ public class NativeParserNode {
     private final Set<String> fullJdbcNames;
 
     //缓存
-    private final ConcurrentHashMap<String, NativeSqlStatement> statements = new ConcurrentHashMap();
+    private final ConcurrentHashMap<String, DataNativeSqlStatement> statements = new ConcurrentHashMap();
 
     public NativeParserNode(Statement stmt, Statement countStmt, Expression fullWhere, Map<String, String> jdbcDollarMap,
         Set<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateSql, List<String> updateJdbcNames) {
@@ -61,7 +61,7 @@ public class NativeParserNode {
         this.requiredJdbcNames = Collections.unmodifiableSet(requiredJdbcNames);
     }
 
-    public NativeSqlStatement loadStatement(IntFunction<String> signFunc, Map<String, Object> params) {
+    public DataNativeSqlStatement loadStatement(IntFunction<String> signFunc, Map<String, Object> params) {
         Set<String> miss = null;
         for (String mustName : requiredJdbcNames) {
             if (params.get(mustName) == null) {
@@ -81,13 +81,13 @@ public class NativeParserNode {
         return statements.computeIfAbsent(key, k -> createStatement(signFunc, params));
     }
 
-    private NativeSqlStatement createStatement(IntFunction<String> signFunc, Map<String, Object> params) {
+    private DataNativeSqlStatement createStatement(IntFunction<String> signFunc, Map<String, Object> params) {
         final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
         if (updateJdbcNames != null) {
             exprDeParser.getJdbcNames().addAll(updateJdbcNames);
         }
         String whereSql = exprDeParser.deParser(fullWhere);
-        NativeSqlStatement statement = new NativeSqlStatement();
+        DataNativeSqlStatement statement = new DataNativeSqlStatement();
         statement.setJdbcNames(exprDeParser.getJdbcNames());
         List<String> paramNames = new ArrayList<>();
         for (String name : statement.getJdbcNames()) {
@@ -110,7 +110,7 @@ public class NativeParserNode {
     }
 
     private String cacheKey(Map<String, Object> params) {
-        List<String> list = fullJdbcNames.stream().filter(v -> params.containsKey(v)).collect(Collectors.toList());
+        List<String> list = fullJdbcNames.stream().filter(params::containsKey).collect(Collectors.toList());
         if (list.isEmpty()) {
             return "";
         }

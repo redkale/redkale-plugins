@@ -10,7 +10,7 @@ import java.util.function.IntFunction;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.*;
 import net.sf.jsqlparser.expression.operators.relational.*;
-import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.util.deparser.*;
 import org.redkale.source.SourceException;
 
@@ -98,9 +98,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
         if (!paramLosing) {
             buffer.append(operator);
         } else {
-            for (int i = size1; i < size2; i++) {
-                jdbcNames.remove(jdbcNames.size() - 1);
-            }
+            trimJdbcNames(size1, size2);
         }
 
         size1 = jdbcNames.size();
@@ -110,9 +108,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
         if (paramLosing) { //没有right
             buffer.delete(start1, end2);
             //多个paramNames里中一个不存在，需要删除另外几个
-            for (int i = size1; i < size2; i++) {
-                jdbcNames.remove(jdbcNames.size() - 1);
-            }
+            trimJdbcNames(size1, size2);
         } else {
             if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_LEFT) {
                 buffer.append("(+)");
@@ -137,9 +133,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
             if (end1 > start1) {
                 buffer.append(operator);
             } else {
-                for (int i = size1; i < size2; i++) {
-                    jdbcNames.remove(jdbcNames.size() - 1);
-                }
+                trimJdbcNames(size1, size2);
             }
 
             size1 = jdbcNames.size();
@@ -149,9 +143,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
             size2 = jdbcNames.size();
             if (end2 == start2) { //没有right
                 buffer.delete(end1, end2);
-                for (int i = size1; i < size2; i++) {
-                    jdbcNames.remove(jdbcNames.size() - 1);
-                }
+                trimJdbcNames(size1, size2);
             }
 
             conditions.pop();
@@ -170,16 +162,11 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 final int end1 = buffer.length();
                 if (paramLosing) { //没有right
                     buffer.delete(start1, end1);
-                    int size2 = jdbcNames.size();
-                    for (int i = size1; i < size2; i++) {
-                        jdbcNames.remove(jdbcNames.size() - 1);
-                    }
+                    trimJdbcNames(size1, jdbcNames.size());
                 }
             } else {
                 int size2 = jdbcNames.size();
-                for (int i = size1; i < size2; i++) {
-                    jdbcNames.remove(jdbcNames.size() - 1);
-                }
+                trimJdbcNames(size1, jdbcNames.size());
             }
 
             relations.pop();
@@ -243,17 +230,11 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 end2 = buffer.length();
                 if (paramLosing) {
                     buffer.delete(start, end2);
-                    final int size2 = jdbcNames.size();
-                    for (int i = size; i < size2; i++) {
-                        jdbcNames.remove(jdbcNames.size() - 1);
-                    }
+                    trimJdbcNames(size, jdbcNames.size());
                 }
             } else {
                 buffer.delete(start, end2);
-                final int size2 = jdbcNames.size();
-                for (int i = size; i < size2; i++) {
-                    jdbcNames.remove(jdbcNames.size() - 1);
-                }
+                trimJdbcNames(size, jdbcNames.size());
             }
         }
 
@@ -277,44 +258,38 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 buffer.append(" NOT");
             }
             buffer.append(" IN ");
-            if (expr.getRightExpression() != null) {
-                if (expr.getRightExpression() instanceof SubSelect) {
-                    expr.getRightExpression().accept(this);
-                } else if (expr.getRightExpression() instanceof JdbcNamedParameter) {
-                    List<Expression> itemList = createInParamItemList((JdbcNamedParameter) expr.getRightExpression());
-                    new ExpressionList(itemList).accept(this);
-                } else {
-                    throw new SourceException("Not support expression (" + expr.getRightExpression() + ") ");
+            Expression rightExpr = expr.getRightExpression();
+            if (rightExpr instanceof Select) {
+                rightExpr.accept(this);
+            } else if (rightExpr instanceof ExpressionList) {
+                List<Expression> newList = new ArrayList<>((ExpressionList) rightExpr);
+                for (int i = newList.size() - 1; i >= 0; i--) {
+                    Expression item = newList.get(i);
+                    if (item instanceof JdbcNamedParameter) {
+                        List<Expression> es = createInParamItemList((JdbcNamedParameter) item);
+                        newList.remove(i);
+                        newList.addAll(i, es);
+                    }
                 }
+                new ParenthesedExpressionList(newList).accept(this);
+            } else if (rightExpr instanceof JdbcNamedParameter) {
+                List<Expression> itemList = createInParamItemList((JdbcNamedParameter) rightExpr);
+                new ParenthesedExpressionList(itemList).accept(this);
             } else {
-                if (expr.getRightItemsList() instanceof ExpressionList) {
-                    List<Expression> newList = new ArrayList<>(((ExpressionList) expr.getRightItemsList()).getExpressions());
-                    for (int i = newList.size() - 1; i >= 0; i--) {
-                        Expression item = newList.get(i);
-                        if (item instanceof JdbcNamedParameter) {
-                            List<Expression> es = createInParamItemList((JdbcNamedParameter) item);
-                            newList.remove(i);
-                            newList.addAll(i, es);
-                        }
-                    }
-                    new ExpressionList(newList).accept(this);
-                } else {
-                    int size2 = jdbcNames.size();
-                    expr.getRightItemsList().accept(this);
-                    if (jdbcNames.size() > size2) {
-                        throw new SourceException("Not support expression (" + expr.getRightItemsList().getClass() + "," + expr.getRightItemsList() + ") ");
-                    }
-                }
+                throw new SourceException("Not support expression (" + rightExpr + "), type: " + (rightExpr == null ? null : rightExpr.getClass().getName()));
             }
         } else {
             buffer.delete(start, end);
-            final int size2 = jdbcNames.size();
-            for (int i = size1; i < size2; i++) {
-                jdbcNames.remove(jdbcNames.size() - 1);
-            }
+            trimJdbcNames(size1, jdbcNames.size());
         }
         relations.pop();
         paramLosing = false;
+    }
+
+    private void trimJdbcNames(int size1, int size2) {
+        for (int i = size1; i < size2; i++) {
+            jdbcNames.remove(jdbcNames.size() - 1);
+        }
     }
 
     private List<Expression> createInParamItemList(JdbcNamedParameter namedParam) {

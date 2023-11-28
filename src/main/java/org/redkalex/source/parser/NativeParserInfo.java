@@ -202,9 +202,9 @@ public class NativeParserInfo {
             Expression where = null;
             Runnable clearWhere = null;
             List<UpdateSet> updateSets = null;
-            List<SelectBody> insertSets = null;
+            List<Select> insertSets = null;
             if (stmt instanceof Select) {
-                PlainSelect selectBody = (PlainSelect) ((Select) stmt).getSelectBody();
+                PlainSelect selectBody = (PlainSelect) stmt;
                 where = selectBody.getWhere();
                 clearWhere = () -> selectBody.setWhere(null);
                 { //创建COUNT总数sql
@@ -213,26 +213,27 @@ public class NativeParserInfo {
                     PlainSelect countBody = (PlainSelect) countSelect.getSelectBody();
                     if (countBody.getDistinct() == null) {
                         Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withParameters(new ExpressionList(new LongValue(1)));
-                        countBody.setSelectItems(Utility.ofList(new SelectExpressionItem(countFunc)));
+                        countBody.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
                     } else {
                         Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
-                            .withParameters(new ExpressionList((List) countBody.getSelectItems()));
-                        countBody.setSelectItems(Utility.ofList(new SelectExpressionItem(countFunc)));
+                            .withParameters(new ParenthesedExpressionList((List) countBody.getSelectItems()));
+                        countBody.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
                         countBody.setDistinct(null);
                     }
                     countBody.setWhere(null);
                     countStmt = countSelect;
                 }
             } else if (stmt instanceof Insert) {
-                Select select = ((Insert) stmt).getSelect();
-                SelectBody selectBody = select.getSelectBody();
+                Select selectBody = ((Insert) stmt).getSelect();
                 if (selectBody instanceof PlainSelect) {
                     where = ((PlainSelect) selectBody).getWhere();
                     clearWhere = () -> ((PlainSelect) selectBody).setWhere(null);
                 } else if (selectBody instanceof SetOperationList) {
                     insertSets = ((SetOperationList) selectBody).getSelects();
+                } else if (selectBody instanceof Values) {
+                    //do nothing
                 } else {
-                    throw new SourceException("Not support sql (" + rawSql + ") ");
+                    throw new SourceException("Not support sql (" + rawSql + "), type: " + selectBody.getClass().getName());
                 }
             } else if (stmt instanceof Delete) {
                 where = ((Delete) stmt).getWhere();
@@ -253,13 +254,16 @@ public class NativeParserInfo {
                 requiredNamedSet.clear(); //where不存在必需的参数名
             }
             if (insertSets != null) {
-                for (SelectBody body : insertSets) {
+                for (Select body : insertSets) {
                     body.accept(selectAdapter);
                 }
             }
             if (updateSets != null) {
                 for (UpdateSet set : updateSets) {
-                    for (Expression expr : set.getExpressions()) {
+                    for (Expression expr : set.getColumns()) {
+                        expr.accept(exprAdapter);
+                    }
+                    for (Expression expr : set.getValues()) {
                         expr.accept(exprAdapter);
                     }
                 }

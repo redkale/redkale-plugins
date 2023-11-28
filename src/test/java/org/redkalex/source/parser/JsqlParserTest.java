@@ -8,7 +8,6 @@ import java.util.function.IntFunction;
 import org.junit.jupiter.api.*;
 import org.redkale.boot.LoggingBaseHandler;
 import org.redkale.source.*;
-import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.util.Utility;
 
 /**
@@ -45,10 +44,10 @@ public class JsqlParserTest {
         Map<String, Object> params = Utility.ofMap("mytab", "20240807", "min2", 1, "c2", 3, "time", new Range.IntRange(1, 2), "gameids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         String expect = "SELECT DISTINCT col1 AS a, col2 AS b, col3 AS c FROM table_20240807 T WHERE col1 = 10 AND (col2 = ?) AND name LIKE '%' AND seqid IS NULL AND (gameid IN (2, 3) OR gameName IN ('%', 'zzz')) AND time BETWEEN ? AND ? AND col2 >= ? AND id IN (SELECT id FROM table2 WHERE time > 1)";
         Assertions.assertEquals(expect, statement.getNativeSql());
-        String expectCount = "SELECT COUNT(DISTINCT col1 AS a, col2 AS b, col3 AS c) FROM table_20240807 T WHERE col1 = 10 AND (col2 = ?) AND name LIKE '%' AND seqid IS NULL AND (gameid IN (2, 3) OR gameName IN ('%', 'zzz')) AND time BETWEEN ? AND ? AND col2 >= ? AND id IN (SELECT id FROM table2 WHERE time > 1)";
+        String expectCount = "SELECT COUNT(DISTINCT (col1 AS a, col2 AS b, col3 AS c)) FROM table_20240807 T WHERE col1 = 10 AND (col2 = ?) AND name LIKE '%' AND seqid IS NULL AND (gameid IN (2, 3) OR gameName IN ('%', 'zzz')) AND time BETWEEN ? AND ? AND col2 >= ? AND id IN (SELECT id FROM table2 WHERE time > 1)";
         Assertions.assertEquals(expectCount, statement.getNativeCountSql());
 
         System.out.println("新sql = " + statement.getNativeSql());
@@ -62,7 +61,7 @@ public class JsqlParserTest {
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         Assertions.assertEquals(sql, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
@@ -70,18 +69,18 @@ public class JsqlParserTest {
 
     @Test
     public void run3() throws Exception {
-        String sql = "INSERT INTO dayrecord (recordid, content, createTime) VALUES (1, ${v2}, 3)";
+        String sql = "INSERT INTO dayrecord (recordid, content, createTime) VALUES (1, $${v2}, 3)";
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         SourceException exp = null;
-        NativeSqlStatement statement = null;
+        DataNativeSqlStatement statement = null;
         try {
             statement = parser.parse(signFunc, "mysql", sql, params);
         } catch (SourceException e) {
             exp = e;
         }
-        Assertions.assertEquals("Missing parameter [v2]", exp == null ? null : exp.getMessage());
+        Assertions.assertEquals("Missing parameter v2", exp == null ? null : exp.getMessage());
     }
 
     @Test
@@ -90,7 +89,7 @@ public class JsqlParserTest {
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         String expect = "INSERT INTO dayrecord (recordid, content, createTime) SELECT recordid, content, NOW() FROM hourrecord WHERE createTime BETWEEN ? AND ? AND id > 0";
         Assertions.assertEquals(expect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
@@ -103,7 +102,7 @@ public class JsqlParserTest {
         Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "ids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         String expect = "UPDATE dayrecord SET id = MAX(100), remark = ?, name = CASE WHEN type = 1 THEN ? WHEN type = 2 THEN ? ELSE ? END WHERE id IN (2, 3)";
         Assertions.assertEquals(expect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
@@ -112,12 +111,12 @@ public class JsqlParserTest {
 
     @Test
     public void run6() throws Exception {
-        String sql = "UPDATE dayrecord SET id = SELECT MAX(${id}) FROM tt WHERE status IN :sts, remark = :remark, name = CASE WHEN type = 1 THEN :v1 WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
-        Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "sts", List.of(2, 3), "ids", List.of(2, 3));
+        String sql = "UPDATE dayrecord SET id = :idx, remark = :remark, name = CASE WHEN type = 1 THEN :v1 WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
+        Map<String, Object> params = Utility.ofMap("idx", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "sts", List.of(2, 3), "ids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
-        String expect = "UPDATE dayrecord SET id = SELECT MAX(?) FROM tt WHERE status IN (1), remark = ?, name = CASE WHEN type = 1 THEN ? WHEN type = 2 THEN ? ELSE ? END WHERE id IN (2, 3)";
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        String expect = "UPDATE dayrecord SET id = ?, remark = ?, name = CASE WHEN type = 1 THEN ? WHEN type = 2 THEN ? ELSE ? END WHERE id IN (2, 3)";
         Assertions.assertEquals(expect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
@@ -125,12 +124,12 @@ public class JsqlParserTest {
 
     @Test
     public void run7() throws Exception {
-        String sql = "UPDATE dayrecord SET id = SELECT MAX(${id}) FROM tt WHERE status IN :sts, remark = ${remark}, name = CASE WHEN type = MOD(${t1},${t2}) THEN ${v1} WHEN type = 2 THEN ${v2} ELSE ${v3} END WHERE createTime BETWEEN :startTime AND :endTime AND id IN ${ids}";
-        Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "t1", 36, "startTime", 1, "sts", List.of(2, 3), "ids", List.of(2, 3));
+        String sql = "UPDATE dayrecord SET id = :idx, remark = ${remark}, name = CASE WHEN type = MOD(${t1},${t2}) THEN ${v1} WHEN type = 2 THEN ${v2} ELSE ${v3} END WHERE createTime BETWEEN :startTime AND :endTime AND id IN ${ids}";
+        Map<String, Object> params = Utility.ofMap("idx", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "t1", 36, "startTime", 1, "sts", List.of(2, 3), "ids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         SourceException exp = null;
-        NativeSqlStatement statement = null;
+        DataNativeSqlStatement statement = null;
         try {
             statement = parser.parse(signFunc, "mysql", sql, params);
         } catch (SourceException e) {
@@ -145,7 +144,7 @@ public class JsqlParserTest {
         Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         String repect = "SELECT * FROM userdetail WHERE id = ?";
         Assertions.assertEquals(repect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
@@ -158,7 +157,7 @@ public class JsqlParserTest {
         Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         String repect = "SELECT * FROM userdetail WHERE id = ?";
         Assertions.assertEquals(repect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());

@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.function.IntFunction;
 import net.sf.jsqlparser.parser.CCJSqlParser;
 import org.junit.jupiter.api.Test;
-import org.redkale.source.DataNativeSqlParser;
+import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.util.Utility;
 
 /**
@@ -38,10 +38,11 @@ public class JsqlJdbcParserTest {
         Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlParser.NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("新countsql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=================================================================================");
     }
 
     @Test
@@ -50,9 +51,10 @@ public class JsqlJdbcParserTest {
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlParser.NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=================================================================================");
     }
 
     @Test
@@ -61,9 +63,10 @@ public class JsqlJdbcParserTest {
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlParser.NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=================================================================================");
     }
 
     @Test
@@ -72,9 +75,10 @@ public class JsqlJdbcParserTest {
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlParser.NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=================================================================================");
     }
 
     @Test
@@ -86,22 +90,24 @@ public class JsqlJdbcParserTest {
         System.out.println(sqlParser.Statement());
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlParser.NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=================================================================================");
     }
 
     @Test
     public void run6() throws Exception {
-        String sql = "UPDATE dayrecord SET id = SELECT MAX(:id) FROM tt WHERE status IN :sts, remark = :remark, name = CASE WHEN type = 1 THEN :v1 WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN (1,2,:ids)";
-        Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "sts", List.of(2, 3), "ids", List.of(3, 4));
+        String sql = "UPDATE dayrecord SET id = :idx, remark = :remark, name = CASE WHEN type = 1 THEN :v1 WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN (1,2,:ids)";
+        Map<String, Object> params = Utility.ofMap("idx", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "sts", List.of(2, 3), "ids", List.of(3, 4));
 
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
         System.out.println(sqlParser.Statement());
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlParser.NativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=================================================================================");
     }
 }

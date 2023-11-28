@@ -18,7 +18,6 @@ import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
-import org.redkale.source.DataNativeSqlParser.NativeSqlStatement;
 import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
@@ -874,7 +873,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     @Override
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = writePool();
         if (!sinfo.isEmptyNamed()) {
@@ -909,7 +908,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     @Override
     public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = readPool();
         Function<PgResultSet, V> transfer = dataset -> {
@@ -935,7 +934,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        NativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = readPool();
         Function<PgResultSet, Long> countTransfer = dataset -> {
