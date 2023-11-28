@@ -38,7 +38,7 @@ public class NativeParserNode {
     private final Map<String, String> jdbcDollarMap;
 
     //没有where的UPDATE语句
-    private final String updateSql;
+    private final String updateNoWhereSql;
 
     //修改项，只有UPDATE语句才有值
     private final List<String> updateJdbcNames;
@@ -47,7 +47,7 @@ public class NativeParserNode {
     private final Set<String> requiredJdbcNames;
 
     //所有参数名，包含了requiredJdbcNames
-    private final Set<String> fullJdbcNames;
+    private final TreeSet<String> fullJdbcNames;
 
     private final ReentrantLock whereLock = new ReentrantLock();
 
@@ -55,15 +55,15 @@ public class NativeParserNode {
     private final ConcurrentHashMap<String, DataNativeSqlStatement> statements = new ConcurrentHashMap();
 
     public NativeParserNode(Statement stmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcDollarMap,
-        Set<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateSql, List<String> updateJdbcNames) {
+        Set<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateNoWhereSql, List<String> updateJdbcNames) {
         this.stmt = stmt;
         this.dynamic = dynamic;
         this.countStmt = countStmt;
         this.fullWhere = fullWhere;
         this.jdbcDollarMap = jdbcDollarMap;
-        this.updateSql = updateSql;
+        this.updateNoWhereSql = updateNoWhereSql;
         this.updateJdbcNames = updateJdbcNames;
-        this.fullJdbcNames = Collections.unmodifiableSet(fullJdbcNames);
+        this.fullJdbcNames = new TreeSet<>(fullJdbcNames);
         this.requiredJdbcNames = Collections.unmodifiableSet(requiredJdbcNames);
     }
 
@@ -102,34 +102,31 @@ public class NativeParserNode {
         statement.setParamNames(paramNames);
         statement.setParamValues(params);
         if (whereSql.isEmpty()) {
-            statement.setNativeSql(updateSql == null ? stmt.toString() : updateSql);
+            statement.setNativeSql(updateNoWhereSql == null ? stmt.toString() : updateNoWhereSql);
             if (countStmt != null) {
                 statement.setNativeCountSql(countStmt.toString());
             }
-        } else {
-
-            if (countStmt != null) {  //SELECT
-                String stmtSql;
-                String countSql;
-                PlainSelect selectStmt = (PlainSelect) stmt;
-                whereLock.lock();
-                Expression oldWhere = selectStmt.getWhere();
-                Expression oldCountWhere = countStmt.getWhere();
-                try {
-                    selectStmt.setWhere(new NativeSqlExpression(whereSql));
-                    stmtSql = selectStmt.toString();
-                    countStmt.setWhere(new NativeSqlExpression(whereSql));
-                    countSql = countStmt.toString();
-                } finally {
-                    selectStmt.setWhere(oldWhere);
-                    countStmt.setWhere(oldCountWhere);
-                    whereLock.unlock();
-                }
-                statement.setNativeSql(stmtSql);
-                statement.setNativeCountSql(countSql);
-            } else { //not SELECT
-                statement.setNativeSql((updateSql == null ? stmt.toString() : updateSql) + " WHERE " + whereSql);
+        } else if (countStmt != null) {  //SELECT
+            String stmtSql;
+            String countSql;
+            PlainSelect queryStmt = (PlainSelect) stmt;
+            whereLock.lock();
+            Expression oldQueryWhere = queryStmt.getWhere();
+            Expression oldCountWhere = countStmt.getWhere();
+            try {
+                queryStmt.setWhere(new NativeSqlExpression(whereSql));
+                stmtSql = queryStmt.toString();
+                countStmt.setWhere(new NativeSqlExpression(whereSql));
+                countSql = countStmt.toString();
+            } finally {
+                queryStmt.setWhere(oldQueryWhere);
+                countStmt.setWhere(oldCountWhere);
+                whereLock.unlock();
             }
+            statement.setNativeSql(stmtSql);
+            statement.setNativeCountSql(countSql);
+        } else { //not SELECT
+            statement.setNativeSql((updateNoWhereSql == null ? stmt.toString() : updateNoWhereSql) + " WHERE " + whereSql);
         }
         return statement;
     }
@@ -139,7 +136,7 @@ public class NativeParserNode {
         if (list.isEmpty()) {
             return "";
         }
-        Collections.sort(list);
+        //TreeSet已是排序 Collections.sort(list);
         return list.stream().collect(Collectors.joining(","));
     }
 
@@ -148,7 +145,7 @@ public class NativeParserNode {
         private final String sql;
 
         public NativeSqlExpression(String sql) {
-            this.sql = sql;
+            this.sql = Objects.requireNonNull(sql);
         }
 
         @Override

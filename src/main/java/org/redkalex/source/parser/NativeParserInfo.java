@@ -297,7 +297,7 @@ public class NativeParserInfo {
                 clearWhere.run(); //必须清空where条件
             }
 
-            String updateSql = null;
+            String updateNoWhereSql = null;
             List<String> updateNamedSet = new ArrayList<>();
             if (updateSets != null) {
                 Map<String, Object> params = new HashMap<>();
@@ -308,11 +308,11 @@ public class NativeParserInfo {
                 final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
                 UpdateDeParser deParser = new UpdateDeParser(exprDeParser, exprDeParser.getBuffer());
                 deParser.deParse((Update) stmt);
-                updateSql = exprDeParser.getBuffer().toString();
+                updateNoWhereSql = exprDeParser.getBuffer().toString();
                 updateNamedSet = exprDeParser.getJdbcNames();
             }
             return new NativeParserNode(stmt, countStmt, where, jdbcDollarMap,
-                fullNames, requiredNamedSet, isDynamic() || containsInName.get(), updateSql, updateNamedSet);
+                fullNames, requiredNamedSet, isDynamic() || containsInName.get(), updateNoWhereSql, updateNamedSet);
         } catch (ParseException e) {
             throw new SourceException("Parse error, sql: " + rawSql, e);
         }
