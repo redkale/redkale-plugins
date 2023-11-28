@@ -176,12 +176,19 @@ public class JsqlParserTest {
 
     @Test
     public void run10() throws Exception {
-        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = ${id} AND r.type = MOD(${t1},${t2})";
+        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = ${id} AND r.type = MOD(${t1},${t2}) ORDER BY u.createTime DESC";
         Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
-        String repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = ?";
+        String repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = ? ORDER BY u.createTime DESC";
+        Assertions.assertEquals(repect, statement.getNativeSql());
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+
+        params = Utility.ofMap("id", 1, "t1", 30, "t1", "10", "t2", "5");
+        statement = parser.parse(signFunc, "mysql", sql, params);
+        repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = ? AND r.type = MOD(?, ?) ORDER BY u.createTime DESC";
         Assertions.assertEquals(repect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());

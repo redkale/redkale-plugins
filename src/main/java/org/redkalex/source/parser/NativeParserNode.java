@@ -5,10 +5,14 @@ package org.redkalex.source.parser;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.ExpressionVisitor;
+import net.sf.jsqlparser.parser.SimpleNode;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.source.SourceException;
 
@@ -25,7 +29,7 @@ public class NativeParserNode {
     private final Statement stmt;
 
     //原始sql的 COUNT(1)版
-    private final Statement countStmt;
+    private final PlainSelect countStmt;
 
     //where条件
     private final Expression fullWhere;
@@ -45,10 +49,12 @@ public class NativeParserNode {
     //所有参数名，包含了requiredJdbcNames
     private final Set<String> fullJdbcNames;
 
+    private final ReentrantLock whereLock = new ReentrantLock();
+
     //缓存
     private final ConcurrentHashMap<String, DataNativeSqlStatement> statements = new ConcurrentHashMap();
 
-    public NativeParserNode(Statement stmt, Statement countStmt, Expression fullWhere, Map<String, String> jdbcDollarMap,
+    public NativeParserNode(Statement stmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcDollarMap,
         Set<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateSql, List<String> updateJdbcNames) {
         this.stmt = stmt;
         this.dynamic = dynamic;
@@ -101,9 +107,28 @@ public class NativeParserNode {
                 statement.setNativeCountSql(countStmt.toString());
             }
         } else {
-            statement.setNativeSql((updateSql == null ? stmt.toString() : updateSql) + " WHERE " + whereSql);
-            if (countStmt != null) {
-                statement.setNativeCountSql(countStmt.toString() + " WHERE " + whereSql);
+
+            if (countStmt != null) {  //SELECT
+                String stmtSql;
+                String countSql;
+                PlainSelect selectStmt = (PlainSelect) stmt;
+                whereLock.lock();
+                Expression oldWhere = selectStmt.getWhere();
+                Expression oldCountWhere = countStmt.getWhere();
+                try {
+                    selectStmt.setWhere(new NativeSqlExpression(whereSql));
+                    stmtSql = selectStmt.toString();
+                    countStmt.setWhere(new NativeSqlExpression(whereSql));
+                    countSql = countStmt.toString();
+                } finally {
+                    selectStmt.setWhere(oldWhere);
+                    countStmt.setWhere(oldCountWhere);
+                    whereLock.unlock();
+                }
+                statement.setNativeSql(stmtSql);
+                statement.setNativeCountSql(countSql);
+            } else { //not SELECT
+                statement.setNativeSql((updateSql == null ? stmt.toString() : updateSql) + " WHERE " + whereSql);
             }
         }
         return statement;
@@ -116,5 +141,35 @@ public class NativeParserNode {
         }
         Collections.sort(list);
         return list.stream().collect(Collectors.joining(","));
+    }
+
+    public static class NativeSqlExpression implements Expression {
+
+        private final String sql;
+
+        public NativeSqlExpression(String sql) {
+            this.sql = sql;
+        }
+
+        @Override
+        public void accept(ExpressionVisitor expressionVisitor) {
+            //do nothing
+        }
+
+        @Override
+        public SimpleNode getASTNode() {
+            return null;
+        }
+
+        @Override
+        public void setASTNode(SimpleNode node) {
+            //do nothing
+        }
+
+        @Override
+        public String toString() {
+            return sql;
+        }
+
     }
 }

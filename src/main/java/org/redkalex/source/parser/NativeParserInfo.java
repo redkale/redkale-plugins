@@ -205,7 +205,7 @@ public class NativeParserInfo {
                 }
             };
 
-            Statement countStmt = null;
+            PlainSelect countStmt = null;
             Expression where = null;
             Runnable clearWhere = null;
             List<UpdateSet> updateSets = null;
