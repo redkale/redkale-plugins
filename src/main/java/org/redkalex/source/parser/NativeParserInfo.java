@@ -19,6 +19,8 @@ import org.redkale.source.SourceException;
 import org.redkale.util.*;
 
 /**
+ * jsqlparser只能识别:xxx的参数变量形式的sql，而DataNativeSqlParser定义的参数变量形式是: #{xxx}、${xxx}、$${xxx}
+ * 此类作用是将原始sql先转换成:name形式的sql再解析出变量参数
  *
  * @author zhangjx
  */
@@ -26,7 +28,7 @@ import org.redkale.util.*;
 public class NativeParserInfo {
 
     //原始sql语句
-    private final String rowSql;
+    private final String rawSql;
 
     //jdbc版的sql语句, 只有numberSignNames为空时才有值
     private final String jdbcSql;
@@ -51,7 +53,7 @@ public class NativeParserInfo {
     private final ConcurrentHashMap<String, NativeParserNode> parserNodes = new ConcurrentHashMap();
 
     public NativeParserInfo(final String rawSql) {
-        this.rowSql = rawSql;
+        this.rawSql = rawSql;
         //解析sql
         boolean paraming = false;
         StringBuilder sb = new StringBuilder();
@@ -230,7 +232,7 @@ public class NativeParserInfo {
                 } else if (selectBody instanceof SetOperationList) {
                     insertSets = ((SetOperationList) selectBody).getSelects();
                 } else {
-                    throw new SourceException("Not support sql (" + rowSql + ") ");
+                    throw new SourceException("Not support sql (" + rawSql + ") ");
                 }
             } else if (stmt instanceof Delete) {
                 where = ((Delete) stmt).getWhere();
@@ -240,7 +242,7 @@ public class NativeParserInfo {
                 where = ((Update) stmt).getWhere();
                 clearWhere = () -> ((Update) stmt).setWhere(null);
             } else {
-                throw new SourceException("Not support sql (" + rowSql + ") ");
+                throw new SourceException("Not support sql (" + rawSql + ") ");
             }
 
             SelectDeParser selectAdapter = new SelectDeParser();
@@ -283,8 +285,20 @@ public class NativeParserInfo {
             return new NativeParserNode(stmt, countStmt, where, jdbcDollarMap,
                 fullNames, requiredNamedSet, isDynamic() || containsInName.get(), updateSql, updateNamedSet);
         } catch (ParseException e) {
-            throw new SourceException("Parse error, sql: " + rowSql, e);
+            throw new SourceException("Parse error, sql: " + rawSql, e);
         }
+    }
+
+    @Override
+    public String toString() {
+        return NativeParserInfo.class.getSimpleName() + "{"
+            + "rawSql: \"" + rawSql + "\""
+            + ", jdbcSql: \"" + jdbcSql + "\""
+            + ", numberSignNames: " + numberSignNames
+            + ", dollarJdbcNames: " + dollarJdbcNames
+            + ", requiredDollarNames: " + requiredDollarNames
+            + ", jdbcDollarMap: " + jdbcDollarMap
+            + "}";
     }
 
 }

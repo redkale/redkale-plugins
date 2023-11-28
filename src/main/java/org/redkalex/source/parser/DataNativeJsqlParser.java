@@ -11,6 +11,8 @@ import org.redkale.source.DataNativeSqlParser;
 import org.redkale.util.ObjectRef;
 
 /**
+ * 基于jsqlparser的DataNativeSqlParser实现类
+ * 
  *
  * @author zhangjx
  */
