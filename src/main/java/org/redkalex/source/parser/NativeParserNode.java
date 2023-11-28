@@ -39,7 +39,7 @@ public class NativeParserNode {
     //修改项，只有UPDATE语句才有值
     private final List<String> updateJdbcNames;
 
-    //必须要有的参数名, 包含了updateJdbcNames
+    //必需的参数名, 包含了updateJdbcNames
     private final Set<String> requiredJdbcNames;
 
     //所有参数名，包含了requiredJdbcNames

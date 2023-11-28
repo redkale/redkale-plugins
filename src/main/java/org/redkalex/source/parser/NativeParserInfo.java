@@ -10,10 +10,17 @@ import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.parser.*;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.alter.Alter;
 import net.sf.jsqlparser.statement.delete.Delete;
+import net.sf.jsqlparser.statement.drop.Drop;
+import net.sf.jsqlparser.statement.execute.Execute;
+import net.sf.jsqlparser.statement.grant.Grant;
 import net.sf.jsqlparser.statement.insert.Insert;
+import net.sf.jsqlparser.statement.merge.Merge;
 import net.sf.jsqlparser.statement.select.*;
+import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.*;
+import net.sf.jsqlparser.statement.upsert.Upsert;
 import net.sf.jsqlparser.util.deparser.*;
 import org.redkale.source.SourceException;
 import org.redkale.util.*;
@@ -133,7 +140,7 @@ public class NativeParserInfo {
     }
 
     public Map<String, Object> createNamedParams(ObjectRef<String> newSql, Map<String, Object> params) {
-        Map<String, Object> newParams = new HashMap<>(params);
+        Map<String, Object> newParams = params == null ? new HashMap<>() : new HashMap<>(params);
         for (NativeSqlParameter p : allNamedParameters) {
             Object val = p.getParamValue(params);
             if (p.isRequired() && val == null) {
@@ -171,8 +178,8 @@ public class NativeParserInfo {
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
             Statement stmt = sqlParser.Statement();
-            final Set<String> fullNames = new HashSet<String>();
-            final Set<String> requiredNamedSet = new HashSet<String>();
+            final Set<String> fullNames = new HashSet<>();
+            final Set<String> requiredNamedSet = new HashSet<>();
             final AtomicBoolean containsInName = new AtomicBoolean();
             ExpressionVisitorAdapter exprAdapter = new ExpressionVisitorAdapter() {
 
@@ -209,8 +216,7 @@ public class NativeParserInfo {
                 clearWhere = () -> selectBody.setWhere(null);
                 { //创建COUNT总数sql
                     CCJSqlParser countParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
-                    Select countSelect = (Select) countParser.Statement();
-                    PlainSelect countBody = (PlainSelect) countSelect.getSelectBody();
+                    PlainSelect countBody = (PlainSelect) countParser.Statement();
                     if (countBody.getDistinct() == null) {
                         Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withParameters(new ExpressionList(new LongValue(1)));
                         countBody.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
@@ -221,7 +227,7 @@ public class NativeParserInfo {
                         countBody.setDistinct(null);
                     }
                     countBody.setWhere(null);
-                    countStmt = countSelect;
+                    countStmt = countBody;
                 }
             } else if (stmt instanceof Insert) {
                 Select selectBody = ((Insert) stmt).getSelect();
@@ -242,8 +248,27 @@ public class NativeParserInfo {
                 updateSets = ((Update) stmt).getUpdateSets();
                 where = ((Update) stmt).getWhere();
                 clearWhere = () -> ((Update) stmt).setWhere(null);
+            } else if (stmt instanceof Upsert) {
+                updateSets = ((Upsert) stmt).getUpdateSets();
+                PlainSelect select = ((Upsert) stmt).getPlainSelect();
+                if (select != null) {
+                    where = select.getWhere();
+                    clearWhere = () -> select.setWhere(null);
+                }
+            } else if (stmt instanceof Truncate) {
+                //do nothing
+            } else if (stmt instanceof Alter) {
+                //do nothing
+            } else if (stmt instanceof Grant) {
+                //do nothing
+            } else if (stmt instanceof Drop) {
+                //do nothing
+            } else if (stmt instanceof Execute) {
+                //do nothing
+            } else if (stmt instanceof Merge) {
+                //do nothing
             } else {
-                throw new SourceException("Not support sql (" + rawSql + ") ");
+                throw new SourceException("Not support sql (" + rawSql + "), type: " + stmt.getClass().getName());
             }
 
             SelectDeParser selectAdapter = new SelectDeParser();

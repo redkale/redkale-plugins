@@ -32,6 +32,7 @@ public class JsqlParserTest {
         test.run9();
         test.run10();
         test.run11();
+        test.run12();
     }
 
     @Test
@@ -53,6 +54,7 @@ public class JsqlParserTest {
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("新countsql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================01============================================");
     }
 
     @Test
@@ -65,6 +67,7 @@ public class JsqlParserTest {
         Assertions.assertEquals(sql, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================02============================================");
     }
 
     @Test
@@ -81,6 +84,7 @@ public class JsqlParserTest {
             exp = e;
         }
         Assertions.assertEquals("Missing parameter v2", exp == null ? null : exp.getMessage());
+        System.out.println("=====================================03============================================");
     }
 
     @Test
@@ -94,6 +98,7 @@ public class JsqlParserTest {
         Assertions.assertEquals(expect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================04============================================");
     }
 
     @Test
@@ -107,6 +112,7 @@ public class JsqlParserTest {
         Assertions.assertEquals(expect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================05============================================");
     }
 
     @Test
@@ -120,6 +126,7 @@ public class JsqlParserTest {
         Assertions.assertEquals(expect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================06============================================");
     }
 
     @Test
@@ -136,6 +143,7 @@ public class JsqlParserTest {
             exp = e;
         }
         Assertions.assertEquals("Missing parameter [t2]", exp == null ? null : exp.getMessage());
+        System.out.println("=====================================07============================================");
     }
 
     @Test
@@ -149,6 +157,7 @@ public class JsqlParserTest {
         Assertions.assertEquals(repect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================08============================================");
     }
 
     @Test
@@ -162,14 +171,42 @@ public class JsqlParserTest {
         Assertions.assertEquals(repect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================09============================================");
     }
 
     @Test
     public void run10() throws Exception {
+        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = ${id} AND r.type = MOD(${t1},${t2})";
+        Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        String repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = ?";
+        Assertions.assertEquals(repect, statement.getNativeSql());
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================10============================================");
     }
 
     @Test
     public void run11() throws Exception {
+        String sql = "TRUNCATE TABLE userdetail";
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, null);
+        Assertions.assertEquals(sql, statement.getNativeSql());
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================11============================================");
     }
 
+    @Test
+    public void run12() throws Exception {
+        String sql = "ALTER TABLE userdetail ADD COLUMN name VARCHAR (32) NOT NULL DEFAULT '' COMMENT '名称'";
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, null);
+        Assertions.assertEquals(sql, statement.getNativeSql());
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================12============================================");
+    }
 }
