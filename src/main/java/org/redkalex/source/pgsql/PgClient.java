@@ -60,8 +60,8 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
     }
 
     @Override
-    protected PgClientConnection createClientConnection(final int index, AsyncConnection channel) {
-        return new PgClientConnection(this, index, channel);
+    protected PgClientConnection createClientConnection(AsyncConnection channel) {
+        return new PgClientConnection(this, channel);
     }
 
     @Override

@@ -49,8 +49,8 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
     }
 
     @Override
-    protected RedisCacheConnection createClientConnection(final int index, AsyncConnection channel) {
-        return new RedisCacheConnection(this, index, channel);
+    protected RedisCacheConnection createClientConnection(AsyncConnection channel) {
+        return new RedisCacheConnection(this, channel);
     }
 
 }

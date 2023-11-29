@@ -18,8 +18,8 @@ import org.redkale.net.client.*;
  */
 public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, RedisCacheResult> {
 
-    public RedisCacheConnection(Client client, int index, AsyncConnection channel) {
-        super(client, index, channel);
+    public RedisCacheConnection(Client client, AsyncConnection channel) {
+        super(client, channel);
     }
 
     @Override

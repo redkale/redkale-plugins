@@ -28,8 +28,8 @@ public class MyClientConnection extends ClientConnection<MyClientRequest, MyResu
 
     //int clientCapabilitiesFlag;
     //
-    public MyClientConnection(MyClient client, int index, AsyncConnection channel) {
-        super(client, index, channel);
+    public MyClientConnection(MyClient client, AsyncConnection channel) {
+        super(client, channel);
     }
 
     @Override

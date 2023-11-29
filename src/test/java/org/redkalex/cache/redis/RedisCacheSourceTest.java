@@ -47,7 +47,7 @@ public class RedisCacheSourceTest extends RedisAbstractTest {
     public void run() throws Exception {
         final AsyncIOGroup asyncGroup = new AsyncIOGroup(8192, 16);
         RedisCacheClient client = new RedisCacheClient("test", "test", asyncGroup, "", new ClientAddress(new InetSocketAddress("127.0.0.1", 3389)), 2, 2, null, null);
-        RedisCacheConnection conn = (RedisCacheConnection) client.createClientConnection(1, asyncGroup.newTCPClientConnection());
+        RedisCacheConnection conn = (RedisCacheConnection) client.createClientConnection(asyncGroup.newTCPClientConnection());
         RedisCacheCodec codec = new RedisCacheCodec(conn);
         ByteArray array = new ByteArray();
 

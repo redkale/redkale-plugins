@@ -23,8 +23,8 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
 
     private final Map<String, PgPrepareDesc> cachePreparedDescs = new HashMap<>();
 
-    public PgClientConnection(PgClient client, int index, AsyncConnection channel) {
-        super(client, index, channel);
+    public PgClientConnection(PgClient client, AsyncConnection channel) {
+        super(client, channel);
     }
 
     @Override
@@ -143,10 +143,6 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         rs.info = info;
         rs.workThread(workThread);
         return rs;
-    }
-
-    public int getIndex() {
-        return index;
     }
 
     private long sequence;

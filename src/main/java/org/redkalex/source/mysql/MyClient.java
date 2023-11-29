@@ -50,8 +50,8 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
     }
 
     @Override
-    protected MyClientConnection createClientConnection(final int index, AsyncConnection channel) {
-        return new MyClientConnection(this, index, channel);
+    protected MyClientConnection createClientConnection(AsyncConnection channel) {
+        return new MyClientConnection(this, channel);
     }
 
     @Override  //构建连接上先从服务器拉取数据构建的虚拟请求
