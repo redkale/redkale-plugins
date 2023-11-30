@@ -7,7 +7,7 @@ package org.redkalex.source.search;
 
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.source.*;
-import static org.redkale.source.AbstractDataSource.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.source.Range.LongRange;
 import static org.redkale.source.SearchQuery.SEARCH_FILTER_NAME;
 import org.redkale.util.*;

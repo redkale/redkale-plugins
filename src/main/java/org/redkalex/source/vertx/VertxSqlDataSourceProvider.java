@@ -7,6 +7,7 @@ package org.redkalex.source.vertx;
 
 import org.redkale.annotation.Priority;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
@@ -22,7 +23,7 @@ public class VertxSqlDataSourceProvider implements DataSourceProvider {
         if (dbtype == null) {
             AnyValue read = config.getAnyValue("read");
             AnyValue node = read == null ? config : read;
-            dbtype = AbstractDataSource.parseDbtype(node.getValue(AbstractDataSource.DATA_SOURCE_URL));
+            dbtype = parseDbtype(node.getValue(DATA_SOURCE_URL));
         }
         try {
             boolean pgsql = "postgresql".equalsIgnoreCase(dbtype);

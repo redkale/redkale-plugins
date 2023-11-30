@@ -23,6 +23,7 @@ import org.redkale.convert.json.*;
 import org.redkale.persistence.Entity;
 import org.redkale.service.*;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
@@ -54,9 +55,6 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     protected HttpClient httpClient;
 
-    public OpenSearchSource() {
-    }
-
     @Override
     public void init(AnyValue config) {
         super.init(config);
@@ -69,7 +67,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         ProxySelector proxySelector = null;
         Authenticator authenticator = null;
         List<URI> us = new ArrayList<>();
-        String url = props.getProperty(AbstractDataSource.DATA_SOURCE_URL);
+        String url = props.getProperty(DATA_SOURCE_URL);
         if (url.startsWith("search://")) {
             url = url.replace("search://", "http://");
         } else if (url.startsWith("searchs://")) {
@@ -82,17 +80,17 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
             us.add(URI.create(str.trim()));
         }
 
-        String proxyAddr = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_ADDRESS);
+        String proxyAddr = props.getProperty(DATA_SOURCE_PROXY_ADDRESS);
         if (proxyAddr != null && !proxyAddr.isEmpty() && proxyAddr.contains(":")
-            && "true".equalsIgnoreCase(props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_ENABLE, "true"))) {
-            String proxyType = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_TYPE, "HTTP").toUpperCase();
+            && "true".equalsIgnoreCase(props.getProperty(DATA_SOURCE_PROXY_ENABLE, "true"))) {
+            String proxyType = props.getProperty(DATA_SOURCE_PROXY_TYPE, "HTTP").toUpperCase();
             int pos = proxyAddr.indexOf(':');
             SocketAddress addr = new InetSocketAddress(proxyAddr.substring(0, pos), Integer.parseInt(proxyAddr.substring(pos + 1)));
             proxySelector = SimpleProxySelector.create(new Proxy(Proxy.Type.valueOf(proxyType), addr));
         }
-        String proxyUser = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_USER);
+        String proxyUser = props.getProperty(DATA_SOURCE_PROXY_USER);
         if (proxyUser != null && !proxyUser.isEmpty()) {
-            char[] proxyPassword = props.getProperty(AbstractDataSource.DATA_SOURCE_PROXY_PASSWORD, "").toCharArray();
+            char[] proxyPassword = props.getProperty(DATA_SOURCE_PROXY_PASSWORD, "").toCharArray();
             authenticator = new Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(proxyUser, proxyPassword);
@@ -150,7 +148,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         if (confProps == null) {
             return getClass().getSimpleName() + "{}"; //compileMode模式下会为null
         }
-        return getClass().getSimpleName() + "{url = " + confProps.getProperty(AbstractDataSource.DATA_SOURCE_URL) + "}";
+        return getClass().getSimpleName() + "{url = " + confProps.getProperty(DATA_SOURCE_URL) + "}";
     }
 
     @Override

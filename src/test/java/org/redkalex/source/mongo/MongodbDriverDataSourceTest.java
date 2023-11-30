@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.*;
-import static org.redkale.source.AbstractDataSource.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 import org.redkale.util.AnyValue.DefaultAnyValue;
 

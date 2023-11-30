@@ -23,6 +23,7 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
 import org.redkale.service.Local;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**

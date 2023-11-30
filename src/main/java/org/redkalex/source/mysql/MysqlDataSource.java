@@ -18,6 +18,7 @@ import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**

@@ -25,6 +25,7 @@ import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.service.Local;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
@@ -59,9 +60,6 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     protected MongoClient writeMongoClient;
 
     protected MongoDatabase writeMongoDatabase;
-
-    public MongodbDriverDataSource() {
-    }
 
     @Override
     public void init(AnyValue conf) {
