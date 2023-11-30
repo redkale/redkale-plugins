@@ -6,6 +6,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.metrics.MetricsOptions;
 import io.vertx.redis.client.Command;
 import io.vertx.redis.client.Redis;
 import io.vertx.redis.client.RedisClientType;
@@ -33,6 +34,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -91,7 +93,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
 
     private void initClient(AnyValue conf) {
         if (this.vertx == null) {
-            this.vertx = Vertx.vertx(new VertxOptions().setEventLoopPoolSize(Utility.cpus()).setPreferNativeTransport(true));
+            this.vertx = createVertx();
         }
         RedisConfig config = RedisConfig.create(conf);
         //Redis链接
@@ -137,6 +139,17 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         }
     }
 
+    protected Vertx createVertx() {
+        return Vertx.vertx(new VertxOptions()
+            .setEventLoopPoolSize(Utility.cpus())
+            .setPreferNativeTransport(true)
+            .setDisableTCCL(true)
+            .setHAEnabled(false)
+            .setBlockedThreadCheckIntervalUnit(TimeUnit.HOURS)
+            .setMetricsOptions(new MetricsOptions().setEnabled(false))
+        );
+    }
+    
     @Override
     @ResourceListener
     public void onResourceChange(ResourceEvent[] events) {

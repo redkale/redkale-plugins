@@ -6,6 +6,7 @@
 package org.redkalex.source.vertx;
 
 import io.vertx.core.*;
+import io.vertx.core.metrics.MetricsOptions;
 import io.vertx.sqlclient.*;
 import io.vertx.sqlclient.impl.ListTuple;
 import java.io.Serializable;
@@ -13,6 +14,7 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.*;
 import java.util.logging.Level;
@@ -60,7 +62,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         super.init(conf);
         this.dollar = "postgresql".equalsIgnoreCase(dbtype);
         this.pgsql = this.dollar;
-        this.vertx = Vertx.vertx(new VertxOptions().setEventLoopPoolSize(Utility.cpus()).setPreferNativeTransport(true));
+        this.vertx = createVertx();
         {
             this.readOptions = createSqlOptions(readConfProps);
             int readMaxconns = Math.max(1, Integer.decode(readConfProps.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
@@ -79,6 +81,17 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             this.writePoolOptions = createPoolOptions(writeMaxconns);
             this.writeThreadPool = Pool.pool(vertx, writeOptions, writePoolOptions);
         }
+    }
+
+    protected Vertx createVertx() {
+        return Vertx.vertx(new VertxOptions()
+            .setEventLoopPoolSize(Utility.cpus())
+            .setPreferNativeTransport(true)
+            .setDisableTCCL(true)
+            .setHAEnabled(false)
+            .setBlockedThreadCheckIntervalUnit(TimeUnit.HOURS)
+            .setMetricsOptions(new MetricsOptions().setEnabled(false))
+        );
     }
 
     public boolean isPgsql() {
