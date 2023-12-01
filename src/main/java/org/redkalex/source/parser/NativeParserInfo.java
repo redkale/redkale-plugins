@@ -227,6 +227,7 @@ public class NativeParserInfo {
                         countBody.setDistinct(null);
                     }
                     countBody.setWhere(null);
+                    countBody.setOrderByElements(null);
                     countStmt = countBody;
                 }
             } else if (stmt instanceof Insert) {

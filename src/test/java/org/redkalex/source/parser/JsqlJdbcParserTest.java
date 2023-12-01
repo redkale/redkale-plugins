@@ -6,6 +6,7 @@ package org.redkalex.source.parser;
 import java.util.*;
 import java.util.function.IntFunction;
 import net.sf.jsqlparser.parser.CCJSqlParser;
+import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.junit.jupiter.api.Test;
 import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.util.Utility;
@@ -26,6 +27,7 @@ public class JsqlJdbcParserTest {
         test.run4();
         test.run5();
         test.run6();
+        test.run7();
     }
 
     @Test
@@ -107,6 +109,23 @@ public class JsqlJdbcParserTest {
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=================================================================================");
+    }
+
+    @Test
+    public void run7() throws Exception {
+        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = :idx ORDER BY u.createTime DESC";
+        Map<String, Object> params = Utility.ofMap("idx", 100);
+
+        CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
+        PlainSelect stmt = (PlainSelect) sqlParser.Statement();
+        System.out.println(stmt);
+        System.out.println(stmt.getOrderByElements());
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=================================================================================");
     }

@@ -191,6 +191,7 @@ public class JsqlParserTest {
         repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = ? AND r.type = MOD(?, ?) ORDER BY u.createTime DESC";
         Assertions.assertEquals(repect, statement.getNativeSql());
         System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================10============================================");
     }
