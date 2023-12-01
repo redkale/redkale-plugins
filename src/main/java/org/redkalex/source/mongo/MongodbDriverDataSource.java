@@ -482,8 +482,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             case IG_EQ: {
                 return Filters.regex(node.getColumn(), "/^" + node.getValue() + "$/i");
             }
-            case NOT_EQ:
-            case IG_NOT_EQ: {
+            case NE:
+            case IG_NE: {
                 return Filters.not(Filters.eq(node.getColumn(), node.getValue()));
             }
             case GT: {

@@ -98,7 +98,7 @@ public class SourceTest {
             new Exception("更新数量应该是" + 1 + ", 却是:" + rs).printStackTrace();
             return;
         }
-        rs = source.getNumberResult(TestWorld.class, FilterFunc.COUNT, "id", FilterNodes.notEq("randomNumber", 1000)).intValue();
+        rs = source.getNumberResult(TestWorld.class, FilterFunc.COUNT, "id", FilterNodes.ne("randomNumber", 1000)).intValue();
         if (rs != (count - limit - limit + 1)) {
             new Exception("一共数量应该是" + (count - limit - limit + 1) + ", 却是:" + rs).printStackTrace();
             return;

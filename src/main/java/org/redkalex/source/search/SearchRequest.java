@@ -60,8 +60,8 @@ public class SearchRequest extends BaseBean {
             case IG_EQ: {
                 return new QueryFilterItem("term", new QueryFilterItem(node.getColumn(), node.getValue()));
             }
-            case NOT_EQ:
-            case IG_NOT_EQ: {
+            case NE:
+            case IG_NE: {
                 return new QueryFilterItem("bool", new QueryFilterItem("must_not", new QueryFilterItem("term", new QueryFilterItem(node.getColumn(), node.getValue()))));
             }
             case GT: {
