@@ -103,7 +103,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         }
         RedisCacheClient old = this.client;
         this.client = new RedisCacheClient(appName, resourceName(), ioGroup, resourceName() + "." + config.getDb(),
-            new ClientAddress(address), config.getMaxconns(Runtime.getRuntime().availableProcessors()), config.getPipelines(),
+            new ClientAddress(address), config.getMaxconns(Utility.cpus()), config.getPipelines(),
             isEmpty(config.getPassword()) ? null : new RedisCacheReqAuth(config.getPassword()),
             config.getDb() < 1 ? null : new RedisCacheReqDB(config.getDb()));
         if (this.subConn != null) {
