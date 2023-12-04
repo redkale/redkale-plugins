@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import java.util.stream.Stream;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
+import org.redkale.net.WorkThread;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import static org.redkale.source.DataSources.*;
@@ -598,7 +599,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         }
         return queryResultSet(info, sql).thenApply(rsset -> {
             boolean rs = rsset.next();
-            T val = rs ? (selects == null ? getEntityValue(info, null, rsset) : getEntityValue(info, selects, rsset)) : null;
+            T val = rs ? getEntityValue(info, selects, rsset) : null;
             return val;
         });
     }
@@ -811,7 +812,14 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     protected <T> CompletableFuture<VertxResultSet> queryPrepareResultSet(final EntityInfo<T> info, final String sql, Tuple tuple) {
         final long s = System.currentTimeMillis();
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
-        readPool().preparedQuery(sql).execute(tuple, newQueryHandler(s, sql, info, future));
+        PreparedQuery<RowSet<Row>> query;
+        WorkThread thread = WorkThread.currentWorkThread();
+        if (thread != null && thread.inIO()) {
+            query = info.getSubobjectIfAbsent(resourceName() + ":" + sql, n -> readPool().preparedQuery(n));
+        } else {
+            query = readPool().preparedQuery(sql);
+        }
+        query.execute(tuple, newQueryHandler(s, sql, info, future));
         return future;
     }
 
