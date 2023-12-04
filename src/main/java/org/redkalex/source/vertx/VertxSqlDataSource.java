@@ -20,6 +20,7 @@ import java.util.function.*;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.Nullable;
 import org.redkale.annotation.ResourceType;
 import org.redkale.net.WorkThread;
 import org.redkale.service.Local;
@@ -298,6 +299,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     protected <T> CompletableFuture<Integer> insertDBAsync(EntityInfo<T> info, T... values) {
         final long s = System.currentTimeMillis();
+        final WorkThread workThread = WorkThread.currentWorkThread();
         final Attribute<T, Serializable>[] attrs = info.getInsertAttributes();
         final List<Tuple> objs = new ArrayList<>(values.length);
         for (T value : values) {
@@ -315,13 +317,13 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             slowLog(s, sql);
             if (event.failed()) {
                 if (!isTableNotExist(info, event.cause())) {
-                    completeExceptionally(future, event.cause());
+                    completeExceptionally(workThread, future, event.cause());
                     return;
                 }
                 if (info.getTableStrategy() == null) { //单表模式
                     String[] tableSqls = createTableSqls(info);
                     if (tableSqls == null) { //没有建表DDL
-                        completeExceptionally(future, event.cause());
+                        completeExceptionally(workThread, future, event.cause());
                         return;
                     }
                     //创建单表结构
@@ -329,7 +331,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     final ObjectRef<Handler<AsyncResult<RowSet<Row>>>> createHandlerRef = new ObjectRef<>();
                     final Handler<AsyncResult<RowSet<Row>>> createHandler = (AsyncResult<RowSet<Row>> event2) -> {
                         if (event2.failed()) {
-                            completeExceptionally(future, event2.cause());
+                            completeExceptionally(workThread, future, event2.cause());
                         } else if (createIndex.incrementAndGet() < tableSqls.length) {
                             writePool().query(tableSqls[createIndex.get()]).execute(createHandlerRef.get());
                         } else {
@@ -345,7 +347,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     final ObjectRef<Handler<AsyncResult<RowSet<Row>>>> copySqlHandlerRef = new ObjectRef<>();
                     final Handler<AsyncResult<RowSet<Row>>> copySqlHandler = (AsyncResult<RowSet<Row>> event2) -> {
                         if (event2.failed()) {
-                            completeExceptionally(future, event2.cause());
+                            completeExceptionally(workThread, future, event2.cause());
                         } else {
                             //重新提交新增记录
                             writePool().preparedQuery(sql).executeBatch(objs, selfHandlerRef.get());
@@ -391,7 +393,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     }
                 }
             }
-            complete(future, event.result().rowCount());
+            complete(workThread, future, event.result().rowCount());
         };
         selfHandlerRef.set(handler);
         writePool().preparedQuery(sql).executeBatch(objs, handler);
@@ -455,6 +457,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     protected <T> CompletableFuture<Integer> updateEntityDBAsync(EntityInfo<T> info, final T... values) {
         final long s = System.currentTimeMillis();
+        final WorkThread workThread = WorkThread.currentWorkThread();
         final Attribute<T, Serializable> primary = info.getPrimary();
         final Attribute<T, Serializable>[] attrs = info.getUpdateAttributes();
         final List<Tuple> objs = new ArrayList<>(values.length);
@@ -471,10 +474,10 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         writePool().preparedQuery(sql).executeBatch(objs, (AsyncResult<RowSet<Row>> event) -> {
             slowLog(s, sql);
             if (event.failed()) {
-                completeExceptionally(future, event.cause());
+                completeExceptionally(workThread, future, event.cause());
                 return;
             }
-            complete(future, event.result().rowCount());
+            complete(workThread, future, event.result().rowCount());
         });
         return future;
     }
@@ -510,7 +513,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDBAsync(EntityInfo<T> info, String[] tables, String sql, FilterNode node, FilterFuncColumn... columns) {
-        return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
             final Map map = new HashMap<>();
             if (set.next()) {
                 int index = 0;
@@ -531,7 +535,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Number> getNumberResultDBAsync(EntityInfo<T> info, String[] tables, String sql, FilterFunc func, Number defVal, String column, final FilterNode node) {
-        return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
             Number rs = defVal;
             if (set.next()) {
                 Object o = set.getObject(1);
@@ -545,7 +550,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
-        return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
             Map<K, N> rs = new LinkedHashMap<>();
             while (set.next()) {
                 rs.put((K) set.getObject(1), (N) set.getObject(2));
@@ -556,7 +562,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapDBAsync(EntityInfo<T> info, String[] tables, String sql, final ColumnNode[] funcNodes, final String[] groupByColumns, FilterNode node) {
-        return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
             Map rs = new LinkedHashMap<>();
             while (set.next()) {
                 int index = 0;
@@ -585,9 +592,10 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             }
         }
 
+        final WorkThread workThread = WorkThread.currentWorkThread();
         if (selects == null) {
             final String sql = dollar ? info.getFindDollarPrepareSQL(pk) : info.getFindQuestionPrepareSQL(pk);
-            return queryPrepareResultSet(info, sql, Tuple.of(pk)).thenApply(rsset -> {
+            return readPrepareResultSet(workThread, info, sql, Tuple.of(pk)).thenApply(rsset -> {
                 boolean rs = rsset.next();
                 T val = rs ? getEntityValue(info, null, rsset) : null;
                 return val;
@@ -597,7 +605,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         if (info.isLoggable(logger, Level.FINEST, sql)) {
             logger.finest(info.getType().getSimpleName() + " find sql=" + sql);
         }
-        return queryResultSet(info, sql).thenApply(rsset -> {
+        return readResultSet(workThread, info, sql).thenApply(rsset -> {
             boolean rs = rsset.next();
             T val = rs ? getEntityValue(info, selects, rsset) : null;
             return val;
@@ -620,6 +628,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         }
         final String sql = dollar ? info.getFindDollarPrepareSQL(ids[0]) : info.getFindQuestionPrepareSQL(ids[0]);
         final long s = System.currentTimeMillis();
+        final WorkThread workThread = WorkThread.currentWorkThread();
         final PreparedQuery<RowSet<Row>> query = readPool().preparedQuery(sql);
         final T[] array = Creator.newArray(clazz, ids.length);
         final CompletableFuture<List<T>> future = new CompletableFuture<>();
@@ -631,22 +640,22 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 if (event.failed()) {
                     final Throwable ex = event.cause();
                     if (!isTableNotExist(info, ex)) {
-                        completeExceptionally(future, ex);
+                        completeExceptionally(workThread, future, ex);
                     } else {  //表不存在
                         if (info.getTableStrategy() == null) {  //没有原始表
                             String[] tablesqls = createTableSqls(info);
                             if (tablesqls == null) { //没有建表DDL
-                                completeExceptionally(future, ex);
+                                completeExceptionally(workThread, future, ex);
                             } else {
                                 array[index] = null;
                                 if (count.incrementAndGet() == ids.length) {
-                                    complete(future, Arrays.asList(array));
+                                    complete(workThread, future, Arrays.asList(array));
                                 }
                             }
                         } else {  //没有分表
                             array[index] = null;
                             if (count.incrementAndGet() == ids.length) {
-                                complete(future, Arrays.asList(array));
+                                complete(workThread, future, Arrays.asList(array));
                             }
                         }
                     }
@@ -658,7 +667,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         array[index] = null;
                     }
                     if (count.incrementAndGet() == ids.length) {
-                        complete(future, Arrays.asList(array));
+                        complete(workThread, future, Arrays.asList(array));
                     }
                 }
             });
@@ -668,7 +677,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected <T> CompletableFuture<T> findDBAsync(EntityInfo<T> info, String[] tables, String sql, boolean onlypk, SelectColumn selects, Serializable pk, FilterNode node) {
-        return queryResultSet(info, sql).thenApply(rsset -> {
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        return readResultSet(workThread, info, sql).thenApply(rsset -> {
             boolean rs = rsset.next();
             T val = rs ? (onlypk && selects == null ? getEntityValue(info, null, rsset) : getEntityValue(info, selects, rsset)) : null;
             return val;
@@ -677,7 +687,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Serializable> findColumnDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk, String column, Serializable defValue, Serializable pk, FilterNode node) {
-        return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
             Serializable val = defValue;
             if (set.next()) {
                 final Attribute<T, Serializable> attr = info.getAttribute(column);
@@ -689,7 +700,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected <T> CompletableFuture<Boolean> existsDBAsync(EntityInfo<T> info, final String[] tables, String sql, boolean onlypk, Serializable pk, FilterNode node) {
-        return queryResultSet(info, sql).thenApply((VertxResultSet set) -> {
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
             return set.next() ? (((Number) set.getObject(1)).intValue() > 0) : false;
         });
     }
@@ -700,6 +712,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
         final CharSequence join = node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
         final CharSequence where = node == null ? null : createSQLExpress(node, info, joinTabalis);
+        final WorkThread workThread = WorkThread.currentWorkThread();
         String[] tables = info.getTables(node);
         String joinAndWhere = (join == null ? "" : join) + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
         String listsubsql;
@@ -717,12 +730,12 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             }
             listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM (" + (union) + ") a";
         }
-        final String listsql = listsubsql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
-        if (readcache && info.isLoggable(logger, Level.FINEST, listsql)) {
-            logger.finest(info.getType().getSimpleName() + " query sql=" + listsql);
+        final String listSql = listsubsql + createSQLOrderby(info, flipper) + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+        if (readcache && info.isLoggable(logger, Level.FINEST, listSql)) {
+            logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
         }
         if (!needtotal) {
-            CompletableFuture<VertxResultSet> listfuture = queryResultSet(info, listsql);
+            CompletableFuture<VertxResultSet> listfuture = readResultSet(workThread, info, listSql);
             return listfuture.thenApply((VertxResultSet set) -> {
                 final List<T> list = new ArrayList();
                 while (set.next()) {
@@ -743,7 +756,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             if (total.longValue() <= 0) {
                 return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
             }
-            return queryResultSet(info, listsql).thenApply((VertxResultSet set) -> {
+            return readResultSet(workThread, info, listSql).thenApply((VertxResultSet set) -> {
                 final List<T> list = new ArrayList();
                 while (set.next()) {
                     list.add(getEntityValue(info, sels, set));
@@ -760,24 +773,25 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String[] sqls, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final List<Tuple> parameters) {
         final CompletableFuture<Integer> future = new CompletableFuture<>();
         final long s = System.currentTimeMillis();
+        final WorkThread workThread = WorkThread.currentWorkThread();
         if (sqls.length == 1) {
             if (parameters != null && !parameters.isEmpty()) {
                 writePool().preparedQuery(sqls[0]).executeBatch(parameters, (AsyncResult<RowSet<Row>> event) -> {
                     slowLog(s, sqls);
                     if (event.failed()) {
-                        completeExceptionally(future, event.cause());
+                        completeExceptionally(workThread, future, event.cause());
                         return;
                     }
-                    complete(future, event.result().rowCount());
+                    complete(workThread, future, event.result().rowCount());
                 });
             } else {
                 writePool().query(sqls[0]).execute((AsyncResult<RowSet<Row>> event) -> {
                     slowLog(s, sqls);
                     if (event.failed()) {
-                        completeExceptionally(future, event.cause());
+                        completeExceptionally(workThread, future, event.cause());
                         return;
                     }
-                    complete(future, event.result().rowCount());
+                    complete(workThread, future, event.result().rowCount());
                 });
             }
         } else {
@@ -795,13 +809,13 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 return io.vertx.core.Future.fromCompletionStage(CompletableFuture.allOf(futures));
             }).toCompletionStage().whenComplete((v, t) -> {
                 if (t != null) {
-                    completeExceptionally(future, t);
+                    completeExceptionally(workThread, future, t);
                 } else {
                     int c = 0;
                     for (int cc : rs) {
                         c += cc;
                     }
-                    complete(future, c);
+                    complete(workThread, future, c);
                 }
             });
         }
@@ -809,55 +823,55 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     }
 
     //info不可以为null
-    protected <T> CompletableFuture<VertxResultSet> queryPrepareResultSet(final EntityInfo<T> info, final String sql, Tuple tuple) {
+    protected <T> CompletableFuture<VertxResultSet> readPrepareResultSet(final WorkThread workThread, final EntityInfo<T> info, final String sql, Tuple tuple) {
         final long s = System.currentTimeMillis();
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
         PreparedQuery<RowSet<Row>> query;
-        WorkThread thread = WorkThread.currentWorkThread();
-        if (thread != null && thread.inIO()) {
+        if (workThread != null && workThread.inIO()) {
             query = info.getSubobjectIfAbsent(resourceName() + ":" + sql, n -> readPool().preparedQuery(n));
         } else {
             query = readPool().preparedQuery(sql);
         }
-        query.execute(tuple, newQueryHandler(s, sql, info, future));
+        query.execute(tuple, newQueryHandler(s, workThread, sql, info, future));
         return future;
     }
 
     //info可以为null,供directQuery
-    protected <T> CompletableFuture<VertxResultSet> queryResultSet(final EntityInfo<T> info, final String sql) {
+    protected <T> CompletableFuture<VertxResultSet> readResultSet(final WorkThread workThread, @Nullable EntityInfo<T> info, final String sql) {
         final long s = System.currentTimeMillis();
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
-        readPool().query(sql).execute(newQueryHandler(s, sql, info, future));
+        readPool().query(sql).execute(newQueryHandler(s, workThread, sql, info, future));
         return future;
     }
 
-    protected <T> io.vertx.core.Handler<AsyncResult<RowSet<Row>>> newQueryHandler(long s, String sql, final EntityInfo<T> info, final CompletableFuture<VertxResultSet> future) {
+    protected <T> io.vertx.core.Handler<AsyncResult<RowSet<Row>>> newQueryHandler(long s,
+        WorkThread workThread, String sql, final EntityInfo<T> info, final CompletableFuture<VertxResultSet> future) {
         return (AsyncResult<RowSet<Row>> event) -> {
             slowLog(s, sql);
             if (event.failed()) {
                 final Throwable ex = event.cause();
                 if (info == null || !isTableNotExist(info, ex)) {
-                    completeExceptionally(future, ex);
+                    completeExceptionally(workThread, future, ex);
                 } else {  //表不存在
                     if (info.getTableStrategy() == null) {  //没有原始表
                         String[] tablesqls = createTableSqls(info);
                         if (tablesqls == null) { //没有建表DDL
-                            completeExceptionally(future, ex);
+                            completeExceptionally(workThread, future, ex);
                         } else {
                             writePool().query(tablesqls[0]).execute((AsyncResult<RowSet<Row>> event2) -> {
                                 if (event2.failed()) {
-                                    completeExceptionally(future, event2.cause());
+                                    completeExceptionally(workThread, future, event2.cause());
                                 } else {
-                                    complete(future, new VertxResultSet(info, null, null));
+                                    complete(workThread, future, new VertxResultSet(info, null, null));
                                 }
                             });
                         }
                     } else {  //没有分表
-                        complete(future, new VertxResultSet(info, null, null));
+                        complete(workThread, future, new VertxResultSet(info, null, null));
                     }
                 }
             } else {
-                complete(future, new VertxResultSet(info, null, event.result()));
+                complete(workThread, future, new VertxResultSet(info, null, event.result()));
             }
         };
     }
@@ -895,6 +909,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     public CompletableFuture<int[]> nativeUpdatesAsync(String... sqls) {
         final long s = System.currentTimeMillis();
+        final WorkThread workThread = WorkThread.currentWorkThread();
         final int[] rs = new int[sqls.length];
         CompletableFuture[] futures = new CompletableFuture[rs.length];
         return writePool().withTransaction(conn -> {
@@ -918,7 +933,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
-        return queryResultSet(null, sql).thenApply((VertxResultSet set) -> {
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        return readResultSet(workThread, null, sql).thenApply((VertxResultSet set) -> {
             slowLog(s, sql);
             return handler.apply(set);
         });
@@ -928,25 +944,26 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
+        final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<Integer> future = new CompletableFuture<>();
         DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         if (!sinfo.isEmptyNamed()) {
             writePool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
                 if (event.failed()) {
-                    completeExceptionally(future, event.cause());
+                    completeExceptionally(workThread, future, event.cause());
                     return;
                 }
-                complete(future, event.result().rowCount());
+                complete(workThread, future, event.result().rowCount());
             });
         } else {
             writePool().query(sinfo.getNativeSql()).execute((AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
                 if (event.failed()) {
-                    completeExceptionally(future, event.cause());
+                    completeExceptionally(workThread, future, event.cause());
                     return;
                 }
-                complete(future, event.result().rowCount());
+                complete(workThread, future, event.result().rowCount());
             });
         }
         return future;
@@ -956,15 +973,16 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
         long s = System.currentTimeMillis();
+        final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<V> future = new CompletableFuture<>();
         DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         if (!sinfo.isEmptyNamed()) {
             readPool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
                 if (event.failed()) {
-                    completeExceptionally(future, event.cause());
+                    completeExceptionally(workThread, future, event.cause());
                 } else {
-                    complete(future, handler.apply(new VertxResultSet(null, null, event.result()))
+                    complete(workThread, future, handler.apply(new VertxResultSet(null, null, event.result()))
                     );
                 }
             }
@@ -973,9 +991,9 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             readPool().preparedQuery(sinfo.getNativeSql()).execute((AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
                 if (event.failed()) {
-                    completeExceptionally(future, event.cause());
+                    completeExceptionally(workThread, future, event.cause());
                 } else {
-                    complete(future, handler.apply(new VertxResultSet(null, null, event.result())));
+                    complete(workThread, future, handler.apply(new VertxResultSet(null, null, event.result())));
                 }
             }
             );
@@ -985,13 +1003,14 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
         long s = System.currentTimeMillis();
+        final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<Sheet<V>> future = new CompletableFuture<>();
         DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         Pool pool = readPool();
         Handler<AsyncResult<RowSet<Row>>> countHandler = (AsyncResult<RowSet<Row>> evt) -> {
             slowLog(s, sinfo.getNativeCountSql());
             if (evt.failed()) {
-                completeExceptionally(future, evt.cause());
+                completeExceptionally(workThread, future, evt.cause());
             } else {
                 long total = 0;
                 RowIterator<Row> it = evt.result().iterator();
@@ -999,7 +1018,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     total = it.next().getLong(0);
                 }
                 if (total < 1) {
-                    complete(future, new Sheet<>(total, new ArrayList<>()));
+                    complete(workThread, future, new Sheet<>(total, new ArrayList<>()));
                 }
                 final long count = total;
                 String listSql = sinfo.getNativeCountSql()
@@ -1007,10 +1026,10 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 Handler<AsyncResult<RowSet<Row>>> listHandler = (AsyncResult<RowSet<Row>> event) -> {
                     slowLog(s, sinfo.getNativeCountSql());
                     if (event.failed()) {
-                        completeExceptionally(future, event.cause());
+                        completeExceptionally(workThread, future, event.cause());
                     } else {
                         List<V> list = EntityBuilder.getListValue(type, new VertxResultSet(null, null, event.result()));
-                        complete(future, new Sheet<>(count, list));
+                        complete(workThread, future, new Sheet<>(count, list));
                     }
                 };
                 if (!sinfo.isEmptyNamed()) {
