@@ -853,7 +853,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
                         return v;
                     });
                 });
-            return Utility.orTimeout(future, 6, TimeUnit.SECONDS);
+            return Utility.orTimeout(future, () -> "redis (" + command + " " + key + ") timeout", 6, TimeUnit.SECONDS);
         } else {
             return Utility.orTimeout(client.connect()
                 .thenCompose(conn -> {
@@ -864,6 +864,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
                     req.traceid(traceid);
                     return conn.writeRequest(req);
                 }),
+                () -> "redis (" + command + " " + key + ") timeout",
                 6, TimeUnit.SECONDS);
         }
     }
@@ -882,6 +883,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
                 }
                 return conn.writeRequest(requests);
             }),
+            () -> "redis " + Arrays.toString(requests) + " timeout",
             6, TimeUnit.SECONDS);
     }
 
