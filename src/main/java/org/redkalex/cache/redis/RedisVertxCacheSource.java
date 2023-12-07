@@ -246,7 +246,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     protected CompletableFuture<Response> sendAsync(Request request) {
         CompletableFuture<Response> future = new CompletableFuture<>();
         WorkThread workThread = WorkThread.currentWorkThread();
-        redisClient().send(request, new Handler<AsyncResult<Response>>() {
+        redisClient().send(request, new Handler<>() {
             @Override
             public void handle(AsyncResult<Response> event) {
                 completeHandle(workThread, future, event);
@@ -258,7 +258,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     protected CompletableFuture<List<Response>> sendAsync(List<Request> requests) {
         CompletableFuture<List<Response>> future = new CompletableFuture<>();
         WorkThread workThread = WorkThread.currentWorkThread();
-        redisClient().batch(requests, new Handler<AsyncResult<List<Response>>>() {
+        redisClient().batch(requests, new Handler<>() {
             @Override
             public void handle(AsyncResult<List<Response>> event) {
                 completeHandle(workThread, future, event);
