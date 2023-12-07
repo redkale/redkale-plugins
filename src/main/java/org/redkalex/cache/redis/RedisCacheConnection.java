@@ -48,11 +48,6 @@ public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, Re
         return rs;
     }
 
-    public RedisCacheRequest pollRequest(WorkThread workThread, String traceid) {
-        RedisCacheRequest rs = new RedisCacheRequest().workThread(workThread).traceid(traceid);
-        return rs;
-    }
-
     protected ClientFuture<RedisCacheRequest, RedisCacheResult> pollRespFuture(Serializable requestid) {
         return super.pollRespFuture(requestid);
     }

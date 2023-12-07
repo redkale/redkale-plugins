@@ -5,6 +5,9 @@
  */
 package org.redkalex.cache.redis;
 
+import java.net.SocketAddress;
+import java.util.concurrent.CompletableFuture;
+import org.redkale.annotation.Nullable;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.util.Traces;
@@ -49,8 +52,17 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
     }
 
     @Override
-    protected RedisCacheConnection createClientConnection(AsyncConnection channel) {
+    public RedisCacheConnection createClientConnection(AsyncConnection channel) {
         return new RedisCacheConnection(this, channel);
     }
 
+    @Override
+    public CompletableFuture<RedisCacheConnection> connect(RedisCacheRequest request) {
+        return super.connect(request);
+    }
+
+    @Override //根据请求获取地址
+    protected SocketAddress getAddress(@Nullable RedisCacheRequest request) {
+        return super.getAddress(request);
+    }
 }

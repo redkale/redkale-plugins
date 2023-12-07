@@ -244,11 +244,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
         if (topics == null || topics.length < 1) {
             throw new RedkaleException("topics is empty");
         }
-        WorkThread workThread = WorkThread.currentWorkThread();
-        String traceid = Traces.currentTraceid();
+        RedisCacheRequest req = RedisCacheRequest.create(RedisCommand.SUBSCRIBE, null, keysArgs(topics));
         return subConn()
             .thenCompose(conn
-                -> conn.writeRequest(conn.pollRequest(workThread, traceid).prepare(RedisCommand.SUBSCRIBE, null, keysArgs(topics)))
+                -> conn.writeRequest(req)
                 .thenApply(v -> {
                     for (String topic : topics) {
                         pubsubListeners.computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>()).add(listener);
@@ -838,15 +837,14 @@ public final class RedisCacheSource extends AbstractRedisSource {
     public CompletableFuture<RedisCacheResult> sendAsync(final RedisCommand command, final String key, final byte[]... args) {
         WorkThread workThread = WorkThread.currentWorkThread();
         String traceid = Traces.currentTraceid();
+        RedisCacheRequest req = RedisCacheRequest.create(command, key, args);
         if (false && logger.isLoggable(Level.FINEST)) {
             logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") " + command + " " + key);
-            CompletableFuture<RedisCacheResult> future = client.connect()
+            CompletableFuture<RedisCacheResult> future = client.connect(req)
                 .thenCompose(conn -> {
                     if (isNotEmpty(traceid)) {
                         Traces.computeIfAbsent(traceid);
                     }
-                    RedisCacheRequest req = conn.pollRequest(workThread, traceid).prepare(command, key, args);
-                    req.traceid(traceid);
                     logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") request: " + req);
                     return conn.writeRequest(req).thenApply(v -> {
                         logger.log(Level.FINEST, "redis.callback(traceid=" + traceid + ") response: " + v);
@@ -855,13 +853,11 @@ public final class RedisCacheSource extends AbstractRedisSource {
                 });
             return Utility.orTimeout(future, () -> "redis (" + command + " " + key + ") timeout", 6010, TimeUnit.MILLISECONDS);
         } else {
-            return Utility.orTimeout(client.connect()
+            return Utility.orTimeout(client.connect(req)
                 .thenCompose(conn -> {
                     if (isNotEmpty(traceid)) {
                         Traces.computeIfAbsent(traceid);
                     }
-                    RedisCacheRequest req = conn.pollRequest(workThread, traceid).prepare(command, key, args);
-                    req.traceid(traceid);
                     return conn.writeRequest(req);
                 }),
                 () -> "redis (" + command + " " + key + ") timeout",
@@ -876,7 +872,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         for (RedisCacheRequest request : requests) {
             request.workThread(workThread).traceid(traceid);
         }
-        return Utility.orTimeout(client.connect()
+        return Utility.orTimeout(client.connect(requests[0])
             .thenCompose(conn -> {
                 if (isNotEmpty(traceid)) {
                     Traces.computeIfAbsent(traceid);

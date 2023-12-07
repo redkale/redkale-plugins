@@ -6,8 +6,10 @@
 package org.redkalex.cache.redis;
 
 import java.nio.charset.StandardCharsets;
+import org.redkale.net.WorkThread;
 import org.redkale.net.client.*;
 import org.redkale.util.ByteArray;
+import org.redkale.util.Traces;
 
 /**
  *
@@ -45,11 +47,13 @@ public class RedisCacheRequest extends ClientRequest {
     protected byte[][] args;
 
     public static RedisCacheRequest create(RedisCommand command, String key, String... args) {
-        return new RedisCacheRequest().prepare(command, key, RedisCacheSource.keysArgs(key, args));
+        return new RedisCacheRequest().prepare(command, key, RedisCacheSource.keysArgs(key, args))
+            .workThread(WorkThread.currentWorkThread()).traceid(Traces.currentTraceid());
     }
 
     public static RedisCacheRequest create(RedisCommand command, String key, byte[]... args) {
-        return new RedisCacheRequest().prepare(command, key, args);
+        return new RedisCacheRequest().prepare(command, key, args)
+            .workThread(WorkThread.currentWorkThread()).traceid(Traces.currentTraceid());
     }
 
     public RedisCacheRequest prepare(RedisCommand command, String key, byte[]... args) {
