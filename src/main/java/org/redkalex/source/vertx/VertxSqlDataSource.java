@@ -828,7 +828,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
         PreparedQuery<RowSet<Row>> query;
         if (workThread != null && workThread.inIO()) {
-            query = info.getSubobjectIfAbsent(resourceName() + ":" + sql, n -> readPool().preparedQuery(n));
+            query = info.getSubobjectIfAbsent(resourceName() + ":" + sql, n -> readPool().preparedQuery(sql));
         } else {
             query = readPool().preparedQuery(sql);
         }
