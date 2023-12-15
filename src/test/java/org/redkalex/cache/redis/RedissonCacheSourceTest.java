@@ -7,7 +7,7 @@ package org.redkalex.cache.redis;
 
 import org.redkale.convert.json.JsonFactory;
 import static org.redkale.source.AbstractCacheSource.*;
-import org.redkale.util.AnyValue;
+import org.redkale.util.AnyValueWriter;
 
 /**
  *
@@ -16,7 +16,7 @@ import org.redkale.util.AnyValue;
 public class RedissonCacheSourceTest extends RedisAbstractTest {
 
     public static void main(String[] args) throws Exception {
-        AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue()
+        AnyValueWriter conf = new AnyValueWriter()
             .addValue(CACHE_SOURCE_MAXCONNS, "1")
             .addValue(CACHE_SOURCE_NODES, "redis://127.0.0.1:6363");
 

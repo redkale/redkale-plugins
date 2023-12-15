@@ -13,7 +13,6 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.*;
 import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
-import org.redkale.util.AnyValue.DefaultAnyValue;
 
 /**
  *
@@ -23,7 +22,7 @@ public class MongodbDriverDataSourceTest {
 
     //需要本地装MongoDB，故不用Junit
     public static void main(String[] args) throws Throwable {
-        DefaultAnyValue conf = DefaultAnyValue.create();
+        AnyValueWriter conf = AnyValueWriter.create();
         conf.addValue(DATA_SOURCE_URL, "mongodb://localhost/admin");
         conf.addValue(DATA_SOURCE_MAXCONNS, "2");
         final MongodbDriverDataSource source = new MongodbDriverDataSource();

@@ -13,7 +13,7 @@ import org.redkale.util.*;
 public class RedisVertxCacheSourceTest extends RedisAbstractTest {
 
     public static void main(String[] args) throws Exception {
-        AnyValue.DefaultAnyValue conf = new AnyValue.DefaultAnyValue()
+        AnyValueWriter conf = new AnyValueWriter()
             .addValue(CACHE_SOURCE_MAXCONNS, "1")
             .addValue(CACHE_SOURCE_NODES, "redis://127.0.0.1:6363");
         final ResourceFactory factory = ResourceFactory.create();
