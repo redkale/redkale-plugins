@@ -19,6 +19,7 @@ import static org.redkale.boot.Application.RESNAME_APP_EXECUTOR;
 import static org.redkale.boot.Application.RESNAME_APP_NAME;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.inject.ResourceFactory;
 import org.redkale.source.AbstractCacheSource;
 import org.redkale.util.*;
 

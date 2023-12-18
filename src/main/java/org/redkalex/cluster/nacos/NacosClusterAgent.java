@@ -16,6 +16,7 @@ import org.redkale.annotation.ResourceListener;
 import org.redkale.boot.*;
 import org.redkale.cluster.ClusterAgent;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Service;
 import org.redkale.util.*;
 

@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.*;
 import org.junit.jupiter.api.Assertions;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.json.*;
+import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.source.*;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;

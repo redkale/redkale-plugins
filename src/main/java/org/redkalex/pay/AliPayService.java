@@ -18,6 +18,7 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.*;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.net.http.HttpHeaders;
 import org.redkale.net.http.RestHeaders;
 import org.redkale.service.Local;

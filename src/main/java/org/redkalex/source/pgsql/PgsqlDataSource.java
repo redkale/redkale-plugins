@@ -14,6 +14,7 @@ import java.util.logging.Level;
 import java.util.stream.Stream;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;

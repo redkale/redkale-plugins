@@ -10,6 +10,7 @@ import io.vertx.sqlclient.impl.PoolBase;
 import java.lang.reflect.Field;
 import java.util.*;
 import org.redkale.boot.LoggingBaseHandler;
+import org.redkale.inject.ResourceFactory;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import org.redkalex.source.base.IncreWorld;

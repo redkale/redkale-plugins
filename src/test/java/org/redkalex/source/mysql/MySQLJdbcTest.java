@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.convert.json.*;
+import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.persistence.*;
 import org.redkale.source.*;

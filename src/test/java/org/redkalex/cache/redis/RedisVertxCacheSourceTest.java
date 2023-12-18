@@ -3,6 +3,7 @@
 package org.redkalex.cache.redis;
 
 import org.redkale.convert.json.JsonFactory;
+import org.redkale.inject.ResourceFactory;
 import static org.redkale.source.AbstractCacheSource.*;
 import org.redkale.util.*;
 

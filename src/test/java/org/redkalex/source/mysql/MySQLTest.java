@@ -14,6 +14,7 @@ import java.util.stream.*;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.inject.ResourceFactory;
 import org.redkale.net.*;
 import org.redkale.persistence.*;
 import org.redkale.source.*;

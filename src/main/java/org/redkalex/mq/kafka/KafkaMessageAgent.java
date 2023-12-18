@@ -13,6 +13,7 @@ import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.redkale.annotation.ResourceListener;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.mq.*;
 import org.redkale.util.*;
 

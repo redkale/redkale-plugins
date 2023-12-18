@@ -4,6 +4,7 @@
 package org.redkalex.source.pgsql;
 
 import java.util.Properties;
+import org.redkale.inject.ResourceFactory;
 import org.redkale.source.DataJdbcSource;
 import org.redkale.util.*;
 import org.redkalex.source.base.IncreWorld;

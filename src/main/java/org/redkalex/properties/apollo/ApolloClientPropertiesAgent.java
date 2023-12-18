@@ -8,6 +8,7 @@ import com.ctrip.framework.apollo.model.ConfigChange;
 import java.util.*;
 import java.util.logging.Level;
 import org.redkale.boot.*;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.util.*;
 
 /**

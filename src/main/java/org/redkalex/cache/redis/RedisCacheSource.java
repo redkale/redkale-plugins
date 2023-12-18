@@ -22,6 +22,7 @@ import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import static org.redkale.boot.Application.RESNAME_APP_EXECUTOR;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.net.*;
 import org.redkale.net.client.ClientAddress;
 import org.redkale.net.client.ClientConnection;

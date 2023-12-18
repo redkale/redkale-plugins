@@ -20,6 +20,8 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.json.*;
+import org.redkale.inject.Resourcable;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.persistence.Entity;
 import org.redkale.service.*;
 import org.redkale.source.*;

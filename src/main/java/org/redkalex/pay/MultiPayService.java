@@ -11,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
+import org.redkale.inject.ResourceFactory;
 import org.redkale.service.Local;
 import org.redkale.util.*;
 import static org.redkalex.pay.Pays.*;

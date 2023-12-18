@@ -46,6 +46,7 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
 import org.redkale.convert.TextConvert;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.net.WorkThread;
 import org.redkale.service.Local;
 import org.redkale.source.CacheEventListener;
@@ -54,7 +55,6 @@ import org.redkale.source.CacheSource;
 import org.redkale.util.AnyValue;
 import org.redkale.util.Creator;
 import org.redkale.util.RedkaleException;
-import org.redkale.util.ResourceEvent;
 import org.redkale.util.Utility;
 import static org.redkale.util.Utility.*;
 

@@ -26,6 +26,7 @@ import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;

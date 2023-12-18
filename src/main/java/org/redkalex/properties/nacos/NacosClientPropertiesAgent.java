@@ -12,6 +12,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import org.redkale.boot.*;
+import org.redkale.inject.ResourceEvent;
 import org.redkale.util.*;
 import org.redkalex.properties.nacos.NacosPropertiesAgent.NacosInfo;
 
