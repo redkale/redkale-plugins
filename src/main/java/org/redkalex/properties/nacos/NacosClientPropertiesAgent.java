@@ -30,6 +30,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
 
     @Override
     public void compile(final AnyValue propertiesConf) {
+        //do nothing
     }
 
     @Override
@@ -131,7 +132,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             return;
         }
         if (result == null) { //配置项动态变更时需要一次性提交所有配置项
-            updateEnvironmentProperties(application, info.dataId, ResourceEvent.create(info.properties, props));
+            onEnvironmentUpdated(application, info.dataId, ResourceEvent.create(info.properties, props));
             info.properties = props;
         } else {
             info.properties = props;

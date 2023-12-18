@@ -40,6 +40,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
 
     @Override
     public void compile(final AnyValue propertiesConf) {
+        //do nothing
     }
 
     @Override
@@ -62,7 +63,9 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
             String key = k.contains(".") && k.contains("-") ? k : k.replace('-', '.').replace('_', '.');
-            if (!key.startsWith("apollo.")) return;
+            if (!key.startsWith("apollo.")) {
+                return;
+            }
             if (key.equals("apollo.app.id")) {
                 key = "apollo.appid";
             } else if (key.equals("apollo.access.key.secret")) {
@@ -80,7 +83,9 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                 } else if (key.equals("apollo.access.key.secret")) {
                     key = "apollo.access-key.secret";
                 }
-                if (!key.startsWith("apollo.")) return;
+                if (!key.startsWith("apollo.")) {
+                    return;
+                }
                 agentConf.put(key, v);
             }
         });
@@ -98,9 +103,13 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         final List<ApolloInfo> infos = new ArrayList<>();
         final Map<String, ApolloInfo> infoMap = new HashMap<>();
         Map<String, Properties> result = new LinkedHashMap<>();
-        for (String namespace : namespaces.split(";|,")) {
-            if (namespace.trim().isEmpty()) continue;
-            if (infoMap.containsKey(namespace)) continue;
+        for (String namespace : namespaces.split("[;,]")) {
+            if (namespace.trim().isEmpty()) {
+                continue;
+            }
+            if (infoMap.containsKey(namespace)) {
+                continue;
+            }
             ApolloInfo info = new ApolloInfo();
             info.namespaceName = namespace;
             infos.add(info);
@@ -124,11 +133,13 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
                 }
                 String content = resp.body();
                 if (resp.statusCode() != 200) {
-                    logger.log(Level.WARNING, "Apollo pulling error, statusCode: " + resp.statusCode() + ", content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms");
+                    logger.log(Level.WARNING, "Apollo pulling error, statusCode: " + resp.statusCode() 
+                        + ", content: " + content + ", cost " + (System.currentTimeMillis() - s) + " ms");
                     Thread.sleep(5_000);
                     return;
                 }
-                logger.log(Level.FINER, "Apollo pulling content: " + (content == null ? "null" : content.trim()) + ", cost " + (System.currentTimeMillis() - s) + " ms");
+                logger.log(Level.FINER, "Apollo pulling content: " + (content == null ? "null" : content.trim()) 
+                    + ", cost " + (System.currentTimeMillis() - s) + " ms");
 
                 List<ApolloInfo> list = JsonConvert.root().convertFrom(ApolloInfo.LIST_TYPE, content);
                 for (ApolloInfo item : list) {
@@ -190,7 +201,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
 
             //更新全局配置项
             if (result == null) { //配置项动态变更时需要一次性提交所有配置项
-                updateEnvironmentProperties(application, info.namespaceName, ResourceEvent.create(info.properties, props));
+                onEnvironmentUpdated(application, info.namespaceName, ResourceEvent.create(info.properties, props));
                 info.properties = props;
             } else {
                 info.properties = props;
@@ -199,7 +210,9 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             logger.log(Level.FINER, "Apollo config(namespace=" + info.namespaceName + ") size: " + props.size());
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Load apollo content " + info + " error, content: " + content, e);
-            if (result != null) throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
+            if (result != null) {
+                throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
+            }
         }
     }
 

@@ -21,6 +21,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
 
     @Override
     public void compile(final AnyValue propertiesConf) {
+        //do nothing
     }
 
     @Override
@@ -62,8 +63,10 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
         //String cluster = System.getProperty(ConfigConsts.APOLLO_CLUSTER_KEY, ConfigConsts.CLUSTER_NAME_DEFAULT);
         String namespaces = agentConf.getProperty("apollo.namespace", System.getProperty("apollo.namespace", ConfigConsts.NAMESPACE_APPLICATION)); //多个用,分隔
         Map<String, Properties> result = new LinkedHashMap<>();
-        for (String namespace0 : namespaces.split(";|,")) {
-            if (namespace0.trim().isEmpty()) continue;
+        for (String namespace0 : namespaces.split("[;,]")) {
+            if (namespace0.trim().isEmpty()) {
+                continue;
+            }
             String namespace = namespace0.trim();
             Config config = ConfigService.getConfig(namespace);
             logger.log(Level.FINER, "Apollo config (namespace=" + namespace + ") size: " + config.getPropertyNames().size());
@@ -76,7 +79,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
                     }
                 });
                 //更新全局配置项
-                updateEnvironmentProperties(application, namespace, events);
+                onEnvironmentUpdated(application, namespace, events);
             });
             //初始化配置项
             Properties props = new Properties();
@@ -91,6 +94,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
 
     @Override
     public void destroy(AnyValue propertiesConf) {
+        //do nothing
     }
 
 }
