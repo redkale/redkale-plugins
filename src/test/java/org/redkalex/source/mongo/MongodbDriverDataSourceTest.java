@@ -82,8 +82,8 @@ public class MongodbDriverDataSourceTest {
         System.out.println("单个状时间: " + source.findColumn(TestRecord.class, "createTime", entity.getRecordid()));
         System.out.println("查询所有: " + source.querySheet(TestRecord.class, SelectColumn.includes("recordid", "score"), new Flipper(2, 1, "score ASC"), (FilterNode) null));
 
-        ColumnNode[] cns = Utility.ofArray(ColumnFuncNode.count("recordid"), ColumnFuncNode.sum("score"));
-        System.out.println("部分统计: " + JsonConvert.root().convertTo(source.queryColumnMap(TestRecord.class, cns, Utility.ofArray("createTime"), FilterNodes.gt("createTime",  1))));
+        ColumnNode[] cns = Utility.ofArray(ColumnNodes.count("recordid"), ColumnNodes.sum("score"));
+        System.out.println("部分统计: " + JsonConvert.root().convertTo(source.queryColumnMap(TestRecord.class, cns, Utility.ofArray("createTime"), FilterNodes.gt("createTime", 1))));
         System.out.println("部分统计: " + JsonConvert.root().convertTo(source.queryColumnMap(TestRecord.class, "createTime", FilterFunc.SUM, "score", FilterNodes.gt("createTime", 1))));
         System.out.println("部分统计: " + JsonConvert.root().convertTo(source.getNumberMap(TestRecord.class, FilterFuncColumn.create(FilterFunc.COUNT, "recordid"), FilterFuncColumn.create(FilterFunc.SUM, "score"))));
 
