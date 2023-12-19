@@ -16,13 +16,13 @@ import javax.crypto.spec.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
 import static org.redkale.convert.json.JsonConvert.TYPE_MAP_STRING_STRING;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.getHttpContentAsync;
+import org.redkale.annotation.ResourceChanged;
 
 /**
  * 微信服务号Service
@@ -104,7 +104,7 @@ public final class WeiXinMPService implements Service {
         this.elementProps = properties;
     }
 
-    @ResourceListener
+    @ResourceChanged
     @Comment("通过配置中心更改配置后的回调")
     void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();

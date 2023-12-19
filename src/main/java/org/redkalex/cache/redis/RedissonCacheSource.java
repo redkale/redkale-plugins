@@ -23,7 +23,6 @@ import org.redisson.client.codec.*;
 import org.redisson.client.protocol.*;
 import org.redisson.config.*;
 import org.redkale.annotation.AutoLoad;
-import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
 import org.redkale.inject.ResourceEvent;
@@ -31,6 +30,7 @@ import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
+import org.redkale.annotation.ResourceChanged;
 
 /**
  * //https://www.cnblogs.com/xiami2046/p/13934146.html
@@ -195,7 +195,7 @@ public class RedissonCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    @ResourceListener
+    @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
         if (events == null || events.length < 1) {
             return;

@@ -17,11 +17,11 @@ import javax.net.ssl.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.*;
 import org.redkale.util.*;
+import org.redkale.annotation.ResourceChanged;
 
 /**
  *
@@ -68,7 +68,7 @@ public final class ApnsService implements Service {
 
     private SSLSocketFactory sslFactory;
 
-    @ResourceListener
+    @ResourceChanged
     @Comment("通过配置中心更改配置后的回调")
     void onResourceChanged(ResourceEvent[] events) {
         StringBuilder sb = new StringBuilder();

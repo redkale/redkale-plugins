@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
-import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import static org.redkale.boot.Application.RESNAME_APP_EXECUTOR;
@@ -35,6 +34,7 @@ import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
 import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_COUNT;
 import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
+import org.redkale.annotation.ResourceChanged;
 
 /**
  * 详情见: https://redkale.org
@@ -121,7 +121,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    @ResourceListener
+    @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
         if (events == null || events.length < 1) {
             return;

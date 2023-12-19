@@ -41,7 +41,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Nullable;
-import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
 import org.redkale.convert.TextConvert;
@@ -57,6 +56,7 @@ import org.redkale.util.Creator;
 import org.redkale.util.RedkaleException;
 import org.redkale.util.Utility;
 import static org.redkale.util.Utility.*;
+import org.redkale.annotation.ResourceChanged;
 
 /**
  *
@@ -151,7 +151,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
     
     @Override
-    @ResourceListener
+    @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
         if (events == null || events.length < 1) {
             return;

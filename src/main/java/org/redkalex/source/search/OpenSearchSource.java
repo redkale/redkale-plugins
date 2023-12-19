@@ -17,7 +17,6 @@ import java.util.function.IntFunction;
 import java.util.logging.*;
 import java.util.stream.*;
 import org.redkale.annotation.AutoLoad;
-import org.redkale.annotation.ResourceListener;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.json.*;
 import org.redkale.inject.Resourcable;
@@ -27,6 +26,7 @@ import org.redkale.service.*;
 import org.redkale.source.*;
 import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
+import org.redkale.annotation.ResourceChanged;
 
 /**
  *
@@ -112,7 +112,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
         this.confProps = props;
     }
 
-    @ResourceListener
+    @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
         if (events == null || events.length < 1) {
             return;

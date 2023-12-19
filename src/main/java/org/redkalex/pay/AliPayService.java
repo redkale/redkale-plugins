@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.ResourceListener;
 import org.redkale.convert.json.*;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.net.http.HttpHeaders;
@@ -25,6 +24,7 @@ import org.redkale.service.Local;
 import org.redkale.util.*;
 import static org.redkalex.pay.PayRetCodes.*;
 import static org.redkalex.pay.Pays.*;
+import org.redkale.annotation.ResourceChanged;
 
 /**
  *
@@ -97,7 +97,7 @@ public final class AliPayService extends AbstractPayService {
         this.elementProps = properties;
     }
 
-    @ResourceListener //    
+    @ResourceChanged //     //    
     @Comment("通过配置中心更改配置后的回调")
     void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();

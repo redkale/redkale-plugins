@@ -12,10 +12,10 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.redkale.annotation.ResourceListener;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.mq.*;
 import org.redkale.util.*;
+import org.redkale.annotation.ResourceChanged;
 
 /**
  *
@@ -72,7 +72,7 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override
-    @ResourceListener
+    @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
