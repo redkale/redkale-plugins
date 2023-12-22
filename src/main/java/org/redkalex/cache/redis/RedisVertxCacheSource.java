@@ -41,6 +41,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Nullable;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
 import org.redkale.convert.TextConvert;
@@ -56,7 +57,6 @@ import org.redkale.util.Creator;
 import org.redkale.util.RedkaleException;
 import org.redkale.util.Utility;
 import static org.redkale.util.Utility.*;
-import org.redkale.annotation.ResourceChanged;
 
 /**
  *
@@ -149,7 +149,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             .setMetricsOptions(new MetricsOptions().setEnabled(false))
         );
     }
-    
+
     @Override
     @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
@@ -801,6 +801,34 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             bs.add(formatValue(key.toString(), cryptor, convert, val.getClass(), val));
         });
         return sendAsync(Command.MSET, bs.toArray(new String[bs.size()])).thenApply(v -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> msetnxAsync(final Serializable... keyVals) {
+        if (keyVals.length % 2 != 0) {
+            throw new RedkaleException("key value must be paired");
+        }
+        String[] args = new String[keyVals.length];
+        for (int i = 0; i < keyVals.length; i += 2) {
+            String key = keyVals[i].toString();
+            Object val = keyVals[i + 1];
+            args[i] = key;
+            args[i + 1] = formatValue(key, cryptor, convert, val.getClass(), val);
+        }
+        return sendAsync(Command.MSETNX, args).thenApply(v -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> msetnxAsync(final Map map) {
+        if (isEmpty(map)) {
+            return CompletableFuture.completedFuture(null);
+        }
+        List<String> bs = new ArrayList<>();
+        map.forEach((key, val) -> {
+            bs.add(key.toString());
+            bs.add(formatValue(key.toString(), cryptor, convert, val.getClass(), val));
+        });
+        return sendAsync(Command.MSETNX, bs.toArray(new String[bs.size()])).thenApply(v -> null);
     }
 
     @Override

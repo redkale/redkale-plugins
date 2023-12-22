@@ -34,7 +34,6 @@ import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
 import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_COUNT;
 import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
-import org.redkale.annotation.ResourceChanged;
 
 /**
  * 详情见: https://redkale.org
@@ -337,6 +336,22 @@ public final class RedisCacheSource extends AbstractRedisSource {
             return CompletableFuture.completedFuture(null);
         }
         return sendAsync(RedisCommand.MSET, map.keySet().stream().findFirst().orElse("").toString(), keymArgs(map)).thenApply(v -> v.getVoidValue());
+    }
+
+    @Override
+    public CompletableFuture<Void> msetnxAsync(final Serializable... keyVals) {
+        if (keyVals.length % 2 != 0) {
+            throw new RedkaleException("key value must be paired");
+        }
+        return sendAsync(RedisCommand.MSETNX, keyVals[0].toString(), keymArgs(keyVals)).thenApply(v -> v.getVoidValue());
+    }
+
+    @Override
+    public CompletableFuture<Void> msetnxAsync(final Map map) {
+        if (isEmpty(map)) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return sendAsync(RedisCommand.MSETNX, map.keySet().stream().findFirst().orElse("").toString(), keymArgs(map)).thenApply(v -> v.getVoidValue());
     }
 
     //--------------------- setex ------------------------------

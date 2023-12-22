@@ -15,6 +15,7 @@ public enum RedisCommand {
     GET("GET", true),
     GETEX("GETEX", true),
     MSET("MSET", false),
+    MSETNX("MSETNX", false),
     SET("SET", false),
     SETNX("SETNX", false),
     GETSET("GETSET", false),

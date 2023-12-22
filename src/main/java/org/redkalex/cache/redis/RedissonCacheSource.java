@@ -23,6 +23,7 @@ import org.redisson.client.codec.*;
 import org.redisson.client.protocol.*;
 import org.redisson.config.*;
 import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.Convert;
 import org.redkale.inject.ResourceEvent;
@@ -30,7 +31,6 @@ import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
 import static org.redkale.util.Utility.*;
-import org.redkale.annotation.ResourceChanged;
 
 /**
  * //https://www.cnblogs.com/xiami2046/p/13934146.html
@@ -439,6 +439,28 @@ public class RedissonCacheSource extends AbstractRedisSource {
         });
         final RBuckets bucket = client.getBuckets(ByteArrayCodec.INSTANCE);
         return toFuture(bucket.setAsync(bs).thenApply(v -> null));
+    }
+
+    @Override
+    public CompletableFuture<Void> msetnxAsync(Serializable... keyVals) {
+        Map<String, byte[]> map = new LinkedHashMap<>();
+        for (int i = 0; i < keyVals.length; i += 2) {
+            String key = keyVals[i].toString();
+            Object val = keyVals[i + 1];
+            map.put(key, val instanceof String ? encryptValue(key, cryptor, val.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, this.convert, val));
+        }
+        final RBuckets bucket = client.getBuckets(ByteArrayCodec.INSTANCE);
+        return toFuture(bucket.trySetAsync(map).thenApply(v -> null));
+    }
+
+    @Override
+    public CompletableFuture<Void> msetnxAsync(Map map) {
+        Map<String, byte[]> bs = new LinkedHashMap<>();
+        map.forEach((key, val) -> {
+            bs.put(key.toString(), val instanceof String ? encryptValue(key.toString(), cryptor, val.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key.toString(), cryptor, this.convert, val));
+        });
+        final RBuckets bucket = client.getBuckets(ByteArrayCodec.INSTANCE);
+        return toFuture(bucket.trySetAsync(bs).thenApply(v -> null));
     }
 
     //--------------------- setex ------------------------------    
