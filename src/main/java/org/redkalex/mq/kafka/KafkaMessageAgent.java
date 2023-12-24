@@ -5,6 +5,9 @@
  */
 package org.redkalex.mq.kafka;
 
+import org.redkale.mq.spi.MessageAgent;
+import org.redkale.mq.spi.MessageClientProducer;
+import org.redkale.mq.spi.MessageClientConsumer;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;

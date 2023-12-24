@@ -5,6 +5,8 @@
  */
 package org.redkalex.mq.kafka;
 
+import org.redkale.mq.spi.MessageAgent;
+import org.redkale.mq.spi.MessageAgentProvider;
 import org.redkale.annotation.Priority;
 import org.redkale.mq.*;
 import org.redkale.util.*;

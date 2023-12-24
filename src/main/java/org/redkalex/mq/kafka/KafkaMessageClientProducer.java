@@ -5,6 +5,10 @@
  */
 package org.redkalex.mq.kafka;
 
+import org.redkale.mq.spi.MessageRecord;
+import org.redkale.mq.spi.MessageAgent;
+import org.redkale.mq.spi.MessageCoder;
+import org.redkale.mq.spi.MessageClientProducer;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;

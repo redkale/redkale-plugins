@@ -5,6 +5,11 @@
  */
 package org.redkalex.mq.kafka;
 
+import org.redkale.mq.spi.MessageRecord;
+import org.redkale.mq.spi.MessageClient;
+import org.redkale.mq.spi.MessageProcessor;
+import org.redkale.mq.spi.MessageCoder;
+import org.redkale.mq.spi.MessageClientConsumer;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;

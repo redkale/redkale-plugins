@@ -18,7 +18,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.redkale.mq.MessageAgent.MessageConsumerWrapper;
+import org.redkale.mq.spi.MessageAgent.MessageConsumerWrapper;
 import org.redkale.mq.MessageConext;
 import org.redkale.mq.MessageConsumer;
 
