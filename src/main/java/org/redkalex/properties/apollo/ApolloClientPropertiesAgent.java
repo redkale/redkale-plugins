@@ -9,6 +9,7 @@ import java.util.*;
 import java.util.logging.Level;
 import org.redkale.boot.*;
 import org.redkale.inject.ResourceEvent;
+import org.redkale.props.spi.PropertiesAgent;
 import org.redkale.util.*;
 
 /**

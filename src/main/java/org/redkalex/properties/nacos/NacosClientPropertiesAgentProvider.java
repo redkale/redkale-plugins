@@ -3,7 +3,8 @@
 package org.redkalex.properties.nacos;
 
 import org.redkale.annotation.Priority;
-import org.redkale.boot.*;
+import org.redkale.props.spi.PropertiesAgent;
+import org.redkale.props.spi.PropertiesAgentProvider;
 import org.redkale.util.*;
 
 /**

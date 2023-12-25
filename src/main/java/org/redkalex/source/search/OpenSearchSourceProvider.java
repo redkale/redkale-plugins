@@ -8,6 +8,7 @@ package org.redkalex.source.search;
 import org.redkale.annotation.Priority;
 import org.redkale.source.*;
 import static org.redkale.source.DataSources.*;
+import org.redkale.source.spi.DataSourceProvider;
 import org.redkale.util.AnyValue;
 
 /**

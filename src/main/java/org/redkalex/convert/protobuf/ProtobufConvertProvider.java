@@ -7,6 +7,7 @@ package org.redkalex.convert.protobuf;
 
 import org.redkale.annotation.Priority;
 import org.redkale.convert.*;
+import org.redkale.convert.spi.ConvertProvider;
 
 /**
  *

@@ -7,6 +7,7 @@ package org.redkalex.cache.redis;
 
 import org.redkale.annotation.Priority;
 import org.redkale.source.*;
+import org.redkale.source.spi.CacheSourceProvider;
 import org.redkale.util.AnyValue;
 
 /**

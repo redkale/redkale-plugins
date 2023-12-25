@@ -6,6 +6,7 @@ package org.redkalex.source.parser;
 import net.sf.jsqlparser.parser.*;
 import org.redkale.annotation.Priority;
 import org.redkale.source.*;
+import org.redkale.source.spi.DataNativeSqlParserProvider;
 import org.redkale.util.AnyValue;
 
 /**
