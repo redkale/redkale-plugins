@@ -6,7 +6,7 @@
 package org.redkalex.cluster.consul;
 
 import org.redkale.annotation.Priority;
-import org.redkale.cluster.*;
+import org.redkale.cluster.spi.*;
 import org.redkale.util.*;
 
 /**

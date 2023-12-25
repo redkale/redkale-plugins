@@ -3,7 +3,8 @@
 package org.redkalex.cluster.nacos;
 
 import org.redkale.annotation.Priority;
-import org.redkale.cluster.*;
+import org.redkale.cluster.spi.ClusterAgent;
+import org.redkale.cluster.spi.ClusterAgentProvider;
 import org.redkale.util.*;
 
 /**

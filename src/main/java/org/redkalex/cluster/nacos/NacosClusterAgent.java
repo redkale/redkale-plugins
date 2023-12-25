@@ -12,13 +12,13 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.boot.*;
-import org.redkale.cluster.ClusterAgent;
+import org.redkale.cluster.spi.ClusterAgent;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Service;
 import org.redkale.util.*;
-import org.redkale.annotation.ResourceChanged;
 
 /**
  * <blockquote><pre>
