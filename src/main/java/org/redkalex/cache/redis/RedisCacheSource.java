@@ -339,19 +339,19 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> msetnxAsync(final Serializable... keyVals) {
+    public CompletableFuture<Boolean> msetnxAsync(final Serializable... keyVals) {
         if (keyVals.length % 2 != 0) {
             throw new RedkaleException("key value must be paired");
         }
-        return sendAsync(RedisCommand.MSETNX, keyVals[0].toString(), keymArgs(keyVals)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.MSETNX, keyVals[0].toString(), keymArgs(keyVals)).thenApply(v -> v.getBoolValue());
     }
 
     @Override
-    public CompletableFuture<Void> msetnxAsync(final Map map) {
+    public CompletableFuture<Boolean> msetnxAsync(final Map map) {
         if (isEmpty(map)) {
             return CompletableFuture.completedFuture(null);
         }
-        return sendAsync(RedisCommand.MSETNX, map.keySet().stream().findFirst().orElse("").toString(), keymArgs(map)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.MSETNX, map.keySet().stream().findFirst().orElse("").toString(), keymArgs(map)).thenApply(v -> v.getBoolValue());
     }
 
     //--------------------- setex ------------------------------

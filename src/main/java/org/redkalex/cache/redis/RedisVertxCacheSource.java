@@ -804,7 +804,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> msetnxAsync(final Serializable... keyVals) {
+    public CompletableFuture<Boolean> msetnxAsync(final Serializable... keyVals) {
         if (keyVals.length % 2 != 0) {
             throw new RedkaleException("key value must be paired");
         }
@@ -815,11 +815,11 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             args[i] = key;
             args[i + 1] = formatValue(key, cryptor, convert, val.getClass(), val);
         }
-        return sendAsync(Command.MSETNX, args).thenApply(v -> null);
+        return sendAsync(Command.MSETNX, args).thenApply(v -> getBoolValue(v));
     }
 
     @Override
-    public CompletableFuture<Void> msetnxAsync(final Map map) {
+    public CompletableFuture<Boolean> msetnxAsync(final Map map) {
         if (isEmpty(map)) {
             return CompletableFuture.completedFuture(null);
         }
@@ -828,7 +828,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
             bs.add(key.toString());
             bs.add(formatValue(key.toString(), cryptor, convert, val.getClass(), val));
         });
-        return sendAsync(Command.MSETNX, bs.toArray(new String[bs.size()])).thenApply(v -> null);
+        return sendAsync(Command.MSETNX, bs.toArray(new String[bs.size()])).thenApply(v -> getBoolValue(v));
     }
 
     @Override

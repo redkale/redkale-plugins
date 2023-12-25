@@ -442,7 +442,7 @@ public class RedissonCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> msetnxAsync(Serializable... keyVals) {
+    public CompletableFuture<Boolean> msetnxAsync(Serializable... keyVals) {
         Map<String, byte[]> map = new LinkedHashMap<>();
         for (int i = 0; i < keyVals.length; i += 2) {
             String key = keyVals[i].toString();
@@ -450,17 +450,17 @@ public class RedissonCacheSource extends AbstractRedisSource {
             map.put(key, val instanceof String ? encryptValue(key, cryptor, val.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key, cryptor, this.convert, val));
         }
         final RBuckets bucket = client.getBuckets(ByteArrayCodec.INSTANCE);
-        return toFuture(bucket.trySetAsync(map).thenApply(v -> null));
+        return toFuture(bucket.trySetAsync(map).thenApply(v -> v.booleanValue()));
     }
 
     @Override
-    public CompletableFuture<Void> msetnxAsync(Map map) {
+    public CompletableFuture<Boolean> msetnxAsync(Map map) {
         Map<String, byte[]> bs = new LinkedHashMap<>();
         map.forEach((key, val) -> {
             bs.put(key.toString(), val instanceof String ? encryptValue(key.toString(), cryptor, val.toString()).getBytes(StandardCharsets.UTF_8) : encryptValue(key.toString(), cryptor, this.convert, val));
         });
         final RBuckets bucket = client.getBuckets(ByteArrayCodec.INSTANCE);
-        return toFuture(bucket.trySetAsync(bs).thenApply(v -> null));
+        return toFuture(bucket.trySetAsync(bs).thenApply(v -> v.booleanValue()));
     }
 
     //--------------------- setex ------------------------------    
