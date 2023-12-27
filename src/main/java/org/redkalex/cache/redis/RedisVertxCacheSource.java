@@ -858,15 +858,31 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Void> setpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(Command.PSETEX, key, String.valueOf(milliSeconds), formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
+    }
+
+    @Override
     public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
         return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "NX", "EX", String.valueOf(expireSeconds))
             .thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
     }
 
+    @Override
+    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "NX", "PX", String.valueOf(milliSeconds))
+            .thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
+    }
+    
     //--------------------- expire ------------------------------    
     @Override
     public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
         return sendAsync(Command.EXPIRE, key, String.valueOf(expireSeconds)).thenApply(v -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> pexpireAsync(String key, int milliSeconds) {
+        return sendAsync(Command.PEXPIRE, key, String.valueOf(milliSeconds)).thenApply(v -> null);
     }
 
     //--------------------- persist ------------------------------    

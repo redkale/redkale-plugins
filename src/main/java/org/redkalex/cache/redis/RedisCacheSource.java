@@ -52,6 +52,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
 
     protected static final byte[] EX = "EX".getBytes();
 
+    protected static final byte[] PX = "PX".getBytes();
+
     protected static final byte[] CHANNELS = "CHANNELS".getBytes();
 
     private final Logger logger = Logger.getLogger(getClass().getSimpleName());
@@ -382,14 +384,29 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
+    public <T> CompletableFuture<Void> setpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(RedisCommand.SETPX, key, keyArgs(key, milliSeconds, convert, type, value)).thenApply(v -> v.getVoidValue());
+    }
+
+    @Override
     public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
         return sendAsync(RedisCommand.SET, key, keyArgs(key, expireSeconds, NX, EX, convert, type, value)).thenApply(v -> v.getBoolValue());
     }
 
+    @Override
+    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, milliSeconds, NX, PX, convert, type, value)).thenApply(v -> v.getBoolValue());
+    }
+    
     //--------------------- expire ------------------------------    
     @Override
     public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
         return sendAsync(RedisCommand.EXPIRE, key, keyArgs(key, expireSeconds)).thenApply(v -> v.getVoidValue());
+    }
+
+    @Override
+    public CompletableFuture<Void> pexpireAsync(String key, int milliSeconds) {
+        return sendAsync(RedisCommand.PEXPIRE, key, keyArgs(key, milliSeconds)).thenApply(v -> v.getVoidValue());
     }
 
     //--------------------- persist ------------------------------    
@@ -1009,9 +1026,9 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return bss;
     }
 
-    private byte[][] keyArgs(String key, int expire, byte[] nx, byte[] ex, Convert convert, Type type, Object value) {
+    private byte[][] keyArgs(String key, int expire, byte[] nx, byte[] epx, Convert convert, Type type, Object value) {
         return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
-            encodeValue(key, cryptor, convert, type, value), nx, ex,
+            encodeValue(key, cryptor, convert, type, value), nx, epx,
             String.valueOf(expire).getBytes(StandardCharsets.UTF_8)};
     }
 

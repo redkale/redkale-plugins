@@ -470,6 +470,12 @@ public class RedissonCacheSource extends AbstractRedisSource {
         return toFuture(bucket.setAsync(encryptValue(key, cryptor, type, convert, value), expireSeconds, TimeUnit.SECONDS).thenApply(r -> null));
     }
 
+    @Override
+    public <T> CompletableFuture<Void> setpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
+        return toFuture(bucket.setAsync(encryptValue(key, cryptor, type, convert, value), milliSeconds, TimeUnit.MILLISECONDS).thenApply(r -> null));
+    }
+
     //--------------------- setex ------------------------------    
     @Override
     public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert0, final Type type, T value) {
@@ -477,10 +483,21 @@ public class RedissonCacheSource extends AbstractRedisSource {
         return toFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, type, convert0, value), Duration.ofSeconds(expireSeconds)));
     }
 
+    @Override
+    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, int milliSeconds, Convert convert0, final Type type, T value) {
+        final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
+        return toFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, type, convert0, value), Duration.ofMillis(milliSeconds)));
+    }
+
     //--------------------- expire ------------------------------    
     @Override
     public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
         return toFuture(client.getBucket(key).expireAsync(Duration.ofSeconds(expireSeconds)).thenApply(r -> null));
+    }
+
+    @Override
+    public CompletableFuture<Void> pexpireAsync(String key, int milliSeconds) {
+        return toFuture(client.getBucket(key).expireAsync(Duration.ofMillis(milliSeconds)).thenApply(r -> null));
     }
 
     //--------------------- persist ------------------------------    
