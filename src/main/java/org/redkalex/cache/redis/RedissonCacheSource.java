@@ -471,7 +471,7 @@ public class RedissonCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<Void> setpxAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
         return toFuture(bucket.setAsync(encryptValue(key, cryptor, type, convert, value), milliSeconds, TimeUnit.MILLISECONDS).thenApply(r -> null));
     }
@@ -484,7 +484,7 @@ public class RedissonCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, int milliSeconds, Convert convert0, final Type type, T value) {
+    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, long milliSeconds, Convert convert0, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
         return toFuture(bucket.setIfAbsentAsync(encryptValue(key, cryptor, type, convert0, value), Duration.ofMillis(milliSeconds)));
     }
@@ -496,7 +496,7 @@ public class RedissonCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> pexpireAsync(String key, int milliSeconds) {
+    public CompletableFuture<Void> pexpireAsync(String key, long milliSeconds) {
         return toFuture(client.getBucket(key).expireAsync(Duration.ofMillis(milliSeconds)).thenApply(r -> null));
     }
 

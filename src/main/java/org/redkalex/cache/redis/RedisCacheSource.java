@@ -384,7 +384,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<Void> setpxAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
         return sendAsync(RedisCommand.SETPX, key, keyArgs(key, milliSeconds, convert, type, value)).thenApply(v -> v.getVoidValue());
     }
 
@@ -394,10 +394,10 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
         return sendAsync(RedisCommand.SET, key, keyArgs(key, milliSeconds, NX, PX, convert, type, value)).thenApply(v -> v.getBoolValue());
     }
-    
+
     //--------------------- expire ------------------------------    
     @Override
     public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
@@ -405,7 +405,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> pexpireAsync(String key, int milliSeconds) {
+    public CompletableFuture<Void> pexpireAsync(String key, long milliSeconds) {
         return sendAsync(RedisCommand.PEXPIRE, key, keyArgs(key, milliSeconds)).thenApply(v -> v.getVoidValue());
     }
 
@@ -985,13 +985,13 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return new byte[][]{key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), encodeValue(key, cryptor, convert, type, value)};
     }
 
-    private byte[][] keyArgs(String key, int expire, Type type, Object value) {
+    private byte[][] keyArgs(String key, long expire, Type type, Object value) {
         return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
             String.valueOf(expire).getBytes(StandardCharsets.UTF_8),
             encodeValue(key, cryptor, null, type, value)};
     }
 
-    private byte[][] keyArgs(String key, int expire, Convert convert, Type type, Object value) {
+    private byte[][] keyArgs(String key, long expire, Convert convert, Type type, Object value) {
         return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
             String.valueOf(expire).getBytes(StandardCharsets.UTF_8),
             encodeValue(key, cryptor, convert, type, value)};
@@ -1026,7 +1026,7 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return bss;
     }
 
-    private byte[][] keyArgs(String key, int expire, byte[] nx, byte[] epx, Convert convert, Type type, Object value) {
+    private byte[][] keyArgs(String key, long expire, byte[] nx, byte[] epx, Convert convert, Type type, Object value) {
         return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
             encodeValue(key, cryptor, convert, type, value), nx, epx,
             String.valueOf(expire).getBytes(StandardCharsets.UTF_8)};

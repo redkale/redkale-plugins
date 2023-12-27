@@ -858,7 +858,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<Void> setpxAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
         return sendAsync(Command.PSETEX, key, String.valueOf(milliSeconds), formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
     }
 
@@ -869,7 +869,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, int milliSeconds, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
         return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "NX", "PX", String.valueOf(milliSeconds))
             .thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
     }
@@ -881,7 +881,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public CompletableFuture<Void> pexpireAsync(String key, int milliSeconds) {
+    public CompletableFuture<Void> pexpireAsync(String key, long milliSeconds) {
         return sendAsync(Command.PEXPIRE, key, String.valueOf(milliSeconds)).thenApply(v -> null);
     }
 
