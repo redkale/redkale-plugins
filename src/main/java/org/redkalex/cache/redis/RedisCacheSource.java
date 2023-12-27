@@ -384,8 +384,8 @@ public final class RedisCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setpxAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.SETPX, key, keyArgs(key, milliSeconds, convert, type, value)).thenApply(v -> v.getVoidValue());
+    public <T> CompletableFuture<Void> psetexAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(RedisCommand.PSETEX, key, keyArgs(key, milliSeconds, convert, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override

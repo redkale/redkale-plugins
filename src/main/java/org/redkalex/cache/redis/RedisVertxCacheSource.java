@@ -858,7 +858,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setpxAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<Void> psetexAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
         return sendAsync(Command.PSETEX, key, String.valueOf(milliSeconds), formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
     }
 

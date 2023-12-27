@@ -471,7 +471,7 @@ public class RedissonCacheSource extends AbstractRedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> setpxAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
+    public <T> CompletableFuture<Void> psetexAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
         final RBucket<byte[]> bucket = client.getBucket(key, ByteArrayCodec.INSTANCE);
         return toFuture(bucket.setAsync(encryptValue(key, cryptor, type, convert, value), milliSeconds, TimeUnit.MILLISECONDS).thenApply(r -> null));
     }

@@ -21,7 +21,7 @@ public enum RedisCommand {
     GETSET("GETSET", false),
     GETDEL("GETDEL", false),
     SETEX("SETEX", false),
-    SETPX("SETPX", false),
+    PSETEX("PSETEX", false),
     EXPIRE("EXPIRE", false),
     PEXPIRE("PEXPIRE", false),
     PERSIST("PERSIST", false),
