@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -498,6 +499,37 @@ public class RedissonCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> pexpireAsync(String key, long milliSeconds) {
         return toFuture(client.getBucket(key).expireAsync(Duration.ofMillis(milliSeconds)).thenApply(r -> null));
+    }
+
+    @Override
+    public CompletableFuture<Void> expireAtAsync(String key, long secondsTime) {
+        return toFuture(client.getBucket(key).expireAsync(Instant.ofEpochSecond(secondsTime)).thenApply(r -> null));
+    }
+
+    @Override
+    public CompletableFuture<Void> pexpireAtAsync(String key, long milliTime) {
+        return toFuture(client.getBucket(key).expireAsync(Instant.ofEpochMilli(milliTime)).thenApply(r -> null));
+    }
+
+    //--------------------- ttl ------------------------------    
+    @Override
+    public CompletableFuture<Long> ttlAsync(String key) {
+        return toFuture(client.getBucket(key).remainTimeToLiveAsync().thenApply(r -> r > 0 ? r / 1000 : r));
+    }
+
+    @Override
+    public CompletableFuture<Long> pttlAsync(String key) {
+        return toFuture(client.getBucket(key).remainTimeToLiveAsync());
+    }
+
+    @Override
+    public CompletableFuture<Long> expireTimeAsync(String key) {
+        return toFuture(client.getBucket(key).getExpireTimeAsync().thenApply(r -> r > 0 ? r / 1000 : r));
+    }
+
+    @Override
+    public CompletableFuture<Long> pexpireTimeAsync(String key) {
+        return toFuture(client.getBucket(key).getExpireTimeAsync());
     }
 
     //--------------------- persist ------------------------------    

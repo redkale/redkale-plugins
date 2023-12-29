@@ -873,7 +873,7 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
         return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "NX", "PX", String.valueOf(milliSeconds))
             .thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
     }
-    
+
     //--------------------- expire ------------------------------    
     @Override
     public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
@@ -883,6 +883,37 @@ public class RedisVertxCacheSource extends AbstractRedisSource {
     @Override
     public CompletableFuture<Void> pexpireAsync(String key, long milliSeconds) {
         return sendAsync(Command.PEXPIRE, key, String.valueOf(milliSeconds)).thenApply(v -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> expireAtAsync(String key, long secondsTime) {
+        return sendAsync(Command.EXPIREAT, key, String.valueOf(secondsTime)).thenApply(v -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> pexpireAtAsync(String key, long milliTime) {
+        return sendAsync(Command.PEXPIREAT, key, String.valueOf(milliTime)).thenApply(v -> null);
+    }
+
+    //--------------------- ttl ------------------------------    
+    @Override
+    public CompletableFuture<Long> ttlAsync(String key) {
+        return sendAsync(Command.TTL, key).thenApply(v -> getLongValue(v, 0L));
+    }
+
+    @Override
+    public CompletableFuture<Long> pttlAsync(String key) {
+        return sendAsync(Command.PTTL, key).thenApply(v -> getLongValue(v, 0L));
+    }
+
+    @Override
+    public CompletableFuture<Long> expireTimeAsync(String key) {
+        return sendAsync(Command.EXPIRETIME, key).thenApply(v -> getLongValue(v, 0L));
+    }
+
+    @Override
+    public CompletableFuture<Long> pexpireTimeAsync(String key) {
+        return sendAsync(Command.PEXPIRETIME, key).thenApply(v -> getLongValue(v, 0L));
     }
 
     //--------------------- persist ------------------------------    

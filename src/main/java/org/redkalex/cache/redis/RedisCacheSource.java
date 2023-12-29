@@ -409,6 +409,37 @@ public final class RedisCacheSource extends AbstractRedisSource {
         return sendAsync(RedisCommand.PEXPIRE, key, keyArgs(key, milliSeconds)).thenApply(v -> v.getVoidValue());
     }
 
+    @Override
+    public CompletableFuture<Void> expireAtAsync(String key, long secondsTime) {
+        return sendAsync(RedisCommand.EXPIREAT, key, keyArgs(key, secondsTime)).thenApply(v -> v.getVoidValue());
+    }
+
+    @Override
+    public CompletableFuture<Void> pexpireAtAsync(String key, long milliTime) {
+        return sendAsync(RedisCommand.PEXPIREAT, key, keyArgs(key, milliTime)).thenApply(v -> v.getVoidValue());
+    }
+
+    //--------------------- ttl ------------------------------    
+    @Override
+    public CompletableFuture<Long> ttlAsync(String key) {
+        return sendAsync(RedisCommand.TTL, key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
+    }
+
+    @Override
+    public CompletableFuture<Long> pttlAsync(String key) {
+        return sendAsync(RedisCommand.PTTL, key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
+    }
+
+    @Override
+    public CompletableFuture<Long> expireTimeAsync(String key) {
+        return sendAsync(RedisCommand.EXPIRETIME, key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
+    }
+
+    @Override
+    public CompletableFuture<Long> pexpireTimeAsync(String key) {
+        return sendAsync(RedisCommand.PEXPIRETIME, key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
+    }
+
     //--------------------- persist ------------------------------    
     @Override
     public CompletableFuture<Boolean> persistAsync(String key) {

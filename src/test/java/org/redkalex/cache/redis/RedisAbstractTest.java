@@ -544,6 +544,14 @@ public abstract class RedisAbstractTest {
         Assertions.assertTrue(obj == null);
         System.out.println("SPOP一个Long元素：" + obj);
 
+        source.del("exp1");
+        source.psetexString("exp1", 5_000, "haha");
+        long remainMillis = source.pttl("exp1");
+        long remainSeconds = source.ttl("exp1");
+        System.out.println("exp1过期剩余时间：" + remainMillis+", "+ remainSeconds);
+        Assertions.assertTrue(remainMillis <= 5000 && remainMillis > 4500);
+        Assertions.assertTrue(remainSeconds <= 5 && remainSeconds > 4);
+
         cursor = new AtomicLong();
         List<String> keys = source.scan(cursor, 5);
         System.out.println("scan 长度 : " + keys.size() + ", dbsize: " + source.dbsize() + ", cursor: " + cursor + ", 内容: " + keys);
@@ -584,6 +592,7 @@ public abstract class RedisAbstractTest {
         //清除
         long rs = source.del("stritem1");
         System.out.println("删除stritem1个数: " + rs);
+        source.del("exp1");
         source.del("popset");
         source.del("stritem2");
         source.del("intitem1");
