@@ -49,6 +49,8 @@ public class XxljobScheduleManager extends ScheduleManagerService {
 
     private HttpServer server;
 
+    private RegistryParam registryParam;
+
     public XxljobScheduleManager(UnaryOperator<String> propertyFunc) {
         super(propertyFunc);
     }
@@ -68,6 +70,12 @@ public class XxljobScheduleManager extends ScheduleManagerService {
         super.destroy(conf);
         if (server != null) {
             try {
+                if (registryParam != null) {
+                    String regUrl = xxljobConfig.getDomain() + "/api/registryRemove";
+                    String paramBody = JsonConvert.root().convertTo(registryParam);
+                    String regResult = Utility.postHttpContent(regUrl, xxljobConfig.getHeaders(), paramBody);
+                    logger.log(Level.INFO, XxljobScheduleManager.class.getSimpleName() + " registryRemove(" + regUrl + ") : " + regResult);
+                }
                 server.shutdown();
             } catch (Exception ex) {
                 logger.log(Level.WARNING, XxljobScheduleManager.class.getSimpleName() + " shutdown error", ex);
@@ -95,13 +103,14 @@ public class XxljobScheduleManager extends ScheduleManagerService {
             this.server = http;
             http.start();
             //注册
-            RegistryParam registryParam = new RegistryParam();
-            registryParam.setRegistryGroup("EXECUTOR");
-            registryParam.setRegistryKey(clientConf.getExecutorName());
-            registryParam.setRegistryValue("http://" + clientConf.getIp() + ":" + clientConf.getPort());
-            String paramBody = JsonConvert.root().convertTo(registryParam);
+            RegistryParam regParam = new RegistryParam();
+            regParam.setRegistryGroup("EXECUTOR");
+            regParam.setRegistryKey(clientConf.getExecutorName());
+            regParam.setRegistryValue("http://" + clientConf.getIp() + ":" + clientConf.getPort());
+            String paramBody = JsonConvert.root().convertTo(regParam);
             String regUrl = clientConf.getDomain() + "/api/registry";
             String regResult = Utility.postHttpContent(regUrl, clientConf.getHeaders(), paramBody);
+            this.registryParam = regParam;
             logger.log(Level.INFO, XxljobScheduleManager.class.getSimpleName() + " registry(" + regUrl + ") : " + regResult);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, XxljobScheduleManager.class.getSimpleName() + " start error", ex);
@@ -145,6 +154,10 @@ public class XxljobScheduleManager extends ScheduleManagerService {
                     task.lock.unlock();
                 }
                 response.finishJson(rs);
+                HandleCallbackParam callbackParam = new HandleCallbackParam(param.getLogId(), param.getLogDateTime(), rs.getCode(), rs.getMsg());
+                String callbackUrl = xxljobConfig.getDomain() + "/api/callback";
+                String callbackBody = JsonConvert.root().convertTo(new HandleCallbackParam[]{callbackParam});
+                Utility.postHttpContentAsync(callbackUrl, xxljobConfig.getHeaders(), callbackBody);
             }
         }).addHttpServlet("/kill", (request, response) -> {
             KillParam param = convert.convertFrom(KillParam.class, request.getBodyUTF8());

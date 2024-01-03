@@ -14,7 +14,7 @@ import org.redkale.util.AnyValue;
 public class XxljobScheduleProvider implements ScheduleManagerProvider {
 
     /**
-     * &#60;xxljob addresses="http://localhost:8080/xxl-job-admin" executor="xxx" ip="127.0.0.1" port="5678" accessToken="default_token" /&#62;
+     * &#60;xxljob addresses="http://localhost:8080/xxl-job-admin" executorName="xxx" ip="127.0.0.1" port="5678" accessToken="default_token" /&#62;
      *
      * @param config 参数
      *
