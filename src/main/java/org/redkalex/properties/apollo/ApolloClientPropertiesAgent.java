@@ -28,16 +28,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
-        return (System.getProperty("apollo.meta") != null
-            || config.getValue("apollo.meta") != null
-            || config.getValue("apollo-meta") != null
-            || config.getValue("apollo_meta") != null)
-            && (System.getProperty("apollo.appid") != null
-            || System.getProperty("app.id") != null
-            || config.getValue("apollo.appid") != null
-            || config.getValue("app.id") != null
-            || config.getValue("apollo-appid") != null
-            || config.getValue("apollo_appid") != null);
+        return ApolloPropertiesAgent.acceptsConf0(config);
     }
 
     @Override
@@ -45,7 +36,7 @@ public class ApolloClientPropertiesAgent extends PropertiesAgent {
         //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
-            String key = k.contains(".") && k.contains("-") ? k : k.replace('-', '.').replace('_', '.');
+            String key = k.contains(".") && k.contains("-") ? k : k.replace('-', '.');
             agentConf.put(key, v);
             if (key.equals("apollo.appid")) {
                 key = "apollo.app.id";

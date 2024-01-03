@@ -37,32 +37,18 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
-        //支持 nacos.serverAddr、nacos-serverAddr、nacos_serverAddr
-        //nacos.data.group值的数据格式为: dataId1:group1:tenant1,dataId2:group2:tenant2 
-        //多组数据用,分隔
-        return (config.getValue("nacos.serverAddr") != null
-            || config.getValue("nacos-serverAddr") != null
-            || config.getValue("nacos_serverAddr") != null
-            || System.getProperty("nacos.serverAddr") != null
-            || System.getProperty("nacos-serverAddr") != null
-            || System.getProperty("nacos_serverAddr") != null)
-            && (config.getValue("nacos.data.group") != null
-            || config.getValue("nacos-data-group") != null
-            || config.getValue("nacos_data_group") != null
-            || System.getProperty("nacos.data.group") != null
-            || System.getProperty("nacos-data-group") != null
-            || System.getProperty("nacos_data_group") != null);
+        return NacosPropertiesAgent.acceptsConf0(config);
     }
 
     @Override
     public Map<String, Properties> init(final Application application, final AnyValue propertiesConf) {
         try {
             Properties agentConf = new Properties();
-            StringWrapper dataWrapper = new StringWrapper();
+            ObjectRef<String> dataRef = new ObjectRef<>();
             propertiesConf.forEach((k, v) -> {
-                String key = k.replace('-', '.').replace('_', '.');
+                String key = k.replace('-', '.');
                 if (key.equals("nacos.data.group")) {
-                    dataWrapper.setValue(v);
+                    dataRef.set(v);
                 } else if (key.startsWith("nacos.")) {
                     agentConf.put(key.substring("nacos.".length()), v);
                 }
@@ -70,15 +56,15 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             System.getProperties().forEach((k, v) -> {
                 //支持 nacos.serverAddr、nacos-serverAddr、nacos_serverAddr
                 if (k.toString().startsWith("nacos")) {
-                    String key = k.toString().replace('-', '.').replace('_', '.');
+                    String key = k.toString().replace('-', '.');
                     if (key.equals("nacos.data.group")) {
-                        dataWrapper.setValue(v.toString());
+                        dataRef.set(v.toString());
                     } else if (key.startsWith("nacos.")) {
                         agentConf.put(key.substring("nacos.".length()), v);
                     }
                 }
             });
-            List<NacosInfo> infos = NacosInfo.parse(dataWrapper.getValue());
+            List<NacosInfo> infos = NacosInfo.parse(dataRef.get());
             if (infos.isEmpty()) {
                 logger.log(Level.WARNING, "nacos.data.group is empty");
                 return null;

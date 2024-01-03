@@ -45,18 +45,20 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         //do nothing
     }
 
-    @Override
-    public boolean acceptsConf(AnyValue config) {
+    public static boolean acceptsConf0(AnyValue config) {
         return (System.getProperty("apollo.meta") != null
             || config.getValue("apollo.meta") != null
-            || config.getValue("apollo-meta") != null
-            || config.getValue("apollo_meta") != null)
+            || config.getValue("apollo-meta") != null)
             && (System.getProperty("apollo.appid") != null
             || System.getProperty("app.id") != null
             || config.getValue("apollo.appid") != null
             || config.getValue("app.id") != null
-            || config.getValue("apollo-appid") != null
-            || config.getValue("apollo_appid") != null);
+            || config.getValue("apollo-appid") != null);
+    }
+    
+    @Override
+    public boolean acceptsConf(AnyValue config) {
+        return acceptsConf0(config);
     }
 
     @Override
@@ -64,7 +66,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
         //可系统变量:  apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
         Properties agentConf = new Properties();
         propertiesConf.forEach((k, v) -> {
-            String key = k.contains(".") && k.contains("-") ? k : k.replace('-', '.').replace('_', '.');
+            String key = k.contains(".") && k.contains("-") ? k : k.replace('-', '.');
             if (!key.startsWith("apollo.")) {
                 return;
             }
@@ -79,7 +81,7 @@ public class ApolloPropertiesAgent extends PropertiesAgent {
             //支持 app.id、apollo.appid、apollo.meta、apollo.cluster、apollo.label、apollo.access-key.secret、apollo.namespace
             if (k.toString().startsWith("apollo") || k.toString().equals("app.id")) {
                 String key = k.toString().contains(".") && k.toString().contains("-")
-                    ? k.toString() : k.toString().replace('-', '.').replace('_', '.');
+                    ? k.toString() : k.toString().replace('-', '.');
                 if (key.equals("apollo.app.id") || key.equals("app.id")) {
                     key = "apollo.appid";
                 } else if (key.equals("apollo.access.key.secret")) {
