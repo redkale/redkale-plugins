@@ -97,7 +97,7 @@ public class XxljobScheduleManager extends ScheduleManagerService {
             .addValue("host", clientConf.getIp())
             .addValue("port", clientConf.getPort());
         try {
-            HttpServer http = new HttpServer();
+            HttpServer http = new HttpServer(application);
             http.init(httpConf);
             addHttpServlet(http);
             this.server = http;
