@@ -61,7 +61,7 @@ public class XxljobScheduleManager extends ScheduleManagerService {
         if (!this.enabled) {
             return;
         }
-        this.xxljobConfig = new XxljobConfig(conf.getAnyValue("xxljob"));
+        this.xxljobConfig = new XxljobConfig(conf.getAnyValue("xxljob"), this::getProperty);
         logger.log(Level.INFO, XxljobScheduleManager.class.getSimpleName() + " inited " + this.xxljobConfig);
     }
 

@@ -7,6 +7,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.UnaryOperator;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.AnyValue;
 import org.redkale.util.Utility;
@@ -35,12 +36,12 @@ public class XxljobConfig {
     public XxljobConfig() {
     }
 
-    public XxljobConfig(AnyValue conf) {
-        this.addresses = Objects.requireNonNull(conf.getValue("addresses").trim());
-        this.executorName = Objects.requireNonNull(conf.getValue("executorName"));
-        this.ip = conf.getValue("ip", Utility.localInetAddress().getHostAddress());
+    public XxljobConfig(AnyValue conf, UnaryOperator<String> func) {
+        this.addresses = Objects.requireNonNull(func.apply(conf.getValue("addresses").trim()));
+        this.executorName = Objects.requireNonNull(func.apply(conf.getValue("executorName")));
+        this.ip = func.apply(conf.getValue("ip", Utility.localInetAddress().getHostAddress()));
         this.port = conf.getIntValue("port", 0);
-        this.accessToken = conf.getValue("accessToken", "");
+        this.accessToken = func.apply(conf.getValue("accessToken", ""));
         this.headers = new HashMap<>();
         this.headers.put("XXL-JOB-ACCESS-TOKEN", this.accessToken);
         if (this.addresses.endsWith("/")) {
