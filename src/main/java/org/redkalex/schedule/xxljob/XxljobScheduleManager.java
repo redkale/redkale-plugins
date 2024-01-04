@@ -102,6 +102,8 @@ public class XxljobScheduleManager extends ScheduleManagerService {
             addHttpServlet(http);
             this.server = http;
             http.start();
+            //port可能配的是0，需要重新设置
+            clientConf.setPort(http.getSocketAddress().getPort());
             //注册
             RegistryParam regParam = new RegistryParam();
             regParam.setRegistryGroup("EXECUTOR");
@@ -111,7 +113,7 @@ public class XxljobScheduleManager extends ScheduleManagerService {
             String regUrl = clientConf.getDomain() + "/api/registry";
             String regResult = Utility.postHttpContent(regUrl, clientConf.getHeaders(), paramBody);
             this.registryParam = regParam;
-            logger.log(Level.INFO, XxljobScheduleManager.class.getSimpleName() + " registry(" + regUrl + ") : " + regResult);
+            logger.log(Level.INFO, XxljobScheduleManager.class.getSimpleName() + " registry(" + regUrl + ")(" + paramBody + ") : " + regResult);
         } catch (Exception ex) {
             logger.log(Level.SEVERE, XxljobScheduleManager.class.getSimpleName() + " start error", ex);
         }
@@ -122,15 +124,15 @@ public class XxljobScheduleManager extends ScheduleManagerService {
         http.addHttpServlet("/beat", (request, response) -> {
             response.finishJson(ReturnT.SUCCESS);
         }).addHttpServlet("/idleBeat", (request, response) -> {
-            IdleBeatParam param = convert.convertFrom(IdleBeatParam.class, request.getBodyUTF8());
+            IdleBeatParam param = convert.convertFrom(IdleBeatParam.class, request.getBody());
             XxljobTask task = xxljobids.get(param.getJobId());
-            if (task == null || !task.doing()) {
+            if (task == null || task.doing()) {
                 response.finishJson(new ReturnT<String>(ReturnT.FAIL_CODE, "job thread is running or has trigger queue."));
             } else {
                 response.finishJson(ReturnT.SUCCESS);
             }
         }).addHttpServlet("/run", (request, response) -> {
-            TriggerParam param = convert.convertFrom(TriggerParam.class, request.getBodyUTF8());
+            TriggerParam param = convert.convertFrom(TriggerParam.class, request.getBody());
             XxljobTask task = xxljobs.get(param.getExecutorHandler());
             if (task == null) {
                 response.finishJson(new ReturnT<String>(ReturnT.FAIL_CODE, "job handler [" + param.getExecutorHandler() + "] not found."));
@@ -160,7 +162,7 @@ public class XxljobScheduleManager extends ScheduleManagerService {
                 Utility.postHttpContentAsync(callbackUrl, xxljobConfig.getHeaders(), callbackBody);
             }
         }).addHttpServlet("/kill", (request, response) -> {
-            KillParam param = convert.convertFrom(KillParam.class, request.getBodyUTF8());
+            KillParam param = convert.convertFrom(KillParam.class, request.getBody());
             XxljobTask task = xxljobids.get(param.getJobId());
             if (task == null) {
                 response.finishJson(new ReturnT<String>(ReturnT.SUCCESS_CODE, "job thread already killed."));
