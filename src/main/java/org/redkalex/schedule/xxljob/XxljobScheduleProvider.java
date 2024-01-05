@@ -22,7 +22,7 @@ public class XxljobScheduleProvider implements ScheduleManagerProvider {
      */
     @Override
     public boolean acceptsConf(AnyValue config) {
-        return config.getAnyValue("xxljob") != null;
+        return config != null && config.getAnyValue("xxljob") != null;
     }
 
     @Override
