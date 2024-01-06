@@ -28,6 +28,7 @@ public class JsqlJdbcParserTest {
         test.run5();
         test.run6();
         test.run7();
+        test.run8();
     }
 
     @Test
@@ -44,7 +45,7 @@ public class JsqlJdbcParserTest {
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("新countsql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
-        System.out.println("=================================================================================");
+        System.out.println("========================================1=========================================");
     }
 
     @Test
@@ -56,7 +57,7 @@ public class JsqlJdbcParserTest {
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
-        System.out.println("=================================================================================");
+        System.out.println("=========================================2========================================");
     }
 
     @Test
@@ -68,24 +69,26 @@ public class JsqlJdbcParserTest {
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
-        System.out.println("=================================================================================");
+        System.out.println("==========================================3=======================================");
     }
 
     @Test
     public void run4() throws Exception {
-        String sql = "INSERT INTO dayrecord (recordid, content, createTime) SELECT recordid, content, NOW() FROM hourrecord WHERE createTime BETWEEN :startTime AND :endTime AND id > 0";
+        String sql = "INSERT INTO dayrecord (recordid, content, createTime) SELECT recordid, content, NOW() "
+            + "FROM hourrecord WHERE createTime BETWEEN :startTime AND :endTime AND id > 0";
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
-        System.out.println("=================================================================================");
+        System.out.println("==========================================4=======================================");
     }
 
     @Test
     public void run5() throws Exception {
-        String sql = "UPDATE dayrecord SET id = MAX(:id), remark = :remark, name = CASE WHEN type = 1 THEN :v1 WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
+        String sql = "UPDATE dayrecord SET id = MAX(:id), remark = :remark, name = CASE WHEN type = 1 THEN :v1 "
+            + "WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
         Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "ids", List.of(2, 3));
 
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
@@ -95,13 +98,14 @@ public class JsqlJdbcParserTest {
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
-        System.out.println("=================================================================================");
+        System.out.println("==========================================5=======================================");
     }
 
     @Test
     public void run6() throws Exception {
-        String sql = "UPDATE dayrecord SET id = :idx, remark = :remark, name = CASE WHEN type = 1 THEN :v1 WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN (1,2,:ids)";
-        Map<String, Object> params = Utility.ofMap("idx", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "sts", List.of(2, 3), "ids", List.of(3, 4));
+        String sql = "UPDATE dayrecord SET id = MAX(:id), remark = :remark, name = CASE WHEN type = 1 THEN :v1 "
+            + "WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
+        Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "ids", new ArrayList<>());
 
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
         System.out.println(sqlParser.Statement());
@@ -110,11 +114,28 @@ public class JsqlJdbcParserTest {
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
-        System.out.println("=================================================================================");
+        System.out.println("==========================================6=======================================");
     }
 
     @Test
     public void run7() throws Exception {
+        String sql = "UPDATE dayrecord SET id = :idx, remark = :remark, name = CASE WHEN type = 1 THEN :v1 "
+            + "WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN (1,2,:ids)";
+        Map<String, Object> params = Utility.ofMap("idx", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark",
+            "startTime", 1, "sts", List.of(2, 3), "ids", List.of(3, 4));
+
+        CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
+        System.out.println(sqlParser.Statement());
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("==========================================7=======================================");
+    }
+
+    @Test
+    public void run8() throws Exception {
         String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = :idx ORDER BY u.createTime DESC";
         Map<String, Object> params = Utility.ofMap("idx", 100);
 
@@ -127,6 +148,6 @@ public class JsqlJdbcParserTest {
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
-        System.out.println("=================================================================================");
+        System.out.println("==========================================8=======================================");
     }
 }

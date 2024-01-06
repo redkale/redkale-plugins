@@ -268,13 +268,20 @@ public class NativeExprDeParser extends ExpressionDeParser {
                     if (item instanceof JdbcNamedParameter) {
                         List<Expression> es = createInParamItemList((JdbcNamedParameter) item);
                         newList.remove(i);
-                        newList.addAll(i, es);
+                        if (es != null) {
+                            newList.addAll(i, es);
+                        }
                     }
                 }
                 new ParenthesedExpressionList(newList).accept(this);
             } else if (rightExpr instanceof JdbcNamedParameter) {
                 List<Expression> itemList = createInParamItemList((JdbcNamedParameter) rightExpr);
-                new ParenthesedExpressionList(itemList).accept(this);
+                if (itemList == null) {
+                    buffer.delete(start, end);
+                    buffer.append(expr.isNot() ? "1=1" : "1=2");
+                } else {
+                    new ParenthesedExpressionList(itemList).accept(this);
+                }
             } else {
                 throw new SourceException("Not support expression (" + rightExpr + "), type: " + (rightExpr == null ? null : rightExpr.getClass().getName()));
             }
@@ -300,12 +307,14 @@ public class NativeExprDeParser extends ExpressionDeParser {
         }
         if (val instanceof Collection) {
             if (((Collection) val).isEmpty()) {
-                throw new SourceException("Parameter (name=" + name + ") is empty");
+                //throw new SourceException("Parameter (name=" + name + ") is empty");
+                return null;
             }
         } else if (val.getClass().isArray()) {
             int len = Array.getLength(val);
             if (len < 1) {
-                throw new SourceException("Parameter (name=" + name + ") is empty");
+                //throw new SourceException("Parameter (name=" + name + ") is empty");
+                return null;
             }
             Collection list = new ArrayList();
             for (int i = 0; i < len; i++) {
