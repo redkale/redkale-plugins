@@ -21,13 +21,13 @@ import org.bson.codecs.pojo.PojoCodecProvider;
 import org.bson.conversions.Bson;
 import org.reactivestreams.*;
 import org.redkale.annotation.AutoLoad;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.annotation.ResourceType;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
-import org.redkale.annotation.ResourceChanged;
 
 /**
  * Mongodb版的DataSource实现 <br>
@@ -1222,10 +1222,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             return CompletableFuture.completedFuture(new LinkedHashMap<>());
         }
         final EntityInfo<T> info = loadEntityInfo(clazz);
-        final ArrayList<K> pks = new ArrayList<>();
-        keyStream.forEach(k -> pks.add(k));
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(clazz, FilterNodes.in(primary.field(), pks)).thenApply((List<T> rs) -> {
+        return queryListAsync(clazz, FilterNodes.in(primary.field(), keyStream)).thenApply((List<T> rs) -> {
             Map<K, T> map = new LinkedHashMap<>();
             if (rs.isEmpty()) {
                 return new LinkedHashMap<>();
