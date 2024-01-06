@@ -12,7 +12,7 @@ public class NativeSqlFragment {
     //是否是#{xx.xx}参数
     private final boolean signable;
 
-    //sql语句片段或者#{}参数名
+    //sql语句片段或者#{}参数名或者:jdbcParamName
     private final String text;
 
     public NativeSqlFragment(boolean signable, String text) {

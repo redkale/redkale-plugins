@@ -6,8 +6,8 @@
 package org.redkalex.source.parser2;
 
 import java.io.*;
-import org.redkale.persistence.*;
 import org.redkale.convert.json.*;
+import org.redkale.persistence.*;
 
 /**
  *
@@ -16,33 +16,6 @@ import org.redkale.convert.json.*;
 @Entity
 public abstract class BaseEntity implements Serializable {
 
-    //状态间隔10，便于以后扩展意义接近的状态值比较靠近
-    //正常
-    public static final short STATUS_NORMAL = 10;
-
-    //待审批
-    public static final short STATUS_PENDING = 20;
-
-    //审批不通过
-    public static final short STATUS_PENDNO = 30;
-
-    //冻结
-    public static final short STATUS_FREEZE = 40;
-
-    //隐藏
-    public static final short STATUS_HIDDEN = 50;
-
-    //关闭
-    public static final short STATUS_CLOSED = 60;
-
-    //过期
-    public static final short STATUS_EXPIRE = 70;
-
-    //删除
-    public static final short STATUS_DELETED = 80;
-
-    //草稿
-    public static final short STATUS_DRAFT = 90;
 
     @Override
     public String toString() {

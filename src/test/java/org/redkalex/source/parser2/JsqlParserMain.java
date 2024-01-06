@@ -48,5 +48,31 @@ public class JsqlParserMain {
 
         ForumInfo forum = source.nativeQueryOne(ForumInfo.class, "SELECT forum_groupid FROM forum_info WHERE forumid='ggmk'");
         System.out.println("ggmk对象: " + forum);
+
+        ForumResult result = source.nativeQueryOne(ForumResult.class, "SELECT f.forum_groupid, s.forum_section_color "
+            + "FROM forum_info f, forum_section s "
+            + " WHERE f.forumid = s.forumid AND s.forum_sectionid='jjjc'");
+        System.out.println("result对象: " + result);
+
+        ForumBean bean = new ForumBean();
+        bean.setForumSectionColor("#05526b");
+        bean.setForumSectionid("jjjc");
+        bean.setForumid("ggmk");
+
+        result = source.nativeQueryOne(ForumResult.class, "SELECT f.forum_groupid, s.forum_section_color "
+            + "FROM forum_info f, forum_section s "
+            + " WHERE f.forumid = s.forumid AND "
+            + "s.forum_sectionid = ${forumSectionid} AND "
+            + "f.forumid = ${forumid} AND s.forum_section_color = ${forumSectionColor}", bean);
+        System.out.println("result对象2====: " + result);
+        
+        bean.setForumSectionid(null); 
+        result = source.nativeQueryOne(ForumResult.class, "SELECT f.forum_groupid, s.forum_section_color "
+            + "FROM forum_info f, forum_section s "
+            + " WHERE f.forumid = s.forumid AND "
+            + "s.forum_sectionid = ${forumSectionid} AND "
+            + "f.forumid = #{forumid} AND s.forum_section_color = ${forumSectionColor}", bean);
+        System.out.println("result对象3=========: " + result);
+
     }
 }

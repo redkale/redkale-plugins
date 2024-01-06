@@ -22,6 +22,7 @@ import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.*;
 import net.sf.jsqlparser.statement.upsert.Upsert;
 import net.sf.jsqlparser.util.deparser.*;
+import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.SourceException;
 import org.redkale.util.*;
 
@@ -141,6 +142,7 @@ public class NativeParserInfo {
 
     public Map<String, Object> createNamedParams(ObjectRef<String> newSql, Map<String, Object> params) {
         Map<String, Object> newParams = params == null ? new HashMap<>() : new HashMap<>(params);
+        JsonConvert convert = JsonConvert.root();
         for (NativeSqlParameter p : allNamedParameters) {
             Object val = p.getParamValue(params);
             if (p.isRequired() && val == null) {
@@ -155,7 +157,7 @@ public class NativeParserInfo {
             StringBuilder sb = new StringBuilder();
             for (NativeSqlFragment fragment : fragments) {
                 if (fragment.isSignable()) {
-                    sb.append(newParams.get(fragment.getText()));
+                    sb.append(convert.convertTo(newParams.get(fragment.getText())));
                 } else {
                     sb.append(fragment.getText());
                 }
