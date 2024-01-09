@@ -5,15 +5,17 @@ package org.redkalex.source.parser;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.IntFunction;
 import java.util.logging.*;
 import org.redkale.annotation.ResourceType;
+import org.redkale.source.DataNativeSqlInfo;
 import org.redkale.source.DataNativeSqlParser;
 import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.util.ObjectRef;
 
 /**
  * 基于jsqlparser的DataNativeSqlParser实现类
- * 
+ *
  *
  * @author zhangjx
  */
@@ -23,6 +25,11 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
     protected final Logger logger = Logger.getLogger(DataNativeJsqlParser.class.getSimpleName());
 
     private final ConcurrentHashMap<String, NativeParserInfo> parserInfo = new ConcurrentHashMap();
+
+    @Override
+    public DataNativeSqlInfo parse(IntFunction<String> signFunc, String dbtype, String rawSql) {
+        return parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql));
+    }
 
     @Override
     public DataNativeSqlStatement parse(java.util.function.IntFunction<String> signFunc, String dbtype, String rawSql, Map<String, Object> params) {

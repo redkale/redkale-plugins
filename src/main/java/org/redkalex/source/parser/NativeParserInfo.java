@@ -23,6 +23,7 @@ import net.sf.jsqlparser.statement.update.*;
 import net.sf.jsqlparser.statement.upsert.Upsert;
 import net.sf.jsqlparser.util.deparser.*;
 import org.redkale.convert.json.JsonConvert;
+import org.redkale.source.DataNativeSqlInfo;
 import org.redkale.source.SourceException;
 import org.redkale.util.*;
 
@@ -33,13 +34,7 @@ import org.redkale.util.*;
  * @author zhangjx
  */
 @SuppressWarnings("unchecked")
-public class NativeParserInfo {
-
-    //原始sql语句
-    private final String rawSql;
-
-    //jdbc版的sql语句, 只有numberSignNames为空时才有值
-    private final String jdbcSql;
+public class NativeParserInfo extends DataNativeSqlInfo {
 
     //#{xx.xx}的参数名
     private final Map<String, NativeSqlParameter> numberSignNames = new HashMap<>();
@@ -67,7 +62,7 @@ public class NativeParserInfo {
         StringBuilder sb = new StringBuilder();
         final char[] chars = Utility.charArray(rawSql);
         char last = 0;
-        boolean dyn = false;
+        Set<String> rootParams = new LinkedHashSet<>();
         int type = 0; //1:#{xx.xx}, 2:${xx.xx}, 3:$${xx.xx}
         for (int i = 0; i < chars.length; i++) {
             char ch = chars[i];
@@ -90,12 +85,11 @@ public class NativeParserInfo {
                 if (!paraming) {
                     throw new SourceException("Parse error, sql: " + rawSql);
                 }
-                String name = sb.toString();
+                String name = sb.toString().trim();
                 sb.delete(0, sb.length());
                 if (type == 1) { //#{xx.xx}
                     numberSignNames.put(name, new NativeSqlParameter(name, name, true));
                     fragments.add(new NativeSqlFragment(true, name));
-                    dyn = true;
                 } else if (type >= 2) { //${xx.xx}、$${xx.xx}
                     NativeSqlParameter old = dollarJdbcNames.get(name);
                     String jdbc = old == null ? null : old.getJdbcName();
@@ -112,6 +106,14 @@ public class NativeParserInfo {
                     fragments.add(new NativeSqlFragment(false, ":" + jdbc));
                 }
                 paraming = false;
+                int p1 = name.indexOf('.');
+                int p2 = name.indexOf('[');
+                if (p1 < 0 && p2 < 0) {
+                    rootParams.add(name);
+                } else {
+                    int p = p1 > 0 ? (p2 > 0 ? Math.min(p1, p2) : p1) : p2;
+                    rootParams.add(name.substring(0, p));
+                }
             } else {
                 sb.append(ch);
             }
@@ -134,10 +136,7 @@ public class NativeParserInfo {
         }
         this.allNamedParameters.addAll(numberSignNames.values());
         this.allNamedParameters.addAll(dollarJdbcNames.values());
-    }
-
-    public boolean isDynamic() {
-        return jdbcSql == null;
+        this.rootParamNames.addAll(rootParams);
     }
 
     public Map<String, Object> createNamedParams(ObjectRef<String> newSql, Map<String, Object> params) {
