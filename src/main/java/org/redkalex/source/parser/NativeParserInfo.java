@@ -137,6 +137,26 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         this.allNamedParameters.addAll(numberSignNames.values());
         this.allNamedParameters.addAll(dollarJdbcNames.values());
         this.rootParamNames.addAll(rootParams);
+        try {
+            CCJSqlParser sqlParser = new CCJSqlParser(Utility.orElse(this.jdbcSql, this.rawSql)).withAllowComplexParsing(true);
+            Statement stmt = sqlParser.Statement();
+            if (stmt instanceof Select) {
+                this.sqlMode = SqlMode.SELECT;
+            } else if (stmt instanceof Insert) {
+                this.sqlMode = SqlMode.INSERT;
+            } else if (stmt instanceof Delete) {
+                this.sqlMode = SqlMode.DELETE;
+            } else if (stmt instanceof Update) {
+                this.sqlMode = SqlMode.UPDATE;
+            } else if (stmt instanceof Upsert) {
+                this.sqlMode = SqlMode.UPSERT;
+            } else {
+                this.sqlMode = SqlMode.OTHERS;
+            }
+        } catch (ParseException e) {
+            throw new SourceException("Parse error, sql: " + rawSql, e);
+        }
+
     }
 
     public Map<String, Object> createNamedParams(ObjectRef<String> newSql, Map<String, Object> params) {
