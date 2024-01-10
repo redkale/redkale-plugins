@@ -22,7 +22,6 @@ import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.*;
 import net.sf.jsqlparser.statement.upsert.Upsert;
 import net.sf.jsqlparser.util.deparser.*;
-import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.DataNativeSqlInfo;
 import org.redkale.source.SourceException;
 import org.redkale.util.*;
@@ -137,8 +136,9 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         this.allNamedParameters.addAll(numberSignNames.values());
         this.allNamedParameters.addAll(dollarJdbcNames.values());
         this.rootParamNames.addAll(rootParams);
+        String parserSql = Utility.orElse(this.jdbcSql, this.rawSql);
         try {
-            CCJSqlParser sqlParser = new CCJSqlParser(Utility.orElse(this.jdbcSql, this.rawSql)).withAllowComplexParsing(true);
+            CCJSqlParser sqlParser = new CCJSqlParser(parserSql).withAllowComplexParsing(true);
             Statement stmt = sqlParser.Statement();
             if (stmt instanceof Select) {
                 this.sqlMode = SqlMode.SELECT;
@@ -154,14 +154,13 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 this.sqlMode = SqlMode.OTHERS;
             }
         } catch (ParseException e) {
-            throw new SourceException("Parse error, sql: " + rawSql, e);
+            this.sqlMode = this.rawSql.trim().toLowerCase().startsWith("select") ? SqlMode.SELECT : SqlMode.OTHERS;
         }
 
     }
 
     public Map<String, Object> createNamedParams(ObjectRef<String> newSql, Map<String, Object> params) {
         Map<String, Object> newParams = params == null ? new HashMap<>() : new HashMap<>(params);
-        JsonConvert convert = JsonConvert.root();
         for (NativeSqlParameter p : allNamedParameters) {
             Object val = p.getParamValue(params);
             if (p.isRequired() && val == null) {
@@ -176,7 +175,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             StringBuilder sb = new StringBuilder();
             for (NativeSqlFragment fragment : fragments) {
                 if (fragment.isSignable()) {
-                    sb.append(convert.convertTo(newParams.get(fragment.getText())));
+                    sb.append(newParams.get(fragment.getText())); //不能用JsonConvert， 比如 FROM user_#{uid}
                 } else {
                     sb.append(fragment.getText());
                 }
@@ -336,7 +335,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             return new NativeParserNode(stmt, countStmt, where, jdbcDollarMap,
                 fullNames, requiredNamedSet, isDynamic() || containsInName.get(), updateNoWhereSql, updateNamedSet);
         } catch (ParseException e) {
-            throw new SourceException("Parse error, sql: " + rawSql, e);
+            throw new SourceException("Parse error, sql: " + nativeSql, e);
         }
     }
 
