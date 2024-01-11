@@ -79,7 +79,15 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                     fragments.add(new NativeSqlFragment(false, sb.substring(0, sb.length() + 1 - type)));
                     sb.delete(0, sb.length());
                     paraming = true;
+                } else if (last == '\\') {
+                    sb.deleteCharAt(sb.length() - 1);
+                    sb.append(ch);
+                } else {
+                    sb.append(ch);
                 }
+            } else if (ch == '}' && last == '\\') {
+                sb.deleteCharAt(sb.length() - 1);
+                sb.append(ch);
             } else if (ch == '}') {
                 if (!paraming) {
                     throw new SourceException("Parse error, sql: " + rawSql);
