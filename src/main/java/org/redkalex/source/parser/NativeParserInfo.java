@@ -139,7 +139,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         String parserSql = Utility.orElse(this.jdbcSql, this.rawSql);
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(parserSql).withAllowComplexParsing(true);
-            Statement stmt = sqlParser.Statement();
+            Statement stmt = sqlParser.SingleStatement();
             if (stmt instanceof Select) {
                 this.sqlMode = SqlMode.SELECT;
             } else if (stmt instanceof Insert) {
@@ -154,7 +154,17 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 this.sqlMode = SqlMode.OTHERS;
             }
         } catch (ParseException e) {
-            this.sqlMode = this.rawSql.trim().toLowerCase().startsWith("select") ? SqlMode.SELECT : SqlMode.OTHERS;
+            String upperSql = this.rawSql.trim().toUpperCase();
+            this.sqlMode = SqlMode.OTHERS;
+            if (upperSql.startsWith("SELECT")) {
+                this.sqlMode = SqlMode.SELECT;
+            } else if (upperSql.startsWith("INSERT")) {
+                this.sqlMode = SqlMode.INSERT;
+            } else if (upperSql.startsWith("UPDATE")) {
+                this.sqlMode = SqlMode.UPDATE;
+            } else if (upperSql.startsWith("DELETE")) {
+                this.sqlMode = SqlMode.DELETE;
+            }
         }
 
     }
