@@ -22,7 +22,7 @@ import org.redkale.source.SourceException;
  */
 public class NativeParserNode {
 
-    //sql是否根据参数值动态生成的，包含了IN或#{xx.xx}参数的
+    //sql是否根据参数值动态生成的，包含了IN或${xx.xx}参数的
     private final boolean dynamic;
 
     //Statement对象
@@ -34,8 +34,8 @@ public class NativeParserNode {
     //where条件
     private final Expression fullWhere;
 
-    //jdbc参数名:argxxx对应${xx.xx}参数名
-    private final Map<String, String> jdbcDollarMap;
+    //jdbc参数名:argxxx对应#{xx.xx}参数名
+    private final Map<String, String> jdbcNumsignMap;
 
     //没有where的UPDATE语句
     private final String updateNoWhereSql;
@@ -54,13 +54,13 @@ public class NativeParserNode {
     //缓存
     private final ConcurrentHashMap<String, DataNativeSqlStatement> statements = new ConcurrentHashMap();
 
-    public NativeParserNode(Statement stmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcDollarMap,
+    public NativeParserNode(Statement stmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcNumsignMap,
         Set<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateNoWhereSql, List<String> updateJdbcNames) {
         this.stmt = stmt;
         this.dynamic = dynamic;
         this.countStmt = countStmt;
         this.fullWhere = fullWhere;
-        this.jdbcDollarMap = jdbcDollarMap;
+        this.jdbcNumsignMap = jdbcNumsignMap;
         this.updateNoWhereSql = updateNoWhereSql;
         this.updateJdbcNames = updateJdbcNames;
         this.fullJdbcNames = new TreeSet<>(fullJdbcNames);
@@ -74,7 +74,7 @@ public class NativeParserNode {
                 if (miss == null) {
                     miss = new LinkedHashSet<>();
                 }
-                miss.add(jdbcDollarMap.getOrDefault(mustName, mustName));
+                miss.add(jdbcNumsignMap.getOrDefault(mustName, mustName));
             }
         }
         if (miss != null) {
@@ -97,7 +97,7 @@ public class NativeParserNode {
         statement.setJdbcNames(exprDeParser.getJdbcNames());
         List<String> paramNames = new ArrayList<>();
         for (String name : statement.getJdbcNames()) {
-            paramNames.add(jdbcDollarMap == null ? name : jdbcDollarMap.getOrDefault(name, name));
+            paramNames.add(jdbcNumsignMap == null ? name : jdbcNumsignMap.getOrDefault(name, name));
         }
         statement.setParamNames(paramNames);
         statement.setParamValues(params);

@@ -37,10 +37,10 @@ public class JsqlParserTest {
 
     @Test
     public void run1() throws Exception {
-        String sql = "SELECT DISTINCT col1 AS a, col2 AS b, col3 AS c FROM table_#{mytab} T "
-            + "WHERE col1 = 10 AND (col2 = $${c2} OR col3 = MAX(${c3})) AND name LIKE '%'"
+        String sql = "SELECT DISTINCT col1 AS a, col2 AS b, col3 AS c FROM table_${mytab} T "
+            + "WHERE col1 = 10 AND (col2 = ##{c2} OR col3 = MAX(#{c3})) AND name LIKE '%'"
             + " AND seqid IS NULL AND (gameid IN :gameids OR gameName IN ('%', 'zzz'))"
-            + " AND time BETWEEN ${time.min} AND ${time.max} AND col2 >= ${c2}"
+            + " AND time BETWEEN #{time.min} AND #{time.max} AND col2 >= #{c2}"
             + " AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";
         Map<String, Object> params = Utility.ofMap("mytab", "20240807", "min2", 1, "c2", 3, "time", new Range.IntRange(1, 2), "gameids", List.of(2, 3));
 
@@ -72,7 +72,7 @@ public class JsqlParserTest {
 
     @Test
     public void run3() throws Exception {
-        String sql = "INSERT INTO dayrecord (recordid, content, createTime) VALUES (1, $${v2}, 3)";
+        String sql = "INSERT INTO dayrecord (recordid, content, createTime) VALUES (1, ##{v2}, 3)";
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
@@ -89,7 +89,7 @@ public class JsqlParserTest {
 
     @Test
     public void run4() throws Exception {
-        String sql = "INSERT INTO dayrecord (recordid, content, createTime) SELECT recordid, content, NOW() FROM hourrecord WHERE createTime BETWEEN ${startTime} AND ${endTime} AND id > 0";
+        String sql = "INSERT INTO dayrecord (recordid, content, createTime) SELECT recordid, content, NOW() FROM hourrecord WHERE createTime BETWEEN #{startTime} AND #{endTime} AND id > 0";
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
@@ -103,7 +103,7 @@ public class JsqlParserTest {
 
     @Test
     public void run5() throws Exception {
-        String sql = "UPDATE dayrecord SET id = MAX(#{id}), remark = ${remark}, name = CASE WHEN type = 1 THEN ${v1} WHEN type = 2 THEN ${v2} ELSE ${v3} END WHERE createTime BETWEEN ${startTime} AND ${endTime} AND id IN ${ids}";
+        String sql = "UPDATE dayrecord SET id = MAX(${id}), remark = #{remark}, name = CASE WHEN type = 1 THEN #{v1} WHEN type = 2 THEN #{v2} ELSE #{v3} END WHERE createTime BETWEEN #{startTime} AND #{endTime} AND id IN #{ids}";
         Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "ids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
@@ -131,7 +131,7 @@ public class JsqlParserTest {
 
     @Test
     public void run7() throws Exception {
-        String sql = "UPDATE dayrecord SET id = :idx, remark = ${remark}, name = CASE WHEN type = MOD(${t1},${t2}) THEN ${v1} WHEN type = 2 THEN ${v2} ELSE ${v3} END WHERE createTime BETWEEN :startTime AND :endTime AND id IN ${ids}";
+        String sql = "UPDATE dayrecord SET id = :idx, remark = #{remark}, name = CASE WHEN type = MOD(#{t1},#{t2}) THEN #{v1} WHEN type = 2 THEN #{v2} ELSE #{v3} END WHERE createTime BETWEEN :startTime AND :endTime AND id IN #{ids}";
         Map<String, Object> params = Utility.ofMap("idx", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "t1", 36, "startTime", 1, "sts", List.of(2, 3), "ids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
@@ -148,7 +148,7 @@ public class JsqlParserTest {
 
     @Test
     public void run8() throws Exception {
-        String sql = "SELECT * FROM userdetail WHERE id = ${id} AND MOD(${t1},${t2}) = 3";
+        String sql = "SELECT * FROM userdetail WHERE id = #{id} AND MOD(#{t1},#{t2}) = 3";
         Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
@@ -162,7 +162,7 @@ public class JsqlParserTest {
 
     @Test
     public void run9() throws Exception {
-        String sql = "SELECT * FROM userdetail WHERE id = ${id} AND type = MOD(${t1},${t2})";
+        String sql = "SELECT * FROM userdetail WHERE id = #{id} AND type = MOD(#{t1},#{t2})";
         Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
@@ -176,7 +176,7 @@ public class JsqlParserTest {
 
     @Test
     public void run10() throws Exception {
-        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = ${id} AND r.type = MOD(${t1},${t2}) ORDER BY u.createTime DESC";
+        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = #{id} AND r.type = MOD(#{t1},#{t2}) ORDER BY u.createTime DESC";
         Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();

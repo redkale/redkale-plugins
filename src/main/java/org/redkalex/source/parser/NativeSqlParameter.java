@@ -17,8 +17,8 @@ public class NativeSqlParameter {
 
     private static final ConcurrentHashMap<String, Attribute> attrCache = new ConcurrentHashMap<>();
 
-    //${xxx}、$${xxx}参数名
-    private final String dollarName;
+    //#{xxx}、##{xxx}参数名
+    private final String numsignName;
 
     //jdbc参数名 :argxxx
     private final String jdbcName;
@@ -26,21 +26,21 @@ public class NativeSqlParameter {
     //是否必需 
     private final boolean required;
 
-    //${xxx}参数名按.分隔
-    private final String[] dollars;
+    //#{xxx}参数名按.分隔
+    private final String[] numsigns;
 
-    public NativeSqlParameter(String dollarName, String jdbcName, boolean required) {
-        this.dollarName = dollarName;
+    public NativeSqlParameter(String numsignName, String jdbcName, boolean required) {
+        this.numsignName = numsignName;
         this.jdbcName = jdbcName;
         this.required = required;
-        this.dollars = dollarName.split("\\.");
+        this.numsigns = numsignName.split("\\.");
     }
 
     public Object getParamValue(Map<String, Object> params) {
         if (params == null || params.isEmpty()) {
             return null;
         }
-        String[] subs = dollars;
+        String[] subs = numsigns;
         Object val = params.get(subs[0]);
         if (val == null || subs.length == 1) {
             return val;
@@ -57,8 +57,8 @@ public class NativeSqlParameter {
         return val;
     }
 
-    public String getDollarName() {
-        return dollarName;
+    public String getNumsignName() {
+        return numsignName;
     }
 
     public String getJdbcName() {
@@ -69,8 +69,8 @@ public class NativeSqlParameter {
         return required;
     }
 
-    public String[] getDollars() {
-        return dollars;
+    public String[] getNumsigns() {
+        return numsigns;
     }
 
     @Override

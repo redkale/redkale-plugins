@@ -27,7 +27,7 @@ import org.redkale.source.SourceException;
 import org.redkale.util.*;
 
 /**
- * jsqlparser只能识别:xxx的参数变量形式的sql，而DataNativeSqlParser定义的参数变量形式是: #{xxx}、${xxx}、$${xxx}
+ * jsqlparser只能识别:xxx的参数变量形式的sql，而DataNativeSqlParser定义的参数变量形式是: ${xxx}、#{xxx}、##{xxx}
  * 此类作用是将原始sql先转换成:name形式的sql再解析出变量参数
  *
  * @author zhangjx
@@ -38,16 +38,16 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     //#{xx.xx}的参数名
     private final Map<String, NativeSqlParameter> numberSignNames = new HashMap<>();
 
-    //${xx.xx}参数名对应jdbc参数名:argxxx, 包含了requiredDollarNames
-    private final Map<String, NativeSqlParameter> dollarJdbcNames = new HashMap<>();
+    //#{xx.xx}参数名对应jdbc参数名:argxxx, 包含了requiredNumsignNames
+    private final Map<String, NativeSqlParameter> numsignJdbcNames = new HashMap<>();
 
-    //必需的$${xx.xx}参数名
-    private final Map<String, NativeSqlParameter> requiredDollarNames = new HashMap<>();
+    //必需的##{xx.xx}参数名
+    private final Map<String, NativeSqlParameter> requiredNumsignNames = new HashMap<>();
 
-    //jdbc参数名:argxxx对应${xx.xx}参数名
-    private final Map<String, String> jdbcDollarMap = new HashMap<>();
+    //jdbc参数名:argxxx对应#{xx.xx}参数名
+    private final Map<String, String> jdbcNumsignMap = new HashMap<>();
 
-    //根据#{xx.xx}分解并将${xx.xx}替换成:argxxx的sql片段
+    //根据#{xx.xx}分解并将#{xx.xx}替换成:argxxx的sql片段
     private final List<NativeSqlFragment> fragments = new ArrayList<>();
 
     private final List<NativeSqlParameter> allNamedParameters = new ArrayList<>();
@@ -62,20 +62,20 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         final char[] chars = Utility.charArray(rawSql);
         char last = 0;
         Set<String> rootParams = new LinkedHashSet<>();
-        int type = 0; //1:#{xx.xx}, 2:${xx.xx}, 3:$${xx.xx}
+        int type = 0; //1:${xx.xx}, 2:#{xx.xx}, 3:##{xx.xx}
         for (int i = 0; i < chars.length; i++) {
             char ch = chars[i];
             if (ch == '{') {
                 if (paraming || i < 2) {
                     throw new SourceException("Parse error, sql: " + rawSql);
                 }
-                if (last == '#') {
+                if (last == '$') {
                     fragments.add(new NativeSqlFragment(false, sb.substring(0, sb.length() - 1)));
                     sb.delete(0, sb.length());
                     type = 1;
                     paraming = true;
-                } else if (last == '$') {
-                    type = chars[i - 2] == '$' ? 3 : 2;
+                } else if (last == '#') {
+                    type = chars[i - 2] == '#' ? 3 : 2;
                     fragments.add(new NativeSqlFragment(false, sb.substring(0, sb.length() + 1 - type)));
                     sb.delete(0, sb.length());
                     paraming = true;
@@ -86,20 +86,20 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 }
                 String name = sb.toString().trim();
                 sb.delete(0, sb.length());
-                if (type == 1) { //#{xx.xx}
+                if (type == 1) { //${xx.xx}
                     numberSignNames.put(name, new NativeSqlParameter(name, name, true));
                     fragments.add(new NativeSqlFragment(true, name));
-                } else if (type >= 2) { //${xx.xx}、$${xx.xx}
-                    NativeSqlParameter old = dollarJdbcNames.get(name);
+                } else if (type >= 2) { //#{xx.xx}、##{xx.xx}
+                    NativeSqlParameter old = numsignJdbcNames.get(name);
                     String jdbc = old == null ? null : old.getJdbcName();
                     if (jdbc == null) {
-                        int seqno = dollarJdbcNames.size() + 1;
+                        int seqno = numsignJdbcNames.size() + 1;
                         jdbc = "arg" + (seqno >= 10 ? seqno : ("0" + seqno));
                         NativeSqlParameter p = new NativeSqlParameter(name, jdbc, type == 3);
-                        dollarJdbcNames.put(name, p);
-                        jdbcDollarMap.put(jdbc, name);
+                        numsignJdbcNames.put(name, p);
+                        jdbcNumsignMap.put(jdbc, name);
                         if (p.isRequired()) {
-                            requiredDollarNames.put(name, p);
+                            requiredNumsignNames.put(name, p);
                         }
                     }
                     fragments.add(new NativeSqlFragment(false, ":" + jdbc));
@@ -134,7 +134,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             this.jdbcSql = null;
         }
         this.allNamedParameters.addAll(numberSignNames.values());
-        this.allNamedParameters.addAll(dollarJdbcNames.values());
+        this.allNamedParameters.addAll(numsignJdbcNames.values());
         this.rootParamNames.addAll(rootParams);
         String parserSql = Utility.orElse(this.jdbcSql, this.rawSql);
         try {
@@ -174,18 +174,18 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         for (NativeSqlParameter p : allNamedParameters) {
             Object val = p.getParamValue(params);
             if (p.isRequired() && val == null) {
-                throw new SourceException("Missing parameter " + p.getDollarName());
+                throw new SourceException("Missing parameter " + p.getNumsignName());
             }
             if (val != null) {
-                newParams.put(p.getDollarName(), val);
+                newParams.put(p.getNumsignName(), val);
                 newParams.put(p.getJdbcName(), val);
             }
         }
         if (jdbcSql == null) {
             StringBuilder sb = new StringBuilder();
             for (NativeSqlFragment fragment : fragments) {
-                if (fragment.isSignable()) {
-                    sb.append(newParams.get(fragment.getText())); //不能用JsonConvert， 比如 FROM user_#{uid}
+                if (fragment.isDollarable()) {
+                    sb.append(newParams.get(fragment.getText())); //不能用JsonConvert， 比如 FROM user_${uid}
                 } else {
                     sb.append(fragment.getText());
                 }
@@ -342,7 +342,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 updateNoWhereSql = exprDeParser.getBuffer().toString();
                 updateNamedSet = exprDeParser.getJdbcNames();
             }
-            return new NativeParserNode(stmt, countStmt, where, jdbcDollarMap,
+            return new NativeParserNode(stmt, countStmt, where, jdbcNumsignMap,
                 fullNames, requiredNamedSet, isDynamic() || containsInName.get(), updateNoWhereSql, updateNamedSet);
         } catch (ParseException e) {
             throw new SourceException("Parse error, sql: " + nativeSql, e);
@@ -355,9 +355,9 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             + "rawSql: \"" + rawSql + "\""
             + ", jdbcSql: \"" + jdbcSql + "\""
             + ", numberSignNames: " + numberSignNames
-            + ", dollarJdbcNames: " + dollarJdbcNames
-            + ", requiredDollarNames: " + requiredDollarNames
-            + ", jdbcDollarMap: " + jdbcDollarMap
+            + ", dollarJdbcNames: " + numsignJdbcNames
+            + ", requiredDollarNames: " + requiredNumsignNames
+            + ", jdbcDollarMap: " + jdbcNumsignMap
             + "}";
     }
 
