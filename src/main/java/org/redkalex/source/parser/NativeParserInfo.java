@@ -35,8 +35,8 @@ import org.redkale.util.*;
 @SuppressWarnings("unchecked")
 public class NativeParserInfo extends DataNativeSqlInfo {
 
-    //#{xx.xx}的参数名
-    private final Map<String, NativeSqlParameter> numberSignNames = new HashMap<>();
+    //${xx.xx}的参数名
+    private final Map<String, NativeSqlParameter> dollarNames = new HashMap<>();
 
     //#{xx.xx}参数名对应jdbc参数名:argxxx, 包含了requiredNumsignNames
     private final Map<String, NativeSqlParameter> numsignJdbcNames = new HashMap<>();
@@ -45,9 +45,9 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     private final Map<String, NativeSqlParameter> requiredNumsignNames = new HashMap<>();
 
     //jdbc参数名:argxxx对应#{xx.xx}参数名
-    private final Map<String, String> jdbcNumsignMap = new HashMap<>();
+    private final Map<String, String> jdbcToNumsignMap = new HashMap<>();
 
-    //根据#{xx.xx}分解并将#{xx.xx}替换成:argxxx的sql片段
+    //根据${xx.xx}分解并将xx.xx替换成:argxxx的sql片段
     private final List<NativeSqlFragment> fragments = new ArrayList<>();
 
     private final List<NativeSqlParameter> allNamedParameters = new ArrayList<>();
@@ -95,7 +95,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 String name = sb.toString().trim();
                 sb.delete(0, sb.length());
                 if (type == 1) { //${xx.xx}
-                    numberSignNames.put(name, new NativeSqlParameter(name, name, true));
+                    dollarNames.put(name, new NativeSqlParameter(name, name, true));
                     fragments.add(new NativeSqlFragment(true, name));
                 } else if (type >= 2) { //#{xx.xx}、##{xx.xx}
                     NativeSqlParameter old = numsignJdbcNames.get(name);
@@ -105,7 +105,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                         jdbc = "arg" + (seqno >= 10 ? seqno : ("0" + seqno));
                         NativeSqlParameter p = new NativeSqlParameter(name, jdbc, type == 3);
                         numsignJdbcNames.put(name, p);
-                        jdbcNumsignMap.put(jdbc, name);
+                        jdbcToNumsignMap.put(jdbc, name);
                         if (p.isRequired()) {
                             requiredNumsignNames.put(name, p);
                         }
@@ -132,7 +132,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         if (sb.length() > 0) {
             fragments.add(new NativeSqlFragment(false, sb.toString()));
         }
-        if (numberSignNames.isEmpty()) {
+        if (dollarNames.isEmpty()) {
             StringBuilder ss = new StringBuilder();
             for (NativeSqlFragment fragment : fragments) {
                 ss.append(fragment.getText());
@@ -141,7 +141,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         } else {
             this.jdbcSql = null;
         }
-        this.allNamedParameters.addAll(numberSignNames.values());
+        this.allNamedParameters.addAll(dollarNames.values());
         this.allNamedParameters.addAll(numsignJdbcNames.values());
         this.rootParamNames.addAll(rootParams);
         String parserSql = Utility.orElse(this.jdbcSql, this.rawSql);
@@ -156,8 +156,6 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 this.sqlMode = SqlMode.DELETE;
             } else if (stmt instanceof Update) {
                 this.sqlMode = SqlMode.UPDATE;
-            } else if (stmt instanceof Upsert) {
-                this.sqlMode = SqlMode.UPSERT;
             } else {
                 this.sqlMode = SqlMode.OTHERS;
             }
@@ -256,7 +254,8 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                     CCJSqlParser countParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
                     PlainSelect countBody = (PlainSelect) countParser.Statement();
                     if (countBody.getDistinct() == null) {
-                        Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withParameters(new ExpressionList(new LongValue(1)));
+                        Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT")
+                            .withParameters(new ExpressionList(new LongValue(1)));
                         countBody.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
                     } else {
                         Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
@@ -350,7 +349,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 updateNoWhereSql = exprDeParser.getBuffer().toString();
                 updateNamedSet = exprDeParser.getJdbcNames();
             }
-            return new NativeParserNode(stmt, countStmt, where, jdbcNumsignMap,
+            return new NativeParserNode(stmt, countStmt, where, jdbcToNumsignMap,
                 fullNames, requiredNamedSet, isDynamic() || containsInName.get(), updateNoWhereSql, updateNamedSet);
         } catch (ParseException e) {
             throw new SourceException("Parse error, sql: " + nativeSql, e);
@@ -362,10 +361,10 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         return NativeParserInfo.class.getSimpleName() + "{"
             + "rawSql: \"" + rawSql + "\""
             + ", jdbcSql: \"" + jdbcSql + "\""
-            + ", numberSignNames: " + numberSignNames
-            + ", dollarJdbcNames: " + numsignJdbcNames
-            + ", requiredDollarNames: " + requiredNumsignNames
-            + ", jdbcDollarMap: " + jdbcNumsignMap
+            + ", dollarNames: " + dollarNames
+            + ", numsignJdbcNames: " + numsignJdbcNames
+            + ", requiredNumsignNames: " + requiredNumsignNames
+            + ", jdbcToNumsignMap: " + jdbcToNumsignMap
             + "}";
     }
 
