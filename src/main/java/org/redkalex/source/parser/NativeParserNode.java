@@ -35,7 +35,7 @@ public class NativeParserNode {
     private final Expression fullWhere;
 
     //jdbc参数名:argxxx对应#{xx.xx}参数名
-    private final Map<String, String> jdbcNumsignMap;
+    private final Map<String, String> jdbcToNumsignMap;
 
     //没有where的UPDATE语句
     private final String updateNoWhereSql;
@@ -54,13 +54,13 @@ public class NativeParserNode {
     //缓存
     private final ConcurrentHashMap<String, DataNativeSqlStatement> statements = new ConcurrentHashMap();
 
-    public NativeParserNode(Statement stmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcNumsignMap,
+    public NativeParserNode(Statement stmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcToNumsignMap,
         Set<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateNoWhereSql, List<String> updateJdbcNames) {
         this.stmt = stmt;
         this.dynamic = dynamic;
         this.countStmt = countStmt;
         this.fullWhere = fullWhere;
-        this.jdbcNumsignMap = jdbcNumsignMap;
+        this.jdbcToNumsignMap = jdbcToNumsignMap;
         this.updateNoWhereSql = updateNoWhereSql;
         this.updateJdbcNames = updateJdbcNames;
         this.fullJdbcNames = new TreeSet<>(fullJdbcNames);
@@ -74,7 +74,7 @@ public class NativeParserNode {
                 if (miss == null) {
                     miss = new LinkedHashSet<>();
                 }
-                miss.add(jdbcNumsignMap.getOrDefault(mustName, mustName));
+                miss.add(jdbcToNumsignMap.getOrDefault(mustName, mustName));
             }
         }
         if (miss != null) {
@@ -97,7 +97,7 @@ public class NativeParserNode {
         statement.setJdbcNames(exprDeParser.getJdbcNames());
         List<String> paramNames = new ArrayList<>();
         for (String name : statement.getJdbcNames()) {
-            paramNames.add(jdbcNumsignMap == null ? name : jdbcNumsignMap.getOrDefault(name, name));
+            paramNames.add(jdbcToNumsignMap == null ? name : jdbcToNumsignMap.getOrDefault(name, name));
         }
         statement.setParamNames(paramNames);
         statement.setParamValues(params);
