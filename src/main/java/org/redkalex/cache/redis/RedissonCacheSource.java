@@ -41,7 +41,7 @@ import static org.redkale.util.Utility.*;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
-public class RedissonCacheSource extends AbstractRedisSource {
+public class RedissonCacheSource extends RedisSource {
 
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 

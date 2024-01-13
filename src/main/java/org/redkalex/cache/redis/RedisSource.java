@@ -29,7 +29,7 @@ import org.redkale.util.*;
  *
  * @since 2.8.0
  */
-public abstract class AbstractRedisSource extends AbstractCacheSource {
+public abstract class RedisSource extends AbstractCacheSource {
 
     public static final String CACHE_SOURCE_CRYPTOR = "cryptor";
 
