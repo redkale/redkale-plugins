@@ -33,6 +33,12 @@ public abstract class RedisSource extends AbstractCacheSource {
 
     public static final String CACHE_SOURCE_CRYPTOR = "cryptor";
 
+    protected static final String SCRIPT_DELEX = "if redis.call('get', KEYS[1]) == ARGV[1] then "
+        + "redis.call('del', KEYS[1]); "
+        + "return 1 "
+        + "else "
+        + "return 0 end";
+
     protected String name;
 
     @Resource(name = RESNAME_APP_NAME, required = false)
@@ -64,7 +70,7 @@ public abstract class RedisSource extends AbstractCacheSource {
     public void init(AnyValue conf) {
         this.conf = conf;
         super.init(conf);
-        this.name = conf.getValue("name", "");
+        this.name = conf == null ? "" : conf.getValue("name", "");
         if (this.convert == null) {
             this.convert = this.defaultConvert;
         }
@@ -145,6 +151,8 @@ public abstract class RedisSource extends AbstractCacheSource {
     public String resourceName() {
         return name;
     }
+
+    public abstract <T> CompletableFuture<T> evalAsync(Type type, String script, List<String> keys, String... args);
 
     protected String decryptValue(String key, RedisCryptor cryptor, String value) {
         return cryptor != null ? cryptor.decrypt(key, value) : value;

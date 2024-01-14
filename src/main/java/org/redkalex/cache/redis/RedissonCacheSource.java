@@ -549,10 +549,28 @@ public class RedissonCacheSource extends RedisSource {
         return toFuture(client.getBucket(oldKey).renamenxAsync(newKey));
     }
 
+    @Override
+    public <T> CompletableFuture<T> evalAsync(Type type, String script, List<String> keys, String... args) {
+        String key = keys == null || keys.isEmpty() ? null : keys.get(0);
+        Object[] vals = args;
+        return toFuture(client.getScript(ByteArrayCodec.INSTANCE)
+            .evalAsync(RScript.Mode.READ_WRITE, script, RScript.ReturnType.VALUE, (List) keys, vals)
+            .thenApply(bs -> decryptValue(key, cryptor, type, (byte[]) bs)));
+    }
+
     //--------------------- del ------------------------------    
     @Override
     public CompletableFuture<Long> delAsync(String... keys) {
         return toFuture(client.getKeys().deleteAsync(keys));
+    }
+
+    @Override
+    public CompletableFuture<Long> delexAsync(String key, String expectedValue) {
+        if (key == null) {
+            return CompletableFuture.completedFuture(0L);
+        }
+        return toFuture(client.getScript(StringCodec.INSTANCE)
+            .evalAsync(RScript.Mode.READ_WRITE, SCRIPT_DELEX, RScript.ReturnType.INTEGER, List.of(key), expectedValue));
     }
 
     //--------------------- incrby ------------------------------    

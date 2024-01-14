@@ -523,6 +523,23 @@ public class RedisVertxCacheSource extends RedisSource {
         return map;
     }
 
+    protected String[] keysArgs(String script, List<String> keys, String... args) {
+        int len = keys == null || keys.isEmpty() ? 0 : keys.size();
+        String[] bs = new String[1 + 1 + len + args.length];
+        bs[0] = script;
+        bs[1] = String.valueOf(len);
+        int index = 1;
+        if (keys != null) {
+            for (String key : keys) {
+                bs[++index] = key;
+            }
+        }
+        for (String arg : args) {
+            bs[++index] = arg;
+        }
+        return bs;
+    }
+
     protected String[] keyArgs(String key, int start, int stop) {
         return new String[]{key, String.valueOf(start), String.valueOf(stop)};
     }
@@ -546,7 +563,7 @@ public class RedisVertxCacheSource extends RedisSource {
         return strs;
     }
 
-    protected <T> String[] keyArgs(String key, CacheScoredValue... values) {
+    protected String[] keyArgs(String key, CacheScoredValue... values) {
         String[] strs = new String[values.length * 2 + 1];
         strs[0] = key;
         for (int i = 0; i < values.length; i++) {
@@ -556,7 +573,7 @@ public class RedisVertxCacheSource extends RedisSource {
         return strs;
     }
 
-    protected <T> String[] keyArgs(String key, String... members) {
+    protected String[] keyArgs(String key, String... members) {
         String[] strs = new String[members.length + 1];
         strs[0] = key;
         for (int i = 0; i < members.length; i++) {
@@ -838,7 +855,8 @@ public class RedisVertxCacheSource extends RedisSource {
 
     @Override
     public <T> CompletableFuture<Boolean> setnxAsync(String key, Convert convert, final Type type, T value) {
-        return sendAsync(Command.SETNX, key, formatValue(key, cryptor, convert, type, value)).thenApply(v -> getBoolValue(v));
+        return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "NX")
+            .thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
     }
 
     @Override
@@ -854,12 +872,12 @@ public class RedisVertxCacheSource extends RedisSource {
     //--------------------- setex ------------------------------    
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(Command.SETEX, key, String.valueOf(expireSeconds), formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
+        return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "EX", String.valueOf(expireSeconds)).thenApply(v -> null);
     }
 
     @Override
     public <T> CompletableFuture<Void> psetexAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(Command.PSETEX, key, String.valueOf(milliSeconds), formatValue(key, cryptor, convert, type, value)).thenApply(v -> null);
+        return sendAsync(Command.SET, key, formatValue(key, cryptor, convert, type, value), "PX", String.valueOf(milliSeconds)).thenApply(v -> null);
     }
 
     @Override
@@ -933,10 +951,24 @@ public class RedisVertxCacheSource extends RedisSource {
         return sendAsync(Command.RENAMENX, oldKey, newKey).thenApply(v -> v != null && ("OK".equals(v.toString()) || v.toInteger() > 0));
     }
 
+    @Override
+    public <T> CompletableFuture<T> evalAsync(Type type, String script, List<String> keys, String... args) {
+        String key = keys == null || keys.isEmpty() ? null : keys.get(0);
+        return sendAsync(Command.EVAL, keysArgs(script, keys, args)).thenApply(v -> getObjectValue(key, cryptor, v, type));
+    }
+
     //--------------------- del ------------------------------    
     @Override
     public CompletableFuture<Long> delAsync(String... keys) {
         return sendAsync(Command.DEL, keys).thenApply(v -> getLongValue(v, 0L));
+    }
+
+    @Override
+    public CompletableFuture<Long> delexAsync(String key, String expectedValue) {
+        if (key == null) {
+            return CompletableFuture.completedFuture(0L);
+        }
+        return sendAsync(Command.EVAL, keysArgs(SCRIPT_DELEX, List.of(key), expectedValue)).thenApply(v -> getLongValue(v, 0L));
     }
 
     //--------------------- incrby ------------------------------    

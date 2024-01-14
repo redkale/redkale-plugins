@@ -364,7 +364,7 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public <T> CompletableFuture<Boolean> setnxAsync(String key, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.SETNX, key, keyArgs(key, convert, type, value)).thenApply(v -> v.getBoolValue());
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, NX, convert, type, value)).thenApply(v -> v.getBoolValue());
     }
 
     @Override
@@ -380,12 +380,12 @@ public final class RedisCacheSource extends RedisSource {
     //--------------------- setex ------------------------------    
     @Override
     public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.SETEX, key, keyArgs(key, expireSeconds, convert, type, value)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, expireSeconds, EX, convert, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public <T> CompletableFuture<Void> psetexAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.PSETEX, key, keyArgs(key, milliSeconds, convert, type, value)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, milliSeconds, PX, convert, type, value)).thenApply(v -> v.getVoidValue());
     }
 
     @Override
@@ -457,6 +457,12 @@ public final class RedisCacheSource extends RedisSource {
         return sendAsync(RedisCommand.RENAMENX, oldKey, keysArgs(oldKey, newKey)).thenApply(v -> v.getBoolValue());
     }
 
+    @Override
+    public <T> CompletableFuture<T> evalAsync(Type type, String script, List<String> keys, String... args) {
+        String key = keys == null || keys.isEmpty() ? null : keys.get(0);
+        return sendAsync(RedisCommand.EVAL, key, keysArgs(script, keys, args)).thenApply(v -> v.getObjectValue(key, cryptor, type));
+    }
+
     //--------------------- del ------------------------------    
     @Override
     public CompletableFuture<Long> delAsync(String... keys) {
@@ -464,6 +470,14 @@ public final class RedisCacheSource extends RedisSource {
             return CompletableFuture.completedFuture(0L);
         }
         return sendAsync(RedisCommand.DEL, keys[0], keysArgs(keys)).thenApply(v -> v.getLongValue(0L));
+    }
+
+    @Override
+    public CompletableFuture<Long> delexAsync(String key, String expectedValue) {
+        if (key == null) {
+            return CompletableFuture.completedFuture(0L);
+        }
+        return sendAsync(RedisCommand.EVAL, key, keyArgs(SCRIPT_DELEX, 1, key, expectedValue)).thenApply(v -> v.getLongValue(0L));
     }
 
     //--------------------- incrby ------------------------------    
@@ -1016,6 +1030,12 @@ public final class RedisCacheSource extends RedisSource {
         return new byte[][]{key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), encodeValue(key, cryptor, convert, type, value)};
     }
 
+    private byte[][] keyArgs(String script, int len, String key, String arg) {
+        return new byte[][]{script.getBytes(StandardCharsets.UTF_8),
+            String.valueOf(len).getBytes(StandardCharsets.UTF_8),
+            key.getBytes(StandardCharsets.UTF_8), arg.getBytes(StandardCharsets.UTF_8)};
+    }
+
     private byte[][] keyArgs(String key, long expire, Type type, Object value) {
         return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
             String.valueOf(expire).getBytes(StandardCharsets.UTF_8),
@@ -1055,6 +1075,17 @@ public final class RedisCacheSource extends RedisSource {
             bss[i + 2] = values[i].getValue().getBytes(StandardCharsets.UTF_8);
         }
         return bss;
+    }
+
+    private byte[][] keyArgs(String key, byte[] nx, Convert convert, Type type, Object value) {
+        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
+            encodeValue(key, cryptor, convert, type, value), nx};
+    }
+
+    private byte[][] keyArgs(String key, long expire, byte[] nex, Convert convert, Type type, Object value) {
+        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
+            encodeValue(key, cryptor, convert, type, value), nex,
+            String.valueOf(expire).getBytes(StandardCharsets.UTF_8)};
     }
 
     private byte[][] keyArgs(String key, long expire, byte[] nx, byte[] epx, Convert convert, Type type, Object value) {
@@ -1135,6 +1166,23 @@ public final class RedisCacheSource extends RedisSource {
             }
             return bss;
         }
+    }
+
+    private byte[][] keysArgs(String script, List<String> keys, String... args) {
+        int len = keys == null || keys.isEmpty() ? 0 : keys.size();
+        byte[][] bs = new byte[1 + 1 + len + args.length][];
+        bs[0] = script.getBytes(StandardCharsets.UTF_8);
+        bs[1] = String.valueOf(len).getBytes(StandardCharsets.UTF_8);
+        int index = 1;
+        if (keys != null) {
+            for (String key : keys) {
+                bs[++index] = key.getBytes(StandardCharsets.UTF_8);
+            }
+        }
+        for (String arg : args) {
+            bs[++index] = arg.getBytes(StandardCharsets.UTF_8);
+        }
+        return bs;
     }
 
     private byte[] encodeValue(String key, RedisCryptor cryptor, String value) {

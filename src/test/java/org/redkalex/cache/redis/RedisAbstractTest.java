@@ -28,6 +28,7 @@ import org.redkale.util.*;
 public abstract class RedisAbstractTest {
 
     protected static void run(CacheSource source, boolean press) throws Exception {
+        JsonConvert convert = JsonConvert.root();
         System.out.println("------------------------------------");
         source.del("stritem1", "stritem2", "stritem1x");
         source.setString("stritem1", "value1");
@@ -120,6 +121,11 @@ public abstract class RedisAbstractTest {
         bool = source.exists("key2");
         System.out.println("[无值] key2 EXISTS : " + bool);
         Assertions.assertFalse(bool);
+
+        source.del("keyex");
+        source.setString("keyex", "haha");
+        Assertions.assertTrue(source.delex("keyex", "hehe") == 0);
+        Assertions.assertTrue(source.delex("keyex", "haha") == 1);
 
         source.del("keys3");
         source.rpush("keys3", String.class, "vals1");
@@ -360,10 +366,10 @@ public abstract class RedisAbstractTest {
         Assertions.assertIterableEquals(List.of(111L, 222L), source.hvalsLongAsync("hmapall").join());
         Assertions.assertEquals(Utility.ofMap("k1", "111", "k2", "222"), source.hgetall("hmapall", String.class));
         Assertions.assertEquals(Utility.ofMap("k1", "111", "k2", "222"), source.hgetallString("hmapall"));
-        Assertions.assertEquals(JsonConvert.root().convertTo(Utility.ofMap("k1", 111L, "k2", 222L)), JsonConvert.root().convertTo(source.hgetallLong("hmapall")));
-        Assertions.assertEquals(JsonConvert.root().convertTo(Utility.ofMap("k1", "111", "k2", "222")), JsonConvert.root().convertTo(source.hgetallAsync("hmapall", String.class).join()));
-        Assertions.assertEquals(JsonConvert.root().convertTo(Utility.ofMap("k1", "111", "k2", "222")), JsonConvert.root().convertTo(source.hgetallStringAsync("hmapall").join()));
-        Assertions.assertEquals(JsonConvert.root().convertTo(Utility.ofMap("k1", 111L, "k2", 222L)), JsonConvert.root().convertTo(source.hgetallLongAsync("hmapall").join()));
+        Assertions.assertEquals(convert.convertTo(Utility.ofMap("k1", 111L, "k2", 222L)), convert.convertTo(source.hgetallLong("hmapall")));
+        Assertions.assertEquals(convert.convertTo(Utility.ofMap("k1", "111", "k2", "222")), convert.convertTo(source.hgetallAsync("hmapall", String.class).join()));
+        Assertions.assertEquals(convert.convertTo(Utility.ofMap("k1", "111", "k2", "222")), convert.convertTo(source.hgetallStringAsync("hmapall").join()));
+        Assertions.assertEquals(convert.convertTo(Utility.ofMap("k1", 111L, "k2", 222L)), convert.convertTo(source.hgetallLongAsync("hmapall").join()));
 
         //h
         source.del("hmap");
@@ -548,7 +554,7 @@ public abstract class RedisAbstractTest {
         source.psetexString("exp1", 5_000, "haha");
         long remainMillis = source.pttl("exp1");
         long remainSeconds = source.ttl("exp1");
-        System.out.println("exp1过期剩余时间：" + remainMillis+", "+ remainSeconds);
+        System.out.println("exp1过期剩余时间：" + remainMillis + ", " + remainSeconds);
         Assertions.assertTrue(remainMillis <= 5000 && remainMillis > 4500);
         Assertions.assertTrue(remainSeconds <= 5 && remainSeconds > 4);
 
