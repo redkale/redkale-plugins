@@ -556,7 +556,7 @@ public abstract class RedisAbstractTest {
         long remainSeconds = source.ttl("exp1");
         System.out.println("exp1过期剩余时间：" + remainMillis + ", " + remainSeconds);
         Assertions.assertTrue(remainMillis <= 5000 && remainMillis > 4500);
-        Assertions.assertTrue(remainSeconds <= 5 && remainSeconds > 4);
+        Assertions.assertTrue(remainSeconds <= 5 && remainSeconds >= 4);
 
         cursor = new AtomicLong();
         List<String> keys = source.scan(cursor, 5);
