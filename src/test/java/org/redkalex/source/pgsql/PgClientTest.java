@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.*;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.net.client.*;
 import org.redkale.source.AbstractDataSource.SourceUrlInfo;
+import org.redkale.util.Utility;
 
 /**
  *
@@ -41,7 +42,7 @@ public class PgClientTest {
             //    conn.writeCounter.set(0);
             //    conn.readCounter.set(0);
         }
-        Thread.sleep(800);
+        Utility.sleep(800);
         System.out.println("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n==================================开始==================================");
         final int count = 200;
         CountDownLatch cdl2 = new CountDownLatch(count);

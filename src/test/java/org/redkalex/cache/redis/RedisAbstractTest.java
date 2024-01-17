@@ -572,25 +572,25 @@ public abstract class RedisAbstractTest {
         Assertions.assertFalse(keys.isEmpty());
         if (press) {
             source.del("nxexkey1");
-            Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "hahaha"));
-            Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehehe"));
-            Thread.sleep(1100);
-            Assertions.assertTrue(source.setnxexString("nxexkey1", 1, "haha"));
-            Assertions.assertTrue(!source.setnxexString("nxexkey1", 1, "hehe"));
+            Assertions.assertTrue(source.setnxpxString("nxexkey1", 100, "hahaha"));
+            Assertions.assertTrue(!source.setnxpxString("nxexkey1", 100, "hehehe"));
+            Utility.sleep(110);
+            Assertions.assertTrue(source.setnxpxString("nxexkey1", 100, "haha"));
+            Assertions.assertTrue(!source.setnxpxString("nxexkey1", 100, "hehe"));
             Assertions.assertEquals("haha", source.getString("nxexkey1"));
             source.del("nxexkey1");
-            Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 1111));
-            Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 2222));
-            Thread.sleep(1100);
-            Assertions.assertTrue(source.setnxexLong("nxexkey1", 1, 111));
-            Assertions.assertTrue(!source.setnxexLong("nxexkey1", 1, 222));
+            Assertions.assertTrue(source.setnxpxLong("nxexkey1", 100, 1111));
+            Assertions.assertTrue(!source.setnxpxLong("nxexkey1", 100, 2222));
+            Utility.sleep(110);
+            Assertions.assertTrue(source.setnxpxLong("nxexkey1", 100, 111));
+            Assertions.assertTrue(!source.setnxpxLong("nxexkey1", 100, 222));
             Assertions.assertEquals(111L, source.getLong("nxexkey1", 0L));
             source.del("nxexkey1");
-            Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
-            Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
-            Thread.sleep(1100);
-            Assertions.assertTrue(source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr88));
-            Assertions.assertTrue(!source.setnxex("nxexkey1", 1, InetSocketAddress.class, addr99));
+            Assertions.assertTrue(source.setnxpx("nxexkey1", 100, InetSocketAddress.class, addr88));
+            Assertions.assertTrue(!source.setnxpx("nxexkey1", 100, InetSocketAddress.class, addr99));
+            Utility.sleep(110);
+            Assertions.assertTrue(source.setnxpx("nxexkey1", 100, InetSocketAddress.class, addr88));
+            Assertions.assertTrue(!source.setnxpx("nxexkey1", 100, InetSocketAddress.class, addr99));
             Assertions.assertEquals(addr88.toString(), source.get("nxexkey1", InetSocketAddress.class).toString());
         }
         long dbsize = source.dbsize();
@@ -657,46 +657,30 @@ public abstract class RedisAbstractTest {
                 System.err.println("testnumber的查询结果应该是 -1，但是得到的值却是:" + source.getLong("testnumber", -1));
             }
             source.setLong("testnumber", 0);
-            Thread.sleep(10);
+            Utility.sleep(10);
             AtomicInteger ai = new AtomicInteger(count);
             CountDownLatch start = new CountDownLatch(count * 3);
             CountDownLatch over = new CountDownLatch(count * 3);
             long s = System.currentTimeMillis();
-            AtomicLong cc1 = new AtomicLong();
-            AtomicLong cc2 = new AtomicLong();
             for (int i = 0; i < count; i++) {
-                new Thread() {
-                    public void run() {
-                        start.countDown();
-                        if (ai.decrementAndGet() == 0) {
-                            System.out.println("开始了 ");
-                        }
-                        long c = cc1.incrementAndGet();
-                        long c2 = source.incr("testnumber");
-                        if (c < c2) {
-                            System.err.println("错误数据: " + c + ", " + c2);
-                        }
-                        over.countDown();
+                new Thread(() -> {
+                    start.countDown();
+                    if (ai.decrementAndGet() == 0) {
+                        System.out.println("开始了 ");
                     }
-                }.start();
-                new Thread() {
-                    public void run() {
-                        start.countDown();
-                        long c = cc2.incrementAndGet();
-                        long c2 = source.hincr("hmap", "key1");
-                        if (c < c2) {
-                            System.err.println("错误数据2: " + c + ", " + c2);
-                        }
-                        over.countDown();
-                    }
-                }.start();
-                new Thread() {
-                    public void run() {
-                        start.countDown();
-                        source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING);
-                        over.countDown();
-                    }
-                }.start();
+                    source.incr("testnumber");
+                    over.countDown();
+                }).start();
+                new Thread(() -> {
+                    start.countDown();
+                    source.hincr("hmap", "key1");
+                    over.countDown();
+                }).start();
+                new Thread(() -> {
+                    start.countDown();
+                    source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING);
+                    over.countDown();
+                }).start();
             }
             over.await();
             long e = System.currentTimeMillis() - s;
@@ -708,7 +692,7 @@ public abstract class RedisAbstractTest {
         final CountDownLatch cdl = new CountDownLatch(2);
         final String channel = "hello_topic";
         final String content = "this is a message content";
-        CacheEventListener<byte[]> listener = new CacheEventListener<byte[]>() {
+        CacheEventListener<byte[]> listener = new CacheEventListener<>() {
             @Override
             public void onMessage(String topic, byte[] message) {
                 String msg = new String(message, StandardCharsets.UTF_8);
