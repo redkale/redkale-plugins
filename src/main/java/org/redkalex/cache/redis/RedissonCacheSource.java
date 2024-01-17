@@ -304,7 +304,7 @@ public class RedissonCacheSource extends RedisSource {
         final MessageListener<byte[]> msgListener = new MessageListener<byte[]>() {
             @Override
             public void onMessage(CharSequence channel, byte[] msg) {
-                subExecutor().execute(() -> {
+                pubSubExecutor().execute(() -> {
                     try {
                         listener.onMessage(channel.toString(), msg);
                     } catch (Throwable t) {

@@ -33,7 +33,8 @@ public abstract class RedisSource extends AbstractCacheSource {
 
     public static final String CACHE_SOURCE_CRYPTOR = "cryptor";
 
-    protected static final String SCRIPT_DELEX = "if redis.call('get', KEYS[1]) == ARGV[1] then "
+    protected static final String SCRIPT_DELEX
+        = "if redis.call('get', KEYS[1]) == ARGV[1] then "
         + "redis.call('del', KEYS[1]); "
         + "return 1 "
         + "else "
@@ -59,9 +60,9 @@ public abstract class RedisSource extends AbstractCacheSource {
 
     protected AnyValue conf;
 
-    private ExecutorService subExecutor;
+    private ExecutorService pubSubExecutor;
 
-    private final ReentrantLock subExecutorLock = new ReentrantLock();
+    private final ReentrantLock pubSubExecutorLock = new ReentrantLock();
 
     @Resource(name = RESNAME_APP_EXECUTOR, required = false)
     protected ExecutorService workExecutor;
@@ -112,18 +113,18 @@ public abstract class RedisSource extends AbstractCacheSource {
             || config.getValue(CACHE_SOURCE_NODES, config.getValue("url", "")).startsWith("rediss://");
     }
 
-    protected ExecutorService subExecutor() {
-        ExecutorService executor = subExecutor;
+    protected ExecutorService pubSubExecutor() {
+        ExecutorService executor = pubSubExecutor;
         if (executor != null) {
             return executor;
         }
-        subExecutorLock.lock();
+        pubSubExecutorLock.lock();
         try {
-            if (subExecutor == null) {
+            if (pubSubExecutor == null) {
                 String threadNameFormat = "CacheSource-" + resourceName() + "-SubThread-%s";
                 Function<String, ExecutorService> func = Utility.virtualExecutorFunction();
                 final AtomicInteger counter = new AtomicInteger();
-                subExecutor = func == null ? Executors.newFixedThreadPool(Utility.cpus(), r -> {
+                pubSubExecutor = func == null ? Executors.newFixedThreadPool(Utility.cpus(), r -> {
                     Thread t = new Thread(r);
                     t.setDaemon(true);
                     int c = counter.incrementAndGet();
@@ -131,9 +132,9 @@ public abstract class RedisSource extends AbstractCacheSource {
                     return t;
                 }) : func.apply(threadNameFormat);
             }
-            executor = subExecutor;
+            executor = pubSubExecutor;
         } finally {
-            subExecutorLock.unlock();
+            pubSubExecutorLock.unlock();
         }
         return executor;
     }

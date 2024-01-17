@@ -18,7 +18,6 @@ import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
-import static org.redkale.boot.Application.RESNAME_APP_EXECUTOR;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
@@ -61,20 +60,16 @@ public final class RedisCacheSource extends RedisSource {
     @Resource(name = RESNAME_APP_CLIENT_ASYNCGROUP, required = false)
     private AsyncGroup clientAsyncGroup;
 
-    //配置<executor threads="0"> APP_EXECUTOR资源为null
-    @Resource(name = RESNAME_APP_EXECUTOR, required = false)
-    private ExecutorService workExecutor;
-
     private RedisCacheClient client;
 
     private InetSocketAddress address;
 
-    private RedisCacheConnection subConn;
+    private RedisCacheConnection pubSubConn;
 
-    private final ReentrantLock pubsubLock = new ReentrantLock();
+    private final ReentrantLock pubSubLock = new ReentrantLock();
 
     //key: topic
-    private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubsubListeners = new ConcurrentHashMap<>();
+    private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubSubListeners = new ConcurrentHashMap<>();
 
     @Override
     public void init(AnyValue conf) {
@@ -108,17 +103,19 @@ public final class RedisCacheSource extends RedisSource {
             new ClientAddress(address), config.getMaxconns(Utility.cpus()), config.getPipelines(),
             isEmpty(config.getPassword()) ? null : new RedisCacheReqAuth(config.getPassword()),
             config.getDb() < 1 ? null : new RedisCacheReqDB(config.getDb()));
-        if (this.subConn != null) {
-            this.subConn.dispose(null);
-            this.subConn = null;
+        if (this.pubSubConn != null) {
+            this.pubSubConn.dispose(null);
+            this.pubSubConn = null;
         }
         if (old != null) {
             old.close();
         }
-        if (!pubsubListeners.isEmpty()) {
-            subConn().join();
+        if (!pubSubListeners.isEmpty()) {
+            pubSubConn().join();
         }
-        //if (logger.isLoggable(Level.FINE)) logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" + db);
+//        if (logger.isLoggable(Level.FINE)) {
+//            logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" + db);
+//        }
     }
 
     @Override
@@ -155,16 +152,16 @@ public final class RedisCacheSource extends RedisSource {
         }
     }
 
-    protected CompletableFuture<RedisCacheConnection> subConn() {
-        RedisCacheConnection conn = this.subConn;
+    protected CompletableFuture<RedisCacheConnection> pubSubConn() {
+        RedisCacheConnection conn = this.pubSubConn;
         if (conn != null) {
             return CompletableFuture.completedFuture(conn);
         }
         return client.newConnection().thenApply(r -> {
-            pubsubLock.lock();
+            pubSubLock.lock();
             try {
-                if (subConn == null) {
-                    subConn = r;
+                if (pubSubConn == null) {
+                    pubSubConn = r;
                     r.getCodec().withMessageListener(new ClientMessageListener() {
                         @Override
                         public void onMessage(ClientConnection conn, ClientResponse resp) {
@@ -175,11 +172,11 @@ public final class RedisCacheSource extends RedisSource {
                                     String type = new String(events.get(0), StandardCharsets.UTF_8);
                                     if (events.size() == 3 && "message".equals(type)) {
                                         String channel = new String(events.get(1), StandardCharsets.UTF_8);
-                                        Set<CacheEventListener<byte[]>> set = pubsubListeners.get(channel);
+                                        Set<CacheEventListener<byte[]>> set = pubSubListeners.get(channel);
                                         if (set != null) {
                                             byte[] msg = events.get(2);
                                             for (CacheEventListener item : set) {
-                                                subExecutor().execute(() -> {
+                                                pubSubExecutor().execute(() -> {
                                                     try {
                                                         item.onMessage(channel, msg);
                                                     } catch (Throwable t) {
@@ -206,13 +203,13 @@ public final class RedisCacheSource extends RedisSource {
                         }
 
                         public void onClose(ClientConnection conn) {
-                            subConn = null;
+                            pubSubConn = null;
                         }
                     });
                     //重连时重新订阅
-                    if (!pubsubListeners.isEmpty()) {
+                    if (!pubSubListeners.isEmpty()) {
                         final Map<CacheEventListener<byte[]>, HashSet<String>> listeners = new HashMap<>();
-                        pubsubListeners.forEach((t, s) -> {
+                        pubSubListeners.forEach((t, s) -> {
                             s.forEach(l -> listeners.computeIfAbsent(l, x -> new HashSet<>()).add(t));
                         });
                         listeners.forEach((listener, topics) -> {
@@ -220,9 +217,9 @@ public final class RedisCacheSource extends RedisSource {
                         });
                     }
                 }
-                return subConn;
+                return pubSubConn;
             } finally {
-                pubsubLock.unlock();
+                pubSubLock.unlock();
             }
         });
     }
@@ -247,12 +244,12 @@ public final class RedisCacheSource extends RedisSource {
             throw new RedkaleException("topics is empty");
         }
         RedisCacheRequest req = RedisCacheRequest.create(RedisCommand.SUBSCRIBE, null, keysArgs(topics));
-        return subConn()
+        return pubSubConn()
             .thenCompose(conn
                 -> conn.writeRequest(req)
                 .thenApply(v -> {
                     for (String topic : topics) {
-                        pubsubListeners.computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>()).add(listener);
+                        pubSubListeners.computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>()).add(listener);
                     }
                     return null;
                 })
@@ -264,15 +261,15 @@ public final class RedisCacheSource extends RedisSource {
         if (listener == null) { //清掉指定topic的所有订阅者            
             Set<String> delTopics = new HashSet<>();
             if (topics == null || topics.length < 1) {
-                delTopics.addAll(pubsubListeners.keySet());
+                delTopics.addAll(pubSubListeners.keySet());
             } else {
                 delTopics.addAll(Arrays.asList(topics));
             }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             delTopics.forEach(topic -> {
-                futures.add(subConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
+                futures.add(pubSubConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
                     .thenApply(r -> {
-                        pubsubListeners.remove(topic);
+                        pubSubListeners.remove(topic);
                         return null;
                     })
                 ));
@@ -281,15 +278,15 @@ public final class RedisCacheSource extends RedisSource {
         } else {  //清掉指定topic的指定订阅者         
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (String topic : topics) {
-                CopyOnWriteArraySet<CacheEventListener<byte[]>> listens = pubsubListeners.get(topic);
+                CopyOnWriteArraySet<CacheEventListener<byte[]>> listens = pubSubListeners.get(topic);
                 if (listens == null) {
                     continue;
                 }
                 listens.remove(listener);
                 if (listens.isEmpty()) {
-                    futures.add(subConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
+                    futures.add(pubSubConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
                         .thenApply(r -> {
-                            pubsubListeners.remove(topic);
+                            pubSubListeners.remove(topic);
                             return null;
                         })
                     ));

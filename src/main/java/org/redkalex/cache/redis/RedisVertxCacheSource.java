@@ -75,12 +75,12 @@ public class RedisVertxCacheSource extends RedisSource {
 
     private Redis client;
 
-    private RedisConnection subConn;
+    private RedisConnection pubSubConn;
 
-    private final ReentrantLock pubsubLock = new ReentrantLock();
+    private final ReentrantLock pubSubLock = new ReentrantLock();
 
     //key: topic
-    private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubsubListeners = new ConcurrentHashMap<>();
+    private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubSubListeners = new ConcurrentHashMap<>();
 
     @Override
     public void init(AnyValue conf) {
@@ -127,15 +127,15 @@ public class RedisVertxCacheSource extends RedisSource {
         this.db = config.getDb();
         Redis old = this.client;
         this.client = Redis.createClient(this.vertx, redisConfig);
-        if (this.subConn != null) {
-            this.subConn.close();
-            this.subConn = null;
+        if (this.pubSubConn != null) {
+            this.pubSubConn.close();
+            this.pubSubConn = null;
         }
         if (old != null) {
             old.close();
         }
-        if (!pubsubListeners.isEmpty()) {
-            subConn().join();
+        if (!pubSubListeners.isEmpty()) {
+            pubSubConn().join();
         }
     }
 
@@ -193,24 +193,24 @@ public class RedisVertxCacheSource extends RedisSource {
         }
     }
 
-    protected CompletableFuture<RedisConnection> subConn() {
-        RedisConnection conn = this.subConn;
+    protected CompletableFuture<RedisConnection> pubSubConn() {
+        RedisConnection conn = this.pubSubConn;
         if (conn != null) {
             return CompletableFuture.completedFuture(conn);
         }
         CompletableFuture<RedisConnection> future = new CompletableFuture<>();
         redisClient().connect().onComplete(r -> {
-            pubsubLock.lock();
+            pubSubLock.lock();
             try {
                 if (r.succeeded()) {
-                    if (subConn == null) {
-                        subConn = r.result();
-                        subConn.exceptionHandler(t -> subConn = null);
-                        future.complete(subConn);
+                    if (pubSubConn == null) {
+                        pubSubConn = r.result();
+                        pubSubConn.exceptionHandler(t -> pubSubConn = null);
+                        future.complete(pubSubConn);
                         //重连时重新订阅
-                        if (!pubsubListeners.isEmpty()) {
+                        if (!pubSubListeners.isEmpty()) {
                             final Map<CacheEventListener<byte[]>, HashSet<String>> listeners = new HashMap<>();
-                            pubsubListeners.forEach((t, s) -> {
+                            pubSubListeners.forEach((t, s) -> {
                                 s.forEach(l -> listeners.computeIfAbsent(l, x -> new HashSet<>()).add(t));
                             });
                             listeners.forEach((listener, topics) -> {
@@ -218,18 +218,18 @@ public class RedisVertxCacheSource extends RedisSource {
                             });
                         }
                     } else {
-                        future.complete(subConn);
+                        future.complete(pubSubConn);
                         r.result().close();
                     }
                 } else {
-                    if (subConn == null) {
+                    if (pubSubConn == null) {
                         future.completeExceptionally(r.cause());
                     } else {
-                        future.complete(subConn);
+                        future.complete(pubSubConn);
                     }
                 }
             } finally {
-                pubsubLock.unlock();
+                pubSubLock.unlock();
             }
         });
         return future;
@@ -301,7 +301,7 @@ public class RedisVertxCacheSource extends RedisSource {
             return false;
         }
         Boolean v = resp.toBoolean();
-        return v == null ? false : v;
+        return v != null && v;
     }
 
     protected String getStringValue(String key, RedisCryptor cryptor, Response resp) {
@@ -674,7 +674,7 @@ public class RedisVertxCacheSource extends RedisSource {
         if (topics == null || topics.length < 1) {
             throw new RedkaleException("topics is empty");
         }
-        return subConn().thenCompose(conn -> {
+        return pubSubConn().thenCompose(conn -> {
             CompletableFuture<Void> future = new CompletableFuture<>();
             try {
                 conn.handler(new Handler<Response>() {
@@ -688,10 +688,10 @@ public class RedisVertxCacheSource extends RedisSource {
                         }
                         String channel = event.get(1).toString();
                         byte[] msg = event.get(2).toBytes();
-                        Set<CacheEventListener<byte[]>> set = pubsubListeners.get(channel);
+                        Set<CacheEventListener<byte[]>> set = pubSubListeners.get(channel);
                         if (set != null) {
                             for (CacheEventListener item : set) {
-                                subExecutor().execute(() -> {
+                                pubSubExecutor().execute(() -> {
                                     try {
                                         item.onMessage(channel, msg);
                                     } catch (Throwable t) {
@@ -713,7 +713,7 @@ public class RedisVertxCacheSource extends RedisSource {
                         return;
                     }
                     for (String topic : topics) {
-                        pubsubListeners.computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>()).add(listener);
+                        pubSubListeners.computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>()).add(listener);
                     }
                     future.complete(null);
                 });
@@ -729,16 +729,16 @@ public class RedisVertxCacheSource extends RedisSource {
         if (listener == null) { //清掉指定topic的所有订阅者            
             Set<String> delTopics = new HashSet<>();
             if (topics == null || topics.length < 1) {
-                delTopics.addAll(pubsubListeners.keySet());
+                delTopics.addAll(pubSubListeners.keySet());
             } else {
                 delTopics.addAll(Arrays.asList(topics));
             }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             delTopics.forEach(topic -> {
-                futures.add(subConn().thenCompose(conn -> conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic))
+                futures.add(pubSubConn().thenCompose(conn -> conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic))
                     .toCompletionStage()
                     .thenApply(r -> {
-                        pubsubListeners.remove(topic);
+                        pubSubListeners.remove(topic);
                         return null;
                     })
                 ));
@@ -747,16 +747,16 @@ public class RedisVertxCacheSource extends RedisSource {
         } else {  //清掉指定topic的指定订阅者         
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (String topic : topics) {
-                CopyOnWriteArraySet<CacheEventListener<byte[]>> listens = pubsubListeners.get(topic);
+                CopyOnWriteArraySet<CacheEventListener<byte[]>> listens = pubSubListeners.get(topic);
                 if (listens == null) {
                     continue;
                 }
                 listens.remove(listener);
                 if (listens.isEmpty()) {
-                    futures.add(subConn().thenCompose(conn -> conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic))
+                    futures.add(pubSubConn().thenCompose(conn -> conn.send(Request.cmd(Command.UNSUBSCRIBE).arg(topic))
                         .toCompletionStage()
                         .thenApply(r -> {
-                            pubsubListeners.remove(topic);
+                            pubSubListeners.remove(topic);
                             return null;
                         })
                     ));
