@@ -176,7 +176,7 @@ public class RedisCacheResult implements ClientResult {
         return list;
     }
 
-    protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Type type) {
+    protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Type valueType) {
         if (frameList == null || frameList.isEmpty()) {
             return new LinkedHashMap<>();
         }
@@ -184,55 +184,55 @@ public class RedisCacheResult implements ClientResult {
         for (int i = 0; i < frameList.size(); i += 2) {
             byte[] bs1 = frameList.get(i);
             byte[] bs2 = frameList.get(i + 1);
-            T val = decodeValue(key, cryptor, bs2, type);
+            T val = decodeValue(key, cryptor, bs2, valueType);
             if (val != null) {
-                map.put(decodeValue(key, cryptor, bs1, String.class).toString(), val);
+                map.put(String.valueOf(decodeValue(key, cryptor, bs1, String.class)), val);
             }
         }
         return map;
     }
 
-    protected static <T> T decodeValue(String key, RedisCryptor cryptor, byte[] frames, Type type) {
+    protected static <T> T decodeValue(String key, RedisCryptor cryptor, byte[] frames, Type valueType) {
         if (frames == null) {
             return null;
         }
-        if (type == byte[].class) {
+        if (valueType == byte[].class) {
             return (T) frames;
         }
-        if (type == String.class) {
+        if (valueType == String.class) {
             String val = new String(frames, StandardCharsets.UTF_8);
             if (cryptor != null) {
                 val = cryptor.decrypt(key, val);
             }
             return (T) val;
         }
-        if (type == int.class || type == Integer.class) {
+        if (valueType == int.class || valueType == Integer.class) {
             return (T) (Integer) Integer.parseInt(new String(frames, StandardCharsets.UTF_8));
         }
-        if (type == long.class || type == Long.class) {
+        if (valueType == long.class || valueType == Long.class) {
             return (T) (Long) Long.parseLong(new String(frames, StandardCharsets.UTF_8));
         }
-        if (type == float.class || type == Float.class) {
+        if (valueType == float.class || valueType == Float.class) {
             return (T) (Float) Float.parseFloat(new String(frames, StandardCharsets.UTF_8));
         }
-        if (type == BigInteger.class) {
+        if (valueType == BigInteger.class) {
             return (T) new BigInteger(new String(frames, StandardCharsets.UTF_8));
         }
-        if (type == BigDecimal.class) {
+        if (valueType == BigDecimal.class) {
             return (T) new BigDecimal(new String(frames, StandardCharsets.UTF_8));
         }
-        if (type == boolean.class || type == Boolean.class) {
+        if (valueType == boolean.class || valueType == Boolean.class) {
             String v = new String(frames, StandardCharsets.UTF_8);
             return (T) (Boolean) ("t".equalsIgnoreCase(v) || "1".equals(v));
         }
-        if (type == double.class || type == Double.class) {
+        if (valueType == double.class || valueType == Double.class) {
             return (T) (Double) Double.parseDouble(new String(frames, StandardCharsets.UTF_8));
         }
         if (cryptor != null) {
             String val = cryptor.decrypt(key, new String(frames, StandardCharsets.UTF_8));
-            return (T) JsonConvert.root().convertFrom(type, val);
+            return (T) JsonConvert.root().convertFrom(valueType, val);
         }
-        return (T) JsonConvert.root().convertFrom(type, frames);
+        return (T) JsonConvert.root().convertFrom(valueType, frames);
     }
 
     @Override

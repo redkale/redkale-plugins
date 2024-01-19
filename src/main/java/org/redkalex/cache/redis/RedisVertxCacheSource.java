@@ -17,6 +17,7 @@ import io.vertx.redis.client.Request;
 import io.vertx.redis.client.Response;
 import io.vertx.redis.client.ResponseType;
 import java.io.Serializable;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -55,6 +56,7 @@ import org.redkale.source.CacheSource;
 import org.redkale.util.AnyValue;
 import org.redkale.util.Creator;
 import org.redkale.util.RedkaleException;
+import org.redkale.util.TypeToken;
 import org.redkale.util.Utility;
 import static org.redkale.util.Utility.*;
 
@@ -486,7 +488,7 @@ public class RedisVertxCacheSource extends RedisSource {
         return list;
     }
 
-    protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Response gresp, AtomicLong cursor, Type type) {
+    protected <T> Map<String, T> getMapValue(String key, RedisCryptor cryptor, Response gresp, AtomicLong cursor, Type valueType) {
         boolean asMap = cursor == null;
         int gsize = gresp.size();
         if (gsize == 0) {
@@ -496,7 +498,7 @@ public class RedisVertxCacheSource extends RedisSource {
         if (asMap) {
             for (String field : gresp.getKeys()) {
                 Response resp = gresp.get(field);
-                T val = getObjectValue(key, cryptor, resp.toBytes(), type);
+                T val = getObjectValue(key, cryptor, resp.toBytes(), valueType);
                 if (val != null) {
                     map.put(field, val);
                 }
@@ -513,7 +515,7 @@ public class RedisVertxCacheSource extends RedisSource {
                 for (int i = 0; i < size; i += 2) {
                     String bs1 = resp.get(i).toString(StandardCharsets.UTF_8);
                     String bs2 = resp.get(i + 1).toString(StandardCharsets.UTF_8);
-                    T val = getObjectValue(key, cryptor, bs2, type);
+                    T val = getObjectValue(key, cryptor, bs2, valueType);
                     if (val != null) {
                         map.put(getObjectValue(key, cryptor, bs1, String.class).toString(), val);
                     }
@@ -954,7 +956,41 @@ public class RedisVertxCacheSource extends RedisSource {
     @Override
     public <T> CompletableFuture<T> evalAsync(Type type, String script, List<String> keys, String... args) {
         String key = keys == null || keys.isEmpty() ? null : keys.get(0);
-        return sendAsync(Command.EVAL, keysArgs(script, keys, args)).thenApply(v -> getObjectValue(key, cryptor, v, type));
+        return sendAsync(Command.EVAL, keysArgs(script, keys, args)).thenApply(v -> {
+            if (type == long.class) {
+                return (T) getLongValue(v, 0L);
+            } else if (type == Long.class) {
+                return (T) getLongValue(v, null);
+            } else if (type == int.class) {
+                return (T) getIntValue(v, 0);
+            } else if (type == Integer.class) {
+                return (T) getIntValue(v, null);
+            } else if (type == double.class) {
+                return (T) getDoubleValue(v, 0.0);
+            } else if (type == Double.class) {
+                return (T) getDoubleValue(v, null);
+            } else if (type == float.class) {
+                return (T) (Number) getDoubleValue(v, 0.0).floatValue();
+            } else if (type == Float.class) {
+                Double d = getDoubleValue(v, 0.0);
+                return d == null ? null : (T) (Number) d.floatValue();
+            } else if (type == String.class) {
+                return getObjectValue(key, cryptor, v, type);
+            } else {
+                Class t = TypeToken.typeToClass(type);
+                if (List.class.isAssignableFrom(t)) {
+                    Type componentType = type instanceof ParameterizedType ? ((ParameterizedType) type).getActualTypeArguments()[0] : String.class;
+                    return (T) getCollectionValue(key, cryptor, v, false, componentType);
+                } else if (Set.class.isAssignableFrom(t)) {
+                    Type componentType = type instanceof ParameterizedType ? ((ParameterizedType) type).getActualTypeArguments()[0] : String.class;
+                    return (T) getCollectionValue(key, cryptor, v, true, componentType);
+                } else if (Map.class.isAssignableFrom(t)) {
+                    Type componentType = type instanceof ParameterizedType ? ((ParameterizedType) type).getActualTypeArguments()[1] : String.class;
+                    return (T) getMapValue(key, cryptor, v, null, componentType);
+                }
+                return getObjectValue(key, cryptor, v, type);
+            }
+        });
     }
 
     //--------------------- del ------------------------------    
