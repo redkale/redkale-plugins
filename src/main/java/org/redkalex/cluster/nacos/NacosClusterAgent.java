@@ -83,12 +83,15 @@ public class NacosClusterAgent extends ClusterAgent {
             if ("ttls".equals(event.name())) {
                 newTtls = Integer.parseInt(event.newValue().toString());
                 if (newTtls < 5) {
-                    sb.append(NacosClusterAgent.class.getSimpleName()).append(" cannot change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                    sb.append(NacosClusterAgent.class.getSimpleName()).append(" cannot change '")
+                        .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
                 } else {
-                    sb.append(NacosClusterAgent.class.getSimpleName()).append(" change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                    sb.append(NacosClusterAgent.class.getSimpleName()).append(" change '")
+                        .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
                 }
             } else {
-                sb.append(NacosClusterAgent.class.getSimpleName()).append(" skip change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                sb.append(NacosClusterAgent.class.getSimpleName()).append(" skip change '")
+                    .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
         if (newTtls != this.ttls) {
@@ -166,7 +169,8 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected void reloadSncpAddressHealth() {
         try {
-            String content = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/ns/service/list?pageNo=1&pageSize=99999&namespaceId=" + urlEncode(namespaceid), StandardCharsets.UTF_8, httpHeaders);
+            String content = Utility.remoteHttpContent(httpClient, "GET",
+                this.apiUrl + "/ns/service/list?pageNo=1&pageSize=99999&namespaceId=" + urlEncode(namespaceid), StandardCharsets.UTF_8, httpHeaders);
             final ServiceList list = JsonConvert.root().convertFrom(ServiceList.class, content);
             Set<String> sncpkeys = new HashSet<>();
             if (list != null && list.doms != null) {
@@ -269,7 +273,8 @@ public class NacosClusterAgent extends ClusterAgent {
         String serviceType = generateApplicationServiceType();
         String host = generateApplicationHost();
         int port = generateApplicationPort();
-        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthyOnly=true";
+        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) 
+            + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthyOnly=true";
         try {
             String rs = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (logger.isLoggable(Level.FINEST)) {
@@ -293,9 +298,15 @@ public class NacosClusterAgent extends ClusterAgent {
     }
 
     protected void beatHealth(String serviceName, String serviceType, String host, int port) {
-        String beat = "{\"ip\":\"" + host + "\",\"metadata\":{},\"port\":" + port + ",\"scheduled\":true,\"groupName\":\"" + serviceType + "\",\"namespaceId\":\"" + namespaceid + "\",\"serviceName\":\"" + serviceName + "\"}";
+        String beat = "{\"ip\":\"" + host + "\",\"metadata\":{},\"port\":" + port
+            + ",\"scheduled\":true,\"groupName\":\"" + serviceType
+            + "\",\"namespaceId\":\"" + namespaceid
+            + "\",\"serviceName\":\"" + serviceName + "\"}";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/ns/instance/beat?serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid)
+            String rs = Utility.remoteHttpContent(httpClient, "PUT",
+                this.apiUrl + "/ns/instance/beat?serviceName=" + urlEncode(serviceName)
+                + "&groupName=" + serviceType
+                + "&namespaceId=" + urlEncode(namespaceid)
                 + "&beat=" + urlEncode(beat), StandardCharsets.UTF_8, httpHeaders);
             //if (finest) logger.log(Level.FINEST, "checkLocalHealth: " + beat + " --> " + rs);
             if (!rs.startsWith("{")) {
@@ -308,7 +319,8 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected void register(String serviceName, String serviceType, String host, int port) {
         //https://nacos.io/zh-cn/docs/open-api.html#2.1
-        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthy=true&enabled=true&ephemeral=false";
+        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) 
+            + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthy=true&enabled=true&ephemeral=false";
         try {
             String rs = Utility.remoteHttpContent(httpClient, "POST", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (logger.isLoggable(Level.FINEST)) {
@@ -324,7 +336,8 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected void deregister(String serviceName, String serviceType, String host, int port, ClusterEntry currEntry, boolean realCanceled) {
         //https://nacos.io/zh-cn/docs/open-api.html#2.2
-        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&ephemeral=false";
+        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) 
+            + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&ephemeral=false";
         try {
             String rs = Utility.remoteHttpContent(httpClient, "DELETE", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (realCanceled && currEntry != null) {

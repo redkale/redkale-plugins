@@ -5,11 +5,6 @@
  */
 package org.redkalex.mq.kafka;
 
-import org.redkale.mq.spi.MessageRecord;
-import org.redkale.mq.spi.MessageClient;
-import org.redkale.mq.spi.MessageProcessor;
-import org.redkale.mq.spi.MessageCoder;
-import org.redkale.mq.spi.MessageClientConsumer;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -17,7 +12,11 @@ import java.util.concurrent.locks.*;
 import java.util.logging.Level;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.serialization.*;
-import org.redkale.mq.*;
+import org.redkale.mq.spi.MessageClient;
+import org.redkale.mq.spi.MessageClientConsumer;
+import org.redkale.mq.spi.MessageCoder;
+import org.redkale.mq.spi.MessageProcessor;
+import org.redkale.mq.spi.MessageRecord;
 import org.redkale.util.Traces;
 
 /**
@@ -51,7 +50,8 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
 
     @Override
     public void run() {
-        this.kafkaConsumer = new KafkaConsumer<>(this.config, new StringDeserializer(), new MessageRecordDeserializer(messageClient.getClientMessageCoder()));
+        this.kafkaConsumer = new KafkaConsumer<>(this.config, new StringDeserializer(), 
+            new MessageRecordDeserializer(messageClient.getClientMessageCoder()));
         Collection<String> topics = getTopics();
         this.kafkaConsumer.subscribe(topics);
         this.startFuture.complete(null);
@@ -66,7 +66,8 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                     records = this.kafkaConsumer.poll(Duration.ofMillis(Long.MAX_VALUE));
                 } catch (Throwable ex) {
                     if (!this.closed) {
-                        logger.log(Level.WARNING, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") poll error", ex);
+                        logger.log(Level.WARNING, getClass().getSimpleName() 
+                            + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") poll error", ex);
                     }
                     break;
                 }
@@ -81,12 +82,15 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                         this.kafkaConsumer.commitSync(Duration.ofMillis(3000));
                         long ce = System.currentTimeMillis() - cs;
                         if (ce > 1000 && logger.isLoggable(Level.FINE)) {
-                            logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") commitSync cost-slower = " + ce + " ms");
+                            logger.log(Level.FINE, getClass().getSimpleName() 
+                                + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") commitSync cost-slower = " + ce + " ms");
                         } else if (ce > 100 && finest) {
-                            logger.log(Level.FINEST, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") commitSync cost-slowly = " + ce + "ms");
+                            logger.log(Level.FINEST, getClass().getSimpleName() 
+                                + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") commitSync cost-slowly = " + ce + "ms");
                         }
                     } catch (Throwable e) {
-                        logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") commitSync error", e);
+                        logger.log(Level.SEVERE, getClass().getSimpleName() 
+                            + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") commitSync error", e);
                     }
                 }
                 long s = System.currentTimeMillis();
@@ -98,20 +102,29 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
                         processor.process(msg, s);
                         Traces.removeTraceid();
                     } catch (Throwable e) {
-                        logger.log(Level.SEVERE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") consumer " + msg + " error", e);
+                        logger.log(Level.SEVERE, getClass().getSimpleName() 
+                            + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") consumer " + msg + " error", e);
                     }
                 }
                 long e2 = System.currentTimeMillis() - s;
                 if (e2 > 100 && finest) {
-                    logger.log(Level.FINEST, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") consumer run " + count + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e2 + "ms");
+                    logger.log(Level.FINEST, getClass().getSimpleName() 
+                        + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ") consumer run " + count 
+                        + " records" + (count == 1 && msg != null ? ("(seqid=" + msg.getSeqid() + ")") : "") + " in " + e2 + "ms");
                 }
                 long e = System.currentTimeMillis() - s;
                 if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-slower = " + e + " ms)， msg=" + msg);
+                    logger.log(Level.FINE, getClass().getSimpleName() 
+                        + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count 
+                        + ", mq.cost-slower = " + e + " ms)， msg=" + msg);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msg=" + msg);
+                    logger.log(Level.FINER, getClass().getSimpleName() 
+                        + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count 
+                        + ", mq.cost-slowly = " + e + " ms)， msg=" + msg);
                 } else if (e > 10 && finest) {
-                    logger.log(Level.FINEST, getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count + ", mq.cost-normal = " + e + " ms)");
+                    logger.log(Level.FINEST, getClass().getSimpleName() 
+                        + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this) + ").consumer (mq.count = " + count 
+                        + ", mq.cost-normal = " + e + " ms)");
                 }
             }
             if (this.kafkaConsumer != null) {

@@ -16,7 +16,6 @@ import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.redkale.inject.ResourceEvent;
-import org.redkale.mq.*;
 import org.redkale.util.*;
 import org.redkale.annotation.ResourceChanged;
 
@@ -79,7 +78,8 @@ public class KafkaMessageAgent extends MessageAgent {
     public void onResourceChange(ResourceEvent[] events) {
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
-            sb.append(KafkaMessageAgent.class.getSimpleName()).append(" skip change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+            sb.append(KafkaMessageAgent.class.getSimpleName()).append(" skip change '")
+                .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
         if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());

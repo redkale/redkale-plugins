@@ -18,9 +18,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.redkale.mq.spi.MessageAgent.MessageConsumerWrapper;
 import org.redkale.mq.MessageConext;
 import org.redkale.mq.MessageConsumer;
+import org.redkale.mq.spi.MessageAgent.MessageConsumerWrapper;
 
 /**
  *
@@ -112,11 +112,14 @@ class KafkaMessageConsumer implements Runnable {
                 }
                 long e = System.currentTimeMillis() - s;
                 if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slower = " + e + " ms)， msgs=" + map);
+                    logger.log(Level.FINE, getClass().getSimpleName() 
+                        + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slower = " + e + " ms)， msgs=" + map);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msgs=" + map);
+                    logger.log(Level.FINER, getClass().getSimpleName() 
+                        + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msgs=" + map);
                 } else if (e > 10 && logger.isLoggable(Level.FINEST)) {
-                    logger.log(Level.FINEST, getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-normal = " + e + " ms)");
+                    logger.log(Level.FINEST, getClass().getSimpleName() 
+                        + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-normal = " + e + " ms)");
                 }
                 map.clear();
             }

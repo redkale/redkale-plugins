@@ -17,7 +17,6 @@ import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.TopicPartitionInfo;
 import org.apache.kafka.common.serialization.*;
-import org.redkale.mq.*;
 import org.redkale.util.Traces;
 
 /**
@@ -88,11 +87,14 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
 
             long e = System.currentTimeMillis() - message.getCreateTime();
             if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + name + ") (mq.cost-slower = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+                logger.log(Level.FINE, getClass().getSimpleName()
+                    + "(name=" + name + ") (mq.cost-slower = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                logger.log(Level.FINER, getClass().getSimpleName() + "(name=" + name + ") (mq.cost-slowly = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+                logger.log(Level.FINER, getClass().getSimpleName() 
+                    + "(name=" + name + ") (mq.cost-slowly = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             } else if (e > 10 && logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST, getClass().getSimpleName() + "(name=" + name + ") (mq.cost-normal = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
+                logger.log(Level.FINEST, getClass().getSimpleName() 
+                    + "(name=" + name + ") (mq.cost-normal = " + e + " ms)，partition=" + partition0 + ", msg=" + message);
             }
             Traces.removeTraceid();
         });
@@ -111,11 +113,13 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
                 }
                 Arrays.sort(parts);
                 if (logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, getClass().getSimpleName() + "(name=" + name + ") Topic(" + topic + ") load partitions = " + list);
+                    logger.log(Level.FINER, getClass().getSimpleName() 
+                        + "(name=" + name + ") Topic(" + topic + ") load partitions = " + list);
                 }
                 return parts;
             } catch (Exception ex) {
-                logger.log(Level.SEVERE, getClass().getSimpleName() + "(name=" + name + ") Topic(" + topic + ")  load partitions error", ex);
+                logger.log(Level.SEVERE, getClass().getSimpleName() 
+                    + "(name=" + name + ") Topic(" + topic + ")  load partitions error", ex);
                 return new Integer[0];
             }
         });

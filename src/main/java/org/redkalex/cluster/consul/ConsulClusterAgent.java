@@ -88,12 +88,15 @@ public class ConsulClusterAgent extends ClusterAgent {
             if ("ttls".equals(event.name())) {
                 newTtls = Integer.parseInt(event.newValue().toString());
                 if (newTtls < 5) {
-                    sb.append(ConsulClusterAgent.class.getSimpleName()).append(" cannot change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                    sb.append(ConsulClusterAgent.class.getSimpleName()).append(" cannot change '")
+                        .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
                 } else {
-                    sb.append(ConsulClusterAgent.class.getSimpleName()).append(" change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                    sb.append(ConsulClusterAgent.class.getSimpleName()).append(" change '")
+                        .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
                 }
             } else {
-                sb.append(ConsulClusterAgent.class.getSimpleName()).append(" skip change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                sb.append(ConsulClusterAgent.class.getSimpleName()).append(" skip change '")
+                    .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
             }
         }
         if (newTtls != this.ttls) {
@@ -262,7 +265,8 @@ public class ConsulClusterAgent extends ClusterAgent {
             }
         });
         final Set<InetSocketAddress> set = new CopyOnWriteArraySet<>();
-        return client.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenCompose(content -> {
+        return client.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+            .thenApply(HttpResponse::body).thenCompose(content -> {
             final Map<String, AddressEntry> map = JsonConvert.root().convertFrom(MAP_STRING_ADDRESSENTRY, (String) content);
             if (map.isEmpty()) {
                 return CompletableFuture.completedFuture(set);
@@ -280,7 +284,8 @@ public class ConsulClusterAgent extends ClusterAgent {
                         builder0.header(n, v.toString());
                     }
                 });
-                futures.add(client.sendAsync(builder0.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> resp.body()).thenApply(irs -> {
+                futures.add(client.sendAsync(builder0.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+                    .thenApply(HttpResponse::body).thenApply(irs -> {
                     if ("passing".equalsIgnoreCase(irs)) {
                         set.add(en.getValue().createSocketAddress());
                     } else {
@@ -296,7 +301,8 @@ public class ConsulClusterAgent extends ClusterAgent {
     protected boolean isApplicationHealth() {
         String serviceid = generateApplicationServiceId();
         try {
-            String irs = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/agent/health/service/id/" + serviceid + "?format=text", StandardCharsets.UTF_8, httpHeaders);
+            String irs = Utility.remoteHttpContent(httpClient, "GET", 
+                this.apiUrl + "/agent/health/service/id/" + serviceid + "?format=text", StandardCharsets.UTF_8, httpHeaders);
             return "passing".equalsIgnoreCase(irs);
         } catch (java.io.FileNotFoundException ex) {
             return false;
@@ -328,10 +334,14 @@ public class ConsulClusterAgent extends ClusterAgent {
         String serviceid = generateApplicationServiceId();
         String serviceName = generateApplicationServiceName();
         String host = this.appAddress.getHostString();
-        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + serviceName + "\",\"Address\": \"" + host + "\",\"Port\": " + this.appAddress.getPort()
-            + ",\"Check\":{\"CheckID\": \"" + generateApplicationCheckId() + "\",\"Name\": \"" + generateApplicationCheckName() + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
+        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + serviceName 
+            + "\",\"Address\": \"" + host + "\",\"Port\": " + this.appAddress.getPort()
+            + ",\"Check\":{\"CheckID\": \"" + generateApplicationCheckId() 
+            + "\",\"Name\": \"" + generateApplicationCheckName() 
+            + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", 
+                this.apiUrl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
             if (!rs.isEmpty()) {
                 logger.log(Level.SEVERE, serviceid + " register error: " + rs);
             }
@@ -344,7 +354,8 @@ public class ConsulClusterAgent extends ClusterAgent {
     public void deregister(Application application) {
         String serviceid = generateApplicationServiceId();
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", 
+                this.apiUrl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
             if (!rs.isEmpty()) {
                 logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
             }
@@ -358,13 +369,16 @@ public class ConsulClusterAgent extends ClusterAgent {
         deregister(ns, protocol, service, false);
         //
         ClusterEntry clusterEntry = new ClusterEntry(ns, protocol, service);
-        String json = "{\"ID\": \"" + clusterEntry.serviceid + "\",\"Name\": \"" + clusterEntry.serviceName + "\",\"Address\": \"" + clusterEntry.address.getHostString() + "\",\"Port\": " + clusterEntry.address.getPort()
-            + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service) + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
+        String json = "{\"ID\": \"" + clusterEntry.serviceid + "\",\"Name\": \"" + clusterEntry.serviceName
+            + "\",\"Address\": \"" + clusterEntry.address.getHostString() + "\",\"Port\": " + clusterEntry.address.getPort()
+            + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service)
+            + "\",\"Name\": \"" + generateCheckName(ns, protocol, service) + "\",\"TTL\":\"" + ttls + "s\",\"Notes\":\"Interval " + ttls + "s Check\"}}";
         try {
             String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/register", StandardCharsets.UTF_8, httpHeaders, json);
             if (rs.isEmpty()) {
                 //需要立马执行下check，否则立即queryAddress可能会得到critical
-                Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/check/pass/" + generateCheckId(ns, protocol, service), StandardCharsets.UTF_8, httpHeaders);
+                Utility.remoteHttpContent(httpClient, "PUT", 
+                    this.apiUrl + "/agent/check/pass/" + generateCheckId(ns, protocol, service), StandardCharsets.UTF_8, httpHeaders);
             } else {
                 logger.log(Level.SEVERE, clusterEntry.serviceid + " register error: " + rs);
             }
@@ -398,7 +412,8 @@ public class ConsulClusterAgent extends ClusterAgent {
             }
         }
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT", this.apiUrl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(httpClient, "PUT", 
+                this.apiUrl + "/agent/service/deregister/" + serviceid, StandardCharsets.UTF_8, httpHeaders);
             if (realcanceled && currEntry != null) {
                 currEntry.canceled = true;
             }
