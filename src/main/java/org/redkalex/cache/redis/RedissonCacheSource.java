@@ -553,9 +553,33 @@ public class RedissonCacheSource extends RedisSource {
     public <T> CompletableFuture<T> evalAsync(Type type, String script, List<String> keys, String... args) {
         String key = keys == null || keys.isEmpty() ? null : keys.get(0);
         Object[] vals = args;
-        return toFuture(client.getScript(ByteArrayCodec.INSTANCE)
-            .evalAsync(RScript.Mode.READ_WRITE, script, RScript.ReturnType.VALUE, (List) keys, vals)
-            .thenApply(bs -> decryptValue(key, cryptor, type, (byte[]) bs)));
+        RScript.ReturnType rt = RScript.ReturnType.VALUE;
+        final Class t = TypeToken.typeToClass(type);
+        if (Collection.class.isAssignableFrom(t)) {
+            rt = RScript.ReturnType.MULTI;
+        } else if (Map.class.isAssignableFrom(t)) {
+            rt = RScript.ReturnType.MAPVALUE;
+        }
+        RScript.ReturnType rrt = rt;
+        return toFuture(client.getScript(StringCodec.INSTANCE)
+            .evalAsync(RScript.Mode.READ_WRITE, script, rrt, (List) keys, vals)
+            .thenApply(bs -> {
+                if (bs == null) {
+                    return null;
+                }
+                if (TypeToken.primitiveToWrapper(t).isAssignableFrom(bs.getClass())) {
+                    return (T) bs;
+                }
+                if (bs instanceof String) {
+                    String val = (String) bs;
+                    if (type == String.class) {
+                        return val;
+                    } else {
+                        return (T) this.convert.convertFrom(type, val.getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+                return decryptValue(key, cryptor, type, (byte[]) bs);
+            }));
     }
 
     //--------------------- del ------------------------------    

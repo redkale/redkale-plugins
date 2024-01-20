@@ -186,7 +186,8 @@ public class RedisCacheResult implements ClientResult {
             byte[] bs2 = frameList.get(i + 1);
             T val = decodeValue(key, cryptor, bs2, valueType);
             if (val != null) {
-                map.put(String.valueOf(decodeValue(key, cryptor, bs1, String.class)), val);
+                String k = decodeValue(key, cryptor, bs1, String.class);
+                map.put(k, val);
             }
         }
         return map;

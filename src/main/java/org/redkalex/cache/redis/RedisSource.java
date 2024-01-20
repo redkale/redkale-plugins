@@ -34,11 +34,52 @@ public abstract class RedisSource extends AbstractCacheSource {
     public static final String CACHE_SOURCE_CRYPTOR = "cryptor";
 
     protected static final String SCRIPT_DELEX
-        = "if redis.call('get', KEYS[1]) == ARGV[1] then "
-        + "redis.call('del', KEYS[1]); "
-        + "return 1 "
-        + "else "
-        + "return 0 end";
+        = "if redis.call('get', KEYS[1]) == ARGV[1] then\n"
+        + "  redis.call('del', KEYS[1]);\n"
+        + "  return 1\n"
+        + "else\n"
+        + "  return 0\n"
+        + "end\n";
+
+    protected static final String SCRIPT_RATELIMIT
+        = "redis.replicate_commands()\n"
+        + "\n"
+        + "local tokens_key = KEYS[1]\n"
+        + "local timestamp_key = KEYS[2]\n"
+        + "\n"
+        + "local rate = tonumber(ARGV[1])\n"
+        + "local capacity = tonumber(ARGV[2])\n"
+        + "local requested = tonumber(ARGV[3])\n"
+        + "\n"
+        + "local fill_time = capacity / rate\n"
+        + "local ttl = math.floor(fill_time * 2)\n"
+        + "local now = redis.call('TIME')[1]\n"
+        + "\n"
+        + "local last_tokens = tonumber(redis.call(\"get\", tokens_key))\n"
+        + "if last_tokens == nil then\n"
+        + "  last_tokens = capacity\n"
+        + "end\n"
+        + "\n"
+        + "local last_refreshed = tonumber(redis.call(\"get\", timestamp_key))\n"
+        + "if last_refreshed == nil then\n"
+        + "  last_refreshed = 0\n"
+        + "end\n"
+        + "\n"
+        + "local delta = math.max(0, now-last_refreshed)\n"
+        + "local filled_tokens = math.min(capacity, last_tokens+(delta*rate))\n"
+        + "local allowed = filled_tokens >= requested\n"
+        + "local new_tokens = filled_tokens\n"
+        + "local allowed_num = filled_tokens - requested\n"
+        + "if allowed then\n"
+        + "  new_tokens = filled_tokens - requested\n"
+        + "end\n"
+        + "\n"
+        + "if ttl > 0 then\n"
+        + "  redis.call(\"setex\", tokens_key, ttl, new_tokens)\n"
+        + "  redis.call(\"setex\", timestamp_key, ttl, now)\n"
+        + "end\n"
+        + "\n"
+        + "return allowed_num";
 
     protected String name;
 
@@ -151,6 +192,33 @@ public abstract class RedisSource extends AbstractCacheSource {
     @Override
     public String resourceName() {
         return name;
+    }
+
+    /**
+     * 令牌桶算法限流， 返回负数表示无令牌， 其他为有令牌
+     * <pre>
+     * 每秒限制请求1次:     rate:1,     capacity:1,     requested:1
+     * 每秒限制请求10次:    rate:10,    capacity:10,    requested:1
+     * 每分钟限制请求1次:   rate:1,     capacity:60,    requested:60
+     * 每分钟限制请求10次:  rate:1,     capacity:60,    requested:6
+     * 每小时限制请求1次:   rate:1,     capacity:3600,  requested:3600
+     * 每小时限制请求10次:  rate:1,     capacity:3600,  requested:360
+     * </pre>
+     *
+     * @param key       限流的键
+     * @param rate      令牌桶每秒填充平均速率
+     * @param capacity  令牌桶总容量
+     * @param requested 需要的令牌数
+     *
+     * @return 可用令牌数
+     */
+    @Override
+    public CompletableFuture<Long> rateLimitAsync(final String key, final long rate, final long capacity, final long requested) {
+        if (capacity < rate || capacity < requested || rate <= 0 || requested < 0) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("rate=" + rate + ", capacity=" + capacity + ", requested=" + requested));
+        }
+        List<String> keys = List.of("redkale_rate_limiter.{" + key + "}.tokens", "redkale_rate_limiter.{" + key + "}.timestamp");
+        return evalAsync(long.class, SCRIPT_RATELIMIT, keys, String.valueOf(rate), String.valueOf(capacity), String.valueOf(requested));
     }
 
     public abstract <T> CompletableFuture<T> evalAsync(Type type, String script, List<String> keys, String... args);

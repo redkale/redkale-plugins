@@ -558,6 +558,15 @@ public abstract class RedisAbstractTest {
         Assertions.assertTrue(remainMillis <= 5000 && remainMillis > 4500);
         Assertions.assertTrue(remainSeconds <= 5 && remainSeconds >= 4);
 
+        //rate-limiter
+        long tokensLeft = source.rateLimit("/pipes/user/update", 1, 1, 1);
+        System.out.println("tokensLeft：" + tokensLeft);
+        Assertions.assertTrue(tokensLeft >= 0);
+        tokensLeft = source.rateLimit("/pipes/user/update", 1, 1, 1);
+        System.out.println("tokensLeft：" + tokensLeft);
+        Assertions.assertTrue(tokensLeft < 0);
+
+        //
         cursor = new AtomicLong();
         List<String> keys = source.scan(cursor, 5);
         System.out.println("scan 长度 : " + keys.size() + ", dbsize: " + source.dbsize() + ", cursor: " + cursor + ", 内容: " + keys);
