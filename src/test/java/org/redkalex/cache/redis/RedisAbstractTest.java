@@ -559,10 +559,16 @@ public abstract class RedisAbstractTest {
         Assertions.assertTrue(remainSeconds <= 5 && remainSeconds >= 4);
 
         //rate-limiter
-        long tokensLeft = source.rateLimit("/pipes/user/update", 1, 1, 1);
+        long tokensLeft = source.rateLimit("/pipes/user/update", 2, 2, 1);
         System.out.println("tokensLeft：" + tokensLeft);
         Assertions.assertTrue(tokensLeft >= 0);
-        tokensLeft = source.rateLimit("/pipes/user/update", 1, 1, 1);
+        tokensLeft = source.rateLimit("/pipes/user/update", 2, 2, 1);
+        System.out.println("tokensLeft：" + tokensLeft);
+        Assertions.assertTrue(tokensLeft >= 0);
+        tokensLeft = source.rateLimit("/pipes/user/update", 2, 2, 1);
+        System.out.println("tokensLeft：" + tokensLeft);
+        Assertions.assertTrue(tokensLeft < 0);
+        tokensLeft = source.rateLimit("/pipes/user/update", 2, 2, 1);
         System.out.println("tokensLeft：" + tokensLeft);
         Assertions.assertTrue(tokensLeft < 0);
 
