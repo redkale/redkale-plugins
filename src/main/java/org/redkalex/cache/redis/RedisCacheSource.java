@@ -963,15 +963,14 @@ public final class RedisCacheSource extends RedisSource {
                 });
             return Utility.orTimeout(future, () -> "redis (" + command + " " + key + ") timeout", 6010, TimeUnit.MILLISECONDS);
         } else {
-            return Utility.orTimeout(client.connect(req)
+            CompletableFuture<RedisCacheResult> future = client.connect(req)
                 .thenCompose(conn -> {
                     if (isNotEmpty(traceid)) {
                         Traces.computeIfAbsent(traceid);
                     }
                     return conn.writeRequest(req);
-                }),
-                () -> "redis (" + command + " " + key + ") timeout",
-                6010, TimeUnit.MILLISECONDS);
+                });
+            return Utility.orTimeout(future, () -> "redis (" + command + " " + key + ") timeout", 6010, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -982,15 +981,14 @@ public final class RedisCacheSource extends RedisSource {
         for (RedisCacheRequest request : requests) {
             request.workThread(workThread).traceid(traceid);
         }
-        return Utility.orTimeout(client.connect(requests[0])
+        CompletableFuture<List<RedisCacheResult>> future = client.connect(requests[0])
             .thenCompose(conn -> {
                 if (isNotEmpty(traceid)) {
                     Traces.computeIfAbsent(traceid);
                 }
                 return conn.writeRequest(requests);
-            }),
-            () -> "redis " + Arrays.toString(requests) + " timeout",
-            6010, TimeUnit.MILLISECONDS);
+            });
+        return Utility.orTimeout(future, () -> "redis " + Arrays.toString(requests) + " timeout", 6010, TimeUnit.MILLISECONDS);
     }
 
     private byte[][] keyArgs(String key) {
