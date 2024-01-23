@@ -1,6 +1,7 @@
 package com.xxl.job.core.biz.model;
 
 import java.io.Serializable;
+import org.redkale.convert.json.JsonConvert;
 
 /**
  * common return
@@ -65,7 +66,7 @@ public class ReturnT<T> implements Serializable {
 
     @Override
     public String toString() {
-        return "ReturnT [code=" + code + ", msg=" + msg + ", content=" + content + "]";
+        return JsonConvert.root().convertTo(this);
     }
 
 }
