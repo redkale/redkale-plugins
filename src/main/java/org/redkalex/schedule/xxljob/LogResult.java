@@ -1,26 +1,32 @@
 package org.redkalex.schedule.xxljob;
 
 import java.io.Serializable;
+import org.redkale.convert.json.JsonConvert;
 
 /**
  * Created by xuxueli on 17/3/23.
  */
 public class LogResult implements Serializable {
+
     private static final long serialVersionUID = 42L;
+
+    private int fromLineNum;
+
+    private int toLineNum;
+
+    private String logContent;
+
+    private boolean isEnd;
 
     public LogResult() {
     }
+
     public LogResult(int fromLineNum, int toLineNum, String logContent, boolean isEnd) {
         this.fromLineNum = fromLineNum;
         this.toLineNum = toLineNum;
         this.logContent = logContent;
         this.isEnd = isEnd;
     }
-
-    private int fromLineNum;
-    private int toLineNum;
-    private String logContent;
-    private boolean isEnd;
 
     public int getFromLineNum() {
         return fromLineNum;
@@ -52,5 +58,10 @@ public class LogResult implements Serializable {
 
     public void setEnd(boolean end) {
         isEnd = end;
+    }
+
+    @Override
+    public String toString() {
+        return JsonConvert.root().convertTo(this);
     }
 }

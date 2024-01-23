@@ -18,7 +18,7 @@ public class XxljobScheduleProvider implements ScheduleManagerProvider {
      *
      * @param config 参数
      *
-     * @return 是否识破
+     * @return 是否适配xxljob
      */
     @Override
     public boolean acceptsConf(AnyValue config) {

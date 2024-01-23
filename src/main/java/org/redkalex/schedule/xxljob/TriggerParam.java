@@ -1,30 +1,38 @@
 package org.redkalex.schedule.xxljob;
 
 import java.io.Serializable;
+import org.redkale.convert.json.JsonConvert;
 
 /**
  * Created by xuxueli on 16/7/22.
  */
-public class TriggerParam implements Serializable{
+public class TriggerParam implements Serializable {
+
     private static final long serialVersionUID = 42L;
 
     private int jobId;
 
     private String executorHandler;
+
     private String executorParams;
+
     private String executorBlockStrategy;
+
     private int executorTimeout;
 
     private long logId;
+
     private long logDateTime;
 
     private String glueType;
+
     private String glueSource;
+
     private long glueUpdatetime;
 
     private int broadcastIndex;
-    private int broadcastTotal;
 
+    private int broadcastTotal;
 
     public int getJobId() {
         return jobId;
@@ -122,23 +130,9 @@ public class TriggerParam implements Serializable{
         this.broadcastTotal = broadcastTotal;
     }
 
-
     @Override
     public String toString() {
-        return "TriggerParam{" +
-                "jobId=" + jobId +
-                ", executorHandler='" + executorHandler + '\'' +
-                ", executorParams='" + executorParams + '\'' +
-                ", executorBlockStrategy='" + executorBlockStrategy + '\'' +
-                ", executorTimeout=" + executorTimeout +
-                ", logId=" + logId +
-                ", logDateTime=" + logDateTime +
-                ", glueType='" + glueType + '\'' +
-                ", glueSource='" + glueSource + '\'' +
-                ", glueUpdatetime=" + glueUpdatetime +
-                ", broadcastIndex=" + broadcastIndex +
-                ", broadcastTotal=" + broadcastTotal +
-                '}';
+        return JsonConvert.root().convertTo(this);
     }
 
 }

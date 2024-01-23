@@ -1,18 +1,24 @@
 package org.redkalex.schedule.xxljob;
 
 import java.io.Serializable;
+import org.redkale.convert.json.JsonConvert;
 
 /**
  * Created by xuxueli on 2017-05-10 20:22:42
  */
 public class RegistryParam implements Serializable {
+
     private static final long serialVersionUID = 42L;
 
     private String registryGroup;
+
     private String registryKey;
+
     private String registryValue;
 
-    public RegistryParam(){}
+    public RegistryParam() {
+    }
+
     public RegistryParam(String registryGroup, String registryKey, String registryValue) {
         this.registryGroup = registryGroup;
         this.registryKey = registryKey;
@@ -45,10 +51,6 @@ public class RegistryParam implements Serializable {
 
     @Override
     public String toString() {
-        return "RegistryParam{" +
-                "registryGroup='" + registryGroup + '\'' +
-                ", registryKey='" + registryKey + '\'' +
-                ", registryValue='" + registryValue + '\'' +
-                '}';
+        return JsonConvert.root().convertTo(this);
     }
 }
