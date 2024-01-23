@@ -1,4 +1,4 @@
-package com.xxl.job.core.biz.model;
+package org.redkalex.schedule.xxljob;
 
 import java.io.Serializable;
 import org.redkale.convert.json.JsonConvert;

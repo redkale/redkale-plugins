@@ -3,7 +3,6 @@
  */
 package org.redkalex.schedule.xxljob;
 
-import com.xxl.job.core.biz.model.ReturnT;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Map;

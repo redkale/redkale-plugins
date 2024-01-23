@@ -1,6 +1,3 @@
-/*
- *
- */
 package org.redkalex.schedule.xxljob;
 
 import java.io.Serializable;
