@@ -114,7 +114,7 @@ public class XxljobScheduleManager extends ScheduleManagerService {
             this.registryParam = regParam;
             logger.log(Level.INFO, XxljobScheduleManager.class.getSimpleName() + " registry(" + regUrl + ")(" + paramBody + ") : " + regResult);
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, XxljobScheduleManager.class.getSimpleName() + " start error", ex);
+            throw new RedkaleException(XxljobScheduleManager.class.getSimpleName() + " connect " + clientConf.getDomain() + "/api/registry" + " error", ex);
         }
     }
 

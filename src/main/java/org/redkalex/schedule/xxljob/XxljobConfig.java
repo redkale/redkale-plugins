@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
+import org.redkale.convert.ConvertColumn;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.AnyValue;
 import org.redkale.util.Utility;
@@ -15,7 +16,8 @@ import org.redkale.util.Utility;
  */
 public class XxljobConfig {
 
-    //不以/结尾
+    //不以/结尾    
+    @ConvertColumn(ignore = true)
     private String domain;
 
     private String addresses;
@@ -26,8 +28,10 @@ public class XxljobConfig {
 
     private String executorName;
 
+    @ConvertColumn(ignore = true)
     private String accessToken;
 
+    @ConvertColumn(ignore = true)
     private Map<String, Serializable> headers;
 
     public XxljobConfig() {
