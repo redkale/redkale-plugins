@@ -35,7 +35,7 @@ import org.redkale.util.*;
 @SuppressWarnings("unchecked")
 public class NativeParserInfo extends DataNativeSqlInfo {
 
-    //${xx.xx}的参数名
+    //${xx.xx}的拼接参数名
     private final Map<String, NativeSqlParameter> dollarNames = new HashMap<>();
 
     //#{xx.xx}参数名对应jdbc参数名:argxxx, 包含了requiredNumsignNames

@@ -203,7 +203,8 @@ public class RedissonCacheSource extends RedisSource {
         }
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
-            sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+            sb.append("CacheSource(name=").append(resourceName())
+                .append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
         }
         initClient(this.conf);
         if (sb.length() > 0) {
