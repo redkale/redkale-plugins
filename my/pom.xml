@@ -33,7 +33,7 @@
         <apollo-client.version>2.1.0</apollo-client.version>
         <nacos-client.version>2.2.4</nacos-client.version>
         <mysql.version>8.1.0</mysql.version>
-        <postgresql.version>42.6.0</postgresql.version>
+        <postgresql.version>42.7.2</postgresql.version>
     </properties>
 
     <dependencies>
