@@ -897,7 +897,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         if (code == null) {
             return false;
         }
-        return super.isTableNotExist(info, code);
+        return super.isTableNotExist(info, t, code);
     }
 
     @Local

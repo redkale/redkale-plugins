@@ -585,7 +585,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             }
             if (t == null) {
                 rs.complete(g);
-            } else if (isTableNotExist(info, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {
+            } else if (isTableNotExist(info, t, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {
                 if (info.getTableStrategy() == null) {
                     String[] tablesqls = createTableSqls(info);
                     if (tablesqls == null) {  //没有建表DDL
@@ -625,7 +625,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             }
             if (t == null) {
                 rs.complete(g);
-            } else if (isTableNotExist(info, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {  //表不存在
+            } else if (isTableNotExist(info, t, t instanceof SQLException ? ((SQLException) t).getSQLState() : null)) {  //表不存在
                 if (info.getTableStrategy() == null) {  //单表模式
                     String[] tablesqls = createTableSqls(info);
                     if (tablesqls == null) {  //没有建表DDL
@@ -670,7 +670,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                                     rs.completeExceptionally(t3);
                                 }
                             });
-                        } else if (isTableNotExist(info, t2 instanceof SQLException ? ((SQLException) t2).getSQLState() : null)) { //还是没有表： 1、没有原始表; 2:没有库
+                        } else if (isTableNotExist(info, t2, t2 instanceof SQLException ? ((SQLException) t2).getSQLState() : null)) { //还是没有表： 1、没有原始表; 2:没有库
                             if (newTable.indexOf('.') < 0) {  //没有原始表需要建表
                                 String[] tablesqls = createTableSqls(info);
                                 if (tablesqls == null) {  //没有建表DDL
@@ -724,7 +724,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                                                         rs.completeExceptionally(t6);
                                                     }
                                                 });
-                                            } else if (isTableNotExist(info, t5 instanceof SQLException ? ((SQLException) t5).getSQLState() : null)) { //没有原始表需要建表
+                                            } else if (isTableNotExist(info, t5, t5 instanceof SQLException ? ((SQLException) t5).getSQLState() : null)) { //没有原始表需要建表
                                                 String[] tablesqls = createTableSqls(info);
                                                 if (tablesqls == null) {  //没有建表DDL
                                                     rs.completeExceptionally(t5);
@@ -777,7 +777,9 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         return rs;
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, final String[] sqls, final T[] values, int fetchSize, final boolean insert, final Attribute<T, Serializable>[] attrs, final Object[][] parameters) {
+    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, 
+        final String[] sqls, final T[] values, int fetchSize, final boolean insert, 
+        final Attribute<T, Serializable>[] attrs, final Object[][] parameters) {
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
         WorkThread workThread = WorkThread.currentWorkThread();
