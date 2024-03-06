@@ -1,20 +1,25 @@
-<b>项目介绍</b>
-<p>
-   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RedKale的扩展插件库。
-</p>
-<p>
-<strong>redkale-plugins已有的功能如下：</strong>
-</p>
-<ol>
-<li>苹果APNS的消息推送-----------------------ApnsService</li>
-<li>Redis的CacheSource实现-------------------RedisCacheSource</li>
-<li>Protobuf的Convert实现---------------------ProtobufConvert</li>
-<li>微信/支付宝/银联的支付功能---------------MultiPayService</li>
-<li>Postgres数据库的DataSource实现----------PgSQLDataSource</li>
-<li>微信企业号常规操作类----------------------WeiXinQYService</li>
-<li>Consul的服务管理ClusterAgent实现--------ConsulClusterAgent</li>
-<li>Kafka的MQ管理器MessageAgent实现------KafkaMessageAgent</li>
-</ol>
+## 项目介绍
+&emsp;&emsp;RedKale的扩展插件库。
+## 功能说明
+|组件|说明|依赖|
+| --- | --- | --- |
+|RedisCacheSource|基于redkale-client的CacheSource实现|无|
+|RedisVertxCacheSource|基于vertx-redis的CacheSource实现|vertx-redis-client:v4.5.1|
+|RedissonCacheSource|基于redisson的CacheSource实现|redisson:v3.25.2|
+|  |  |
+|VertxSqlDataSource|基于vertx-sql-client的DataSource实现|vertx-sql-client:v4.5.1|
+|MongodbDriverDataSource|基于mongodb的DataSource实现|mongodb-driver-reactivestreams:v4.11.1|
+|OpenSearchSource|基于openSearch的SearchSource实现|无|
+|  |  |
+|ConsulClusterAgent|基于consul的ClusterAgent实现|无|
+|NacosClusterAgent|基于nacos的ClusterAgent实现|无|
+|  |  |
+|ApolloClientPropertiesAgent|基于apollo-client的PropertiesAgent实现|apollo-client:v2.1.0
+|ApolloPropertiesAgent|基于apollo的PropertiesAgent实现|无|
+|  |  |
+|XxljobScheduleManager|基于xxl-job的ScheduleManager实现|无|
+|  |  |
+|KafkaMessageAgent|基于kafka的MessageAgent实现|kafka-clients:v3.6.1|
 
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>详情请访问:&nbsp;&nbsp;&nbsp;&nbsp;<a href='http://redkale.org' target='_blank'>http://redkale.org</a></b>
+<b>详情请访问:&nbsp;&nbsp;&nbsp;&nbsp;<a href='http://redkale.org' target='_blank'>http://redkale.org</a></b>
