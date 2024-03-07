@@ -21,6 +21,8 @@
 |  |  |
 |XxljobScheduleManager|基于xxl-job的ScheduleManager实现|无|
 |  |  |
+|DataNativeJsqlParser|基于jsqlparser的DataNativeSqlParser实现|jsqlparser:v4.7|
+|  |  |
 |KafkaMessageAgent|基于kafka的MessageAgent实现|kafka-clients:v3.6.1|
 
 
