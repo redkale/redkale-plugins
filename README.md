@@ -16,6 +16,8 @@
 |  |  |
 |ApolloClientPropertiesAgent|基于apollo-client的PropertiesAgent实现|apollo-client:v2.1.0
 |ApolloPropertiesAgent|基于apollo的PropertiesAgent实现|无|
+|NacosClientPropertiesAgent|基于nacos-client的PropertiesAgent实现|nacos-client:v2.2.4
+|NacosPropertiesAgent|基于nacos的PropertiesAgent实现|无|
 |  |  |
 |XxljobScheduleManager|基于xxl-job的ScheduleManager实现|无|
 |  |  |
