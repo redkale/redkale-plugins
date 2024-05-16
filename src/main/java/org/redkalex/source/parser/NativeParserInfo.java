@@ -29,6 +29,7 @@ import org.redkale.util.*;
 /**
  * jsqlparser只能识别:xxx的参数变量形式的sql，而DataNativeSqlParser定义的参数变量形式是: ${xxx}、#{xxx}、##{xxx}
  * 此类作用是将原始sql先转换成:name形式的sql再解析出变量参数
+ * 注意: 目前不支持union sql
  *
  * @author zhangjx
  */
@@ -247,6 +248,9 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             List<UpdateSet> updateSets = null;
             List<Select> insertSets = null;
             if (stmt instanceof Select) {
+                if (!(stmt instanceof PlainSelect)) {
+                    throw new SourceException("Not support sql (" + rawSql + "), type: " + stmt.getClass().getName());
+                }
                 PlainSelect selectBody = (PlainSelect) stmt;
                 where = selectBody.getWhere();
                 clearWhere = () -> selectBody.setWhere(null);
