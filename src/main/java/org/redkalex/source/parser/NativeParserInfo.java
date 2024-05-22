@@ -41,12 +41,15 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     private final Map<String, NativeSqlParameter> dollarNames = new HashMap<>();
 
     //#{xx.xx}参数名对应jdbc参数名:argxxx, 包含了requiredNumsignNames ##{xx.xx}
+    //key: xx.xx
     private final Map<String, NativeSqlParameter> numsignJdbcNames = new HashMap<>();
 
     //必需的##{xx.xx}参数名
+    //key: xx.xx
     private final Map<String, NativeSqlParameter> requiredNumsignNames = new HashMap<>();
 
     //jdbc参数名:argxxx对应#{xx.xx}参数名
+    //key: arg0x, value: xx.xx
     private final Map<String, String> jdbcToNumsignMap = new HashMap<>();
 
     //根据${xx.xx}分解并将xx.xx替换成:argxxx的sql片段
@@ -141,14 +144,14 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             for (NativeSqlFragment fragment : fragments) {
                 ss.append(fragment.getText());
             }
-            this.jdbcSql = ss.toString();
+            this.templetSql = ss.toString();
         } else {
-            this.jdbcSql = null;
+            this.templetSql = null;
         }
         this.allNamedParameters.addAll(dollarNames.values());
         this.allNamedParameters.addAll(numsignJdbcNames.values());
         this.rootParamNames.addAll(rootParams);
-        String parserSql = Utility.orElse(this.jdbcSql, this.rawSql);
+        String parserSql = Utility.orElse(this.templetSql, this.rawSql);
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(parserSql).withAllowComplexParsing(true);
             Statement stmt = sqlParser.SingleStatement();
@@ -191,7 +194,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 newParams.put(p.getJdbcName(), val);
             }
         }
-        if (jdbcSql == null) {
+        if (templetSql == null) {
             StringBuilder sb = new StringBuilder();
             for (NativeSqlFragment fragment : fragments) {
                 if (fragment.isDollarable()) {
@@ -202,7 +205,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             }
             newSql.set(sb.toString());
         } else {
-            newSql.set(jdbcSql);
+            newSql.set(templetSql);
         }
         return newParams;
     }
@@ -217,9 +220,10 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     private NativeParserNode createParserNode(IntFunction<String> signFunc, final String nativeSql) {
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
-            Statement stmt = sqlParser.Statement();
+            Statement originStmt = sqlParser.Statement();
             final Set<String> fullNames = new HashSet<>();
             final Set<String> requiredNamedSet = new HashSet<>();
+            //包含IN参数的sql必须走动态拼接sql模式
             final AtomicBoolean containsInExpr = new AtomicBoolean();
             ExpressionVisitorAdapter exprAdapter = new ExpressionVisitorAdapter() {
 
@@ -234,7 +238,8 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 public void visit(InExpression expr) {
                     int size = fullNames.size();
                     super.visit(expr);
-                    if (fullNames.size() > size) {
+                    //rightExpression maybe JdbcNamedParameter/ParenthesedExpressionList/ParenthesedSelect
+                    if (fullNames.size() > size && !(expr.getRightExpression() instanceof Select)) {
                         containsInExpr.set(true);
                     }
                 }
@@ -250,11 +255,11 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             Runnable clearWhere = null;
             List<UpdateSet> updateSets = null;
             List<Select> insertSets = null;
-            if (stmt instanceof Select) {
-                if (!(stmt instanceof PlainSelect)) {
-                    throw new SourceException("Not support sql (" + rawSql + "), type: " + stmt.getClass().getName());
+            if (originStmt instanceof Select) {
+                if (!(originStmt instanceof PlainSelect)) {
+                    throw new SourceException("Not support sql (" + rawSql + "), type: " + originStmt.getClass().getName());
                 }
-                PlainSelect selectBody = (PlainSelect) stmt;
+                PlainSelect selectBody = (PlainSelect) originStmt;
                 fullWhere = selectBody.getWhere();
                 clearWhere = () -> selectBody.setWhere(null);
                 //创建COUNT总数sql
@@ -273,8 +278,9 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 countBody.setWhere(null);
                 countBody.setOrderByElements(null);
                 countStmt = countBody;
-            } else if (stmt instanceof Insert) {
-                Select selectBody = ((Insert) stmt).getSelect();
+            } else if (originStmt instanceof Insert) {
+                Insert insert = (Insert) originStmt;
+                Select selectBody = insert.getSelect();
                 if (selectBody instanceof PlainSelect) {
                     fullWhere = ((PlainSelect) selectBody).getWhere();
                     clearWhere = () -> ((PlainSelect) selectBody).setWhere(null);
@@ -285,34 +291,37 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 } else {
                     throw new SourceException("Not support sql (" + rawSql + "), type: " + selectBody.getClass().getName());
                 }
-            } else if (stmt instanceof Delete) {
-                fullWhere = ((Delete) stmt).getWhere();
-                clearWhere = () -> ((Delete) stmt).setWhere(null);
-            } else if (stmt instanceof Update) {
-                updateSets = ((Update) stmt).getUpdateSets();
-                fullWhere = ((Update) stmt).getWhere();
-                clearWhere = () -> ((Update) stmt).setWhere(null);
-            } else if (stmt instanceof Upsert) {
-                updateSets = ((Upsert) stmt).getUpdateSets();
-                PlainSelect select = ((Upsert) stmt).getPlainSelect();
+            } else if (originStmt instanceof Delete) {
+                Delete delete = (Delete) originStmt;
+                fullWhere = delete.getWhere();
+                clearWhere = () -> delete.setWhere(null);
+            } else if (originStmt instanceof Update) {
+                Update update = (Update) originStmt;
+                updateSets = update.getUpdateSets();
+                fullWhere = update.getWhere();
+                clearWhere = () -> update.setWhere(null);
+            } else if (originStmt instanceof Upsert) {
+                Upsert upsert = (Upsert) originStmt;
+                updateSets = upsert.getUpdateSets();
+                PlainSelect select = upsert.getPlainSelect();
                 if (select != null) {
                     fullWhere = select.getWhere();
                     clearWhere = () -> select.setWhere(null);
                 }
-            } else if (stmt instanceof Truncate) {
+            } else if (originStmt instanceof Truncate) {
                 //do nothing
-            } else if (stmt instanceof Alter) {
+            } else if (originStmt instanceof Alter) {
                 //do nothing
-            } else if (stmt instanceof Grant) {
+            } else if (originStmt instanceof Grant) {
                 //do nothing
-            } else if (stmt instanceof Drop) {
+            } else if (originStmt instanceof Drop) {
                 //do nothing
-            } else if (stmt instanceof Execute) {
+            } else if (originStmt instanceof Execute) {
                 //do nothing
-            } else if (stmt instanceof Merge) {
+            } else if (originStmt instanceof Merge) {
                 //do nothing
             } else {
-                throw new SourceException("Not support sql (" + rawSql + "), type: " + stmt.getClass().getName());
+                throw new SourceException("Not support sql (" + rawSql + "), type: " + originStmt.getClass().getName());
             }
 
             SelectDeParser selectAdapter = new SelectDeParser();
@@ -343,7 +352,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
 
             String updateNoWhereSql = null;
             List<String> updateNamedSet = new ArrayList<>();
-            if (updateSets != null) {
+            if (updateSets != null) { //UPDATE语句
                 Map<String, Object> params = new HashMap<>();
                 Object val = List.of(1); //虚构一个参数值，IN需要Collection
                 for (String name : requiredNamedSet) {
@@ -351,11 +360,11 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 }
                 final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
                 UpdateDeParser deParser = new UpdateDeParser(exprDeParser, exprDeParser.getBuffer());
-                deParser.deParse((Update) stmt);
+                deParser.deParse((Update) originStmt);
                 updateNoWhereSql = exprDeParser.getBuffer().toString();
                 updateNamedSet = exprDeParser.getJdbcNames();
             }
-            return new NativeParserNode(stmt, countStmt, fullWhere, jdbcToNumsignMap,
+            return new NativeParserNode(originStmt, countStmt, fullWhere, jdbcToNumsignMap,
                 fullNames, requiredNamedSet, isDynamic() || containsInExpr.get(), updateNoWhereSql, updateNamedSet);
         } catch (ParseException e) {
             throw new SourceException("Parse error, sql: " + nativeSql, e);
@@ -366,7 +375,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     public String toString() {
         return NativeParserInfo.class.getSimpleName() + "{"
             + "rawSql: \"" + rawSql + "\""
-            + ", jdbcSql: \"" + jdbcSql + "\""
+            + ", jdbcSql: \"" + templetSql + "\""
             + ", dollarNames: " + dollarNames
             + ", numsignJdbcNames: " + numsignJdbcNames
             + ", requiredNumsignNames: " + requiredNumsignNames
