@@ -777,8 +777,8 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         return rs;
     }
 
-    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info, 
-        final String[] sqls, final T[] values, int fetchSize, final boolean insert, 
+    protected <T> CompletableFuture<Integer> executeUpdate(final EntityInfo<T> info,
+        final String[] sqls, final T[] values, int fetchSize, final boolean insert,
         final Attribute<T, Serializable>[] attrs, final Object[][] parameters) {
         final long s = System.currentTimeMillis();
         final PgClient pool = writePool();
@@ -941,26 +941,28 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = readPool();
+        final String countSql = sinfo.getNativeCountSql();
         Function<PgResultSet, Long> countTransfer = dataset -> {
             long rs = dataset.next() ? dataset.getLongValue(1) : 0;
-            slowLog(s, sinfo.getNativeCountSql());
+            slowLog(s, countSql);
             return rs;
         };
         if (!sinfo.isEmptyNamed()) {
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended countReq = conn.pollReqExtended(workThread, null);
                 Stream<Serializable> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
-                countReq.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, sinfo.getNativeCountSql(), 0, sinfo.getParamNames().size(), pstream);
+                countReq.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, countSql, 0, sinfo.getParamNames().size(), pstream);
                 return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
                     if (total < 1) {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = sinfo.getNativeCountSql()
+                        String listSql = sinfo.getNativeSql()
                             + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
                         PgReqExtended req = conn.pollReqExtended(workThread, null);
                         Stream<Serializable> pstream2 = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
-                        req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, listSql, flipper == null ? 0 : flipper.getLimit(), sinfo.getParamNames().size(), pstream2);
+                        req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, listSql,
+                            flipper == null ? 0 : flipper.getLimit(), sinfo.getParamNames().size(), pstream2);
                         Function<PgResultSet, Sheet<V>> sheetTransfer = dataset -> {
                             List<V> list = EntityBuilder.getListValue(type, dataset);
                             slowLog(s2, listSql);
@@ -973,13 +975,13 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         } else {
             return pool.connect().thenCompose(conn -> {
                 PgReqQuery countReq = conn.pollReqQuery(workThread, null);
-                countReq.prepare(sinfo.getNativeCountSql());
+                countReq.prepare(countSql);
                 return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
                     if (total < 1) {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = sinfo.getNativeCountSql()
+                        String listSql = sinfo.getNativeSql()
                             + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
                         PgReqQuery req = conn.pollReqQuery(workThread, null);
                         req.prepare(listSql);

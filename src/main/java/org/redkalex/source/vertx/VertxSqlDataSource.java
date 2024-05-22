@@ -1008,8 +1008,9 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         final CompletableFuture<Sheet<V>> future = new CompletableFuture<>();
         DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
         Pool pool = readPool();
+        final String countSql = sinfo.getNativeCountSql();
         Handler<AsyncResult<RowSet<Row>>> countHandler = (AsyncResult<RowSet<Row>> evt) -> {
-            slowLog(s, sinfo.getNativeCountSql());
+            slowLog(s, countSql);
             if (evt.failed()) {
                 completeExceptionally(workThread, future, evt.cause());
             } else {
@@ -1022,10 +1023,10 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     complete(workThread, future, new Sheet<>(total, new ArrayList<>()));
                 }
                 final long count = total;
-                String listSql = sinfo.getNativeCountSql()
+                String listSql = sinfo.getNativeSql()
                     + (flipper == null || flipper.getLimit() < 1 ? "" : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
                 Handler<AsyncResult<RowSet<Row>>> listHandler = (AsyncResult<RowSet<Row>> event) -> {
-                    slowLog(s, sinfo.getNativeCountSql());
+                    slowLog(s, listSql);
                     if (event.failed()) {
                         completeExceptionally(workThread, future, event.cause());
                     } else {
@@ -1041,9 +1042,9 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             }
         };
         if (!sinfo.isEmptyNamed()) {
-            pool.preparedQuery(sinfo.getNativeCountSql()).execute(tupleParameter(sinfo, params), countHandler);
+            pool.preparedQuery(countSql).execute(tupleParameter(sinfo, params), countHandler);
         } else {
-            pool.preparedQuery(sinfo.getNativeCountSql()).execute(countHandler);
+            pool.preparedQuery(countSql).execute(countHandler);
         }
         return future;
     }

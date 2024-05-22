@@ -33,6 +33,7 @@ public class JsqlParserTest {
         test.run10();
         test.run11();
         test.run12();
+        test.run13();
     }
 
     @Test
@@ -216,5 +217,17 @@ public class JsqlParserTest {
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================12============================================");
+    }
+
+    @Test
+    public void run13() throws Exception {
+        String sql = "SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 WHERE userid = :idx";
+        Map<String, Object> params = Utility.ofMap("idx", 100);
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================13============================================");
     }
 }

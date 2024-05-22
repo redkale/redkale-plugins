@@ -6,6 +6,7 @@ package org.redkalex.source.parser;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.IntFunction;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.parser.*;
@@ -39,7 +40,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     //${xx.xx}的拼接参数名
     private final Map<String, NativeSqlParameter> dollarNames = new HashMap<>();
 
-    //#{xx.xx}参数名对应jdbc参数名:argxxx, 包含了requiredNumsignNames
+    //#{xx.xx}参数名对应jdbc参数名:argxxx, 包含了requiredNumsignNames ##{xx.xx}
     private final Map<String, NativeSqlParameter> numsignJdbcNames = new HashMap<>();
 
     //必需的##{xx.xx}参数名
@@ -51,8 +52,10 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     //根据${xx.xx}分解并将xx.xx替换成:argxxx的sql片段
     private final List<NativeSqlFragment> fragments = new ArrayList<>();
 
+    //包含${xx.xx}、#{xx.xx}、##{xx.xx}所有参数名
     private final List<NativeSqlParameter> allNamedParameters = new ArrayList<>();
 
+    //非动态sql的NativeParserNode对象缓存
     private final ConcurrentHashMap<String, NativeParserNode> parserNodes = new ConcurrentHashMap();
 
     public NativeParserInfo(final String rawSql) {
@@ -204,20 +207,20 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         return newParams;
     }
 
-    public NativeParserNode loadParserNode(java.util.function.IntFunction<String> signFunc, String dbtype, final String nativeSql) {
+    public NativeParserNode loadParserNode(IntFunction<String> signFunc, String dbType, final String nativeSql) {
         if (isDynamic()) {
-            return createParserNode(signFunc, dbtype, nativeSql);
+            return createParserNode(signFunc, nativeSql);
         }
-        return parserNodes.computeIfAbsent(nativeSql, sql -> createParserNode(signFunc, dbtype, nativeSql));
+        return parserNodes.computeIfAbsent(nativeSql, sql -> createParserNode(signFunc, nativeSql));
     }
 
-    private NativeParserNode createParserNode(java.util.function.IntFunction<String> signFunc, String dbtype, final String nativeSql) {
+    private NativeParserNode createParserNode(IntFunction<String> signFunc, final String nativeSql) {
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
             Statement stmt = sqlParser.Statement();
             final Set<String> fullNames = new HashSet<>();
             final Set<String> requiredNamedSet = new HashSet<>();
-            final AtomicBoolean containsInName = new AtomicBoolean();
+            final AtomicBoolean containsInExpr = new AtomicBoolean();
             ExpressionVisitorAdapter exprAdapter = new ExpressionVisitorAdapter() {
 
                 @Override
@@ -232,7 +235,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                     int size = fullNames.size();
                     super.visit(expr);
                     if (fullNames.size() > size) {
-                        containsInName.set(true);
+                        containsInExpr.set(true);
                     }
                 }
 
@@ -243,7 +246,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             };
 
             PlainSelect countStmt = null;
-            Expression where = null;
+            Expression fullWhere = null;
             Runnable clearWhere = null;
             List<UpdateSet> updateSets = null;
             List<Select> insertSets = null;
@@ -252,29 +255,28 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                     throw new SourceException("Not support sql (" + rawSql + "), type: " + stmt.getClass().getName());
                 }
                 PlainSelect selectBody = (PlainSelect) stmt;
-                where = selectBody.getWhere();
+                fullWhere = selectBody.getWhere();
                 clearWhere = () -> selectBody.setWhere(null);
-                { //创建COUNT总数sql
-                    CCJSqlParser countParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
-                    PlainSelect countBody = (PlainSelect) countParser.Statement();
-                    if (countBody.getDistinct() == null) {
-                        Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT")
-                            .withParameters(new ExpressionList(new LongValue(1)));
-                        countBody.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
-                    } else {
-                        Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
-                            .withParameters(new ParenthesedExpressionList((List) countBody.getSelectItems()));
-                        countBody.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
-                        countBody.setDistinct(null);
-                    }
-                    countBody.setWhere(null);
-                    countBody.setOrderByElements(null);
-                    countStmt = countBody;
+                //创建COUNT总数sql
+                CCJSqlParser countParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
+                PlainSelect countBody = (PlainSelect) countParser.Statement();
+                if (countBody.getDistinct() == null) {
+                    Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT")
+                        .withParameters(new ExpressionList(new LongValue(1)));
+                    countBody.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
+                } else {
+                    Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
+                        .withParameters(new ParenthesedExpressionList((List) countBody.getSelectItems()));
+                    countBody.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
+                    countBody.setDistinct(null);
                 }
+                countBody.setWhere(null);
+                countBody.setOrderByElements(null);
+                countStmt = countBody;
             } else if (stmt instanceof Insert) {
                 Select selectBody = ((Insert) stmt).getSelect();
                 if (selectBody instanceof PlainSelect) {
-                    where = ((PlainSelect) selectBody).getWhere();
+                    fullWhere = ((PlainSelect) selectBody).getWhere();
                     clearWhere = () -> ((PlainSelect) selectBody).setWhere(null);
                 } else if (selectBody instanceof SetOperationList) {
                     insertSets = ((SetOperationList) selectBody).getSelects();
@@ -284,17 +286,17 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                     throw new SourceException("Not support sql (" + rawSql + "), type: " + selectBody.getClass().getName());
                 }
             } else if (stmt instanceof Delete) {
-                where = ((Delete) stmt).getWhere();
+                fullWhere = ((Delete) stmt).getWhere();
                 clearWhere = () -> ((Delete) stmt).setWhere(null);
             } else if (stmt instanceof Update) {
                 updateSets = ((Update) stmt).getUpdateSets();
-                where = ((Update) stmt).getWhere();
+                fullWhere = ((Update) stmt).getWhere();
                 clearWhere = () -> ((Update) stmt).setWhere(null);
             } else if (stmt instanceof Upsert) {
                 updateSets = ((Upsert) stmt).getUpdateSets();
                 PlainSelect select = ((Upsert) stmt).getPlainSelect();
                 if (select != null) {
-                    where = select.getWhere();
+                    fullWhere = select.getWhere();
                     clearWhere = () -> select.setWhere(null);
                 }
             } else if (stmt instanceof Truncate) {
@@ -316,8 +318,8 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             SelectDeParser selectAdapter = new SelectDeParser();
             selectAdapter.setExpressionVisitor(exprAdapter);
             exprAdapter.setSelectVisitor(selectAdapter);
-            if (where != null) {
-                where.accept(exprAdapter);
+            if (fullWhere != null) {
+                fullWhere.accept(exprAdapter);
                 requiredNamedSet.clear(); //where不存在必需的参数名
             }
             if (insertSets != null) {
@@ -353,8 +355,8 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 updateNoWhereSql = exprDeParser.getBuffer().toString();
                 updateNamedSet = exprDeParser.getJdbcNames();
             }
-            return new NativeParserNode(stmt, countStmt, where, jdbcToNumsignMap,
-                fullNames, requiredNamedSet, isDynamic() || containsInName.get(), updateNoWhereSql, updateNamedSet);
+            return new NativeParserNode(stmt, countStmt, fullWhere, jdbcToNumsignMap,
+                fullNames, requiredNamedSet, isDynamic() || containsInExpr.get(), updateNoWhereSql, updateNamedSet);
         } catch (ParseException e) {
             throw new SourceException("Parse error, sql: " + nativeSql, e);
         }

@@ -5,6 +5,8 @@ package org.redkalex.source.parser;
 
 import java.util.*;
 import java.util.function.IntFunction;
+import net.sf.jsqlparser.expression.BinaryExpression;
+import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.parser.CCJSqlParser;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,8 @@ public class JsqlJdbcParserTest {
         test.run6();
         test.run7();
         test.run8();
+        test.run9();
+        test.run10();
     }
 
     @Test
@@ -149,5 +153,35 @@ public class JsqlJdbcParserTest {
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================8=======================================");
+    }
+
+    @Test
+    public void run9() throws Exception {
+        String sql = "SELECT * FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 WHERE userid = :idx) a";
+        Map<String, Object> params = Utility.ofMap("idx", 100);
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("count-sql = " + statement.getNativeCountSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("==========================================9=======================================");
+    }
+
+    @Test
+    public void run10() throws Exception {
+        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
+            + "WHERE u.id = :idx AND u.name IN (SELECT name FROM orderdetail WHERE status = :status UNION SELECT name FROM orderdetail_his) "
+            + "ORDER BY u.createTime DESC";
+        CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
+        PlainSelect stmt = (PlainSelect) sqlParser.Statement();
+        System.out.println(((InExpression)((BinaryExpression)stmt.getWhere()).getRightExpression()).getRightExpression().getClass());
+        
+        Map<String, Object> params = Utility.ofMap("idx", 100);
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, params);
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("count-sql = " + statement.getNativeCountSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("==========================================10=======================================");
     }
 }

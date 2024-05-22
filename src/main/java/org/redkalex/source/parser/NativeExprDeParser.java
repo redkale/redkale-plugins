@@ -29,7 +29,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
     private final Deque<Expression> relations = new ArrayDeque<>();
 
-    private java.util.function.IntFunction<String> signFunc;
+    private IntFunction<String> signFunc;
 
     //需要预编译的jdbc参数名:argxxx, 数量与sql中的?数量一致
     private List<String> jdbcNames = new ArrayList<>();
@@ -165,7 +165,6 @@ public class NativeExprDeParser extends ExpressionDeParser {
                     trimJdbcNames(size1, jdbcNames.size());
                 }
             } else {
-                int size2 = jdbcNames.size();
                 trimJdbcNames(size1, jdbcNames.size());
             }
 

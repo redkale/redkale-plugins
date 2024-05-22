@@ -13,6 +13,7 @@ import net.sf.jsqlparser.expression.ExpressionVisitor;
 import net.sf.jsqlparser.parser.SimpleNode;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
+import org.redkale.annotation.Nullable;
 import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.source.SourceException;
 
@@ -26,18 +27,21 @@ public class NativeParserNode {
     private final boolean dynamic;
 
     //Statement对象
-    private final Statement stmt;
+    private final Statement originStmt;
 
     //原始sql的 COUNT(1)版
+    @Nullable
     private final PlainSelect countStmt;
 
     //where条件
+    @Nullable
     private final Expression fullWhere;
 
     //jdbc参数名:argxxx对应#{xx.xx}参数名
     private final Map<String, String> jdbcToNumsignMap;
 
     //没有where的UPDATE语句
+    @Nullable
     private final String updateNoWhereSql;
 
     //修改项，只有UPDATE语句才有值
@@ -49,14 +53,15 @@ public class NativeParserNode {
     //所有参数名，包含了requiredJdbcNames
     private final TreeSet<String> fullJdbcNames;
 
+    //where锁
     private final ReentrantLock whereLock = new ReentrantLock();
 
     //缓存
     private final ConcurrentHashMap<String, DataNativeSqlStatement> statements = new ConcurrentHashMap();
 
-    public NativeParserNode(Statement stmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcToNumsignMap,
+    public NativeParserNode(Statement originStmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcToNumsignMap,
         Set<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateNoWhereSql, List<String> updateJdbcNames) {
-        this.stmt = stmt;
+        this.originStmt = originStmt;
         this.dynamic = dynamic;
         this.countStmt = countStmt;
         this.fullWhere = fullWhere;
@@ -83,8 +88,7 @@ public class NativeParserNode {
         if (dynamic) { //根据参数值动态生成的sql语句不缓存
             return createStatement(signFunc, params);
         }
-        String key = cacheKey(params);
-        return statements.computeIfAbsent(key, k -> createStatement(signFunc, params));
+        return statements.computeIfAbsent(cacheKey(params), k -> createStatement(signFunc, params));
     }
 
     private DataNativeSqlStatement createStatement(IntFunction<String> signFunc, Map<String, Object> params) {
@@ -102,14 +106,14 @@ public class NativeParserNode {
         statement.setParamNames(paramNames);
         statement.setParamValues(params);
         if (whereSql.isEmpty()) {
-            statement.setNativeSql(updateNoWhereSql == null ? stmt.toString() : updateNoWhereSql);
+            statement.setNativeSql(updateNoWhereSql == null ? originStmt.toString() : updateNoWhereSql);
             if (countStmt != null) {
                 statement.setNativeCountSql(countStmt.toString());
             }
         } else if (countStmt != null) {  //SELECT
             String stmtSql;
             String countSql;
-            PlainSelect queryStmt = (PlainSelect) stmt;
+            PlainSelect queryStmt = (PlainSelect) originStmt;
             whereLock.lock();
             Expression oldQueryWhere = queryStmt.getWhere();
             Expression oldCountWhere = countStmt.getWhere();
@@ -126,7 +130,7 @@ public class NativeParserNode {
             statement.setNativeSql(stmtSql);
             statement.setNativeCountSql(countSql);
         } else { //not SELECT
-            statement.setNativeSql((updateNoWhereSql == null ? stmt.toString() : updateNoWhereSql) + " WHERE " + whereSql);
+            statement.setNativeSql((updateNoWhereSql == null ? originStmt.toString() : updateNoWhereSql) + " WHERE " + whereSql);
         }
         return statement;
     }
@@ -136,7 +140,7 @@ public class NativeParserNode {
         if (list.isEmpty()) {
             return "";
         }
-        //TreeSet已是排序 Collections.sort(list);
+        //fullJdbcNames是TreeSet, 已排序  //Collections.sort(list);
         return list.stream().collect(Collectors.joining(","));
     }
 
