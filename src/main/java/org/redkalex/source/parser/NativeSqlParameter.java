@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.Attribute;
+import org.redkale.util.Utility;
 
 /**
  *
@@ -17,17 +18,17 @@ public class NativeSqlParameter {
 
     private static final ConcurrentHashMap<String, Attribute> attrCache = new ConcurrentHashMap<>();
 
-    //#{xxx}、##{xxx}参数名
+    //#{xx.xx}、##{xx.xx}参数名
     private final String numsignName;
 
-    //jdbc参数名 :argxxx
+    //jdbc参数名 :xx_xx
     private final String jdbcName;
-
-    //是否必需 
-    private final boolean required;
 
     //#{xxx}参数名按.分隔
     private final String[] numsigns;
+
+    //是否必需 
+    boolean required;
 
     public NativeSqlParameter(String numsignName, String jdbcName, boolean required) {
         this.numsignName = numsignName;
@@ -37,7 +38,7 @@ public class NativeSqlParameter {
     }
 
     public Object getParamValue(Map<String, Object> params) {
-        if (params == null || params.isEmpty()) {
+        if (Utility.isEmpty(params)) {
             return null;
         }
         String[] subs = numsigns;
@@ -55,6 +56,11 @@ public class NativeSqlParameter {
             }
         }
         return val;
+    }
+
+    NativeSqlParameter required(boolean required) {
+        this.required = required;
+        return this;
     }
 
     public String getNumsignName() {

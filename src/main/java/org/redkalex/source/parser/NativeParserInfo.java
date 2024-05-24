@@ -193,6 +193,8 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                         if (p.isRequired()) {
                             requiredNumsignNames.put(name, p);
                         }
+                    } else if (!old.isRequired() && type == 3) {//参数先非必需，后必需，需要更改required属性
+                        old.required(true);
                     }
                     fragments.add(new NativeSqlFragment(false, ":" + jdbc));
                 }
@@ -261,6 +263,38 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 mode = SqlMode.DELETE;
             } else if (stmt instanceof Update) {
                 mode = SqlMode.UPDATE;
+                final Set<String> updateNames = new HashSet<>();
+                ExpressionDeParser updateDeParser = new ExpressionDeParser() {
+
+                    @Override
+                    public void visit(JdbcNamedParameter expr) {
+                        super.visit(expr);
+                        updateNames.add(expr.getName());
+                    }
+                };
+                updateDeParser.setSelectVisitor(new SelectDeParser(updateDeParser, updateDeParser.getBuffer()));
+                List<UpdateSet> updateSets = ((Update) stmt).getUpdateSets();
+                if (updateSets != null) {
+                    for (UpdateSet updateSet : updateSets) {
+                        for (Expression expr : updateSet.getValues()) {
+                            //跳过SELECT子语句WHERE中的参数
+                            //UPDATE dayrecord SET money = (SELECT SUM(m) FROM order WHERE flag = #{flag})
+                            if (!(expr instanceof ParenthesedSelect)) {
+                                expr.accept(updateDeParser);
+                            }
+                        }
+                    }
+                    updateNames.forEach(jdbcName -> {
+                        for (NativeSqlParameter p : allNamedParameters) {
+                            if (Objects.equals(p.getJdbcName(), jdbcName)) {
+                                if (!p.isRequired()) { //UPDATE SET中的参数都是必需的
+                                    numsignParameters.put(p.getNumsignName(), p.required(true));
+                                }
+                                return;
+                            }
+                        }
+                    });
+                }
             }
             this.sqlMode = mode;
         } catch (ParseException e) {

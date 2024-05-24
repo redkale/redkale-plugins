@@ -34,6 +34,7 @@ public class JsqlParserTest {
         test.run11();
         test.run12();
         test.run13();
+        test.run14();
     }
 
     @Test
@@ -85,9 +86,8 @@ public class JsqlParserTest {
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         SourceException exp = null;
-        DataNativeSqlStatement statement = null;
         try {
-            statement = parser.parse(signFunc, "mysql", sql, false, params);
+            parser.parse(signFunc, "mysql", sql, false, params);
         } catch (SourceException e) {
             exp = e;
         }
@@ -150,7 +150,7 @@ public class JsqlParserTest {
     @Test
     public void run7() throws Exception {
         String sql = "UPDATE dayrecord SET id = :idx, remark = #{remark}, "
-            + "name = CASE WHEN type = MOD(#{t1},##{t2}) THEN #{v1} WHEN type = 2 THEN #{v2} ELSE #{v3} END "
+            + "name = CASE WHEN type = MOD(#{t1},#{t2}) THEN #{v1} WHEN type = 2 THEN #{v2} ELSE #{v3} END "
             + "WHERE createTime BETWEEN :startTime AND :endTime AND id IN #{ids}";
         Map<String, Object> params = Utility.ofMap("idx", 100, "v1", 1, "v2", 2, "v3", 3,
             "remark", "this is remark", "t1", 36, "startTime", 1,
@@ -158,9 +158,8 @@ public class JsqlParserTest {
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         SourceException exp = null;
-        DataNativeSqlStatement statement = null;
         try {
-            statement = parser.parse(signFunc, "mysql", sql, false, params);
+            parser.parse(signFunc, "mysql", sql, false, params);
         } catch (SourceException e) {
             exp = e;
         }
@@ -170,21 +169,28 @@ public class JsqlParserTest {
 
     @Test
     public void run8() throws Exception {
-        String sql = "SELECT * FROM userdetail WHERE id = #{id} AND MOD(#{t1},#{t2}) = 3";
-        Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
+        String sql = "UPDATE dayrecord SET money = (SELECT SUM(m) FROM order WHERE flag = #{flag}), "
+            + "id = :idx, remark = #{remark} "
+            + "WHERE createTime BETWEEN :startTime AND :endTime AND id IN #{ids}";
+        Map<String, Object> params = Utility.ofMap("idx", 100, "v1", 1, "v2", 2, "v3", 3,
+            "remark", "this is remark", "t1", 36, "startTime", 1,
+            "sts", List.of(2, 3), "ids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, params);
-        String repect = "SELECT * FROM userdetail WHERE id = ?";
-        Assertions.assertEquals(repect, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
-        System.out.println("paramNames = " + statement.getParamNames());
+        SourceException exp = null;
+        try {
+            parser.parse(signFunc, "mysql", sql, false, params);
+        } catch (SourceException e) {
+            e.printStackTrace();
+            exp = e;
+        }
+        Assertions.assertTrue(exp == null);
         System.out.println("=====================================08============================================");
     }
 
     @Test
     public void run9() throws Exception {
-        String sql = "SELECT * FROM userdetail WHERE id = #{id} AND type = MOD(#{t1},#{t2})";
+        String sql = "SELECT * FROM userdetail WHERE id = #{id} AND MOD(#{t1},#{t2}) = 3";
         Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
@@ -198,6 +204,20 @@ public class JsqlParserTest {
 
     @Test
     public void run10() throws Exception {
+        String sql = "SELECT * FROM userdetail WHERE id = #{id} AND type = MOD(#{t1},#{t2})";
+        Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, params);
+        String repect = "SELECT * FROM userdetail WHERE id = ?";
+        Assertions.assertEquals(repect, statement.getNativeSql());
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================10============================================");
+    }
+
+    @Test
+    public void run11() throws Exception {
         String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
             + "WHERE u.id = #{id} AND r.type = MOD(#{t1},#{t2}) ORDER BY u.createTime DESC";
         Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
@@ -218,23 +238,12 @@ public class JsqlParserTest {
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
-        System.out.println("=====================================10============================================");
-    }
-
-    @Test
-    public void run11() throws Exception {
-        String sql = "TRUNCATE TABLE userdetail";
-        DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null);
-        Assertions.assertEquals(sql, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
-        System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================11============================================");
     }
 
     @Test
     public void run12() throws Exception {
-        String sql = "ALTER TABLE userdetail ADD COLUMN name VARCHAR (32) NOT NULL DEFAULT '' COMMENT '名称'";
+        String sql = "TRUNCATE TABLE userdetail";
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null);
         Assertions.assertEquals(sql, statement.getNativeSql());
@@ -245,6 +254,17 @@ public class JsqlParserTest {
 
     @Test
     public void run13() throws Exception {
+        String sql = "ALTER TABLE userdetail ADD COLUMN name VARCHAR (32) NOT NULL DEFAULT '' COMMENT '名称'";
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null);
+        Assertions.assertEquals(sql, statement.getNativeSql());
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================13============================================");
+    }
+
+    @Test
+    public void run14() throws Exception {
         String sql = "SELECT * FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 "
             + "WHERE userid = :idx) a ORDER BY name DESC";
         Map<String, Object> params = Utility.ofMap("idx", 100);
@@ -260,6 +280,6 @@ public class JsqlParserTest {
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
-        System.out.println("=====================================13============================================");
+        System.out.println("=====================================14============================================");
     }
 }
