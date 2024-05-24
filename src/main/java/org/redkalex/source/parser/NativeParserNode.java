@@ -60,7 +60,7 @@ public class NativeParserNode {
     private final ConcurrentHashMap<String, DataNativeSqlStatement> statements = new ConcurrentHashMap();
 
     public NativeParserNode(Statement originStmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcToNumsignMap,
-        Set<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateNoWhereSql, List<String> updateJdbcNames) {
+        TreeSet<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateNoWhereSql, List<String> updateJdbcNames) {
         this.originStmt = originStmt;
         this.dynamic = dynamic;
         this.countStmt = countStmt;
@@ -68,7 +68,7 @@ public class NativeParserNode {
         this.jdbcToNumsignMap = jdbcToNumsignMap;
         this.updateNoWhereSql = updateNoWhereSql;
         this.updateJdbcNames = updateJdbcNames;
-        this.fullJdbcNames = new TreeSet<>(fullJdbcNames);
+        this.fullJdbcNames = fullJdbcNames;
         this.requiredJdbcNames = Collections.unmodifiableSet(requiredJdbcNames);
     }
 

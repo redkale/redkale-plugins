@@ -129,8 +129,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                     NativeSqlParameter old = numsignJdbcNames.get(name);
                     String jdbc = old == null ? null : old.getJdbcName();
                     if (jdbc == null) {
-                        int seqno = numsignJdbcNames.size() + 1;
-                        jdbc = "arg" + (seqno >= 10 ? seqno : ("0" + seqno));
+                        jdbc = formatNumsignToJdbcName(name);
                         NativeSqlParameter p = new NativeSqlParameter(name, jdbc, type == 3);
                         numsignJdbcNames.put(name, p);
                         jdbcToNumsignMap.put(jdbc, name);
@@ -201,25 +200,28 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
             Statement originStmt = sqlParser.Statement();
-            final Set<String> fullNames = new HashSet<>();
+            //所有参数名 arg01/xx
+            final TreeSet<String> fullJdbcNames = new TreeSet<>();
+            //##{xx.xx}必需的参数名 arg01/xx
             final Set<String> requiredNamedSet = new HashSet<>();
             //包含IN参数的sql必须走动态拼接sql模式
             final AtomicBoolean containsInExpr = new AtomicBoolean();
+            //参数解析器
             ExpressionVisitorAdapter exprAdapter = new ExpressionVisitorAdapter() {
 
                 @Override
                 public void visit(JdbcNamedParameter expr) {
                     super.visit(expr);
                     requiredNamedSet.add(expr.getName());
-                    fullNames.add(expr.getName());
+                    fullJdbcNames.add(expr.getName());
                 }
 
                 @Override
                 public void visit(InExpression expr) {
-                    int size = fullNames.size();
+                    int size = fullJdbcNames.size();
                     super.visit(expr);
                     //rightExpression maybe JdbcNamedParameter/ParenthesedExpressionList/ParenthesedSelect
-                    if (fullNames.size() > size && !(expr.getRightExpression() instanceof Select)) {
+                    if (fullJdbcNames.size() > size && !(expr.getRightExpression() instanceof Select)) {
                         containsInExpr.set(true);
                     }
                 }
@@ -345,7 +347,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 updateNamedSet = exprDeParser.getJdbcNames();
             }
             return new NativeParserNode(originStmt, countStmt, fullWhere, jdbcToNumsignMap,
-                fullNames, requiredNamedSet, isDynamic() || containsInExpr.get(), updateNoWhereSql, updateNamedSet);
+                fullJdbcNames, requiredNamedSet, isDynamic() || containsInExpr.get(), updateNoWhereSql, updateNamedSet);
         } catch (ParseException e) {
             throw new SourceException("Parse error, sql: " + nativeSql, e);
         }
@@ -380,6 +382,18 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             }
             return mode;
         }
+    }
+
+    private String formatNumsignToJdbcName(String name) {
+        StringBuilder sb = new StringBuilder(name.length());
+        for (char ch : name.toCharArray()) {
+            if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '$') {
+                sb.append(ch);
+            } else {
+                sb.append('_');
+            }
+        }
+        return sb.toString();
     }
 
     @Override

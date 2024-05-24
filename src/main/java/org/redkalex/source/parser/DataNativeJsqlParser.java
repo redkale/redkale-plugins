@@ -11,7 +11,6 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.source.DataNativeSqlInfo;
 import org.redkale.source.DataNativeSqlParser;
 import org.redkale.source.DataNativeSqlStatement;
-import org.redkale.util.ObjectRef;
 
 /**
  * 基于jsqlparser的DataNativeSqlParser实现类
@@ -34,13 +33,12 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
     @Override
     public DataNativeSqlStatement parse(IntFunction<String> signFunc, String dbType, String rawSql, boolean countable, Map<String, Object> params) {
         NativeParserInfo info = parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql));
-        ObjectRef<String> templetRef = new ObjectRef<>();
         NativeSqlTemplet templet = info.createTemplet(params);
         if (logger.isLoggable(Level.FINER)) {
             logger.log(Level.FINER, DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql
-                + ", dynamic: " + info.isDynamic() + ", templetSql: " + templetRef.get());
+                + ", dynamic: " + info.isDynamic() + ", templetSql: " + templet.getTempletSql());
         }
-        NativeParserNode node = info.loadParserNode(signFunc, dbType, templetRef.get(), countable);
+        NativeParserNode node = info.loadParserNode(signFunc, dbType, templet.getTempletSql(), countable);
         DataNativeSqlStatement statement = node.loadStatement(signFunc, templet.getTempletParams());
         if (logger.isLoggable(Level.FINE)) {
             String countSql = countable ? (", nativeCountSql: " + statement.getNativeCountSql()) : "";
