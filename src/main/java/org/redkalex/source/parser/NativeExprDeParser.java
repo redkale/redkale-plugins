@@ -33,10 +33,10 @@ public class NativeExprDeParser extends ExpressionDeParser {
     private final IntFunction<String> signFunc;
 
     //需要预编译的jdbc参数名:argxxx, 数量与sql中的?数量一致
-    private List<String> jdbcNames = new ArrayList<>();
+    private final List<String> jdbcNames = new ArrayList<>();
 
     //参数
-    private Map<String, Object> paramValues;
+    private final Map<String, Object> paramValues;
 
     //当前BinaryExpression缺失参数
     private boolean paramLosing;
@@ -50,7 +50,8 @@ public class NativeExprDeParser extends ExpressionDeParser {
     }
 
     public String deParseSql(Statement stmt) {
-        CustomStatementDeParser deParser = new CustomStatementDeParser(this, (SelectDeParser) getSelectVisitor(), buffer);
+        SelectDeParser parser = (SelectDeParser) getSelectVisitor();
+        CustomStatementDeParser deParser = new CustomStatementDeParser(this, parser, buffer);
         stmt.accept(deParser);
         return buffer.toString();
     }
@@ -120,7 +121,6 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 buffer.append("(+)");
             }
         }
-
         relations.pop();
         paramLosing = false;
     }
@@ -296,6 +296,54 @@ public class NativeExprDeParser extends ExpressionDeParser {
         paramLosing = false;
     }
 
+    @Override
+    public void visit(LikeExpression expr) {
+        final int start = buffer.length();
+        visitBinaryExpression(expr, (expr.isNot() ? " NOT " : " ") + expr.getLikeKeyWord() + " ");
+        final int end = buffer.length();
+        Expression escape = expr.getEscape();
+        if (end > start && escape != null) {
+            buffer.append(" ESCAPE ");
+            expr.getEscape().accept(this);
+        }
+    }
+
+    @Override
+    public void visit(FullTextSearch expr) {
+        paramLosing = false;
+        relations.push(expr);
+        super.visit(expr);
+        relations.pop();
+        paramLosing = false;
+    }
+
+    @Override
+    public void visit(IsNullExpression expr) {
+        paramLosing = false;
+        relations.push(expr);
+        super.visit(expr);
+        relations.pop();
+        paramLosing = false;
+    }
+
+    @Override
+    public void visit(IsBooleanExpression expr) {
+        paramLosing = false;
+        relations.push(expr);
+        super.visit(expr);
+        relations.pop();
+        paramLosing = false;
+    }
+
+    @Override
+    public void visit(ExistsExpression expr) {
+        paramLosing = false;
+        relations.push(expr);
+        super.visit(expr);
+        relations.pop();
+        paramLosing = false;
+    }
+
     private void trimJdbcNames(int size1, int size2) {
         for (int i = size1; i < size2; i++) {
             jdbcNames.remove(jdbcNames.size() - 1);
@@ -334,68 +382,29 @@ public class NativeExprDeParser extends ExpressionDeParser {
             } else if (item instanceof String) {
                 itemList.add(new StringValue(item.toString().replace("'", "\\'")));
             } else if (item instanceof Short || item instanceof Integer || item instanceof Long) {
-                itemList.add(new LongValue(item.toString()));
+                itemList.add(new LongValue().withValue(((Number) item).longValue()));
             } else if (item instanceof Float || item instanceof Double) {
-                itemList.add(new DoubleValue(item.toString()));
+                itemList.add(new DoubleValue().withValue(((Number) item).doubleValue()));
             } else if (item instanceof BigInteger || item instanceof BigDecimal) {
                 itemList.add(new StringValue(item.toString()));
+            } else if (item instanceof java.util.Date) {
+                itemList.add(new DateValue().withValue(new java.sql.Date(((java.util.Date) item).getTime())));
             } else if (item instanceof java.sql.Date) {
-                itemList.add(new DateValue((java.sql.Date) item));
+                itemList.add(new DateValue().withValue((java.sql.Date) item));
             } else if (item instanceof java.sql.Time) {
-                itemList.add(new TimeValue(item.toString()));
+                itemList.add(new TimeValue().withValue((java.sql.Time) item));
+            } else if (item instanceof java.sql.Timestamp) {
+                itemList.add(new TimestampValue().withValue((java.sql.Timestamp) item));
+            } else if (item instanceof java.time.LocalDate) {
+                itemList.add(new DateValue().withValue(java.sql.Date.valueOf((java.time.LocalDate) item)));
+            } else if (item instanceof java.time.LocalTime) {
+                itemList.add(new TimeValue().withValue(java.sql.Time.valueOf((java.time.LocalTime) item)));
+            } else if (item instanceof java.time.LocalDateTime) {
+                itemList.add(new TimestampValue().withValue(java.sql.Timestamp.valueOf((java.time.LocalDateTime) item)));
             } else {
                 throw new SourceException("Not support parameter: " + val);
             }
         }
         return itemList;
-    }
-
-    @Override
-    public void visit(FullTextSearch expr) {
-        //@TODO 
-        paramLosing = false;
-        relations.push(expr);
-        super.visit(expr);
-        relations.pop();
-        paramLosing = false;
-    }
-
-    @Override
-    public void visit(LikeExpression expr) {
-        final int start = buffer.length();
-        visitBinaryExpression(expr, (expr.isNot() ? " NOT" : "") + (expr.isCaseInsensitive() ? " ILIKE " : " LIKE "));
-        final int end = buffer.length();
-        Expression escape = expr.getEscape();
-        if (end > start && escape != null) {
-            buffer.append(" ESCAPE ");
-            expr.getEscape().accept(this);
-        }
-    }
-
-    @Override
-    public void visit(IsNullExpression expr) {
-        paramLosing = false;
-        relations.push(expr);
-        super.visit(expr);
-        relations.pop();
-        paramLosing = false;
-    }
-
-    @Override
-    public void visit(IsBooleanExpression expr) {
-        paramLosing = false;
-        relations.push(expr);
-        super.visit(expr);
-        relations.pop();
-        paramLosing = false;
-    }
-
-    @Override
-    public void visit(ExistsExpression expr) {
-        paramLosing = false;
-        relations.push(expr);
-        super.visit(expr);
-        relations.pop();
-        paramLosing = false;
     }
 }
