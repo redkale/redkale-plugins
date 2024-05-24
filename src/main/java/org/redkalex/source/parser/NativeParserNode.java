@@ -72,7 +72,7 @@ public class NativeParserNode {
             StringBuilder buffer = exprDeParser.getBuffer();
             NativeCountDeParser countDeParser = new NativeCountDeParser(exprDeParser, buffer);
             exprDeParser.setSelectVisitor(countDeParser);
-            countDeParser.initCountItems(countSelectItems, select.getDistinct() != null, select.getOrderByElements() != null);
+            countDeParser.initCountSelect(select, countSelectItems);
             select.accept(countDeParser);
             countSql = buffer.toString();
         }

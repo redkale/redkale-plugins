@@ -23,6 +23,7 @@ import net.sf.jsqlparser.statement.select.First;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.LateralView;
 import net.sf.jsqlparser.statement.select.OptimizeFor;
+import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
@@ -36,20 +37,17 @@ import net.sf.jsqlparser.util.deparser.SelectDeParser;
 
 public class NativeCountDeParser extends SelectDeParser {
 
+    private PlainSelect countSelect;
+
     private List<SelectItem<?>> countRootSelectItems;
-
-    private Boolean hasRootDistinct;
-
-    private Boolean hasRootOrderByElements;
 
     public NativeCountDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
         super(expressionVisitor, buffer);
     }
 
-    public void initCountItems(List<SelectItem<?>> countSelectItems, boolean hasDistinct, boolean hasOrderByElements) {
+    public void initCountSelect(PlainSelect countSelect, List<SelectItem<?>> countSelectItems) {
+        this.countSelect = countSelect;
         this.countRootSelectItems = countSelectItems;
-        this.hasRootDistinct = hasDistinct ? Boolean.TRUE : null;
-        this.hasRootOrderByElements = hasOrderByElements ? Boolean.TRUE : null;
     }
 
     protected void deparseWhereClause(PlainSelect plainSelect) {
@@ -63,33 +61,27 @@ public class NativeCountDeParser extends SelectDeParser {
         }
     }
 
-    protected void deparseDistinctClause(Distinct distinct) {
-        if (hasRootDistinct != null && hasRootDistinct) {
-            hasRootDistinct = null;
-        } else {
-            deparseDistinctClause0(distinct);
+    protected void deparseDistinctClause(PlainSelect plainSelect, Distinct distinct) {
+        if (this.countSelect != plainSelect) {
+            deparseDistinctClause0(plainSelect, distinct);
         }
     }
 
-    protected void deparseSelectItemsClause(List<SelectItem<?>> selectItems) {
-        if (countRootSelectItems != null) {
-            List<SelectItem<?>> items = countRootSelectItems;
-            this.countRootSelectItems = null;
-            deparseSelectItemsClause0(items);
+    protected void deparseSelectItemsClause(PlainSelect plainSelect, List<SelectItem<?>> selectItems) {
+        if (this.countSelect != plainSelect) {
+            deparseSelectItemsClause0(plainSelect, selectItems);
         } else {
-            deparseSelectItemsClause0(selectItems);
+            deparseSelectItemsClause0(plainSelect, this.countRootSelectItems);
         }
     }
 
-    protected void deparseOrderByElementsClause(PlainSelect plainSelect) {
-        if (hasRootOrderByElements != null && hasRootOrderByElements) {
-            hasRootOrderByElements = null;
-        } else {
-            deparseOrderByElementsClause0(plainSelect);
+    protected void deparseOrderByElementsClause(PlainSelect plainSelect, List<OrderByElement> orderByElements) {
+        if (this.countSelect != plainSelect) {
+            deparseOrderByElementsClause0(plainSelect, orderByElements);
         }
     }
 
-    private void deparseDistinctClause0(Distinct distinct) {
+    private void deparseDistinctClause0(PlainSelect plainSelect, Distinct distinct) {
         if (distinct != null) {
             if (distinct.isUseUnique()) {
                 buffer.append("UNIQUE ");
@@ -111,7 +103,7 @@ public class NativeCountDeParser extends SelectDeParser {
         }
     }
 
-    private void deparseSelectItemsClause0(List<SelectItem<?>> selectItems) {
+    private void deparseSelectItemsClause0(PlainSelect plainSelect, List<SelectItem<?>> selectItems) {
         if (selectItems != null) {
             for (Iterator<SelectItem<?>> iter = selectItems.iterator(); iter.hasNext();) {
                 SelectItem<?> selectItem = iter.next();
@@ -123,10 +115,9 @@ public class NativeCountDeParser extends SelectDeParser {
         }
     }
 
-    private void deparseOrderByElementsClause0(PlainSelect plainSelect) {
-        if (plainSelect.getOrderByElements() != null) {
-            new OrderByDeParser(getExpressionVisitor(), buffer).deParse(plainSelect.isOracleSiblings(),
-                plainSelect.getOrderByElements());
+    private void deparseOrderByElementsClause0(PlainSelect plainSelect, List<OrderByElement> orderByElements) {
+        if (orderByElements != null) {
+            new OrderByDeParser(getExpressionVisitor(), buffer).deParse(plainSelect.isOracleSiblings(), orderByElements);
         }
     }
 
@@ -169,7 +160,7 @@ public class NativeCountDeParser extends SelectDeParser {
             buffer.append(first).append(" ");
         }
 
-        deparseDistinctClause(plainSelect.getDistinct());
+        deparseDistinctClause(plainSelect, plainSelect.getDistinct());
 
         Top top = plainSelect.getTop();
         if (top != null) {
@@ -184,7 +175,7 @@ public class NativeCountDeParser extends SelectDeParser {
             buffer.append("SQL_CALC_FOUND_ROWS").append(" ");
         }
 
-        deparseSelectItemsClause(plainSelect.getSelectItems());
+        deparseSelectItemsClause(plainSelect, plainSelect.getSelectItems());
 
         if (plainSelect.getIntoTables() != null) {
             buffer.append(" INTO ");
@@ -260,7 +251,7 @@ public class NativeCountDeParser extends SelectDeParser {
             plainSelect.getForClause().appendTo(buffer);
         }
 
-        deparseOrderByElementsClause(plainSelect);
+        deparseOrderByElementsClause(plainSelect, plainSelect.getOrderByElements());
 
         if (plainSelect.isEmitChanges()) {
             buffer.append(" EMIT CHANGES");
