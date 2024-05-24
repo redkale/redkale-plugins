@@ -10,6 +10,7 @@ import java.util.function.IntFunction;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.*;
 import net.sf.jsqlparser.expression.operators.relational.*;
+import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.util.deparser.*;
 import org.redkale.source.SourceException;
@@ -45,11 +46,20 @@ public class NativeExprDeParser extends ExpressionDeParser {
         Objects.requireNonNull(params);
         this.signFunc = signFunc;
         this.paramValues = params;
-        SelectDeParser selParser = new SelectDeParser(this, buffer);
-        this.setSelectVisitor(selParser);
+        setSelectVisitor(new CustomSelectDeParser(this, buffer));
     }
 
-    public String deParser(Expression where) {
+    public String customParserSql(Statement stmt) {
+        CustomStatementDeParser deParser = new CustomStatementDeParser(this, (SelectDeParser) getSelectVisitor(), buffer);
+        deParser.deParse(stmt);
+        return buffer.toString();
+    }
+
+    public CustomSelectDeParser getSelectDeParser() {
+        return (CustomSelectDeParser) getSelectVisitor();
+    }
+
+    public String deParse(Expression where) {
         if (where != null) {
             where.accept(this);
         }
@@ -213,26 +223,23 @@ public class NativeExprDeParser extends ExpressionDeParser {
         final int size = jdbcNames.size();
         final int start = buffer.length();
         expr.getLeftExpression().accept(this);
-        int end = buffer.length();
         if (!paramLosing) {
             if (expr.isNot()) {
                 buffer.append(" NOT");
             }
             buffer.append(" BETWEEN ");
-            int start2 = buffer.length();
             expr.getBetweenExpressionStart().accept(this);
-            int end2 = buffer.length();
+            int end = buffer.length();
             if (!paramLosing) {
                 buffer.append(" AND ");
-                start2 = buffer.length();
                 expr.getBetweenExpressionEnd().accept(this);
-                end2 = buffer.length();
+                end = buffer.length();
                 if (paramLosing) {
-                    buffer.delete(start, end2);
+                    buffer.delete(start, end);
                     trimJdbcNames(size, jdbcNames.size());
                 }
             } else {
-                buffer.delete(start, end2);
+                buffer.delete(start, end);
                 trimJdbcNames(size, jdbcNames.size());
             }
         }
@@ -282,7 +289,8 @@ public class NativeExprDeParser extends ExpressionDeParser {
                     new ParenthesedExpressionList(itemList).accept(this);
                 }
             } else {
-                throw new SourceException("Not support expression (" + rightExpr + "), type: " + (rightExpr == null ? null : rightExpr.getClass().getName()));
+                throw new SourceException("Not support expression (" + rightExpr
+                    + "), type: " + (rightExpr == null ? null : rightExpr.getClass().getName()));
             }
         } else {
             buffer.delete(start, end);

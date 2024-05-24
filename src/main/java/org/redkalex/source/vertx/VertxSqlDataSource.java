@@ -947,7 +947,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<Integer> future = new CompletableFuture<>();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
         if (!sinfo.isEmptyNamed()) {
             writePool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
@@ -972,11 +972,12 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
+    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, 
+        Function<DataResultSet, V> handler, Map<String, Object> params) {
         long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<V> future = new CompletableFuture<>();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
         if (!sinfo.isEmptyNamed()) {
             readPool().preparedQuery(sinfo.getNativeSql()).execute(tupleParameter(sinfo, params), (AsyncResult<RowSet<Row>> event) -> {
                 slowLog(s, sinfo.getNativeSql());
@@ -1006,7 +1007,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<Sheet<V>> future = new CompletableFuture<>();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, params);
         Pool pool = readPool();
         final String countSql = sinfo.getNativeCountSql();
         Handler<AsyncResult<RowSet<Row>>> countHandler = (AsyncResult<RowSet<Row>> evt) -> {

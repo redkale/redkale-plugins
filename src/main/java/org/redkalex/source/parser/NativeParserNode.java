@@ -96,7 +96,7 @@ public class NativeParserNode {
         if (updateJdbcNames != null) {
             exprDeParser.getJdbcNames().addAll(updateJdbcNames);
         }
-        String whereSql = exprDeParser.deParser(fullWhere);
+        String whereSql = exprDeParser.deParse(fullWhere);
         DataNativeSqlStatement statement = new DataNativeSqlStatement();
         statement.setJdbcNames(exprDeParser.getJdbcNames());
         List<String> paramNames = new ArrayList<>();
@@ -137,11 +137,8 @@ public class NativeParserNode {
 
     private String cacheKey(Map<String, Object> params) {
         List<String> list = fullJdbcNames.stream().filter(params::containsKey).collect(Collectors.toList());
-        if (list.isEmpty()) {
-            return "";
-        }
         //fullJdbcNames是TreeSet, 已排序  //Collections.sort(list);
-        return list.stream().collect(Collectors.joining(","));
+        return list.isEmpty() ? "" : list.stream().collect(Collectors.joining(","));
     }
 
     public static class NativeSqlExpression implements Expression {

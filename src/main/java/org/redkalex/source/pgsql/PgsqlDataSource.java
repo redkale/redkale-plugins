@@ -877,14 +877,15 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     @Override
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = writePool();
         if (!sinfo.isEmptyNamed()) {
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, null);
                 Stream<Serializable> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
-                req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0, sinfo.getParamNames().size(), pstream);
+                req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, PgExtendMode.OTHER_NATIVE,
+                    sinfo.getNativeSql(), 0, sinfo.getParamNames().size(), pstream);
                 Function<PgResultSet, Integer> transfer = dataset -> {
                     int rs = dataset.getUpdateEffectCount();
                     conn.offerResultSet(req, dataset);
@@ -910,9 +911,10 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
+    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer,
+        Function<DataResultSet, V> handler, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = readPool();
         Function<PgResultSet, V> transfer = dataset -> {
@@ -924,7 +926,8 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             return pool.connect().thenCompose(conn -> {
                 PgReqExtended req = conn.pollReqExtended(workThread, null);
                 Stream<Serializable> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
-                req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0, sinfo.getParamNames().size(), pstream);
+                req.prepareParams(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.OTHER_NATIVE,
+                    sinfo.getNativeSql(), 0, sinfo.getParamNames().size(), pstream);
                 return pool.writeChannel(conn, req, transfer);
             });
         } else {
@@ -938,7 +941,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = readPool();
         final String countSql = sinfo.getNativeCountSql();

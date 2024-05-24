@@ -63,7 +63,28 @@ public class NativeParserInfo extends DataNativeSqlInfo {
 
     public NativeParserInfo(final String rawSql) {
         this.rawSql = rawSql;
-        //解析sql
+        Set<String> rootParams = parseSql();
+        if (dollarNames.isEmpty()) {
+            StringBuilder ss = new StringBuilder();
+            for (NativeSqlFragment fragment : fragments) {
+                ss.append(fragment.getText());
+            }
+            this.templetSql = ss.toString();
+        } else {
+            this.templetSql = null;
+        }
+        this.allNamedParameters.addAll(dollarNames.values());
+        this.allNamedParameters.addAll(numsignJdbcNames.values());
+        this.rootParamNames.addAll(rootParams);
+        this.sqlMode = getSqlMode(Utility.orElse(this.templetSql, this.rawSql), this.rawSql);
+    }
+
+    /**
+     * 解析sql，将sql中的${xx.xx}, #{xx}转化成 :arg :xxx形式
+     *
+     * @return rootParams
+     */
+    private Set<String> parseSql() {
         boolean paraming = false;
         StringBuilder sb = new StringBuilder();
         final char[] chars = Utility.charArray(rawSql);
@@ -139,50 +160,10 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         if (sb.length() > 0) {
             fragments.add(new NativeSqlFragment(false, sb.toString()));
         }
-        if (dollarNames.isEmpty()) {
-            StringBuilder ss = new StringBuilder();
-            for (NativeSqlFragment fragment : fragments) {
-                ss.append(fragment.getText());
-            }
-            this.templetSql = ss.toString();
-        } else {
-            this.templetSql = null;
-        }
-        this.allNamedParameters.addAll(dollarNames.values());
-        this.allNamedParameters.addAll(numsignJdbcNames.values());
-        this.rootParamNames.addAll(rootParams);
-        String parserSql = Utility.orElse(this.templetSql, this.rawSql);
-        try {
-            CCJSqlParser sqlParser = new CCJSqlParser(parserSql).withAllowComplexParsing(true);
-            Statement stmt = sqlParser.SingleStatement();
-            if (stmt instanceof Select) {
-                this.sqlMode = SqlMode.SELECT;
-            } else if (stmt instanceof Insert) {
-                this.sqlMode = SqlMode.INSERT;
-            } else if (stmt instanceof Delete) {
-                this.sqlMode = SqlMode.DELETE;
-            } else if (stmt instanceof Update) {
-                this.sqlMode = SqlMode.UPDATE;
-            } else {
-                this.sqlMode = SqlMode.OTHERS;
-            }
-        } catch (ParseException e) {
-            String upperSql = this.rawSql.trim().toUpperCase();
-            this.sqlMode = SqlMode.OTHERS;
-            if (upperSql.startsWith("SELECT")) {
-                this.sqlMode = SqlMode.SELECT;
-            } else if (upperSql.startsWith("INSERT")) {
-                this.sqlMode = SqlMode.INSERT;
-            } else if (upperSql.startsWith("UPDATE")) {
-                this.sqlMode = SqlMode.UPDATE;
-            } else if (upperSql.startsWith("DELETE")) {
-                this.sqlMode = SqlMode.DELETE;
-            }
-        }
-
+        return rootParams;
     }
 
-    public Map<String, Object> createNamedParams(ObjectRef<String> newSql, Map<String, Object> params) {
+    public NativeSqlTemplet createTemplet(Map<String, Object> params) {
         Map<String, Object> newParams = params == null ? new HashMap<>() : new HashMap<>(params);
         for (NativeSqlParameter p : allNamedParameters) {
             Object val = p.getParamValue(params);
@@ -194,30 +175,29 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 newParams.put(p.getJdbcName(), val);
             }
         }
-        if (templetSql == null) {
+        if (templetSql == null) { //需要根据${xx.xx}参数动态构建sql
             StringBuilder sb = new StringBuilder();
             for (NativeSqlFragment fragment : fragments) {
                 if (fragment.isDollarable()) {
-                    sb.append(newParams.get(fragment.getText())); //不能用JsonConvert， 比如 FROM user_${uid}
+                    sb.append(newParams.get(fragment.getText())); //不能用JsonConvert，比如 FROM user_${uid}
                 } else {
                     sb.append(fragment.getText());
                 }
             }
-            newSql.set(sb.toString());
+            return new NativeSqlTemplet(sb.toString(), newParams);
         } else {
-            newSql.set(templetSql);
+            return new NativeSqlTemplet(templetSql, newParams);
         }
-        return newParams;
     }
 
-    public NativeParserNode loadParserNode(IntFunction<String> signFunc, String dbType, final String nativeSql) {
+    public NativeParserNode loadParserNode(IntFunction<String> signFunc, String dbtype, final String nativeSql, boolean countable) {
         if (isDynamic()) {
-            return createParserNode(signFunc, nativeSql);
+            return createParserNode(signFunc, nativeSql, countable);
         }
-        return parserNodes.computeIfAbsent(nativeSql, sql -> createParserNode(signFunc, nativeSql));
+        return parserNodes.computeIfAbsent(nativeSql, sql -> createParserNode(signFunc, nativeSql, countable));
     }
 
-    private NativeParserNode createParserNode(IntFunction<String> signFunc, final String nativeSql) {
+    private NativeParserNode createParserNode(IntFunction<String> signFunc, final String nativeSql, boolean countable) {
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(nativeSql).withAllowComplexParsing(true);
             Statement originStmt = sqlParser.Statement();
@@ -371,11 +351,42 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         }
     }
 
+    private SqlMode getSqlMode(String parserSql, String rawSql) {
+        try {
+            CCJSqlParser sqlParser = new CCJSqlParser(parserSql).withAllowComplexParsing(true);
+            Statement stmt = sqlParser.SingleStatement();
+            if (stmt instanceof Select) {
+                return SqlMode.SELECT;
+            } else if (stmt instanceof Insert) {
+                return SqlMode.INSERT;
+            } else if (stmt instanceof Delete) {
+                return SqlMode.DELETE;
+            } else if (stmt instanceof Update) {
+                return SqlMode.UPDATE;
+            } else {
+                return SqlMode.OTHERS;
+            }
+        } catch (ParseException e) {
+            String upperSql = rawSql.trim().toUpperCase();
+            SqlMode mode = SqlMode.OTHERS;
+            if (upperSql.startsWith("SELECT")) {
+                mode = SqlMode.SELECT;
+            } else if (upperSql.startsWith("INSERT")) {
+                mode = SqlMode.INSERT;
+            } else if (upperSql.startsWith("UPDATE")) {
+                mode = SqlMode.UPDATE;
+            } else if (upperSql.startsWith("DELETE")) {
+                mode = SqlMode.DELETE;
+            }
+            return mode;
+        }
+    }
+
     @Override
     public String toString() {
         return NativeParserInfo.class.getSimpleName() + "{"
             + "rawSql: \"" + rawSql + "\""
-            + ", jdbcSql: \"" + templetSql + "\""
+            + ", templetSql: \"" + templetSql + "\""
             + ", dollarNames: " + dollarNames
             + ", numsignJdbcNames: " + numsignJdbcNames
             + ", requiredNumsignNames: " + requiredNumsignNames

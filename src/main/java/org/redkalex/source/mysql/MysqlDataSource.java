@@ -882,7 +882,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     @Override
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = writePool();
         if (!sinfo.isEmptyNamed()) {
@@ -913,9 +913,10 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     @Local
     @Override
-    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler, Map<String, Object> params) {
+    public <V> CompletableFuture<V> nativeQueryAsync(String sql, BiConsumer<Object, Object> consumer,
+        Function<DataResultSet, V> handler, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = readPool();
         Function<MyResultSet, V> transfer = dataset -> {
@@ -941,7 +942,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
 
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = readPool();
         final String countSql = sinfo.getNativeCountSql();
