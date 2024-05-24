@@ -5,22 +5,22 @@ package org.redkalex.source.parser;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.select.Distinct;
-import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
+import org.redkale.annotation.Nullable;
 import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.source.SourceException;
 import org.redkale.util.Utility;
 
 /**
+ * 每一个不带${xx}的sql对应一个此对象
+ *
  *
  * @author zhangjx
  */
@@ -29,71 +29,52 @@ public class NativeParserNode {
     //NativeParserInfo
     private final NativeParserInfo info;
 
+    //不带${xx}的sql模板
+    private final String jdbcSql;
+
     //是否需要countSql
     private final boolean countable;
 
     //Statement对象
     private final Statement originStmt;
 
-    //where锁
-    final ReentrantLock countLock = new ReentrantLock();
+    //COUNT语句的SelectItem
+    @Nullable
+    private final List<SelectItem<?>> countSelectItems;
 
     //缓存
     private final ConcurrentHashMap<String, DataNativeSqlStatement> statements = new ConcurrentHashMap();
 
-    public NativeParserNode(NativeParserInfo info, boolean countable, Statement originStmt) {
+    public NativeParserNode(NativeParserInfo info, String jdbcSql, boolean countable, Statement originStmt) {
         this.info = info;
-        this.originStmt = originStmt;
+        this.jdbcSql = jdbcSql;
         this.countable = countable;
+        this.originStmt = originStmt;
+        this.countSelectItems = createCountSelectItems();
     }
 
-    public DataNativeSqlStatement loadStatement(NativeSqlTemplet templet) {
-        if (info.isDynamic()) { //根据参数值动态生成的sql语句不缓存
-            return createStatement(templet);
+    public DataNativeSqlStatement loadStatement(Map<String, Object> fullParams) {
+        if (info.isDynamic()) { //根据${xx}参数值动态生成的sql语句不缓存
+            return createStatement(fullParams);
         }
-        return statements.computeIfAbsent(cacheKey(templet.getTempletParams()), k -> createStatement(templet));
+        return statements.computeIfAbsent(cacheKey(fullParams), k -> createStatement(fullParams));
     }
 
-    protected DataNativeSqlStatement createStatement(NativeSqlTemplet templet) {
-        Map<String, Object> fullParams = templet.getTempletParams();
+    protected DataNativeSqlStatement createStatement(Map<String, Object> fullParams) {
         final NativeExprDeParser exprDeParser = new NativeExprDeParser(info.signFunc(), fullParams);
-        String stmtSql = null;
+        String stmtSql = exprDeParser.deParseSql(originStmt);
+        List<String> jdbcNames = exprDeParser.getJdbcNames();
         String countSql = null;
-        List<String> jdbcNames = null;
         if (countable) {
-            if (!(originStmt instanceof PlainSelect)) {
-                throw new SourceException("Not support count-sql (" + templet.getJdbcSql() + "), type: " + originStmt.getClass().getName());
-            }
+            //生成COUNT语句
             PlainSelect select = (PlainSelect) originStmt;
-            Distinct distinct = select.getDistinct();
-            List<SelectItem<?>> selectItems = select.getSelectItems();
-            List<OrderByElement> orderByElements = select.getOrderByElements();
-            countLock.lock();
-            try {
-                stmtSql = exprDeParser.deParseSql(originStmt);
-                jdbcNames = exprDeParser.getJdbcNames();
-                select.setOrderByElements(null);
-                if (select.getDistinct() == null) {
-                    Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT")
-                        .withParameters(new ExpressionList(new LongValue(1)));
-                    select.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
-                } else {
-                    List<Expression> exprs = selectItems.stream().map(SelectItem::getExpression).collect(Collectors.toList());
-                    Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
-                        .withParameters(new ParenthesedExpressionList(exprs));
-                    select.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
-                    select.setDistinct(null);
-                }
-                countSql = exprDeParser.reset().deParseSql(select);
-            } finally {
-                select.setDistinct(distinct);
-                select.setSelectItems(selectItems);
-                select.setOrderByElements(orderByElements);
-                countLock.unlock();
-            }
-        } else {
-            stmtSql = exprDeParser.deParseSql(originStmt);
-            jdbcNames = exprDeParser.getJdbcNames();
+            exprDeParser.reset();
+            StringBuilder buffer = exprDeParser.getBuffer();
+            NativeCountDeParser countDeParser = new NativeCountDeParser(exprDeParser, buffer);
+            exprDeParser.setSelectVisitor(countDeParser);
+            countDeParser.initCountItems(countSelectItems, select.getDistinct() != null, select.getOrderByElements() != null);
+            select.accept(countDeParser);
+            countSql = buffer.toString();
         }
         DataNativeSqlStatement result = new DataNativeSqlStatement();
         result.setJdbcNames(jdbcNames);
@@ -106,6 +87,26 @@ public class NativeParserNode {
         result.setNativeSql(stmtSql);
         result.setNativeCountSql(countSql);
         return result;
+    }
+
+    private List<SelectItem<?>> createCountSelectItems() {
+        if (!countable) {
+            return null;
+        }
+        if (!(originStmt instanceof PlainSelect)) {
+            throw new SourceException("Not support count-sql (" + jdbcSql + "), type: " + originStmt.getClass().getName());
+        }
+        PlainSelect select = (PlainSelect) originStmt;
+        if (select.getDistinct() == null) {
+            Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT")
+                .withParameters(new ExpressionList(new LongValue(1)));
+            return Utility.ofList(new SelectItem(countFunc));
+        } else {
+            List<Expression> exprs = select.getSelectItems().stream().map(SelectItem::getExpression).collect(Collectors.toList());
+            Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
+                .withParameters(new ParenthesedExpressionList(exprs));
+            return Utility.ofList(new SelectItem(countFunc));
+        }
     }
 
     private String cacheKey(Map<String, Object> params) {

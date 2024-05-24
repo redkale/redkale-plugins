@@ -38,8 +38,8 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
             logger.log(Level.FINER, DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql
                 + ", dynamic: " + info.isDynamic() + ", templetSql: " + templet.getJdbcSql());
         }
-        NativeParserNode node = info.loadParserNode(countable, params);
-        DataNativeSqlStatement statement = node.loadStatement(templet);
+        NativeParserNode node = info.loadParserNode(templet.getJdbcSql(), countable);
+        DataNativeSqlStatement statement = node.loadStatement(templet.getTempletParams());
         if (logger.isLoggable(Level.FINE)) {
             String countSql = countable ? (", nativeCountSql: " + statement.getNativeCountSql()) : "";
             logger.log(Level.FINE, DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql + ", nativeSql: " + statement.getNativeSql()

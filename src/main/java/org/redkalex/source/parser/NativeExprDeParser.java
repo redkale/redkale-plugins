@@ -46,7 +46,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
         Objects.requireNonNull(params);
         this.signFunc = signFunc;
         this.paramValues = params;
-        setSelectVisitor(new CustomSelectDeParser(this, buffer));
+        setSelectVisitor(new NativeCountDeParser(this, buffer));
     }
 
     public String deParseSql(Statement stmt) {
@@ -64,8 +64,8 @@ public class NativeExprDeParser extends ExpressionDeParser {
         return this;
     }
 
-    public CustomSelectDeParser getSelectDeParser() {
-        return (CustomSelectDeParser) getSelectVisitor();
+    public NativeCountDeParser getSelectDeParser() {
+        return (NativeCountDeParser) getSelectVisitor();
     }
 
     public List<String> getJdbcNames() {

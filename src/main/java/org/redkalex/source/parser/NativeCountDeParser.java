@@ -7,7 +7,7 @@
  * Dual licensed under GNU LGPL 2.1 or Apache License 2.0
  * #L%
  *
- * 复制过来增加acceptWhere方法
+ * 复制过来增加deparseWhereClause方法
  */
 package org.redkalex.source.parser;
 
@@ -18,6 +18,7 @@ import net.sf.jsqlparser.expression.ExpressionVisitor;
 import net.sf.jsqlparser.expression.OracleHint;
 import net.sf.jsqlparser.expression.WindowDefinition;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.select.Distinct;
 import net.sf.jsqlparser.statement.select.First;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.LateralView;
@@ -33,23 +34,99 @@ import net.sf.jsqlparser.util.deparser.LimitDeparser;
 import net.sf.jsqlparser.util.deparser.OrderByDeParser;
 import net.sf.jsqlparser.util.deparser.SelectDeParser;
 
-public class CustomSelectDeParser extends SelectDeParser {
+public class NativeCountDeParser extends SelectDeParser {
 
-    protected ExpressionVisitor expressionVisitor;
+    private List<SelectItem<?>> countRootSelectItems;
 
-    public CustomSelectDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
+    private Boolean hasRootDistinct;
+
+    private Boolean hasRootOrderByElements;
+
+    public NativeCountDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
         super(expressionVisitor, buffer);
-        this.expressionVisitor = expressionVisitor;
     }
 
-    protected void acceptWhere(PlainSelect plainSelect) {
+    public void initCountItems(List<SelectItem<?>> countSelectItems, boolean hasDistinct, boolean hasOrderByElements) {
+        this.countRootSelectItems = countSelectItems;
+        this.hasRootDistinct = hasDistinct ? Boolean.TRUE : null;
+        this.hasRootOrderByElements = hasOrderByElements ? Boolean.TRUE : null;
+    }
+
+    protected void deparseWhereClause(PlainSelect plainSelect) {
         if (plainSelect.getWhere() != null) {
             buffer.append(" WHERE ");
             int len = buffer.length();
-            plainSelect.getWhere().accept(expressionVisitor);
+            plainSelect.getWhere().accept(getExpressionVisitor());
             if (buffer.length() == len) {
                 buffer.delete(len - " WHERE ".length(), len);
             }
+        }
+    }
+
+    protected void deparseDistinctClause(Distinct distinct) {
+        if (hasRootDistinct != null && hasRootDistinct) {
+            hasRootDistinct = null;
+        } else {
+            deparseDistinctClause0(distinct);
+        }
+    }
+
+    protected void deparseSelectItemsClause(List<SelectItem<?>> selectItems) {
+        if (countRootSelectItems != null) {
+            List<SelectItem<?>> items = countRootSelectItems;
+            this.countRootSelectItems = null;
+            deparseSelectItemsClause0(items);
+        } else {
+            deparseSelectItemsClause0(selectItems);
+        }
+    }
+
+    protected void deparseOrderByElementsClause(PlainSelect plainSelect) {
+        if (hasRootOrderByElements != null && hasRootOrderByElements) {
+            hasRootOrderByElements = null;
+        } else {
+            deparseOrderByElementsClause0(plainSelect);
+        }
+    }
+
+    private void deparseDistinctClause0(Distinct distinct) {
+        if (distinct != null) {
+            if (distinct.isUseUnique()) {
+                buffer.append("UNIQUE ");
+            } else {
+                buffer.append("DISTINCT ");
+            }
+            if (distinct.getOnSelectItems() != null) {
+                buffer.append("ON (");
+                for (Iterator<SelectItem<?>> iter
+                    = distinct.getOnSelectItems().iterator(); iter.hasNext();) {
+                    SelectItem<?> selectItem = iter.next();
+                    selectItem.accept(this);
+                    if (iter.hasNext()) {
+                        buffer.append(", ");
+                    }
+                }
+                buffer.append(") ");
+            }
+        }
+    }
+
+    private void deparseSelectItemsClause0(List<SelectItem<?>> selectItems) {
+        if (selectItems != null) {
+            for (Iterator<SelectItem<?>> iter = selectItems.iterator(); iter.hasNext();) {
+                SelectItem<?> selectItem = iter.next();
+                selectItem.accept(this);
+                if (iter.hasNext()) {
+                    buffer.append(", ");
+                }
+            }
+        }
+    }
+
+    private void deparseOrderByElementsClause0(PlainSelect plainSelect) {
+        if (plainSelect.getOrderByElements() != null) {
+            new OrderByDeParser(getExpressionVisitor(), buffer).deParse(plainSelect.isOracleSiblings(),
+                plainSelect.getOrderByElements());
         }
     }
 
@@ -92,26 +169,7 @@ public class CustomSelectDeParser extends SelectDeParser {
             buffer.append(first).append(" ");
         }
 
-        if (plainSelect.getDistinct() != null) {
-            if (plainSelect.getDistinct().isUseUnique()) {
-                buffer.append("UNIQUE ");
-            } else {
-                buffer.append("DISTINCT ");
-            }
-            if (plainSelect.getDistinct().getOnSelectItems() != null) {
-                buffer.append("ON (");
-                for (Iterator<SelectItem<?>> iter
-                    = plainSelect.getDistinct().getOnSelectItems().iterator(); iter.hasNext();) {
-                    SelectItem<?> selectItem = iter.next();
-                    selectItem.accept(this);
-                    if (iter.hasNext()) {
-                        buffer.append(", ");
-                    }
-                }
-                buffer.append(") ");
-            }
-
-        }
+        deparseDistinctClause(plainSelect.getDistinct());
 
         Top top = plainSelect.getTop();
         if (top != null) {
@@ -126,16 +184,7 @@ public class CustomSelectDeParser extends SelectDeParser {
             buffer.append("SQL_CALC_FOUND_ROWS").append(" ");
         }
 
-        final List<SelectItem<?>> selectItems = plainSelect.getSelectItems();
-        if (selectItems != null) {
-            for (Iterator<SelectItem<?>> iter = selectItems.iterator(); iter.hasNext();) {
-                SelectItem<?> selectItem = iter.next();
-                selectItem.accept(this);
-                if (iter.hasNext()) {
-                    buffer.append(", ");
-                }
-            }
-        }
+        deparseSelectItemsClause(plainSelect.getSelectItems());
 
         if (plainSelect.getIntoTables() != null) {
             buffer.append(" INTO ");
@@ -183,24 +232,24 @@ public class CustomSelectDeParser extends SelectDeParser {
             buffer.append(plainSelect.getKsqlWindow().toString());
         }
 
-        acceptWhere(plainSelect);
+        deparseWhereClause(plainSelect);
 
         if (plainSelect.getOracleHierarchical() != null) {
-            plainSelect.getOracleHierarchical().accept(expressionVisitor);
+            plainSelect.getOracleHierarchical().accept(getExpressionVisitor());
         }
 
         if (plainSelect.getGroupBy() != null) {
             buffer.append(" ");
-            new GroupByDeParser(expressionVisitor, buffer).deParse(plainSelect.getGroupBy());
+            new GroupByDeParser(getExpressionVisitor(), buffer).deParse(plainSelect.getGroupBy());
         }
 
         if (plainSelect.getHaving() != null) {
             buffer.append(" HAVING ");
-            plainSelect.getHaving().accept(expressionVisitor);
+            plainSelect.getHaving().accept(getExpressionVisitor());
         }
         if (plainSelect.getQualify() != null) {
             buffer.append(" QUALIFY ");
-            plainSelect.getQualify().accept(expressionVisitor);
+            plainSelect.getQualify().accept(getExpressionVisitor());
         }
         if (plainSelect.getWindowDefinitions() != null) {
             buffer.append(" WINDOW ");
@@ -211,18 +260,16 @@ public class CustomSelectDeParser extends SelectDeParser {
             plainSelect.getForClause().appendTo(buffer);
         }
 
-        if (plainSelect.getOrderByElements() != null) {
-            new OrderByDeParser(expressionVisitor, buffer).deParse(plainSelect.isOracleSiblings(),
-                plainSelect.getOrderByElements());
-        }
+        deparseOrderByElementsClause(plainSelect);
+
         if (plainSelect.isEmitChanges()) {
             buffer.append(" EMIT CHANGES");
         }
         if (plainSelect.getLimitBy() != null) {
-            new LimitDeparser(expressionVisitor, buffer).deParse(plainSelect.getLimitBy());
+            new LimitDeparser(getExpressionVisitor(), buffer).deParse(plainSelect.getLimitBy());
         }
         if (plainSelect.getLimit() != null) {
-            new LimitDeparser(expressionVisitor, buffer).deParse(plainSelect.getLimit());
+            new LimitDeparser(getExpressionVisitor(), buffer).deParse(plainSelect.getLimit());
         }
         if (plainSelect.getOffset() != null) {
             visit(plainSelect.getOffset());
@@ -269,12 +316,6 @@ public class CustomSelectDeParser extends SelectDeParser {
         buffer.append(" OPTIMIZE FOR ");
         buffer.append(optimizeFor.getRowCount());
         buffer.append(" ROWS");
-    }
-
-    @Override
-    public void setExpressionVisitor(ExpressionVisitor visitor) {
-        super.setExpressionVisitor(visitor);
-        expressionVisitor = visitor;
     }
 
 }

@@ -7,14 +7,13 @@
  * Dual licensed under GNU LGPL 2.1 or Apache License 2.0
  * #L%
  *
- * 复制过来增加acceptWhere方法
+ * 复制过来增加deparseWhereClause方法
  */
 package org.redkalex.source.parser;
 
 import java.util.Iterator;
 import static java.util.stream.Collectors.joining;
 import net.sf.jsqlparser.expression.ExpressionVisitor;
-import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.select.Join;
@@ -25,18 +24,15 @@ import net.sf.jsqlparser.util.deparser.OrderByDeParser;
 
 public class CustomDeleteDeParser extends DeleteDeParser {
 
-    protected ExpressionVisitor expressionVisitor = new ExpressionVisitorAdapter();
-
     public CustomDeleteDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
         super(expressionVisitor, buffer);
-        this.expressionVisitor = expressionVisitor;
     }
 
-    protected void acceptWhere(Delete delete) {
+    protected void deparseWhereClause(Delete delete) {
         if (delete.getWhere() != null) {
             buffer.append(" WHERE ");
             int len = buffer.length();
-            delete.getWhere().accept(expressionVisitor);
+            delete.getWhere().accept(getExpressionVisitor());
             if (buffer.length() == len) {
                 buffer.delete(len - " WHERE ".length(), len);
             }
@@ -45,6 +41,7 @@ public class CustomDeleteDeParser extends DeleteDeParser {
 
     @Override
     public void deParse(Delete delete) {
+        ExpressionVisitor expressionVisitor = getExpressionVisitor();
         if (delete.getWithItemsList() != null && !delete.getWithItemsList().isEmpty()) {
             buffer.append("WITH ");
             for (Iterator<WithItem> iter = delete.getWithItemsList().iterator(); iter.hasNext();) {
@@ -99,7 +96,7 @@ public class CustomDeleteDeParser extends DeleteDeParser {
             }
         }
 
-        acceptWhere(delete);
+        deparseWhereClause(delete);
 
         if (delete.getOrderByElements() != null) {
             new OrderByDeParser(expressionVisitor, buffer).deParse(delete.getOrderByElements());
@@ -112,11 +109,5 @@ public class CustomDeleteDeParser extends DeleteDeParser {
             delete.getReturningClause().appendTo(buffer);
         }
 
-    }
-
-    @Override
-    public void setExpressionVisitor(ExpressionVisitor visitor) {
-        super.setExpressionVisitor(visitor);
-        expressionVisitor = visitor;
     }
 }

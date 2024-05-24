@@ -7,13 +7,12 @@
  * Dual licensed under GNU LGPL 2.1 or Apache License 2.0
  * #L%
  *
- * 复制过来增加acceptWhere、acceptUpdateSets方法
+ * 复制过来增加deparseWhereClause、deparseUpdateSetsClause方法
  */
 package org.redkalex.source.parser;
 
 import java.util.Iterator;
 import net.sf.jsqlparser.expression.ExpressionVisitor;
-import net.sf.jsqlparser.expression.ExpressionVisitorAdapter;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.statement.update.Update;
@@ -23,26 +22,23 @@ import net.sf.jsqlparser.util.deparser.UpdateDeParser;
 
 public class CustomUpdateDeParser extends UpdateDeParser {
 
-    protected ExpressionVisitor expressionVisitor = new ExpressionVisitorAdapter();
-
     public CustomUpdateDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
         super(expressionVisitor, buffer);
-        this.expressionVisitor = expressionVisitor;
     }
 
-    protected void acceptWhere(Update update) {
+    protected void deparseWhereClause(Update update) {
         if (update.getWhere() != null) {
             buffer.append(" WHERE ");
             int len = buffer.length();
-            update.getWhere().accept(expressionVisitor);
+            update.getWhere().accept(getExpressionVisitor());
             if (buffer.length() == len) {
                 buffer.delete(len - " WHERE ".length(), len);
             }
         }
     }
 
-    protected void acceptUpdateSets(Update update) {
-        deparseUpdateSets(update.getUpdateSets(), buffer, expressionVisitor);
+    protected void deparseUpdateSetsClause(Update update) {
+        deparseUpdateSets(update.getUpdateSets(), buffer, getExpressionVisitor());
     }
 
     @Override
@@ -80,7 +76,7 @@ public class CustomUpdateDeParser extends UpdateDeParser {
         }
         buffer.append(" SET ");
 
-        acceptUpdateSets(update);
+        deparseUpdateSetsClause(update);
 
         if (update.getOutputClause() != null) {
             update.getOutputClause().appendTo(buffer);
@@ -99,24 +95,18 @@ public class CustomUpdateDeParser extends UpdateDeParser {
             }
         }
 
-        acceptWhere(update);
+        deparseWhereClause(update);
 
         if (update.getOrderByElements() != null) {
-            new OrderByDeParser(expressionVisitor, buffer).deParse(update.getOrderByElements());
+            new OrderByDeParser(getExpressionVisitor(), buffer).deParse(update.getOrderByElements());
         }
         if (update.getLimit() != null) {
-            new LimitDeparser(expressionVisitor, buffer).deParse(update.getLimit());
+            new LimitDeparser(getExpressionVisitor(), buffer).deParse(update.getLimit());
         }
 
         if (update.getReturningClause() != null) {
             update.getReturningClause().appendTo(buffer);
         }
-    }
-
-    @Override
-    public void setExpressionVisitor(ExpressionVisitor visitor) {
-        super.setExpressionVisitor(visitor);
-        expressionVisitor = visitor;
     }
 
 }

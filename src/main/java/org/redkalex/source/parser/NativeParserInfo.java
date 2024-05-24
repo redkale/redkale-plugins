@@ -112,9 +112,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         }
     }
 
-    public NativeParserNode loadParserNode(boolean countable, Map<String, Object> params) {
-        NativeSqlTemplet templet = createTemplet(params);
-        String jdbcSql = templet.getJdbcSql();
+    public NativeParserNode loadParserNode(String jdbcSql, boolean countable) {
         if (isDynamic()) {
             return createParserNode(jdbcSql, countable);
         }
@@ -132,7 +130,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     protected NativeParserNode createParserNode(final String jdbcSql, boolean countable) {
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(jdbcSql).withAllowComplexParsing(true);
-            return new NativeParserNode(this, countable, sqlParser.Statement());
+            return new NativeParserNode(this, jdbcSql, countable, sqlParser.Statement());
         } catch (ParseException e) {
             throw new SourceException("Parse error, sql: " + jdbcSql, e);
         }
