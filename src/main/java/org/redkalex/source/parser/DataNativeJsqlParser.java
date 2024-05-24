@@ -27,19 +27,19 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
 
     @Override
     public DataNativeSqlInfo parse(IntFunction<String> signFunc, String dbType, String rawSql) {
-        return parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql));
+        return parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql, dbType, signFunc));
     }
 
     @Override
     public DataNativeSqlStatement parse(IntFunction<String> signFunc, String dbType, String rawSql, boolean countable, Map<String, Object> params) {
-        NativeParserInfo info = parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql));
+        NativeParserInfo info = parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql, dbType, signFunc));
         NativeSqlTemplet templet = info.createTemplet(params);
         if (logger.isLoggable(Level.FINER)) {
             logger.log(Level.FINER, DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql
-                + ", dynamic: " + info.isDynamic() + ", templetSql: " + templet.getTempletSql());
+                + ", dynamic: " + info.isDynamic() + ", templetSql: " + templet.getJdbcSql());
         }
-        NativeParserNode node = info.loadParserNode(signFunc, dbType, templet.getTempletSql(), countable);
-        DataNativeSqlStatement statement = node.loadStatement(signFunc, templet.getTempletParams());
+        NativeParserNode node = info.loadParserNode(countable, params);
+        DataNativeSqlStatement statement = node.loadStatement(templet);
         if (logger.isLoggable(Level.FINE)) {
             String countSql = countable ? (", nativeCountSql: " + statement.getNativeCountSql()) : "";
             logger.log(Level.FINE, DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql + ", nativeSql: " + statement.getNativeSql()

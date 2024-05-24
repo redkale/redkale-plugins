@@ -30,7 +30,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
     private final Deque<Expression> relations = new ArrayDeque<>();
 
-    private IntFunction<String> signFunc;
+    private final IntFunction<String> signFunc;
 
     //需要预编译的jdbc参数名:argxxx, 数量与sql中的?数量一致
     private List<String> jdbcNames = new ArrayList<>();
@@ -49,21 +49,23 @@ public class NativeExprDeParser extends ExpressionDeParser {
         setSelectVisitor(new CustomSelectDeParser(this, buffer));
     }
 
-    public String customParserSql(Statement stmt) {
+    public String deParseSql(Statement stmt) {
         CustomStatementDeParser deParser = new CustomStatementDeParser(this, (SelectDeParser) getSelectVisitor(), buffer);
         deParser.deParse(stmt);
         return buffer.toString();
     }
 
-    public CustomSelectDeParser getSelectDeParser() {
-        return (CustomSelectDeParser) getSelectVisitor();
+    public NativeExprDeParser reset() {
+        conditions.clear();
+        relations.clear();
+        jdbcNames.clear();
+        paramLosing = false;
+        buffer.delete(0, buffer.length());
+        return this;
     }
 
-    public String deParse(Expression where) {
-        if (where != null) {
-            where.accept(this);
-        }
-        return this.buffer.toString();
+    public CustomSelectDeParser getSelectDeParser() {
+        return (CustomSelectDeParser) getSelectVisitor();
     }
 
     public List<String> getJdbcNames() {
@@ -97,13 +99,11 @@ public class NativeExprDeParser extends ExpressionDeParser {
         int size1 = jdbcNames.size();
         final int start1 = buffer.length();
         expr.getLeftExpression().accept(this);
-        int end1 = buffer.length();
         int size2 = jdbcNames.size();
         if (!paramLosing) {
             if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_RIGHT) {
                 buffer.append("(+)");
             }
-            end1 = buffer.length();
         }
         if (!paramLosing) {
             buffer.append(operator);

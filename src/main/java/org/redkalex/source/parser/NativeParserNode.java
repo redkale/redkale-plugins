@@ -6,16 +6,19 @@ package org.redkalex.source.parser;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.ExpressionVisitor;
-import net.sf.jsqlparser.parser.SimpleNode;
+import net.sf.jsqlparser.expression.LongValue;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.Distinct;
+import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import org.redkale.annotation.Nullable;
+import net.sf.jsqlparser.statement.select.SelectItem;
 import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.source.SourceException;
+import org.redkale.util.Utility;
 
 /**
  *
@@ -23,151 +26,92 @@ import org.redkale.source.SourceException;
  */
 public class NativeParserNode {
 
-    //sql是否根据参数值动态生成的，包含了IN或${xx.xx}参数的
-    private final boolean dynamic;
+    //NativeParserInfo
+    private final NativeParserInfo info;
+
+    //是否需要countSql
+    private final boolean countable;
 
     //Statement对象
     private final Statement originStmt;
 
-    //原始sql的 COUNT(1)版
-    @Nullable
-    private final PlainSelect countStmt;
-
-    //where条件
-    @Nullable
-    private final Expression fullWhere;
-
-    //jdbc参数名:argxxx对应#{xx.xx}参数名
-    private final Map<String, String> jdbcToNumsignMap;
-
-    //没有where的UPDATE语句
-    @Nullable
-    private final String updateNoWhereSql;
-
-    //修改项，只有UPDATE语句才有值
-    private final List<String> updateJdbcNames;
-
-    //必需的参数名, 包含了updateJdbcNames
-    private final Set<String> requiredJdbcNames;
-
-    //所有参数名，包含了requiredJdbcNames
-    private final TreeSet<String> fullJdbcNames;
-
     //where锁
-    private final ReentrantLock whereLock = new ReentrantLock();
+    final ReentrantLock countLock = new ReentrantLock();
 
     //缓存
     private final ConcurrentHashMap<String, DataNativeSqlStatement> statements = new ConcurrentHashMap();
 
-    public NativeParserNode(Statement originStmt, PlainSelect countStmt, Expression fullWhere, Map<String, String> jdbcToNumsignMap,
-        TreeSet<String> fullJdbcNames, Set<String> requiredJdbcNames, boolean dynamic, String updateNoWhereSql, List<String> updateJdbcNames) {
+    public NativeParserNode(NativeParserInfo info, boolean countable, Statement originStmt) {
+        this.info = info;
         this.originStmt = originStmt;
-        this.dynamic = dynamic;
-        this.countStmt = countStmt;
-        this.fullWhere = fullWhere;
-        this.jdbcToNumsignMap = jdbcToNumsignMap;
-        this.updateNoWhereSql = updateNoWhereSql;
-        this.updateJdbcNames = updateJdbcNames;
-        this.fullJdbcNames = fullJdbcNames;
-        this.requiredJdbcNames = Collections.unmodifiableSet(requiredJdbcNames);
+        this.countable = countable;
     }
 
-    public DataNativeSqlStatement loadStatement(IntFunction<String> signFunc, Map<String, Object> params) {
-        Set<String> miss = null;
-        for (String mustName : requiredJdbcNames) {
-            if (params.get(mustName) == null) {
-                if (miss == null) {
-                    miss = new LinkedHashSet<>();
-                }
-                miss.add(jdbcToNumsignMap.getOrDefault(mustName, mustName));
-            }
+    public DataNativeSqlStatement loadStatement(NativeSqlTemplet templet) {
+        if (info.isDynamic()) { //根据参数值动态生成的sql语句不缓存
+            return createStatement(templet);
         }
-        if (miss != null) {
-            throw new SourceException("Missing parameter " + miss);
-        }
-        if (dynamic) { //根据参数值动态生成的sql语句不缓存
-            return createStatement(signFunc, params);
-        }
-        return statements.computeIfAbsent(cacheKey(params), k -> createStatement(signFunc, params));
+        return statements.computeIfAbsent(cacheKey(templet.getTempletParams()), k -> createStatement(templet));
     }
 
-    private DataNativeSqlStatement createStatement(IntFunction<String> signFunc, Map<String, Object> params) {
-        final NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
-        if (updateJdbcNames != null) {
-            exprDeParser.getJdbcNames().addAll(updateJdbcNames);
-        }
-        String whereSql = exprDeParser.deParse(fullWhere);
-        DataNativeSqlStatement statement = new DataNativeSqlStatement();
-        statement.setJdbcNames(exprDeParser.getJdbcNames());
-        List<String> paramNames = new ArrayList<>();
-        for (String name : statement.getJdbcNames()) {
-            paramNames.add(jdbcToNumsignMap == null ? name : jdbcToNumsignMap.getOrDefault(name, name));
-        }
-        statement.setParamNames(paramNames);
-        statement.setParamValues(params);
-        if (whereSql.isEmpty()) {
-            statement.setNativeSql(updateNoWhereSql == null ? originStmt.toString() : updateNoWhereSql);
-            if (countStmt != null) {
-                statement.setNativeCountSql(countStmt.toString());
+    protected DataNativeSqlStatement createStatement(NativeSqlTemplet templet) {
+        Map<String, Object> fullParams = templet.getTempletParams();
+        final NativeExprDeParser exprDeParser = new NativeExprDeParser(info.signFunc(), fullParams);
+        String stmtSql = null;
+        String countSql = null;
+        List<String> jdbcNames = null;
+        if (countable) {
+            if (!(originStmt instanceof PlainSelect)) {
+                throw new SourceException("Not support count-sql (" + templet.getJdbcSql() + "), type: " + originStmt.getClass().getName());
             }
-        } else if (countStmt != null) {  //SELECT
-            String stmtSql;
-            String countSql;
-            PlainSelect queryStmt = (PlainSelect) originStmt;
-            whereLock.lock();
-            Expression oldQueryWhere = queryStmt.getWhere();
-            Expression oldCountWhere = countStmt.getWhere();
+            PlainSelect select = (PlainSelect) originStmt;
+            Distinct distinct = select.getDistinct();
+            List<SelectItem<?>> selectItems = select.getSelectItems();
+            List<OrderByElement> orderByElements = select.getOrderByElements();
+            countLock.lock();
             try {
-                queryStmt.setWhere(new NativeSqlExpression(whereSql));
-                stmtSql = queryStmt.toString();
-                countStmt.setWhere(new NativeSqlExpression(whereSql));
-                countSql = countStmt.toString();
+                stmtSql = exprDeParser.deParseSql(originStmt);
+                jdbcNames = exprDeParser.getJdbcNames();
+                select.setOrderByElements(null);
+                if (select.getDistinct() == null) {
+                    Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT")
+                        .withParameters(new ExpressionList(new LongValue(1)));
+                    select.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
+                } else {
+                    List<Expression> exprs = selectItems.stream().map(SelectItem::getExpression).collect(Collectors.toList());
+                    Expression countFunc = new net.sf.jsqlparser.expression.Function().withName("COUNT").withDistinct(true)
+                        .withParameters(new ParenthesedExpressionList(exprs));
+                    select.setSelectItems(Utility.ofList(new SelectItem(countFunc)));
+                    select.setDistinct(null);
+                }
+                countSql = exprDeParser.reset().deParseSql(select);
             } finally {
-                queryStmt.setWhere(oldQueryWhere);
-                countStmt.setWhere(oldCountWhere);
-                whereLock.unlock();
+                select.setDistinct(distinct);
+                select.setSelectItems(selectItems);
+                select.setOrderByElements(orderByElements);
+                countLock.unlock();
             }
-            statement.setNativeSql(stmtSql);
-            statement.setNativeCountSql(countSql);
-        } else { //not SELECT
-            statement.setNativeSql((updateNoWhereSql == null ? originStmt.toString() : updateNoWhereSql) + " WHERE " + whereSql);
+        } else {
+            stmtSql = exprDeParser.deParseSql(originStmt);
+            jdbcNames = exprDeParser.getJdbcNames();
         }
-        return statement;
+        DataNativeSqlStatement result = new DataNativeSqlStatement();
+        result.setJdbcNames(jdbcNames);
+        List<String> paramNames = new ArrayList<>();
+        for (String name : jdbcNames) {
+            paramNames.add(info.jdbcToNumsignMap == null ? name : info.jdbcToNumsignMap.getOrDefault(name, name));
+        }
+        result.setParamNames(paramNames);
+        result.setParamValues(fullParams);
+        result.setNativeSql(stmtSql);
+        result.setNativeCountSql(countSql);
+        return result;
     }
 
     private String cacheKey(Map<String, Object> params) {
-        List<String> list = fullJdbcNames.stream().filter(params::containsKey).collect(Collectors.toList());
+        List<String> list = info.fullJdbcNames.stream().filter(params::containsKey).collect(Collectors.toList());
         //fullJdbcNames是TreeSet, 已排序  //Collections.sort(list);
         return list.isEmpty() ? "" : list.stream().collect(Collectors.joining(","));
     }
 
-    public static class NativeSqlExpression implements Expression {
-
-        private final String sql;
-
-        public NativeSqlExpression(String sql) {
-            this.sql = Objects.requireNonNull(sql);
-        }
-
-        @Override
-        public void accept(ExpressionVisitor expressionVisitor) {
-            //do nothing
-        }
-
-        @Override
-        public SimpleNode getASTNode() {
-            return null;
-        }
-
-        @Override
-        public void setASTNode(SimpleNode node) {
-            //do nothing
-        }
-
-        @Override
-        public String toString() {
-            return sql;
-        }
-
-    }
 }

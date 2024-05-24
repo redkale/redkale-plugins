@@ -12,7 +12,7 @@ import org.redkale.convert.json.JsonConvert;
  */
 public class NativeSqlTemplet {
 
-    private String templetSql;
+    private String jdbcSql;
 
     private Map<String, Object> templetParams;
 
@@ -21,16 +21,16 @@ public class NativeSqlTemplet {
     }
 
     public NativeSqlTemplet(String templetSql, Map<String, Object> templetParams) {
-        this.templetSql = templetSql;
+        this.jdbcSql = templetSql;
         this.templetParams = templetParams;
     }
 
-    public String getTempletSql() {
-        return templetSql;
+    public String getJdbcSql() {
+        return jdbcSql;
     }
 
-    public void setTempletSql(String templetSql) {
-        this.templetSql = templetSql;
+    public void setJdbcSql(String jdbcSql) {
+        this.jdbcSql = jdbcSql;
     }
 
     public Map<String, Object> getTempletParams() {

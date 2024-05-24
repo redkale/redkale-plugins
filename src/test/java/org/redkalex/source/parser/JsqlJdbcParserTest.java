@@ -44,9 +44,9 @@ public class JsqlJdbcParserTest {
             + " AND time BETWEEN :min AND :range_max AND col2 >= :c2"
             + " AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";
         Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
-
+        
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("新countsql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
@@ -176,7 +176,7 @@ public class JsqlJdbcParserTest {
 
     @Test
     public void run10() throws Exception {
-        String sql = "SELECT * FROM (SELECT * FROM pooldatarecord_20220114 WHERE name LIKE :name"
+        String sql = "SELECT * FROM (SELECT * FROM pooldatarecord_20220114 WHERE name LIKE :name AND status = 1"
             + " UNION SELECT * FROM pooldatarecord_20220119 WHERE userid = :idx) a";
         Map<String, Object> params = Utility.ofMap("idx", 100);
 
@@ -186,12 +186,12 @@ public class JsqlJdbcParserTest {
         System.out.println("表: " + select.getFromItem().getClass());
 
         NativeExprDeParser exprDeParser = new NativeExprDeParser(signFunc, params);
-        final String tempSql = exprDeParser.customParserSql(stmt);
-        System.out.println("语句: " + tempSql);
+        final String tempSql = exprDeParser.deParseSql(stmt);
+        System.out.println("语句sql : " + tempSql);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, params);
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("生成sql = " + statement.getNativeSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================10=======================================");
