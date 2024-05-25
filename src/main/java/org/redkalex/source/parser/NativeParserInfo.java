@@ -90,7 +90,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         for (NativeSqlParameter p : allNamedParameters) {
             Object val = p.getParamValue(params);
             if (p.isRequired() && val == null) {
-                throw new SourceException("Missing parameter " + p.getNumsignName());
+                throw MissingParamException.of(p.getNumsignName());
             }
             if (val != null) {
                 newParams.put(p.getNumsignName(), val);
