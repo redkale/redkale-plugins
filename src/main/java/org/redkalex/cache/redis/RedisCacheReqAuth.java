@@ -9,10 +9,7 @@ import java.nio.charset.StandardCharsets;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class RedisCacheReqAuth extends RedisCacheRequest {
 
     private static final byte[] PS = "AUTH\r\n".getBytes(StandardCharsets.UTF_8);
@@ -33,7 +30,6 @@ public class RedisCacheReqAuth extends RedisCacheRequest {
         writer.put(bulkLengthBytes(pwd.length));
         writer.put(pwd);
         writer.put(CRLF);
-
     }
 
     @Override

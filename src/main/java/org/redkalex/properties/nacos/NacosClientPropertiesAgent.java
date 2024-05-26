@@ -20,7 +20,6 @@ import org.redkalex.properties.nacos.NacosPropertiesAgent.NacosInfo;
 /**
  * 依赖于nacos-client实现的Nacos配置 https://github.com/alibaba/nacos
  *
- *
  * @author zhangjx
  * @since 2.8.0
  */
@@ -32,7 +31,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
 
     @Override
     public void compile(final AnyValue propertiesConf) {
-        //do nothing
+        // do nothing
     }
 
     @Override
@@ -54,7 +53,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
                 }
             });
             System.getProperties().forEach((k, v) -> {
-                //支持 nacos.serverAddr、nacos-serverAddr、nacos_serverAddr
+                // 支持 nacos.serverAddr、nacos-serverAddr、nacos_serverAddr
                 if (k.toString().startsWith("nacos")) {
                     String key = k.toString().replace('-', '.');
                     if (key.equals("nacos.data.group")) {
@@ -70,23 +69,25 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
                 return null;
             }
             final AtomicInteger counter = new AtomicInteger();
-            this.listenExecutor = Executors.newFixedThreadPool(infos.size(),
-                r -> new Thread(r, "Redkalex-Properties-Nacos-Listen-Thread-" + counter.incrementAndGet()));
+            this.listenExecutor = Executors.newFixedThreadPool(
+                    infos.size(),
+                    r -> new Thread(r, "Redkalex-Properties-Nacos-Listen-Thread-" + counter.incrementAndGet()));
 
             this.configService = NacosFactory.createConfigService(agentConf);
             Map<String, Properties> result = new LinkedHashMap<>();
             for (NacosInfo info : infos) {
-                final String content = configService.getConfigAndSignListener(info.dataId, info.group, 3_000, new Listener() {
-                    @Override
-                    public Executor getExecutor() {
-                        return listenExecutor;
-                    }
+                final String content =
+                        configService.getConfigAndSignListener(info.dataId, info.group, 3_000, new Listener() {
+                            @Override
+                            public Executor getExecutor() {
+                                return listenExecutor;
+                            }
 
-                    @Override
-                    public void receiveConfigInfo(String configInfo) {
-                        updateContent(application, info, configInfo, null);
-                    }
-                });
+                            @Override
+                            public void receiveConfigInfo(String configInfo) {
+                                updateContent(application, info, configInfo, null);
+                            }
+                        });
                 updateContent(application, info, content, new Properties());
                 result.put(info.dataId, info.properties);
             }
@@ -120,7 +121,7 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
             logger.log(Level.SEVERE, "Load nacos content (dataId=" + info.dataId + ") error", e);
             return;
         }
-        if (result == null) { //配置项动态变更时需要一次性提交所有配置项
+        if (result == null) { // 配置项动态变更时需要一次性提交所有配置项
             onEnvironmentUpdated(application, info.dataId, ResourceEvent.create(info.properties, props));
             info.properties = props;
         } else {
@@ -129,5 +130,4 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
         }
         logger.log(Level.FINER, "Nacos config(dataId=" + info.dataId + ") size: " + props.size());
     }
-
 }

@@ -10,28 +10,28 @@ import org.redkale.convert.ConvertDisabled;
 import org.redkale.util.*;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
 public class PayCreatRequest extends PayRequest {
 
-    private static final Copier<PayCreatRequest, PayPreRequest> copier = Copier.create(PayCreatRequest.class, PayPreRequest.class);
+    private static final Copier<PayCreatRequest, PayPreRequest> copier =
+            Copier.create(PayCreatRequest.class, PayPreRequest.class);
 
-    protected long payMoney; //  支付金额。 单位:分 
+    protected long payMoney; //  支付金额。 单位:分
 
     protected String payCurrency; //  币种,一般币值*100
 
-    protected String payTitle = ""; //订单标题
+    protected String payTitle = ""; // 订单标题
 
-    protected String payBody = ""; //订单内容描述
+    protected String payBody = ""; // 订单内容描述
 
-    protected int payTimeout = 600; //支付超时的秒数
+    protected int payTimeout = 600; // 支付超时的秒数
 
-    protected String clientAddr = "";  //客户端IP地址
+    protected String clientAddr = ""; // 客户端IP地址
 
-    protected Map<String, String> attach; //扩展信息
+    protected Map<String, String> attach; // 扩展信息
 
     public PayPreRequest createPayPreRequest() {
         return copier.apply(this, new PayPreRequest());
@@ -200,5 +200,4 @@ public class PayCreatRequest extends PayRequest {
     public void setPaybody(String payBody) {
         this.payBody = payBody;
     }
-
 }

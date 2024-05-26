@@ -23,7 +23,7 @@ import org.redkale.util.*;
 /**
  * 支付抽象类
  *
- * 详情见: https://redkale.org
+ * <p>详情见: https://redkale.org
  *
  * @author zhangjx
  */
@@ -39,7 +39,7 @@ public abstract class AbstractPayService implements Service {
     @Comment("重新加载本地文件配置")
     public abstract void reloadConfig(short paytype);
 
-    //--------------------------- 同步方法 ------------------------------
+    // --------------------------- 同步方法 ------------------------------
     @Comment("手机预支付")
     public abstract PayPreResponse prepay(PayPreRequest request);
 
@@ -61,7 +61,7 @@ public abstract class AbstractPayService implements Service {
     @Comment("查询退款")
     public abstract PayRefundResponse queryRefund(PayRefundQryReq request);
 
-    //--------------------------- 异步方法 ------------------------------
+    // --------------------------- 异步方法 ------------------------------
     @Comment("手机预支付")
     public abstract CompletableFuture<PayPreResponse> prepayAsync(PayPreRequest request);
 
@@ -83,12 +83,13 @@ public abstract class AbstractPayService implements Service {
     @Comment("查询退款")
     public abstract CompletableFuture<PayRefundResponse> queryRefundAsync(PayRefundQryReq request);
 
-    //------------------------------------------------------------------
+    // ------------------------------------------------------------------
     @Comment("计算签名; map和text只会存在一个有值")
     protected abstract String createSign(final PayElement element, Map<String, ?> map, String text);
 
     @Comment("验证签名; map和text只会存在一个有值")
-    protected abstract boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders);
+    protected abstract boolean checkSign(
+            final PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders);
 
     @Comment("获取配置项")
     public abstract PayElement getPayElement(String appid);
@@ -125,11 +126,14 @@ public abstract class AbstractPayService implements Service {
         return Utility.postHttpContentAsync(client, url, StandardCharsets.UTF_8, body);
     }
 
-    protected CompletableFuture<String> postHttpContentAsync(HttpClient client, String url, RestHeaders headers, String body) {
-        return Utility.postHttpContentAsync(client, url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body);
+    protected CompletableFuture<String> postHttpContentAsync(
+            HttpClient client, String url, RestHeaders headers, String body) {
+        return Utility.postHttpContentAsync(
+                client, url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body);
     }
 
-    protected CompletableFuture<String> postHttpContentAsync(String url, Charset charset, RestHeaders headers, String body) {
+    protected CompletableFuture<String> postHttpContentAsync(
+            String url, Charset charset, RestHeaders headers, String body) {
         return Utility.postHttpContentAsync(url, charset, headers == null ? null : headers.map(), body);
     }
 
@@ -137,48 +141,65 @@ public abstract class AbstractPayService implements Service {
         return Utility.postHttpContentAsync(url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body);
     }
 
-    protected CompletableFuture<String> postHttpContentAsync(String url, Charset charset, String body, Map<String, Serializable> respHeaders) {
+    protected CompletableFuture<String> postHttpContentAsync(
+            String url, Charset charset, String body, Map<String, Serializable> respHeaders) {
         return Utility.postHttpContentAsync(url, charset, body, respHeaders);
     }
 
-    protected CompletableFuture<String> postHttpContentAsync(String url, String body, Map<String, Serializable> respHeaders) {
+    protected CompletableFuture<String> postHttpContentAsync(
+            String url, String body, Map<String, Serializable> respHeaders) {
         return Utility.postHttpContentAsync(url, StandardCharsets.UTF_8, body, respHeaders);
     }
 
-    protected CompletableFuture<String> postHttpContentAsync(HttpClient client, String url, String body, Map<String, Serializable> respHeaders) {
+    protected CompletableFuture<String> postHttpContentAsync(
+            HttpClient client, String url, String body, Map<String, Serializable> respHeaders) {
         return Utility.postHttpContentAsync(client, url, StandardCharsets.UTF_8, body, respHeaders);
     }
 
-    protected CompletableFuture<String> getHttpContentAsync(HttpClient client, String url, String body, Map<String, Serializable> respHeaders) {
+    protected CompletableFuture<String> getHttpContentAsync(
+            HttpClient client, String url, String body, Map<String, Serializable> respHeaders) {
         return Utility.getHttpContentAsync(client, url, StandardCharsets.UTF_8, body, respHeaders);
     }
 
-    protected CompletableFuture<String> postHttpContentAsync(HttpClient client, String url, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
-        return Utility.postHttpContentAsync(client, url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
+    protected CompletableFuture<String> postHttpContentAsync(
+            HttpClient client, String url, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
+        return Utility.postHttpContentAsync(
+                client, url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
     }
 
-    protected static CompletableFuture<String> postHttpContentAsync(String url, int timeout, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
-        return Utility.postHttpContentAsync(url, timeout, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
+    protected static CompletableFuture<String> postHttpContentAsync(
+            String url, int timeout, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
+        return Utility.postHttpContentAsync(
+                url, timeout, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
     }
 
-    protected CompletableFuture<String> getHttpContentAsync(HttpClient client, String url, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
-        return Utility.getHttpContentAsync(client, url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
+    protected CompletableFuture<String> getHttpContentAsync(
+            HttpClient client, String url, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
+        return Utility.getHttpContentAsync(
+                client, url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
     }
 
-    protected CompletableFuture<String> postHttpContentAsync(String url, Charset charset, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
+    protected CompletableFuture<String> postHttpContentAsync(
+            String url, Charset charset, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
         return Utility.postHttpContentAsync(url, charset, headers == null ? null : headers.map(), body, respHeaders);
     }
 
-    protected static CompletableFuture<String> postHttpContentAsync(String url, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
-        return Utility.postHttpContentAsync(url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
+    protected static CompletableFuture<String> postHttpContentAsync(
+            String url, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
+        return Utility.postHttpContentAsync(
+                url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
     }
 
-    protected static CompletableFuture<String> getHttpContentAsync(String url, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
-        return Utility.getHttpContentAsync(url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
+    protected static CompletableFuture<String> getHttpContentAsync(
+            String url, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
+        return Utility.getHttpContentAsync(
+                url, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
     }
 
-    protected static CompletableFuture<String> getHttpContentAsync(String url, int timeout, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
-        return Utility.getHttpContentAsync(url, timeout, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
+    protected static CompletableFuture<String> getHttpContentAsync(
+            String url, int timeout, RestHeaders headers, String body, Map<String, Serializable> respHeaders) {
+        return Utility.getHttpContentAsync(
+                url, timeout, StandardCharsets.UTF_8, headers == null ? null : headers.map(), body, respHeaders);
     }
 
     @Comment("map对象转换成 key1=value1&key2=value2&key3=value3")
@@ -213,9 +234,9 @@ public abstract class AbstractPayService implements Service {
     }
 
     @Comment("支付配置信息抽象类")
-    public static abstract class PayElement {
+    public abstract static class PayElement {
 
-        public String notifyurl = ""; //回调url
+        public String notifyurl = ""; // 回调url
 
         public abstract boolean initElement(Logger logger, File home);
 
@@ -224,5 +245,4 @@ public abstract class AbstractPayService implements Service {
             return JsonConvert.root().convertTo(this);
         }
     }
-
 }

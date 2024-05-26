@@ -4,10 +4,7 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 import org.redkale.util.Times;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Table(comment = "文章记录表")
 public class TestPost {
 

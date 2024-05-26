@@ -6,13 +6,12 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 import org.redkale.source.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Entity
-@LogExcludeLevel(levels = {"FINEST"}, keys = {"DELETE"})
-//@DistributeTable(strategy = SmsRecord.TableStrategy.class)
+@LogExcludeLevel(
+        levels = {"FINEST"},
+        keys = {"DELETE"})
+// @DistributeTable(strategy = SmsRecord.TableStrategy.class)
 public class SmsRecord {
 
     @Id
@@ -51,7 +50,7 @@ public class SmsRecord {
 
     @Transient
     @Column(comment = "用户ID")
-    private long userid;//用户ID
+    private long userid; // 用户ID
 
     @ConstructorParameters({"codeType", "mobile", "content"})
     public SmsRecord(short smstype, String mobile, String content) {
@@ -172,10 +171,10 @@ public class SmsRecord {
             Object time = node.findValue("createTime");
             if (time == null) time = node.findValue("#createTime");
             if (time instanceof Long) {
-                return new String[]{getSingleTable(table, (Long) time)};
+                return new String[] {getSingleTable(table, (Long) time)};
             }
             Range.LongRange createTime = (Range.LongRange) time;
-            return new String[]{getSingleTable(table, createTime.getMin())};
+            return new String[] {getSingleTable(table, createTime.getMin())};
         }
 
         @Override
@@ -185,7 +184,7 @@ public class SmsRecord {
 
         private String getSingleTable(String table, long createTime) {
             int pos = table.indexOf('.');
-            return "" + table.substring(pos + 1) + "_" + String.format(format, createTime); //"notice."
+            return "" + table.substring(pos + 1) + "_" + String.format(format, createTime); // "notice."
         }
 
         @Override

@@ -10,17 +10,14 @@ import org.redkale.source.*;
 import org.redkale.source.spi.CacheSourceProvider;
 import org.redkale.util.AnyValue;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-500)
 public class RedissonCacheSourceProvider implements CacheSourceProvider {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
         try {
-            Object.class.isAssignableFrom(org.redisson.config.Config.class); //试图加载Redisson相关类
+            Object.class.isAssignableFrom(org.redisson.config.Config.class); // 试图加载Redisson相关类
             return new RedissonCacheSource().acceptsConf(config);
         } catch (Throwable e) {
             return false;
@@ -31,5 +28,4 @@ public class RedissonCacheSourceProvider implements CacheSourceProvider {
     public CacheSource createInstance() {
         return new RedissonCacheSource();
     }
-
 }

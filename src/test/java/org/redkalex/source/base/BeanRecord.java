@@ -7,10 +7,7 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 import org.redkale.source.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Entity
 @DistributeTable(strategy = BeanRecord.TableStrategy.class)
 public class BeanRecord {
@@ -82,17 +79,17 @@ public class BeanRecord {
         @Override
         public String[] getTables(String table, FilterNode node) {
             if (node == null) {
-                return new String[]{table};
+                return new String[] {table};
             }
             Object time = node.findValue("createTime");
             if (time == null) {
                 time = node.findValue("#createTime");
             }
             if (time instanceof Long) {
-                return new String[]{getSingleTable(table, (Long) time)};
+                return new String[] {getSingleTable(table, (Long) time)};
             }
             Range.LongRange createTime = (Range.LongRange) time;
-            return new String[]{getSingleTable(table, createTime.getMin())};
+            return new String[] {getSingleTable(table, createTime.getMin())};
         }
 
         @Override
@@ -102,7 +99,7 @@ public class BeanRecord {
 
         private String getSingleTable(String table, long createTime) {
             int pos = table.indexOf('.');
-            return "" + table.substring(pos + 1) + "_" + String.format(format, createTime); //"notice."
+            return "" + table.substring(pos + 1) + "_" + String.format(format, createTime); // "notice."
         }
 
         @Override

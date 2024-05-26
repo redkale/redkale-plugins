@@ -3,18 +3,16 @@
  */
 package org.redkalex.cache.redis;
 
-import java.net.URI;
-import java.util.*;
-import org.redkale.convert.json.JsonConvert;
 import static org.redkale.source.AbstractCacheSource.*;
-import org.redkale.util.*;
 import static org.redkale.util.Utility.isEmpty;
 import static org.redkale.util.Utility.isNotEmpty;
 
-/**
- *
- * @author zhangjx
- */
+import java.net.URI;
+import java.util.*;
+import org.redkale.convert.json.JsonConvert;
+import org.redkale.util.*;
+
+/** @author zhangjx */
 public class RedisConfig {
 
     private boolean ssl;
@@ -50,7 +48,7 @@ public class RedisConfig {
             String urlmaxconns = null;
             String urlpipelines = null;
             addrs.add(url);
-            if (url.startsWith("redis://")) { //兼容 redis://:1234@127.0.0.1:6379?db=2
+            if (url.startsWith("redis://")) { // 兼容 redis://:1234@127.0.0.1:6379?db=2
                 URI uri = URI.create(url);
                 String userInfo = uri.getUserInfo();
                 if (isEmpty(userInfo)) {

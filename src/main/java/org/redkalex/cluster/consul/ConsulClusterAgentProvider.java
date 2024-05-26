@@ -9,10 +9,7 @@ import org.redkale.annotation.Priority;
 import org.redkale.cluster.spi.*;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-800)
 public class ConsulClusterAgentProvider implements ClusterAgentProvider {
 
@@ -25,5 +22,4 @@ public class ConsulClusterAgentProvider implements ClusterAgentProvider {
     public ClusterAgent createInstance() {
         return new ConsulClusterAgent();
     }
-
 }

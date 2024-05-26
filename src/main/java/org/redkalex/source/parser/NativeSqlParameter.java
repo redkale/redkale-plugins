@@ -9,25 +9,22 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.Attribute;
 import org.redkale.util.Utility;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @SuppressWarnings("unchecked")
 public class NativeSqlParameter {
 
     private static final ConcurrentHashMap<String, Attribute> attrCache = new ConcurrentHashMap<>();
 
-    //#{xx.xx}、##{xx.xx}参数名
+    // #{xx.xx}、##{xx.xx}参数名
     private final String numsignName;
 
-    //jdbc参数名 :xx_xx
+    // jdbc参数名 :xx_xx
     private final String jdbcName;
 
-    //#{xxx}参数名按.分隔
+    // #{xxx}参数名按.分隔
     private final String[] numsigns;
 
-    //是否必需 
+    // 是否必需
     boolean required;
 
     public NativeSqlParameter(String numsignName, String jdbcName, boolean required) {
@@ -49,7 +46,8 @@ public class NativeSqlParameter {
         for (int i = 1; i < subs.length; i++) {
             String fieldName = subs[i];
             Class clz = val.getClass();
-            Attribute attr = attrCache.computeIfAbsent(clz.getName() + ":" + fieldName, k -> Attribute.create(clz, fieldName));
+            Attribute attr =
+                    attrCache.computeIfAbsent(clz.getName() + ":" + fieldName, k -> Attribute.create(clz, fieldName));
             val = attr.get(val);
             if (val == null) {
                 return val;
@@ -83,5 +81,4 @@ public class NativeSqlParameter {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

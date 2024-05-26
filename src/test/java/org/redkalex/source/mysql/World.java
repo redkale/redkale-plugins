@@ -8,10 +8,7 @@ package org.redkalex.source.mysql;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Entity
 public class World implements Comparable<World> {
 
@@ -50,5 +47,4 @@ public class World implements Comparable<World> {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

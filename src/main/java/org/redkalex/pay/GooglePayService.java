@@ -5,6 +5,9 @@
  */
 package org.redkalex.pay;
 
+import static org.redkalex.pay.PayRetCodes.*;
+import static org.redkalex.pay.Pays.PAYTYPE_GOOGLE;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -15,16 +18,13 @@ import java.util.logging.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.util.*;
-import static org.redkalex.pay.PayRetCodes.*;
-import static org.redkalex.pay.Pays.PAYTYPE_GOOGLE;
-import org.redkale.annotation.ResourceChanged;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -33,19 +33,19 @@ import org.redkale.annotation.ResourceChanged;
 @AutoLoad(false)
 public final class GooglePayService extends AbstractPayService {
 
-    protected static final String format = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; //yyyy-MM-dd HH:mm:ss
+    protected static final String format = "%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS"; // yyyy-MM-dd HH:mm:ss
 
-    //原始的配置
+    // 原始的配置
     protected Properties elementProps = new Properties();
 
-    //配置对象集合
+    // 配置对象集合
     protected Map<String, GoogleElement> elements = new HashMap<>();
 
     @Resource
     @Comment("必须存在全局配置项，@ResourceListener才会起作用")
     protected Environment environment;
 
-    @Resource(name = "pay.google.conf", required = false) //支付配置文件路径
+    @Resource(name = "pay.google.conf", required = false) // 支付配置文件路径
     protected String conf = "config.properties";
 
     @Resource(name = "APP_HOME")
@@ -54,80 +54,83 @@ public final class GooglePayService extends AbstractPayService {
     @Resource
     protected JsonConvert convert;
 
-//    public static void main(String[] args) throws Throwable {
-//        String json = "{\n"
-//            + "  \"installed\": {\n"
-//            + "    \"client_id\": \"223352421296-8fta4mjf2c49mijhj3n7o3kjkplt7clq.apps.googleusercontent.com\",\n"
-//            + "    \"client_secret\": \"8E7zJlSDniucmceGhThKO0PS\",\n"
-//            + "    \"redirect_uris\": [],\n"
-//            + "    \"auth_uri\": \"https://accounts.google.com/o/oauth2/auth\",\n"
-//            + "    \"token_uri\": \"https://accounts.google.com/o/oauth2/token\"\n"
-//            + "  }\n"
-//            + "}";
-//
-//    }
-//    
-//    private static final String DATA_STORE_SYSTEM_PROPERTY = "user.home";
-//    private static final String DATA_STORE_FILE = ".store/android_publisher_api";
-//    private static final File DATA_STORE_DIR =
-//            new File(System.getProperty(DATA_STORE_SYSTEM_PROPERTY), DATA_STORE_FILE);
-//
-//    /** Global instance of the JSON factory. */
-//    private static final com.google.api.client.json.JsonFactory JSON_FACTORY =  com.google.api.client.json.jackson2.JacksonFactory.getDefaultInstance();
-//
-//    /** Global instance of the HTTP transport. */
-//    private static HttpTransport HTTP_TRANSPORT;
-//
-//    /** Installed application user ID. */
-//    private static final String INST_APP_USER_ID = "user";
-//
-//    /**
-//     * Global instance of the {@link DataStoreFactory}. The best practice is to
-//     * make it a single globally shared instance across your application.
-//     */
-//    private static FileDataStoreFactory dataStoreFactory;
-//    
-//    private Credential authorizeWithServiceAccount(String serviceAccountEmail) throws GeneralSecurityException, IOException {
-//        logger.info(String.format("Authorizing using Service Account: %s", serviceAccountEmail));
-//
-//        // Build service account credential.
-//        GoogleCredential credential = new GoogleCredential.Builder()
-//            .setTransport(HTTP_TRANSPORT)
-//            .setJsonFactory(JSON_FACTORY)
-//            .setServiceAccountId(serviceAccountEmail)
-//            .setServiceAccountScopes(
-//                Collections.singleton(AndroidPublisherScopes.ANDROIDPUBLISHER))
-//            .setServiceAccountPrivateKeyFromP12File(new File(SRC_RESOURCES_KEY_P12))
-//            .build();
-//        return credential;
-//    }
-//
-//    /**
-//     * Authorizes the installed application to access user's protected data.
-//     *
-//     * @throws IOException
-//     * @throws GeneralSecurityException
-//     */
-//    private Credential authorizeWithInstalledApplication() throws IOException {
-//        logger.info("Authorizing using installed application");
-//
-//        // load client secrets
-//        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY,
-//            new InputStreamReader(
-//                AndroidPublisherHelper.class
-//                    .getResourceAsStream(RESOURCES_CLIENT_SECRETS_JSON)));
-//        // Ensure file has been filled out.
-//        checkClientSecretsFile(clientSecrets);
-//
-//        dataStoreFactory = new FileDataStoreFactory(DATA_STORE_DIR);
-//
-//        // set up authorization code flow
-//        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(HTTP_TRANSPORT,
-//            JSON_FACTORY, clientSecrets,            Collections.singleton(AndroidPublisherScopes.ANDROIDPUBLISHER))
-//            .setDataStoreFactory(dataStoreFactory).build();
-//        // authorize
-//        return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize(INST_APP_USER_ID);
-//    }
+    //    public static void main(String[] args) throws Throwable {
+    //        String json = "{\n"
+    //            + "  \"installed\": {\n"
+    //            + "    \"client_id\": \"223352421296-8fta4mjf2c49mijhj3n7o3kjkplt7clq.apps.googleusercontent.com\",\n"
+    //            + "    \"client_secret\": \"8E7zJlSDniucmceGhThKO0PS\",\n"
+    //            + "    \"redirect_uris\": [],\n"
+    //            + "    \"auth_uri\": \"https://accounts.google.com/o/oauth2/auth\",\n"
+    //            + "    \"token_uri\": \"https://accounts.google.com/o/oauth2/token\"\n"
+    //            + "  }\n"
+    //            + "}";
+    //
+    //    }
+    //
+    //    private static final String DATA_STORE_SYSTEM_PROPERTY = "user.home";
+    //    private static final String DATA_STORE_FILE = ".store/android_publisher_api";
+    //    private static final File DATA_STORE_DIR =
+    //            new File(System.getProperty(DATA_STORE_SYSTEM_PROPERTY), DATA_STORE_FILE);
+    //
+    //    /** Global instance of the JSON factory. */
+    //    private static final com.google.api.client.json.JsonFactory JSON_FACTORY =
+    // com.google.api.client.json.jackson2.JacksonFactory.getDefaultInstance();
+    //
+    //    /** Global instance of the HTTP transport. */
+    //    private static HttpTransport HTTP_TRANSPORT;
+    //
+    //    /** Installed application user ID. */
+    //    private static final String INST_APP_USER_ID = "user";
+    //
+    //    /**
+    //     * Global instance of the {@link DataStoreFactory}. The best practice is to
+    //     * make it a single globally shared instance across your application.
+    //     */
+    //    private static FileDataStoreFactory dataStoreFactory;
+    //
+    //    private Credential authorizeWithServiceAccount(String serviceAccountEmail) throws GeneralSecurityException,
+    // IOException {
+    //        logger.info(String.format("Authorizing using Service Account: %s", serviceAccountEmail));
+    //
+    //        // Build service account credential.
+    //        GoogleCredential credential = new GoogleCredential.Builder()
+    //            .setTransport(HTTP_TRANSPORT)
+    //            .setJsonFactory(JSON_FACTORY)
+    //            .setServiceAccountId(serviceAccountEmail)
+    //            .setServiceAccountScopes(
+    //                Collections.singleton(AndroidPublisherScopes.ANDROIDPUBLISHER))
+    //            .setServiceAccountPrivateKeyFromP12File(new File(SRC_RESOURCES_KEY_P12))
+    //            .build();
+    //        return credential;
+    //    }
+    //
+    //    /**
+    //     * Authorizes the installed application to access user's protected data.
+    //     *
+    //     * @throws IOException
+    //     * @throws GeneralSecurityException
+    //     */
+    //    private Credential authorizeWithInstalledApplication() throws IOException {
+    //        logger.info("Authorizing using installed application");
+    //
+    //        // load client secrets
+    //        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY,
+    //            new InputStreamReader(
+    //                AndroidPublisherHelper.class
+    //                    .getResourceAsStream(RESOURCES_CLIENT_SECRETS_JSON)));
+    //        // Ensure file has been filled out.
+    //        checkClientSecretsFile(clientSecrets);
+    //
+    //        dataStoreFactory = new FileDataStoreFactory(DATA_STORE_DIR);
+    //
+    //        // set up authorization code flow
+    //        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(HTTP_TRANSPORT,
+    //            JSON_FACTORY, clientSecrets,
+    // Collections.singleton(AndroidPublisherScopes.ANDROIDPUBLISHER))
+    //            .setDataStoreFactory(dataStoreFactory).build();
+    //        // authorize
+    //        return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize(INST_APP_USER_ID);
+    //    }
     @Override
     public void init(AnyValue conf) {
         if (this.convert == null) {
@@ -146,10 +149,14 @@ public final class GooglePayService extends AbstractPayService {
     @Comment("重新加载本地文件配置")
     public void reloadConfig(short payType) {
         Properties properties = new Properties();
-        if (this.conf != null && !this.conf.isEmpty()) { //存在Google支付配置
+        if (this.conf != null && !this.conf.isEmpty()) { // 存在Google支付配置
             try {
-                File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
-                InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
+                File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0)
+                        ? new File(this.conf)
+                        : new File(home, "conf/" + this.conf);
+                InputStream in = (file.isFile() && file.canRead())
+                        ? new FileInputStream(file)
+                        : getClass().getResourceAsStream("/META-INF/" + this.conf);
                 if (in != null) {
                     properties.load(in);
                     in.close();
@@ -163,7 +170,7 @@ public final class GooglePayService extends AbstractPayService {
         this.elementProps = properties;
     }
 
-    @ResourceChanged //     //    
+    @ResourceChanged //     //
     @Comment("通过配置中心更改配置后的回调")
     void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();
@@ -172,11 +179,15 @@ public final class GooglePayService extends AbstractPayService {
         for (ResourceEvent event : events) {
             if (event.name().startsWith("pay.google.")) {
                 changeProps.put(event.name(), event.newValue().toString());
-                sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                sb.append("@Resource change '")
+                        .append(event.name())
+                        .append("' to '")
+                        .append(event.coverNewValue())
+                        .append("'\r\n");
             }
         }
         if (sb.length() < 1) {
-            return; //无相关配置变化
+            return; // 无相关配置变化
         }
         logger.log(Level.INFO, sb.toString());
         this.elements = GoogleElement.create(logger, changeProps);
@@ -213,9 +224,9 @@ public final class GooglePayService extends AbstractPayService {
             return result.retcode(RETPAY_CONF_ERROR).toFuture();
         }
         result.setAppid(element.appid);
-//        final Map<String, String> rmap = new TreeMap<>();
-//        rmap.put("content", request.getPayno());
-//        result.setResult(rmap);
+        //        final Map<String, String> rmap = new TreeMap<>();
+        //        rmap.put("content", request.getPayno());
+        //        result.setResult(rmap);
         return result.toFuture();
     }
 
@@ -308,7 +319,11 @@ public final class GooglePayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(AbstractPayService.PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) {
+    protected boolean checkSign(
+            AbstractPayService.PayElement element,
+            Map<String, ?> map,
+            String text,
+            Map<String, Serializable> respHeaders) {
         return checkSign((GoogleElement) element, (String) map.get("purchaseData"), (String) map.get("signature"));
     }
 
@@ -327,7 +342,7 @@ public final class GooglePayService extends AbstractPayService {
 
     public static class GoogleNotifyBean implements Serializable {
 
-        public String payno;//payno
+        public String payno; // payno
 
         public String purchaseData;
 
@@ -350,45 +365,61 @@ public final class GooglePayService extends AbstractPayService {
     public static class GoogleElement extends AbstractPayService.PayElement {
 
         // pay.google.[x].appid
-        public String appid = "";  //APP应用ID
+        public String appid = ""; // APP应用ID
         // pay.google.[x].publickey
 
-        public byte[] pubkey;  //publicKey
+        public byte[] pubkey; // publicKey
 
         // pay.google.[x].certpath
-        public String certpath = ""; //签名算法需要用到的密钥
+        public String certpath = ""; // 签名算法需要用到的密钥
 
         public static Map<String, GoogleElement> create(Logger logger, Properties properties) {
             String def_appid = properties.getProperty("pay.google.appid", "").trim();
-            String def_publickey = properties.getProperty("pay.google.publickey", "").trim();
-            String def_certpath = properties.getProperty("pay.google.certpath", "").trim();
-            String def_notifyurl = properties.getProperty("pay.google.notifyurl", "").trim();
+            String def_publickey =
+                    properties.getProperty("pay.google.publickey", "").trim();
+            String def_certpath =
+                    properties.getProperty("pay.google.certpath", "").trim();
+            String def_notifyurl =
+                    properties.getProperty("pay.google.notifyurl", "").trim();
 
             final Map<String, GoogleElement> map = new HashMap<>();
-            properties.keySet().stream().filter(x -> x.toString().startsWith("pay.google.") && x.toString().endsWith(".appid")).forEach(appid_key -> {
-                final String prefix = appid_key.toString().substring(0, appid_key.toString().length() - ".appid".length());
+            properties.keySet().stream()
+                    .filter(x -> x.toString().startsWith("pay.google.")
+                            && x.toString().endsWith(".appid"))
+                    .forEach(appid_key -> {
+                        final String prefix = appid_key
+                                .toString()
+                                .substring(0, appid_key.toString().length() - ".appid".length());
 
-                String appid = properties.getProperty(prefix + ".appid", def_appid).trim();
-                String publickey = properties.getProperty(prefix + ".publickey", def_publickey).trim();
-                String certpath = properties.getProperty(prefix + ".certpath", def_certpath).trim();
-                String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl).trim();
+                        String appid = properties
+                                .getProperty(prefix + ".appid", def_appid)
+                                .trim();
+                        String publickey = properties
+                                .getProperty(prefix + ".publickey", def_publickey)
+                                .trim();
+                        String certpath = properties
+                                .getProperty(prefix + ".certpath", def_certpath)
+                                .trim();
+                        String notifyurl = properties
+                                .getProperty(prefix + ".notifyurl", def_notifyurl)
+                                .trim();
 
-                if (appid.isEmpty() || certpath.isEmpty()) {
-                    logger.log(Level.WARNING, properties + "; has illegal google conf by prefix" + prefix);
-                    return;
-                }
-                GoogleElement element = new GoogleElement();
-                element.appid = appid;
-                element.pubkey = Base64.getDecoder().decode(publickey);
-                element.certpath = certpath;
-                element.notifyurl = notifyurl;
-                if (element.initElement(logger, null)) {
-                    map.put(appid, element);
-                    if (def_appid.equals(appid)) {
-                        map.put("", element);
-                    }
-                }
-            });
+                        if (appid.isEmpty() || certpath.isEmpty()) {
+                            logger.log(Level.WARNING, properties + "; has illegal google conf by prefix" + prefix);
+                            return;
+                        }
+                        GoogleElement element = new GoogleElement();
+                        element.appid = appid;
+                        element.pubkey = Base64.getDecoder().decode(publickey);
+                        element.certpath = certpath;
+                        element.notifyurl = notifyurl;
+                        if (element.initElement(logger, null)) {
+                            map.put(appid, element);
+                            if (def_appid.equals(appid)) {
+                                map.put("", element);
+                            }
+                        }
+                    });
             return map;
         }
 

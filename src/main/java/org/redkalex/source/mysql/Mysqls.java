@@ -12,10 +12,7 @@ import java.util.Arrays;
 import org.redkale.source.SourceException;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 class Mysqls {
 
     public static final int MAX_PACKET_SIZE = 256 * 256 * 256 - 1;
@@ -36,7 +33,7 @@ class Mysqls {
 
     static int maxBufferSize = 65535;
 
-    //----------------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------------------
     public static final byte NULL_MARK = (byte) 251;
 
     public static final byte COM_SLEEP = 0;
@@ -97,7 +94,7 @@ class Mysqls {
 
     public static final byte COM_STMT_FETCH = 28;
 
-    //------------------------------- SERVER -------------------------------------------------
+    // ------------------------------- SERVER -------------------------------------------------
     static final int SERVER_STATUS_IN_TRANS = 1;
 
     static final int SERVER_STATUS_AUTOCOMMIT = 2; // Server in auto_commit mode
@@ -116,7 +113,7 @@ class Mysqls {
 
     static final int SERVER_SESSION_STATE_CHANGED = 1 << 14; // 16384
 
-    //------------------------------- CLIENT -------------------------------------------------
+    // ------------------------------- CLIENT -------------------------------------------------
     static final int CLIENT_LONG_PASSWORD = 0x00000001;
 
     /* new more secure passwords */
@@ -171,7 +168,7 @@ class Mysqls {
 
     static final int CLIENT_DEPRECATE_EOF = 0x01000000;
 
-    //---------------------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------------
     static final String FALSE_SCRAMBLE = "xxxxxxxx";
 
     static final int MAX_QUERY_SIZE_TO_LOG = 1024; // truncate logging of queries at 1K
@@ -186,9 +183,9 @@ class Mysqls {
 
     static final String EXPLAINABLE_STATEMENT = "SELECT";
 
-    static final String[] EXPLAINABLE_STATEMENT_EXTENSION = new String[]{"INSERT", "UPDATE", "REPLACE", "DELETE"};
+    static final String[] EXPLAINABLE_STATEMENT_EXTENSION = new String[] {"INSERT", "UPDATE", "REPLACE", "DELETE"};
 
-    //----------------- Buffer ------------------------
+    // ----------------- Buffer ------------------------
     static final short TYPE_ID_ERROR = 0xFF;
 
     static final short TYPE_ID_EOF = 0xFE;
@@ -213,7 +210,7 @@ class Mysqls {
         }
     }
 
-    //--------------------------- put ------------------------------
+    // --------------------------- put ------------------------------
     protected static void writeUB2(ByteArray buffer, int i) {
         buffer.put((byte) (i & 0xff), (byte) (i >>> 8));
     }
@@ -226,7 +223,7 @@ class Mysqls {
         buffer.put((byte) (i & 0xff), (byte) (i >>> 8), (byte) (i >>> 16));
     }
 
-    //可以存入一个int类型，表示已经考虑到24-32的含有符号位的8位了。
+    // 可以存入一个int类型，表示已经考虑到24-32的含有符号位的8位了。
     protected static void writeInt(ByteArray buffer, int i) {
         buffer.put((byte) (i & 0xff), (byte) (i >>> 8), (byte) (i >>> 16), (byte) (i >>> 24));
     }
@@ -235,16 +232,21 @@ class Mysqls {
         writeInt(buffer, Float.floatToIntBits(f));
     }
 
-    //如果是存入四个字节，其实是不能使用int的，因为24-32位是有符号位的，所以这里需要使用Long，这样可以保证前32表示的都是值
+    // 如果是存入四个字节，其实是不能使用int的，因为24-32位是有符号位的，所以这里需要使用Long，这样可以保证前32表示的都是值
     protected static void writeUB4(ByteArray buffer, long l) {
         buffer.put((byte) (l & 0xff), (byte) (l >>> 8), (byte) (l >>> 16), (byte) (l >>> 24));
     }
 
     protected static void writeLong(ByteArray buffer, long l) {
-        buffer.put((byte) (l & 0xff), (byte) (l >>> 8),
-            (byte) (l >>> 16), (byte) (l >>> 24),
-            (byte) (l >>> 32), (byte) (l >>> 40),
-            (byte) (l >>> 48), (byte) (l >>> 56));
+        buffer.put(
+                (byte) (l & 0xff),
+                (byte) (l >>> 8),
+                (byte) (l >>> 16),
+                (byte) (l >>> 24),
+                (byte) (l >>> 32),
+                (byte) (l >>> 40),
+                (byte) (l >>> 48),
+                (byte) (l >>> 56));
     }
 
     protected static void writeDouble(ByteArray buffer, double d) {
@@ -298,7 +300,7 @@ class Mysqls {
         }
     }
 
-    //--------------------------- read ------------------------------
+    // --------------------------- read ------------------------------
     protected static int readUB2(ByteBuffer buffer) {
         return (buffer.get() & 0xff) | ((buffer.get() & 0xff) << 8);
     }
@@ -308,12 +310,16 @@ class Mysqls {
     }
 
     protected static int readUB3(ByteArray array, int offset) {
-        return (array.get(offset) & 0xff) | ((array.get(offset + 1) & 0xff) << 8) | ((array.get(offset + 2) & 0xff) << 16);
+        return (array.get(offset) & 0xff)
+                | ((array.get(offset + 1) & 0xff) << 8)
+                | ((array.get(offset + 2) & 0xff) << 16);
     }
 
     protected static long readUB4(ByteBuffer buffer) {
-        return ((long) buffer.get() & 0xff) | (((long) buffer.get() & 0xff) << 8)
-            | ((long) (buffer.get() & 0xff) << 16) | ((long) (buffer.get() & 0xff) << 24);
+        return ((long) buffer.get() & 0xff)
+                | (((long) buffer.get() & 0xff) << 8)
+                | ((long) (buffer.get() & 0xff) << 16)
+                | ((long) (buffer.get() & 0xff) << 24);
     }
 
     protected static short readShort(ByteBuffer buffer) {
@@ -321,15 +327,21 @@ class Mysqls {
     }
 
     protected static int readInt(ByteBuffer buffer) {
-        return ((int) buffer.get() & 0xff) | (((int) buffer.get() & 0xff) << 8)
-            | ((int) (buffer.get() & 0xff) << 16) | ((int) (buffer.get() & 0xff) << 24);
+        return ((int) buffer.get() & 0xff)
+                | (((int) buffer.get() & 0xff) << 8)
+                | ((int) (buffer.get() & 0xff) << 16)
+                | ((int) (buffer.get() & 0xff) << 24);
     }
 
     protected static long readLong(ByteBuffer buffer) {
-        return ((long) buffer.get() & 0xff) | (((long) buffer.get() & 0xff) << 8)
-            | ((long) (buffer.get() & 0xff) << 16) | ((long) (buffer.get() & 0xff) << 24)
-            | ((long) (buffer.get() & 0xff) << 32) | ((long) (buffer.get() & 0xff) << 40)
-            | ((long) (buffer.get() & 0xff) << 48) | ((long) (buffer.get() & 0xff) << 56);
+        return ((long) buffer.get() & 0xff)
+                | (((long) buffer.get() & 0xff) << 8)
+                | ((long) (buffer.get() & 0xff) << 16)
+                | ((long) (buffer.get() & 0xff) << 24)
+                | ((long) (buffer.get() & 0xff) << 32)
+                | ((long) (buffer.get() & 0xff) << 40)
+                | ((long) (buffer.get() & 0xff) << 48)
+                | ((long) (buffer.get() & 0xff) << 56);
     }
 
     protected static long readLength(ByteBuffer buffer) {

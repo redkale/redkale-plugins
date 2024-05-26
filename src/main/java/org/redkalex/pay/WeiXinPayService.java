@@ -5,6 +5,9 @@
  */
 package org.redkalex.pay;
 
+import static org.redkalex.pay.PayRetCodes.*;
+import static org.redkalex.pay.Pays.*;
+
 import java.io.*;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
@@ -20,17 +23,14 @@ import javax.crypto.spec.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.net.http.HttpHeaders;
 import org.redkale.service.Local;
 import org.redkale.util.*;
-import static org.redkalex.pay.PayRetCodes.*;
-import static org.redkalex.pay.Pays.*;
-import org.redkale.annotation.ResourceChanged;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -39,16 +39,18 @@ import org.redkale.annotation.ResourceChanged;
 @AutoLoad(false)
 public class WeiXinPayService extends AbstractPayService {
 
-    protected static final String format = "%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS%1$tz"; //yyyy-MM-dd HH:mm:ss
+    protected static final String format = "%1$tY-%1$tm-%1$tdT%1$tH:%1$tM:%1$tS%1$tz"; // yyyy-MM-dd HH:mm:ss
 
-    protected static final Map<String, String> headers = Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
+    protected static final Map<String, String> headers =
+            Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
 
-    protected static final Pattern PAYXML = Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
-    
-    //原始的配置
+    protected static final Pattern PAYXML =
+            Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
+
+    // 原始的配置
     protected Properties elementProps = new Properties();
 
-    //配置对象集合
+    // 配置对象集合
     protected Map<String, WeixinPayElement> elements = new HashMap<>();
 
     @Resource
@@ -58,7 +60,7 @@ public class WeiXinPayService extends AbstractPayService {
     @Comment("定时任务")
     protected ScheduledThreadPoolExecutor scheduler;
 
-    @Resource(name = "pay.weixin.conf", required = false) //支付配置文件路径
+    @Resource(name = "pay.weixin.conf", required = false) // 支付配置文件路径
     protected String conf = "config.properties";
 
     @Resource(name = "APP_HOME")
@@ -78,18 +80,23 @@ public class WeiXinPayService extends AbstractPayService {
             t.setDaemon(true);
             return t;
         });
-        this.scheduler.scheduleAtFixedRate(() -> {
-            try {
-                for (WeixinPayElement element : elements.values()) {
-                    element.updateCertificate(logger);
-                }
-            } catch (Throwable e) {
-                logger.log(Level.SEVERE, WeiXinPayService.class.getSimpleName() + " scheduleAtFixedRate error", e);
-            }
-        }, 60, 60 * 60, TimeUnit.SECONDS);
+        this.scheduler.scheduleAtFixedRate(
+                () -> {
+                    try {
+                        for (WeixinPayElement element : elements.values()) {
+                            element.updateCertificate(logger);
+                        }
+                    } catch (Throwable e) {
+                        logger.log(
+                                Level.SEVERE, WeiXinPayService.class.getSimpleName() + " scheduleAtFixedRate error", e);
+                    }
+                },
+                60,
+                60 * 60,
+                TimeUnit.SECONDS);
     }
 
-    @ResourceChanged //     //    
+    @ResourceChanged //     //
     @Comment("通过配置中心更改配置后的回调")
     void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();
@@ -98,11 +105,15 @@ public class WeiXinPayService extends AbstractPayService {
         for (ResourceEvent event : events) {
             if (event.name().startsWith("pay.weixin.")) {
                 changeProps.put(event.name(), event.newValue().toString());
-                sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                sb.append("@Resource change '")
+                        .append(event.name())
+                        .append("' to '")
+                        .append(event.coverNewValue())
+                        .append("'\r\n");
             }
         }
         if (sb.length() < 1) {
-            return; //无相关配置变化
+            return; // 无相关配置变化
         }
         logger.log(Level.INFO, sb.toString());
         this.elements = WeixinPayElement.create(logger, changeProps, home);
@@ -127,10 +138,14 @@ public class WeiXinPayService extends AbstractPayService {
     @Comment("重新加载本地文件配置")
     public void reloadConfig(short payType) {
         Properties properties = new Properties();
-        if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置
+        if (this.conf != null && !this.conf.isEmpty()) { // 存在微信支付配置
             try {
-                File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
-                InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
+                File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0)
+                        ? new File(this.conf)
+                        : new File(home, "conf/" + this.conf);
+                InputStream in = (file.isFile() && file.canRead())
+                        ? new FileInputStream(file)
+                        : getClass().getResourceAsStream("/META-INF/" + this.conf);
                 if (in != null) {
                     properties.load(in);
                     in.close();
@@ -165,7 +180,9 @@ public class WeiXinPayService extends AbstractPayService {
         return this.elements != null && this.elements.containsKey(appid);
     }
 
-    protected static HttpHeaders createHttpHeaders(final WeixinPayElement element, PayRequest request, String url, String method, String body) throws Exception {
+    protected static HttpHeaders createHttpHeaders(
+            final WeixinPayElement element, PayRequest request, String url, String method, String body)
+            throws Exception {
         String path = url.substring(url.indexOf(".com") + ".com".length());
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
         String nonce = Long.toHexString(System.currentTimeMillis()) + Long.toHexString(System.nanoTime());
@@ -175,18 +192,23 @@ public class WeiXinPayService extends AbstractPayService {
         signature.update(message.getBytes(StandardCharsets.UTF_8));
         String signstr = Base64.getEncoder().encodeToString(signature.sign());
         String token = "mchid=\"" + element.merchno + "\","
-            + "nonce_str=\"" + nonce + "\","
-            + "timestamp=\"" + timestamp + "\","
-            + "serial_no=\"" + element.certserialno + "\","
-            + "signature=\"" + signstr + "\"";
-        return HttpHeaders.of("Content-Type", "application/json", "Accept", "application/json", "Authorization", "WECHATPAY2-SHA256-RSA2048 " + token);
+                + "nonce_str=\"" + nonce + "\","
+                + "timestamp=\"" + timestamp + "\","
+                + "serial_no=\"" + element.certserialno + "\","
+                + "signature=\"" + signstr + "\"";
+        return HttpHeaders.of(
+                "Content-Type",
+                "application/json",
+                "Accept",
+                "application/json",
+                "Authorization",
+                "WECHATPAY2-SHA256-RSA2048 " + token);
     }
 
     /**
      * 手机支付或者微信公众号支付时调用
      *
      * @param request PayPreRequest
-     *
      * @return PayPreResponse
      */
     @Override
@@ -194,9 +216,7 @@ public class WeiXinPayService extends AbstractPayService {
         return prepayAsync(request).join();
     }
 
-    public static void main(String[] args) throws Throwable {
-
-    }
+    public static void main(String[] args) throws Throwable {}
 
     @Override
     public CompletableFuture<PayPreResponse> prepayAsync(PayPreRequest request) {
@@ -218,12 +238,19 @@ public class WeiXinPayService extends AbstractPayService {
             map.put("out_trade_no", request.getPayno());
             map.put("amount", Utility.ofMap("total", request.getPayMoney(), "currency", "CNY"));
             if (request.getTimeoutSeconds() > 0) {
-                map.put("time_expire", String.format(format, System.currentTimeMillis() + request.getTimeoutSeconds() * 1000).replaceFirst("(.*)(\\d\\d)", "$1:$2"));
+                map.put(
+                        "time_expire",
+                        String.format(format, System.currentTimeMillis() + request.getTimeoutSeconds() * 1000)
+                                .replaceFirst("(.*)(\\d\\d)", "$1:$2"));
             }
-            map.put("notify_url", ((request.notifyUrl != null && !request.notifyUrl.isEmpty()) ? request.notifyUrl : element.notifyurl));
+            map.put(
+                    "notify_url",
+                    ((request.notifyUrl != null && !request.notifyUrl.isEmpty())
+                            ? request.notifyUrl
+                            : element.notifyurl));
 
             String url;
-            if (request.getPayWay() == PAYWAY_WEB) { //JSAPI下单
+            if (request.getPayWay() == PAYWAY_WEB) { // JSAPI下单
                 url = "https://api.mch.weixin.qq.com/v3/pay/transactions/jsapi";
                 if (!map.containsKey("openid")) {
                     return result.retcode(RETPAY_PARAM_ERROR).toFuture();
@@ -233,7 +260,10 @@ public class WeiXinPayService extends AbstractPayService {
                 url = "https://api.mch.weixin.qq.com/v3/pay/transactions/app";
             } else if (request.getPayWay() == PAYWAY_H5) {
                 url = "https://api.mch.weixin.qq.com/v3/pay/transactions/h5";
-                map.put("scene_info", Utility.ofMap("payer_client_ip", request.getClientAddr(), "h5_info", Utility.ofMap("type", "wap")));
+                map.put(
+                        "scene_info",
+                        Utility.ofMap(
+                                "payer_client_ip", request.getClientAddr(), "h5_info", Utility.ofMap("type", "wap")));
             } else if (request.getPayWay() == PAYWAY_NATIVE) {
                 url = "https://api.mch.weixin.qq.com/v3/pay/transactions/native";
             } else {
@@ -241,36 +271,48 @@ public class WeiXinPayService extends AbstractPayService {
             }
             String body = convert.convertTo(map);
             Map<String, Serializable> respHeaders = new LinkedHashMap<>();
-            return postHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "POST", body), body, respHeaders).thenApply(responseText -> {
-                result.setResponseText(responseText);
-                if (logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, "Weixin.prepay." + request.getPayWay() + ": " + body + " --> " + responseText);
-                }
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
-                    return result.retcode(RETPAY_FALSIFY_ERROR);
-                }
-                //PAYWAY_WEB: {"prepay_id": "wx261153585405162d4d02642eabe7000000"}
-                //PAYWAY_APP: {"prepay_id": "wx261153585405162d4d02642eabe7000000"}
-                //PAYWAY_NATIVE: {"code_url": "weixin://wxpay/bizpayurl?pr=p4lpSuKzz"}
-                //PAYWAY_H5: {"h5_url": "https://wx.tenpay.com/cgi-bin/mmpayweb-bin/checkmweb?prepay_id=wx2916263004719461949c8&package=2150917749"}
-                //ERROR: {"code":"NO_AUTH","message":"商户号该产品权限已被关闭，请前往商户平台>产品中心检查后重试"}
-                Map<String, String> resultmap = convert.convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, responseText);
-                if (resultmap.get("message") != null) {
-                    return result.retcode(RETPAY_PARAM_ERROR);
-                }
-                Map<String, String> rsmap = new LinkedHashMap<>();
-                if (request.getPayWay() == PAYWAY_WEB) {
-                    rsmap.put(PayPreResponse.PREPAY_PREPAYID, resultmap.get("prepay_id"));
-                } else if (request.getPayWay() == PAYWAY_APP) {
-                    rsmap.put(PayPreResponse.PREPAY_PREPAYID, resultmap.get("prepay_id"));
-                } else if (request.getPayWay() == PAYWAY_H5) {
-                    rsmap.put(PayPreResponse.PREPAY_PAYURL, resultmap.get("h5_url"));
-                } else if (request.getPayWay() == PAYWAY_NATIVE) {
-                    rsmap.put(PayPreResponse.PREPAY_PAYURL, resultmap.get("code_url"));
-                }
-                result.setResult(rsmap);
-                return result;
-            });
+            return postHttpContentAsync(
+                            element.client,
+                            url,
+                            createHttpHeaders(element, request, url, "POST", body),
+                            body,
+                            respHeaders)
+                    .thenApply(responseText -> {
+                        result.setResponseText(responseText);
+                        if (logger.isLoggable(Level.FINER)) {
+                            logger.log(
+                                    Level.FINER,
+                                    "Weixin.prepay." + request.getPayWay() + ": " + body + " --> " + responseText);
+                        }
+                        if (responseText == null
+                                || responseText.isEmpty()
+                                || !checkSign(element, null, responseText, respHeaders)) {
+                            return result.retcode(RETPAY_FALSIFY_ERROR);
+                        }
+                        // PAYWAY_WEB: {"prepay_id": "wx261153585405162d4d02642eabe7000000"}
+                        // PAYWAY_APP: {"prepay_id": "wx261153585405162d4d02642eabe7000000"}
+                        // PAYWAY_NATIVE: {"code_url": "weixin://wxpay/bizpayurl?pr=p4lpSuKzz"}
+                        // PAYWAY_H5: {"h5_url":
+                        // "https://wx.tenpay.com/cgi-bin/mmpayweb-bin/checkmweb?prepay_id=wx2916263004719461949c8&package=2150917749"}
+                        // ERROR: {"code":"NO_AUTH","message":"商户号该产品权限已被关闭，请前往商户平台>产品中心检查后重试"}
+                        Map<String, String> resultmap =
+                                convert.convertFrom(JsonConvert.TYPE_MAP_STRING_STRING, responseText);
+                        if (resultmap.get("message") != null) {
+                            return result.retcode(RETPAY_PARAM_ERROR);
+                        }
+                        Map<String, String> rsmap = new LinkedHashMap<>();
+                        if (request.getPayWay() == PAYWAY_WEB) {
+                            rsmap.put(PayPreResponse.PREPAY_PREPAYID, resultmap.get("prepay_id"));
+                        } else if (request.getPayWay() == PAYWAY_APP) {
+                            rsmap.put(PayPreResponse.PREPAY_PREPAYID, resultmap.get("prepay_id"));
+                        } else if (request.getPayWay() == PAYWAY_H5) {
+                            rsmap.put(PayPreResponse.PREPAY_PAYURL, resultmap.get("h5_url"));
+                        } else if (request.getPayWay() == PAYWAY_NATIVE) {
+                            rsmap.put(PayPreResponse.PREPAY_PAYURL, resultmap.get("code_url"));
+                        }
+                        result.setResult(rsmap);
+                        return result;
+                    });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responseText, e);
@@ -294,12 +336,21 @@ public class WeiXinPayService extends AbstractPayService {
             result.setPayType(request.getPayType());
             NotifyData notifyData = convert.convertFrom(NotifyData.class, request.getBody());
             if (notifyData == null || !notifyData.event_type.endsWith(".SUCCESS")) {
-                return result.retcode(notifyData != null && notifyData.event_type.startsWith("REFUND.") ? RETPAY_REFUND_FAILED : RETPAY_PAY_FAILED).notifytext(rstxt).toFuture();
+                return result.retcode(
+                                notifyData != null && notifyData.event_type.startsWith("REFUND.")
+                                        ? RETPAY_REFUND_FAILED
+                                        : RETPAY_PAY_FAILED)
+                        .notifytext(rstxt)
+                        .toFuture();
             }
 
             final boolean refund = notifyData.event_type.startsWith("REFUND.");
             final WeixinPayElement element = elements.get(request.getAppid());
-            String json = decryptToString(element, notifyData.resource.associated_data, notifyData.resource.nonce, notifyData.resource.ciphertext);
+            String json = decryptToString(
+                    element,
+                    notifyData.resource.associated_data,
+                    notifyData.resource.nonce,
+                    notifyData.resource.ciphertext);
             result.setResponseText(json);
             NotifyPayResult payResult = convert.convertFrom(NotifyPayResult.class, json);
             if ("NOTPAY".equals(payResult.trade_state)) {
@@ -319,7 +370,8 @@ public class WeiXinPayService extends AbstractPayService {
             } else {
                 result.setPayedMoney(payResult.amount.total);
             }
-            return result.notifytext("{\"code\": \"SUCCESS\",\"message\": \"成功\"}").toFuture();
+            return result.notifytext("{\"code\": \"SUCCESS\",\"message\": \"成功\"}")
+                    .toFuture();
         } catch (Exception e) {
             logger.log(Level.WARNING, "notifyAsync error req=" + request + ", resp=" + request.getBody(), e);
             return result.retcode(RETPAY_PAY_FAILED).notifytext(rstxt).toFuture();
@@ -352,40 +404,56 @@ public class WeiXinPayService extends AbstractPayService {
                 return result.retcode(RETPAY_CONF_ERROR).toFuture();
             }
 
-            String url = "https://api.mch.weixin.qq.com/v3/pay/transactions/out-trade-no/" + request.getPayno() + "?mchid=" + element.merchno;
+            String url = "https://api.mch.weixin.qq.com/v3/pay/transactions/out-trade-no/" + request.getPayno()
+                    + "?mchid=" + element.merchno;
             String body = "";
             Map<String, Serializable> respHeaders = new LinkedHashMap<>();
-            return getHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "GET", body), body, respHeaders).thenApply(responseText -> {
-                result.setResponseText(responseText);
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
-                    return result.retcode(RETPAY_FALSIFY_ERROR);
-                }
+            return getHttpContentAsync(
+                            element.client,
+                            url,
+                            createHttpHeaders(element, request, url, "GET", body),
+                            body,
+                            respHeaders)
+                    .thenApply(responseText -> {
+                        result.setResponseText(responseText);
+                        if (responseText == null
+                                || responseText.isEmpty()
+                                || !checkSign(element, null, responseText, respHeaders)) {
+                            return result.retcode(RETPAY_FALSIFY_ERROR);
+                        }
 
-                final NotifyPayResult payResult = convert.convertFrom(NotifyPayResult.class, responseText);
-                String state = payResult.trade_state;
-                //trade_state 支付状态: SUCCESS—支付成功 REFUND—转入退款 NOTPAY—未支付 CLOSED—已关闭 REVOKED—已撤销（刷卡支付） USERPAYING--用户支付中 PAYERROR--支付失败(其他原因，如银行返回失败)
-                short paystatus = PAYSTATUS_PAYNO;
-                if (state != null) {
-                    switch (state) {
-                        case "SUCCESS": paystatus = PAYSTATUS_PAYOK;
-                            break;
-                        case "NOTPAY": paystatus = PAYSTATUS_UNPAY;
-                            break;
-                        case "CLOSED": paystatus = PAYSTATUS_CLOSED;
-                            break;
-                        case "REVOKED": paystatus = PAYSTATUS_CANCELED;
-                            break;
-                        case "USERPAYING": paystatus = PAYSTATUS_PAYING;
-                            break;
-                        case "PAYERROR": paystatus = PAYSTATUS_PAYNO;
-                            break;
-                    }
-                }
-                result.setPayStatus(paystatus);
-                result.setThirdPayno(payResult.transaction_id == null ? "" : payResult.transaction_id);
-                result.setPayedMoney(payResult.amount == null ? 0 : payResult.amount.total);
-                return result;
-            });
+                        final NotifyPayResult payResult = convert.convertFrom(NotifyPayResult.class, responseText);
+                        String state = payResult.trade_state;
+                        // trade_state 支付状态: SUCCESS—支付成功 REFUND—转入退款 NOTPAY—未支付 CLOSED—已关闭 REVOKED—已撤销（刷卡支付）
+                        // USERPAYING--用户支付中 PAYERROR--支付失败(其他原因，如银行返回失败)
+                        short paystatus = PAYSTATUS_PAYNO;
+                        if (state != null) {
+                            switch (state) {
+                                case "SUCCESS":
+                                    paystatus = PAYSTATUS_PAYOK;
+                                    break;
+                                case "NOTPAY":
+                                    paystatus = PAYSTATUS_UNPAY;
+                                    break;
+                                case "CLOSED":
+                                    paystatus = PAYSTATUS_CLOSED;
+                                    break;
+                                case "REVOKED":
+                                    paystatus = PAYSTATUS_CANCELED;
+                                    break;
+                                case "USERPAYING":
+                                    paystatus = PAYSTATUS_PAYING;
+                                    break;
+                                case "PAYERROR":
+                                    paystatus = PAYSTATUS_PAYNO;
+                                    break;
+                            }
+                        }
+                        result.setPayStatus(paystatus);
+                        result.setThirdPayno(payResult.transaction_id == null ? "" : payResult.transaction_id);
+                        result.setPayedMoney(payResult.amount == null ? 0 : payResult.amount.total);
+                        return result;
+                    });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responseText, e);
@@ -410,23 +478,31 @@ public class WeiXinPayService extends AbstractPayService {
             Map<String, String> map = new TreeMap<>();
             map.put("mchid", element.merchno);
 
-            String url = "https://api.mch.weixin.qq.com/v3/pay/transactions/out-trade-no/" + request.getPayno() + "/close";
+            String url =
+                    "https://api.mch.weixin.qq.com/v3/pay/transactions/out-trade-no/" + request.getPayno() + "/close";
             String body = convert.convertTo(map);
             Map<String, Serializable> respHeaders = new LinkedHashMap<>();
-            return postHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "POST", body), body, respHeaders).thenApply(responseText -> {
-                result.setResponseText(responseText);
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
-                    return result.retcode(RETPAY_FALSIFY_ERROR);
-                }
+            return postHttpContentAsync(
+                            element.client,
+                            url,
+                            createHttpHeaders(element, request, url, "POST", body),
+                            body,
+                            respHeaders)
+                    .thenApply(responseText -> {
+                        result.setResponseText(responseText);
+                        if (responseText == null
+                                || responseText.isEmpty()
+                                || !checkSign(element, null, responseText, respHeaders)) {
+                            return result.retcode(RETPAY_FALSIFY_ERROR);
+                        }
 
-                return result;
-            });
+                        return result;
+                    });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "close_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
-
     }
 
     @Override
@@ -434,7 +510,7 @@ public class WeiXinPayService extends AbstractPayService {
         return refundAsync(request).join();
     }
 
-    //https://pay.weixin.qq.com/wiki/doc/api/micropay.php?chapter=9_4
+    // https://pay.weixin.qq.com/wiki/doc/api/micropay.php?chapter=9_4
     @Override
     public CompletableFuture<PayRefundResponse> refundAsync(PayRefundRequest request) {
         request.checkVaild();
@@ -447,25 +523,36 @@ public class WeiXinPayService extends AbstractPayService {
             final TreeMap<String, Object> map = new TreeMap<>();
             map.put("out_trade_no", request.getPayno());
             map.put("out_refund_no", request.getRefundno());
-            map.put("amount", Utility.ofMap("total", request.getPayMoney(), "refund", request.getRefundMoney(), "currency", "CNY"));
+            map.put(
+                    "amount",
+                    Utility.ofMap(
+                            "total", request.getPayMoney(), "refund", request.getRefundMoney(), "currency", "CNY"));
             map.put("notify_url", element.notifyurl);
 
             String url = "https://api.mch.weixin.qq.com/v3/refund/domestic/refunds";
             String body = convert.convertTo(map);
             Map<String, Serializable> respHeaders = new LinkedHashMap<>();
-            return postHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "POST", body), body, respHeaders).thenApply(responseText -> {
-                result.setResponseText(responseText);
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
-                    return result.retcode(RETPAY_FALSIFY_ERROR);
-                }
+            return postHttpContentAsync(
+                            element.client,
+                            url,
+                            createHttpHeaders(element, request, url, "POST", body),
+                            body,
+                            respHeaders)
+                    .thenApply(responseText -> {
+                        result.setResponseText(responseText);
+                        if (responseText == null
+                                || responseText.isEmpty()
+                                || !checkSign(element, null, responseText, respHeaders)) {
+                            return result.retcode(RETPAY_FALSIFY_ERROR);
+                        }
 
-                RefundData refundData = convert.convertFrom(RefundData.class, responseText);
-                if (!"SUCCESS".equals(refundData.status)) {
-                    return result.retcode(RETPAY_REFUND_ERROR);
-                }
-                result.setRefundedMoney(refundData.amount.refund);
-                return result;
-            });
+                        RefundData refundData = convert.convertFrom(RefundData.class, responseText);
+                        if (!"SUCCESS".equals(refundData.status)) {
+                            return result.retcode(RETPAY_REFUND_ERROR);
+                        }
+                        result.setRefundedMoney(refundData.amount.refund);
+                        return result;
+                    });
         } catch (Exception e) {
             result.setRetcode(RETPAY_REFUND_ERROR);
             logger.log(Level.WARNING, "refund_pay_error req=" + request + ", resp=" + result.responseText, e);
@@ -491,47 +578,74 @@ public class WeiXinPayService extends AbstractPayService {
             String url = "https://api.mch.weixin.qq.com/v3/refund/domestic/refunds/" + request.getRefundno();
             String body = "";
             Map<String, Serializable> respHeaders = new LinkedHashMap<>();
-            return getHttpContentAsync(element.client, url, createHttpHeaders(element, request, url, "GET", body), body, respHeaders).thenApply(responseText -> {
-                result.setResponseText(responseText);
-                if (responseText == null || responseText.isEmpty() || !checkSign(element, null, responseText, respHeaders)) {
-                    return result.retcode(RETPAY_FALSIFY_ERROR);
-                }
+            return getHttpContentAsync(
+                            element.client,
+                            url,
+                            createHttpHeaders(element, request, url, "GET", body),
+                            body,
+                            respHeaders)
+                    .thenApply(responseText -> {
+                        result.setResponseText(responseText);
+                        if (responseText == null
+                                || responseText.isEmpty()
+                                || !checkSign(element, null, responseText, respHeaders)) {
+                            return result.retcode(RETPAY_FALSIFY_ERROR);
+                        }
 
-                RefundData refundData = convert.convertFrom(RefundData.class, responseText);
-                if (!"SUCCESS".equals(refundData.status)) {
-                    return result.retcode(RETPAY_REFUND_ERROR);
-                }
-                result.setRefundedMoney(refundData.amount.refund);
-                return result;
-            });
+                        RefundData refundData = convert.convertFrom(RefundData.class, responseText);
+                        if (!"SUCCESS".equals(refundData.status)) {
+                            return result.retcode(RETPAY_REFUND_ERROR);
+                        }
+                        result.setRefundedMoney(refundData.amount.refund);
+                        return result;
+                    });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "query_pay_error req=" + request + ", resp=" + result.responseText, e);
             return result.toFuture();
         }
-
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, ?> map, String text) { //计算签名
+    protected String createSign(final PayElement element, Map<String, ?> map, String text) { // 计算签名
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map, String responseText, Map<String, Serializable> respHeaders) {  //验证签名
-        String requestid = respHeaders.getOrDefault("Request-ID", respHeaders.get("request-id")).toString();
-        String timestamp = respHeaders.getOrDefault("Wechatpay-Timestamp", respHeaders.get("wechatpay-timestamp")).toString();
-        String nonce = respHeaders.getOrDefault("Wechatpay-Nonce", respHeaders.get("wechatpay-nonce")).toString();
-        String serial = respHeaders.getOrDefault("Wechatpay-Serial", respHeaders.get("wechatpay-serial")).toString();
-        String signature = respHeaders.getOrDefault("Wechatpay-Signature", respHeaders.get("wechatpay-signature")).toString();
+    protected boolean checkSign(
+            final PayElement element,
+            Map<String, ?> map,
+            String responseText,
+            Map<String, Serializable> respHeaders) { // 验证签名
+        String requestid = respHeaders
+                .getOrDefault("Request-ID", respHeaders.get("request-id"))
+                .toString();
+        String timestamp = respHeaders
+                .getOrDefault("Wechatpay-Timestamp", respHeaders.get("wechatpay-timestamp"))
+                .toString();
+        String nonce = respHeaders
+                .getOrDefault("Wechatpay-Nonce", respHeaders.get("wechatpay-nonce"))
+                .toString();
+        String serial = respHeaders
+                .getOrDefault("Wechatpay-Serial", respHeaders.get("wechatpay-serial"))
+                .toString();
+        String signature = respHeaders
+                .getOrDefault("Wechatpay-Signature", respHeaders.get("wechatpay-signature"))
+                .toString();
         String message = timestamp + "\n" + nonce + "\n" + responseText + "\n";
         if (requestid == null || timestamp == null || nonce == null || serial == null || signature == null) {
-            logger.log(Level.WARNING, "WeixinPay checkSign header is half-baked, responseText=" + responseText + ", respHeaders =" + respHeaders);
+            logger.log(
+                    Level.WARNING,
+                    "WeixinPay checkSign header is half-baked, responseText=" + responseText + ", respHeaders ="
+                            + respHeaders);
             return false;
         }
         X509Certificate certificate = ((WeixinPayElement) element).certificates.get(serial);
         if (certificate == null) {
-            logger.log(Level.WARNING, "WeixinPay checkSign certificate is null, responseText=" + responseText + ", respHeaders =" + respHeaders);
+            logger.log(
+                    Level.WARNING,
+                    "WeixinPay checkSign certificate is null, responseText=" + responseText + ", respHeaders ="
+                            + respHeaders);
             return false;
         }
         try {
@@ -540,12 +654,16 @@ public class WeiXinPayService extends AbstractPayService {
             sign.update(message.getBytes(StandardCharsets.UTF_8));
             return sign.verify(Base64.getDecoder().decode(signature));
         } catch (Exception e) {
-            logger.log(Level.WARNING, "WeixinPay checkSign error, responseText=" + responseText + ", respHeaders =" + respHeaders, e);
+            logger.log(
+                    Level.WARNING,
+                    "WeixinPay checkSign error, responseText=" + responseText + ", respHeaders =" + respHeaders,
+                    e);
             return false;
         }
     }
 
-    protected static String decryptToString(WeixinPayElement element, String associated_data, String nonce, String ciphertext) throws Exception {
+    protected static String decryptToString(
+            WeixinPayElement element, String associated_data, String nonce, String ciphertext) throws Exception {
         SecretKeySpec key = new SecretKeySpec(element.apiv3key.getBytes(StandardCharsets.UTF_8), "AES");
         GCMParameterSpec spec = new GCMParameterSpec(128, nonce.getBytes(StandardCharsets.UTF_8));
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
@@ -557,37 +675,37 @@ public class WeiXinPayService extends AbstractPayService {
     public static class WeixinPayElement extends PayElement {
 
         // pay.weixin.[x].merchno
-        public String merchno = ""; //商户ID
+        public String merchno = ""; // 商户ID
 
         // pay.weixin.[x].submerchno
-        public String submerchno = ""; //子商户ID，受理模式必填
+        public String submerchno = ""; // 子商户ID，受理模式必填
 
         // pay.weixin.[x].appid
-        public String appid = "";  //APP应用ID
+        public String appid = ""; // APP应用ID
 
         // pay.weixin.[x].subappid
-        public String subappid = ""; //子应用ID，受理模式必填
+        public String subappid = ""; // 子应用ID，受理模式必填
 
         // pay.weixin.[x].apiv3key
-        public String apiv3key = ""; //APIv3密钥
+        public String apiv3key = ""; // APIv3密钥
 
         // pay.weixin.[x].certserialno
-        public String certserialno = ""; //HTTP证书的序列号
+        public String certserialno = ""; // HTTP证书的序列号
 
         // pay.weixin.[x].prikeypath
-        public String prikeypath = "";  //apiclient_key.pem文件路径，用来加载证书用, 不是/开头且没有:字符，视为{APP_HOME}/conf相对下的路径
+        public String prikeypath = ""; // apiclient_key.pem文件路径，用来加载证书用, 不是/开头且没有:字符，视为{APP_HOME}/conf相对下的路径
 
         // pay.weixin.[x].prikeybase64
-        public String prikeybase64 = ""; //apiclient_key.pem文件内容
+        public String prikeybase64 = ""; // apiclient_key.pem文件内容
 
         // pay.weixin.[x].certpath
-        public String certpath = "";  //apiclient_cert.pem文件路径，用来加载证书用, 不是/开头且没有:字符，视为{APP_HOME}/conf相对下的路径
+        public String certpath = ""; // apiclient_cert.pem文件路径，用来加载证书用, 不是/开头且没有:字符，视为{APP_HOME}/conf相对下的路径
 
         // pay.weixin.[x].certbase64
-        public String certbase64 = "";  //apiclient_cert.pem文件内容
+        public String certbase64 = ""; // apiclient_cert.pem文件内容
 
         //
-        protected PrivateKey privateKey; //应用私钥
+        protected PrivateKey privateKey; // 应用私钥
 
         //
         protected PublicKey publicKey;
@@ -600,57 +718,99 @@ public class WeiXinPayService extends AbstractPayService {
 
         public static Map<String, WeixinPayElement> create(Logger logger, Properties properties, File home) {
             String def_appid = properties.getProperty("pay.weixin.appid", "").trim();
-            String def_subappid = properties.getProperty("pay.weixin.subappid", "").trim();
-            String def_merchno = properties.getProperty("pay.weixin.merchno", "").trim();
-            String def_submerchno = properties.getProperty("pay.weixin.submerchno", "").trim();
-            String def_notifyurl = properties.getProperty("pay.weixin.notifyurl", "").trim();
-            String def_apiv3key = properties.getProperty("pay.weixin.apiv3key", "").trim();
-            String def_certserialno = properties.getProperty("pay.weixin.certserialno", "").trim();
-            String def_prikeypath = properties.getProperty("pay.weixin.prikeypath", "").trim();
-            String def_prikeybase64 = properties.getProperty("pay.weixin.prikeybase64", "").trim();
-            String def_certpath = properties.getProperty("pay.weixin.certpath", "").trim();
-            String def_certbase64 = properties.getProperty("pay.weixin.certbase64", "").trim();
+            String def_subappid =
+                    properties.getProperty("pay.weixin.subappid", "").trim();
+            String def_merchno =
+                    properties.getProperty("pay.weixin.merchno", "").trim();
+            String def_submerchno =
+                    properties.getProperty("pay.weixin.submerchno", "").trim();
+            String def_notifyurl =
+                    properties.getProperty("pay.weixin.notifyurl", "").trim();
+            String def_apiv3key =
+                    properties.getProperty("pay.weixin.apiv3key", "").trim();
+            String def_certserialno =
+                    properties.getProperty("pay.weixin.certserialno", "").trim();
+            String def_prikeypath =
+                    properties.getProperty("pay.weixin.prikeypath", "").trim();
+            String def_prikeybase64 =
+                    properties.getProperty("pay.weixin.prikeybase64", "").trim();
+            String def_certpath =
+                    properties.getProperty("pay.weixin.certpath", "").trim();
+            String def_certbase64 =
+                    properties.getProperty("pay.weixin.certbase64", "").trim();
 
             final Map<String, WeixinPayElement> map = new HashMap<>();
-            properties.keySet().stream().filter(x -> x.toString().startsWith("pay.weixin.") && x.toString().endsWith(".appid")).forEach(appid_key -> {
-                final String prefix = appid_key.toString().substring(0, appid_key.toString().length() - ".appid".length());
+            properties.keySet().stream()
+                    .filter(x -> x.toString().startsWith("pay.weixin.")
+                            && x.toString().endsWith(".appid"))
+                    .forEach(appid_key -> {
+                        final String prefix = appid_key
+                                .toString()
+                                .substring(0, appid_key.toString().length() - ".appid".length());
 
-                String appid = properties.getProperty(prefix + ".appid", def_appid).trim();
-                String subappid = properties.getProperty(prefix + ".subappid", def_subappid).trim();
-                String merchno = properties.getProperty(prefix + ".merchno", def_merchno).trim();
-                String submerchno = properties.getProperty(prefix + ".submerchno", def_submerchno).trim();
-                String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl).trim();
-                String apiv3key = properties.getProperty(prefix + ".apiv3key", def_apiv3key).trim();
-                String certserialno = properties.getProperty(prefix + ".certserialno", def_certserialno).trim();
-                String prikeypath = properties.getProperty(prefix + ".prikeypath", def_prikeypath).trim();
-                String prikeybase64 = properties.getProperty(prefix + ".prikeybase64", def_prikeybase64).trim();
-                String certpath = properties.getProperty(prefix + ".certpath", def_certpath).trim();
-                String certbase64 = properties.getProperty(prefix + ".certbase64", def_certbase64).trim();
+                        String appid = properties
+                                .getProperty(prefix + ".appid", def_appid)
+                                .trim();
+                        String subappid = properties
+                                .getProperty(prefix + ".subappid", def_subappid)
+                                .trim();
+                        String merchno = properties
+                                .getProperty(prefix + ".merchno", def_merchno)
+                                .trim();
+                        String submerchno = properties
+                                .getProperty(prefix + ".submerchno", def_submerchno)
+                                .trim();
+                        String notifyurl = properties
+                                .getProperty(prefix + ".notifyurl", def_notifyurl)
+                                .trim();
+                        String apiv3key = properties
+                                .getProperty(prefix + ".apiv3key", def_apiv3key)
+                                .trim();
+                        String certserialno = properties
+                                .getProperty(prefix + ".certserialno", def_certserialno)
+                                .trim();
+                        String prikeypath = properties
+                                .getProperty(prefix + ".prikeypath", def_prikeypath)
+                                .trim();
+                        String prikeybase64 = properties
+                                .getProperty(prefix + ".prikeybase64", def_prikeybase64)
+                                .trim();
+                        String certpath = properties
+                                .getProperty(prefix + ".certpath", def_certpath)
+                                .trim();
+                        String certbase64 = properties
+                                .getProperty(prefix + ".certbase64", def_certbase64)
+                                .trim();
 
-                if (appid.isEmpty() || merchno.isEmpty() || notifyurl.isEmpty() || apiv3key.isEmpty() || apiv3key.length() != 32
-                    || (prikeypath.isEmpty() && prikeybase64.isEmpty()) || (certpath.isEmpty() && certbase64.isEmpty())) {
-                    logger.log(Level.WARNING, properties + "; has illegal weixinpay conf by prefix" + prefix);
-                    return;
-                }
-                WeixinPayElement element = new WeixinPayElement();
-                element.appid = appid;
-                element.subappid = subappid;
-                element.merchno = merchno;
-                element.submerchno = submerchno;
-                element.notifyurl = notifyurl;
-                element.apiv3key = apiv3key;
-                element.certserialno = certserialno;
-                element.prikeypath = prikeypath;
-                element.prikeybase64 = prikeybase64;
-                element.certpath = certpath;
-                element.certbase64 = certbase64;
-                if (element.initElement(logger, home)) {
-                    map.put(appid, element);
-                    if (def_appid.equals(appid)) {
-                        map.put("", element);
-                    }
-                }
-            });
+                        if (appid.isEmpty()
+                                || merchno.isEmpty()
+                                || notifyurl.isEmpty()
+                                || apiv3key.isEmpty()
+                                || apiv3key.length() != 32
+                                || (prikeypath.isEmpty() && prikeybase64.isEmpty())
+                                || (certpath.isEmpty() && certbase64.isEmpty())) {
+                            logger.log(Level.WARNING, properties + "; has illegal weixinpay conf by prefix" + prefix);
+                            return;
+                        }
+                        WeixinPayElement element = new WeixinPayElement();
+                        element.appid = appid;
+                        element.subappid = subappid;
+                        element.merchno = merchno;
+                        element.submerchno = submerchno;
+                        element.notifyurl = notifyurl;
+                        element.apiv3key = apiv3key;
+                        element.certserialno = certserialno;
+                        element.prikeypath = prikeypath;
+                        element.prikeybase64 = prikeybase64;
+                        element.certpath = certpath;
+                        element.certbase64 = certbase64;
+                        if (element.initElement(logger, home)) {
+                            map.put(appid, element);
+                            if (def_appid.equals(appid)) {
+                                map.put("", element);
+                            }
+                        }
+                    });
             return map;
         }
 
@@ -662,22 +822,34 @@ public class WeiXinPayService extends AbstractPayService {
                 if (this.prikeybase64 != null && !this.prikeybase64.isEmpty()) {
                     in = new ByteArrayInputStream(this.prikeybase64.getBytes(StandardCharsets.UTF_8));
                 } else {
-                    File file = (prikeypath.indexOf('/') == 0 || prikeypath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.prikeypath);
-                    in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.prikeypath);
+                    File file = (prikeypath.indexOf('/') == 0 || prikeypath.indexOf(':') > 0)
+                            ? new File(this.certpath)
+                            : new File(home, "conf/" + this.prikeypath);
+                    in = file.isFile()
+                            ? new FileInputStream(file)
+                            : getClass().getResourceAsStream("/META-INF/" + this.prikeypath);
                 }
                 if (in == null) {
                     return false;
                 }
                 KeyFactory kf = KeyFactory.getInstance("RSA");
-                String pripem = Utility.read(in, StandardCharsets.UTF_8).replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "").replaceAll("\\s+", "");
-                this.privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(pripem)));
+                String pripem = Utility.read(in, StandardCharsets.UTF_8)
+                        .replace("-----BEGIN PRIVATE KEY-----", "")
+                        .replace("-----END PRIVATE KEY-----", "")
+                        .replaceAll("\\s+", "");
+                this.privateKey = kf.generatePrivate(
+                        new PKCS8EncodedKeySpec(Base64.getDecoder().decode(pripem)));
                 in.close();
 
                 if (this.certbase64 != null && !this.certbase64.isEmpty()) {
                     in = new ByteArrayInputStream(Base64.getDecoder().decode(this.certbase64));
                 } else {
-                    File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0) ? new File(this.certpath) : new File(home, "conf/" + this.certpath);
-                    in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.certpath);
+                    File file = (certpath.indexOf('/') == 0 || certpath.indexOf(':') > 0)
+                            ? new File(this.certpath)
+                            : new File(home, "conf/" + this.certpath);
+                    in = file.isFile()
+                            ? new FileInputStream(file)
+                            : getClass().getResourceAsStream("/META-INF/" + this.certpath);
                 }
                 if (in == null) {
                     return false;
@@ -701,32 +873,36 @@ public class WeiXinPayService extends AbstractPayService {
             String body = "";
             String url = "https://api.mch.weixin.qq.com/v3/certificates";
             Map<String, Serializable> respHeaders = new LinkedHashMap<>();
-            return getHttpContentAsync(url, 6000, createHttpHeaders(this, null, url, "GET", body), body, respHeaders).thenApply(responseText -> {
-                if (responseText == null || responseText.isEmpty()) {
-                    return "";
-                }
-                CertificateData dataResult = JsonConvert.root().convertFrom(CertificateData.class, responseText);
-                if (dataResult.data == null) {
-                    return "";
-                }
-                for (CertificateItem item : dataResult.data) {
-                    try {
-                        String nonce = item.encrypt_certificate.nonce;
-                        String ciphertext = item.encrypt_certificate.ciphertext;
-                        String associated_data = item.encrypt_certificate.associated_data;
+            return getHttpContentAsync(url, 6000, createHttpHeaders(this, null, url, "GET", body), body, respHeaders)
+                    .thenApply(responseText -> {
+                        if (responseText == null || responseText.isEmpty()) {
+                            return "";
+                        }
+                        CertificateData dataResult =
+                                JsonConvert.root().convertFrom(CertificateData.class, responseText);
+                        if (dataResult.data == null) {
+                            return "";
+                        }
+                        for (CertificateItem item : dataResult.data) {
+                            try {
+                                String nonce = item.encrypt_certificate.nonce;
+                                String ciphertext = item.encrypt_certificate.ciphertext;
+                                String associated_data = item.encrypt_certificate.associated_data;
 
-                        String cert = decryptToString(this, associated_data, nonce, ciphertext);
-                        CertificateFactory cf = CertificateFactory.getInstance("X509");
-                        X509Certificate x509Cert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(cert.getBytes(StandardCharsets.UTF_8)));
-                        x509Cert.checkValidity();
-                        certificates.put(x509Cert.getSerialNumber().toString(16).toUpperCase(), x509Cert);
-                    } catch (Exception e) {
-                        logger.log(Level.SEVERE, "init WeixinPay updateCertificate error, " + item, e);
-                        continue;
-                    }
-                }
-                return "";
-            });
+                                String cert = decryptToString(this, associated_data, nonce, ciphertext);
+                                CertificateFactory cf = CertificateFactory.getInstance("X509");
+                                X509Certificate x509Cert = (X509Certificate) cf.generateCertificate(
+                                        new ByteArrayInputStream(cert.getBytes(StandardCharsets.UTF_8)));
+                                x509Cert.checkValidity();
+                                certificates.put(
+                                        x509Cert.getSerialNumber().toString(16).toUpperCase(), x509Cert);
+                            } catch (Exception e) {
+                                logger.log(Level.SEVERE, "init WeixinPay updateCertificate error, " + item, e);
+                                continue;
+                            }
+                        }
+                        return "";
+                    });
         }
 
         @Override
@@ -815,7 +991,7 @@ public class WeiXinPayService extends AbstractPayService {
         }
     }
 
-    public static class NotifyPayResult { //查询接口也会使用此类
+    public static class NotifyPayResult { // 查询接口也会使用此类
 
         public String appid;
 
@@ -823,9 +999,9 @@ public class WeiXinPayService extends AbstractPayService {
 
         public String transaction_id = "";
 
-        public String trade_state; //SUCCESS
+        public String trade_state; // SUCCESS
 
-        public String refund_status;   //SUCCESS
+        public String refund_status; // SUCCESS
 
         public String out_trade_no;
 
@@ -843,7 +1019,7 @@ public class WeiXinPayService extends AbstractPayService {
 
         public long total;
 
-        public long refund; //退款通知才会有此值
+        public long refund; // 退款通知才会有此值
 
         public String currency;
 

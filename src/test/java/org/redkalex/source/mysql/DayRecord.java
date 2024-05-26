@@ -9,10 +9,7 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 import org.redkale.source.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Entity
 @DistributeTable(strategy = DayRecord.TableStrategy.class)
 public class DayRecord {
@@ -65,7 +62,7 @@ public class DayRecord {
             Object id = node.findValue("recordid");
             if (id != null) {
                 if (id instanceof String) {
-                    return new String[]{getTable(table, (Serializable) id)};
+                    return new String[] {getTable(table, (Serializable) id)};
                 } else if (id instanceof Collection) {
                     Set<String> tables = new LinkedHashSet<>();
                     for (String i : (Collection<String>) id) {
@@ -79,7 +76,8 @@ public class DayRecord {
                     }
                     return tables.toArray(new String[tables.size()]);
                 } else {
-                    throw new SourceException(DayRecord.class.getSimpleName() + ".TableStrategy not supported filter node: " + node);
+                    throw new SourceException(
+                            DayRecord.class.getSimpleName() + ".TableStrategy not supported filter node: " + node);
                 }
             }
             Object time = node.findValue("createTime");
@@ -87,11 +85,12 @@ public class DayRecord {
                 time = node.findValue("#createTime");
             }
             if (time instanceof Long) {
-                return new String[]{getSingleTable(table, (Long) time)};
+                return new String[] {getSingleTable(table, (Long) time)};
             }
             Range.LongRange createTime = (Range.LongRange) time;
-            if (createTime.getMax() != null && createTime.getMax() != Long.MAX_VALUE
-                && createTime.getMax() > createTime.getMin()) {
+            if (createTime.getMax() != null
+                    && createTime.getMax() != Long.MAX_VALUE
+                    && createTime.getMax() > createTime.getMin()) {
                 List<String> tables = new ArrayList<>();
                 long start = createTime.getMin();
                 while (start < createTime.getMax()) {
@@ -100,7 +99,7 @@ public class DayRecord {
                 }
                 return tables.toArray(new String[tables.size()]);
             }
-            return new String[]{getSingleTable(table, createTime.getMin())};
+            return new String[] {getSingleTable(table, createTime.getMin())};
         }
 
         @Override
@@ -111,7 +110,7 @@ public class DayRecord {
         private String getSingleTable(String table, long createTime) {
             int pos = table.indexOf('.');
             String nt = table.substring(pos + 1) + "_" + String.format(format, createTime);
-            //return "aa_test_" + createTime % 4 + "." + nt;
+            // return "aa_test_" + createTime % 4 + "." + nt;
             return nt;
         }
 

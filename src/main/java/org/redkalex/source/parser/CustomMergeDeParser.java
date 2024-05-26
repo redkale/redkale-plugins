@@ -25,7 +25,8 @@ public class CustomMergeDeParser extends MergeDeParser {
 
     protected final SelectDeParser selectDeParser;
 
-    public CustomMergeDeParser(ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder buffer) {
+    public CustomMergeDeParser(
+            ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder buffer) {
         super(expressionDeParser, selectDeParser, buffer);
         this.expressionDeParser = expressionDeParser;
         this.selectDeParser = selectDeParser;
@@ -35,7 +36,7 @@ public class CustomMergeDeParser extends MergeDeParser {
         List<WithItem> withItemsList = merge.getWithItemsList();
         if (withItemsList != null && !withItemsList.isEmpty()) {
             buffer.append("WITH ");
-            for (Iterator<WithItem> iter = withItemsList.iterator(); iter.hasNext();) {
+            for (Iterator<WithItem> iter = withItemsList.iterator(); iter.hasNext(); ) {
                 iter.next().accept(expressionDeParser);
                 if (iter.hasNext()) {
                     buffer.append(",");
@@ -107,5 +108,4 @@ public class CustomMergeDeParser extends MergeDeParser {
             mergeInsert.getWhereCondition().accept(expressionDeParser);
         }
     }
-
 }

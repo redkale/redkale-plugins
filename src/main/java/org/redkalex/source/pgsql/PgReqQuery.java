@@ -9,10 +9,7 @@ import java.util.Objects;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgReqQuery extends PgClientRequest {
 
     protected String sql;
@@ -26,7 +23,7 @@ public class PgReqQuery extends PgClientRequest {
     public int getType() {
         return REQ_TYPE_QUERY;
     }
-    
+
     @Override
     public String toString() {
         return "PgReqQuery_" + Objects.hashCode(this) + "{sql=" + sql + "}";
@@ -40,5 +37,4 @@ public class PgReqQuery extends PgClientRequest {
         writeUTF8String(array, sql);
         array.putInt(start, array.length() - start);
     }
-
 }

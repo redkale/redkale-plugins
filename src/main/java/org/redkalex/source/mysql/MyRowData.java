@@ -9,10 +9,7 @@ import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyRowData {
 
     final byte[][] byteBalues;

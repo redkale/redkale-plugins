@@ -10,30 +10,29 @@ import org.redkale.convert.ConvertDisabled;
 import org.redkale.util.RedkaleException;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
 public class PayRefundRequest extends PayRequest {
 
-    protected long payMoney; //  支付金额。 单位:分 
+    protected long payMoney; //  支付金额。 单位:分
 
     protected String payCurrency; //  币种,一般币值*100
 
-    protected String thirdPayno = ""; //第三方的支付流水号
+    protected String thirdPayno = ""; // 第三方的支付流水号
 
     protected long refundMoney; //  退款金额。 单位:分  不能大于支付金额
 
-    //微信支付: 商户系统内部唯一，同一退款单号多次请求只退一笔
-    //支付宝： 标识一次退款请求，同一笔交易多次退款需要保证唯一，如需部分退款，则此参数必传
-    protected String refundno = ""; //退款编号 商户系统内部的退款单号。
+    // 微信支付: 商户系统内部唯一，同一退款单号多次请求只退一笔
+    // 支付宝： 标识一次退款请求，同一笔交易多次退款需要保证唯一，如需部分退款，则此参数必传
+    protected String refundno = ""; // 退款编号 商户系统内部的退款单号。
 
-    protected String clientHost = ""; //HTTP请求的Host
+    protected String clientHost = ""; // HTTP请求的Host
 
-    protected String clientAddr = "";  //客户端IP地址
+    protected String clientAddr = ""; // 客户端IP地址
 
-    protected Map<String, String> attach; //扩展信息
+    protected Map<String, String> attach; // 扩展信息
 
     @Override
     public void checkVaild() {
@@ -233,5 +232,4 @@ public class PayRefundRequest extends PayRequest {
     public void setMap(Map<String, String> map) {
         this.attach = map;
     }
-
 }

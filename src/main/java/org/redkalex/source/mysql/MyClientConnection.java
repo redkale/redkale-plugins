@@ -12,10 +12,7 @@ import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.source.EntityInfo;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyClientConnection extends ClientConnection<MyClientRequest, MyResultSet> {
 
     private final Map<String, Long> cacheExtendedIndexs = new HashMap<>();
@@ -26,7 +23,7 @@ public class MyClientConnection extends ClientConnection<MyClientRequest, MyResu
 
     MyRespHandshakeResultSet handshake;
 
-    //int clientCapabilitiesFlag;
+    // int clientCapabilitiesFlag;
     //
     public MyClientConnection(MyClient client, AsyncConnection channel) {
         super(client, channel);

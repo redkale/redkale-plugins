@@ -5,6 +5,8 @@
  */
 package org.redkalex.source.mysql;
 
+import static org.redkalex.source.mysql.Mysqls.*;
+
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -14,12 +16,8 @@ import java.util.stream.Stream;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
-import static org.redkalex.source.mysql.Mysqls.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyReqExtended extends MyClientRequest {
 
     protected int type;
@@ -40,9 +38,14 @@ public class MyReqExtended extends MyClientRequest {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', sendPrepare = " + sendPrepare
-            + ", type = " + getType() + ", traceid = " + getTraceid()
-            + ", params = " + (parameters != null && parameters.length > 10 ? ("size " + parameters.length) : JsonConvert.root().convertTo(parameters)) + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', sendPrepare = "
+                + sendPrepare
+                + ", type = " + getType() + ", traceid = " + getTraceid()
+                + ", params = "
+                + (parameters != null && parameters.length > 10
+                        ? ("size " + parameters.length)
+                        : JsonConvert.root().convertTo(parameters))
+                + "}";
     }
 
     @Override
@@ -50,7 +53,12 @@ public class MyReqExtended extends MyClientRequest {
         return type;
     }
 
-    public <T> void prepare(int type, String sql, int fetchSize, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
+    public <T> void prepare(
+            int type,
+            String sql,
+            int fetchSize,
+            final Attribute<T, Serializable>[] attrs,
+            final Object[]... parameters) {
         super.prepare();
         this.type = type;
         this.sql = sql;
@@ -64,7 +72,7 @@ public class MyReqExtended extends MyClientRequest {
         this.type = type;
         this.sql = sql;
         this.fetchSize = fetchSize;
-        this.parameters = stream == null ? null : new Object[][]{stream.toArray(v -> new Object[v])};
+        this.parameters = stream == null ? null : new Object[][] {stream.toArray(v -> new Object[v])};
     }
 
     @Override
@@ -89,16 +97,22 @@ public class MyReqExtended extends MyClientRequest {
         AtomicBoolean prepared = myconn.getPrepareFlag(sql);
         Logger logger = myconn.logger();
         if (prepared.get()) {
-            this.sendPrepare = false; //此对象会复用，第二次调用
+            this.sendPrepare = false; // 此对象会复用，第二次调用
             if (MysqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writeBind: " + this);
+                logger.log(
+                        Level.FINEST,
+                        "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn
+                                + " 写入请求包 writeBind: " + this);
             }
             writeBind(myconn, array);
         } else {
             this.sendPrepare = true;
             prepared.set(true);
             if (MysqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " 写入请求包 writePrepare: " + this);
+                logger.log(
+                        Level.FINEST,
+                        "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn
+                                + " 写入请求包 writePrepare: " + this);
             }
             writePrepare(myconn, array);
         }
@@ -112,7 +126,7 @@ public class MyReqExtended extends MyClientRequest {
         array.put(sqlbytes);
     }
 
-    //https://dev.mysql.com/doc/internals/en/com-stmt-execute-response.html
+    // https://dev.mysql.com/doc/internals/en/com-stmt-execute-response.html
     protected void writeBind(MyClientConnection conn, ByteArray array) {
         if (parameters != null && parameters.length > 0) {
             MyPrepareDesc prepareDesc = conn.getPrepareDesc(sql);
@@ -125,20 +139,21 @@ public class MyReqExtended extends MyClientRequest {
             array.putByte(packetIndex);
             array.put(COM_STMT_EXECUTE);
             Mysqls.writeUB4(array, conn.getStatementIndex(sql));
-            array.putByte(0);   //not OPEN_CURSOR_FLAG placeholder for flags
+            array.putByte(0); // not OPEN_CURSOR_FLAG placeholder for flags
             Mysqls.writeInt(array, 1); // iteration count, always 1
             Mysqls.writeUB3(array, startPos, array.length() - startPos - 4);
         }
     }
 
-    protected void writeSingleBind(MyClientConnection conn, ByteArray array, MyPrepareDesc prepareDesc, Object[] params) {
+    protected void writeSingleBind(
+            MyClientConnection conn, ByteArray array, MyPrepareDesc prepareDesc, Object[] params) {
         final int startPos = array.length();
         Mysqls.writeUB3(array, 0);
         array.putByte(packetIndex);
 
         array.put(COM_STMT_EXECUTE);
         Mysqls.writeUB4(array, conn.getStatementIndex(sql));
-        array.putByte(0);   //not OPEN_CURSOR_FLAG placeholder for flags
+        array.putByte(0); // not OPEN_CURSOR_FLAG placeholder for flags
         Mysqls.writeInt(array, 1); // iteration count, always 1
 
         int numOfParams = prepareDesc.numberOfParameters;
@@ -147,10 +162,10 @@ public class MyReqExtended extends MyClientRequest {
             byte[] nullBitmap = new byte[bitmapLength];
             int nullPos = array.length();
             // write a dummy bitmap first
-            array.put(nullBitmap);  //占位
+            array.put(nullBitmap); // 占位
             boolean sendTypeToServer = true;
-            array.putByte(sendTypeToServer ? 1 : 0); //In case if buffers (type) altered, indicate to server
-            //MyRowColumn[] paramColumns = entity.prepare.paramDescs.columns;
+            array.putByte(sendTypeToServer ? 1 : 0); // In case if buffers (type) altered, indicate to server
+            // MyRowColumn[] paramColumns = entity.prepare.paramDescs.columns;
             for (int i = 0; i < numOfParams; i++) {
                 Object param = params[i];
                 if (params[i] == null) {
@@ -160,10 +175,11 @@ public class MyReqExtended extends MyClientRequest {
                     int t = MysqlType.getTypeFromObject(param);
                     array.putByte(t);
                     array.putByte(0); // parameter flag: signed
-                    //if(t != paramColumns[i].type) System.out .println(i + ", t = " + t + ", type = " +paramColumns[i].type);
+                    // if(t != paramColumns[i].type) System.out .println(i + ", t = " + t + ", type = "
+                    // +paramColumns[i].type);
                 }
             }
-            array.put(nullPos, nullBitmap); //重新赋值
+            array.put(nullPos, nullBitmap); // 重新赋值
             for (int i = 0; i < numOfParams; i++) {
                 Object param = params[i];
                 int t = MysqlType.getTypeFromObject(param);

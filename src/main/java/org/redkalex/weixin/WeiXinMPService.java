@@ -5,6 +5,9 @@
  */
 package org.redkalex.weixin;
 
+import static org.redkale.convert.json.JsonConvert.TYPE_MAP_STRING_STRING;
+import static org.redkale.util.Utility.getHttpContentAsync;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -16,18 +19,16 @@ import javax.crypto.spec.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
-import static org.redkale.convert.json.JsonConvert.TYPE_MAP_STRING_STRING;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.*;
 import org.redkale.util.*;
-import static org.redkale.util.Utility.getHttpContentAsync;
-import org.redkale.annotation.ResourceChanged;
 
 /**
  * 微信服务号Service
  *
- * 详情见: https://redkale.org
+ * <p>详情见: https://redkale.org
  *
  * @author zhangjx
  */
@@ -38,13 +39,13 @@ public final class WeiXinMPService implements Service {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
-    //原始的配置
+    // 原始的配置
     protected Properties elementProps = new Properties();
 
-    //配置集合, key: appid
+    // 配置集合, key: appid
     protected Map<String, MpElement> appidElements = new HashMap<>();
 
-    //配置集合 key: clientid
+    // 配置集合 key: clientid
     protected Map<String, MpElement> clientidElements = new HashMap<>();
 
     @Resource
@@ -54,19 +55,19 @@ public final class WeiXinMPService implements Service {
     @Comment("必须存在全局配置项，@ResourceListener才会起作用")
     protected Environment environment;
 
-    @Resource(name = "weixin.mp.conf", required = false) //公众号配置文件路径
+    @Resource(name = "weixin.mp.conf", required = false) // 公众号配置文件路径
     protected String conf = "config.properties";
 
     @Resource(name = "APP_HOME")
     protected File home;
 
-    @Resource(name = "weixin.mp.clientid", required = false) //客户端ID
+    @Resource(name = "weixin.mp.clientid", required = false) // 客户端ID
     protected String clientid = "";
 
-    @Resource(name = "weixin.mp.appid", required = false) //公众账号ID
+    @Resource(name = "weixin.mp.appid", required = false) // 公众账号ID
     protected String appid = "";
 
-    @Resource(name = "weixin.mp.appsecret", required = false) // 
+    @Resource(name = "weixin.mp.appsecret", required = false) //
     protected String appsecret = "";
 
     @Resource(name = "weixin.mp.token", required = false)
@@ -78,10 +79,14 @@ public final class WeiXinMPService implements Service {
     @Override
     public void init(AnyValue conf) {
         Properties properties = new Properties();
-        if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置
+        if (this.conf != null && !this.conf.isEmpty()) { // 存在微信支付配置
             try {
-                File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
-                InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
+                File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0)
+                        ? new File(this.conf)
+                        : new File(home, "conf/" + this.conf);
+                InputStream in = (file.isFile() && file.canRead())
+                        ? new FileInputStream(file)
+                        : getClass().getResourceAsStream("/META-INF/" + this.conf);
                 if (in != null) {
                     properties.load(in);
                     in.close();
@@ -113,11 +118,15 @@ public final class WeiXinMPService implements Service {
         for (ResourceEvent event : events) {
             if (event.name().startsWith("pay.oppo.")) {
                 changeProps.put(event.name(), event.newValue().toString());
-                sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                sb.append("@Resource change '")
+                        .append(event.name())
+                        .append("' to '")
+                        .append(event.coverNewValue())
+                        .append("'\r\n");
             }
         }
         if (sb.length() < 1) {
-            return; //无相关配置变化
+            return; // 无相关配置变化
         }
         logger.log(Level.INFO, sb.toString());
 
@@ -133,14 +142,15 @@ public final class WeiXinMPService implements Service {
         this.elementProps = changeProps;
     }
 
-    //-----------------------------------微信服务号接口----------------------------------------------------------
-    //仅用于 https://open.weixin.qq.com/connect/oauth2/authorize  &scope=snsapi_base
-    //需要在 “开发 - 接口权限 - 网页服务 - 网页帐号 - 网页授权获取用户基本信息”的配置选项中，修改授权回调域名
+    // -----------------------------------微信服务号接口----------------------------------------------------------
+    // 仅用于 https://open.weixin.qq.com/connect/oauth2/authorize  &scope=snsapi_base
+    // 需要在 “开发 - 接口权限 - 网页服务 - 网页帐号 - 网页授权获取用户基本信息”的配置选项中，修改授权回调域名
     public CompletableFuture<RetResult<String>> getMPOpenidByCode(String code) {
         if (code != null) {
             code = code.replace("\"", "").replace("'", "");
         }
-        String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret + "&code=" + code + "&grant_type=authorization_code";
+        String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid + "&secret=" + appsecret
+                + "&code=" + code + "&grant_type=authorization_code";
         return getHttpContentAsync(url).thenApply(json -> {
             if (logger.isLoggable(Level.FINEST)) {
                 logger.finest(url + "--->" + json);
@@ -166,26 +176,48 @@ public final class WeiXinMPService implements Service {
 
     public CompletableFuture<Map<String, String>> getMPUserTokenByCode(String clientid, String code) {
         MpElement element = this.clientidElements.get(clientid);
-        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code, null, null);
+        return getMPUserTokenByCode(
+                element == null ? false : element.miniprogram,
+                element == null ? appid : element.appid,
+                element == null ? appsecret : element.appsecret,
+                code,
+                null,
+                null);
     }
 
-    public CompletableFuture<Map<String, String>> getMPUserTokenByCodeEncryptedData(String clientid, String code, String encryptedData, String iv) {
+    public CompletableFuture<Map<String, String>> getMPUserTokenByCodeEncryptedData(
+            String clientid, String code, String encryptedData, String iv) {
         MpElement element = this.clientidElements.get(clientid);
-        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code, encryptedData, iv);
+        return getMPUserTokenByCode(
+                element == null ? false : element.miniprogram,
+                element == null ? appid : element.appid,
+                element == null ? appsecret : element.appsecret,
+                code,
+                encryptedData,
+                iv);
     }
 
     public CompletableFuture<Map<String, String>> getMPUserTokenByCodeAndAppid(String appid, String code) {
         MpElement element = this.appidElements.get(appid);
-        return getMPUserTokenByCode(element == null ? false : element.miniprogram, element == null ? appid : element.appid, element == null ? appsecret : element.appsecret, code, null, null);
+        return getMPUserTokenByCode(
+                element == null ? false : element.miniprogram,
+                element == null ? appid : element.appid,
+                element == null ? appsecret : element.appsecret,
+                code,
+                null,
+                null);
     }
 
-    private CompletableFuture<Map<String, String>> getMPUserTokenByCode(boolean miniprogram, String appid0, String appsecret0, String code, String encryptedData, String iv) {
+    private CompletableFuture<Map<String, String>> getMPUserTokenByCode(
+            boolean miniprogram, String appid0, String appsecret0, String code, String encryptedData, String iv) {
         if (code != null) {
             code = code.replace("\"", "").replace("'", "");
         }
-        String url0 = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid0 + "&secret=" + appsecret0 + "&code=" + code + "&grant_type=authorization_code";
+        String url0 = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + appid0 + "&secret=" + appsecret0
+                + "&code=" + code + "&grant_type=authorization_code";
         if (miniprogram) {
-            url0 = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid0 + "&secret=" + appsecret0 + "&js_code=" + code + "&grant_type=authorization_code";
+            url0 = "https://api.weixin.qq.com/sns/jscode2session?appid=" + appid0 + "&secret=" + appsecret0
+                    + "&js_code=" + code + "&grant_type=authorization_code";
         }
         final String url = url0;
         return getHttpContentAsync(url).thenCompose(json -> {
@@ -198,8 +230,10 @@ public final class WeiXinMPService implements Service {
                     try {
                         String sessionkey = jsonmap.get("session_key");
                         if (sessionkey == null) {
-                            return CompletableFuture.completedFuture(jsonmap);  //{"errcode":40163,"errmsg":"code been used, hints: [ req_id: GEbaO6yFe-g8Msfa ]"}
-                        }                        // 被加密的数据
+                            return CompletableFuture.completedFuture(
+                                    jsonmap); // {"errcode":40163,"errmsg":"code been used, hints: [ req_id:
+                            // GEbaO6yFe-g8Msfa ]"}
+                        } // 被加密的数据
                         byte[] dataByte = Base64.getDecoder().decode(encryptedData);
                         // 加密秘钥
                         byte[] keyByte = Base64.getDecoder().decode(sessionkey);
@@ -218,11 +252,12 @@ public final class WeiXinMPService implements Service {
                         parameters.init(new IvParameterSpec(ivByte));
                         // 解密
                         Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding");
-                        cipher.init(Cipher.DECRYPT_MODE, spec, parameters);// 初始化
+                        cipher.init(Cipher.DECRYPT_MODE, spec, parameters); // 初始化
                         byte[] resultByte = cipher.doFinal(dataByte);
                         String result = new String(resultByte, StandardCharsets.UTF_8);
                         if (logger.isLoggable(Level.FINEST)) {
-                            logger.finest("url=" + url + ", session_key=" + sessionkey + ", encryptedData=" + encryptedData + ", iv=" + iv + "， decryptedData=" + result);
+                            logger.finest("url=" + url + ", session_key=" + sessionkey + ", encryptedData="
+                                    + encryptedData + ", iv=" + iv + "， decryptedData=" + result);
                         }
                         int pos = result.indexOf("\"watermark\"");
                         if (pos > 0) {
@@ -252,7 +287,10 @@ public final class WeiXinMPService implements Service {
                         }
                         jsonmap.putAll(map);
                     } catch (Exception ex) {
-                        logger.log(Level.SEVERE, "url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + " error", ex);
+                        logger.log(
+                                Level.SEVERE,
+                                "url=" + url + ", encryptedData=" + encryptedData + ", iv=" + iv + " error",
+                                ex);
                     }
                 }
                 return CompletableFuture.completedFuture(jsonmap);
@@ -267,7 +305,8 @@ public final class WeiXinMPService implements Service {
             if (logger.isLoggable(Level.FINEST)) {
                 logger.finest(url + "--->" + json);
             }
-            Map<String, String> jsonmap = convert.convertFrom(TYPE_MAP_STRING_STRING, json.replaceFirst("\\[.*\\]", "null"));
+            Map<String, String> jsonmap =
+                    convert.convertFrom(TYPE_MAP_STRING_STRING, json.replaceFirst("\\[.*\\]", "null"));
             return jsonmap;
         });
     }
@@ -281,7 +320,8 @@ public final class WeiXinMPService implements Service {
         return verifyMPURL0(element == null ? mptoken : element.mptoken, msgSignature, timeStamp, nonce, echoStr);
     }
 
-    public String verifyMPURLByAppid(String appid, String msgSignature, String timeStamp, String nonce, String echoStr) {
+    public String verifyMPURLByAppid(
+            String appid, String msgSignature, String timeStamp, String nonce, String echoStr) {
         MpElement element = this.appidElements.get(appid);
         return verifyMPURL0(element == null ? mptoken : element.mptoken, msgSignature, timeStamp, nonce, echoStr);
     }
@@ -296,9 +336,10 @@ public final class WeiXinMPService implements Service {
 
     /**
      * 用SHA1算法生成安全签名
-     * <p>
-     * @param strings String[]
      *
+     * <p>
+     *
+     * @param strings String[]
      * @return 安全签名
      */
     protected static String sha1(String... strings) {
@@ -325,36 +366,57 @@ public final class WeiXinMPService implements Service {
         public boolean miniprogram = false;
 
         public static Map<String, MpElement> create(Logger logger, Properties properties, File home) {
-            String def_clientid = properties.getProperty("weixin.mp.clientid", "").trim();
+            String def_clientid =
+                    properties.getProperty("weixin.mp.clientid", "").trim();
             String def_appid = properties.getProperty("weixin.mp.appid", "").trim();
-            String def_appsecret = properties.getProperty("weixin.mp.appsecret", "").trim();
+            String def_appsecret =
+                    properties.getProperty("weixin.mp.appsecret", "").trim();
             String def_mptoken = properties.getProperty("weixin.mp.mptoken", "").trim();
-            boolean def_miniprogram = "true".equalsIgnoreCase(properties.getProperty("weixin.mp.miniprogram", "false").trim());
+            boolean def_miniprogram = "true"
+                    .equalsIgnoreCase(properties
+                            .getProperty("weixin.mp.miniprogram", "false")
+                            .trim());
 
             final Map<String, MpElement> map = new HashMap<>();
-            properties.keySet().stream().filter(x -> x.toString().startsWith("weixin.mp.") && x.toString().endsWith(".appid")).forEach(appid_key -> {
-                final String prefix = appid_key.toString().substring(0, appid_key.toString().length() - ".appid".length());
+            properties.keySet().stream()
+                    .filter(x -> x.toString().startsWith("weixin.mp.")
+                            && x.toString().endsWith(".appid"))
+                    .forEach(appid_key -> {
+                        final String prefix = appid_key
+                                .toString()
+                                .substring(0, appid_key.toString().length() - ".appid".length());
 
-                String clientid = properties.getProperty(prefix + ".clientid", def_clientid).trim();
-                String appid = properties.getProperty(prefix + ".appid", def_appid).trim();
-                String appsecret = properties.getProperty(prefix + ".appsecret", def_appsecret).trim();
-                String mptoken = properties.getProperty(prefix + ".mptoken", def_mptoken).trim();
-                boolean miniprogram = "true".equalsIgnoreCase(properties.getProperty(prefix + ".miniprogram", String.valueOf(def_miniprogram)).trim());
-                if (appid.isEmpty() || appsecret.isEmpty()) {
-                    logger.log(Level.WARNING, properties + "; has illegal weixinmp conf by prefix" + prefix);
-                    return;
-                }
-                MpElement element = new MpElement();
-                element.clientid = clientid;
-                element.appid = appid;
-                element.appsecret = appsecret;
-                element.mptoken = mptoken;
-                element.miniprogram = miniprogram;
-                map.put(appid, element);
-                if (def_appid.equals(appid)) {
-                    map.put("", element);
-                }
-            });
+                        String clientid = properties
+                                .getProperty(prefix + ".clientid", def_clientid)
+                                .trim();
+                        String appid = properties
+                                .getProperty(prefix + ".appid", def_appid)
+                                .trim();
+                        String appsecret = properties
+                                .getProperty(prefix + ".appsecret", def_appsecret)
+                                .trim();
+                        String mptoken = properties
+                                .getProperty(prefix + ".mptoken", def_mptoken)
+                                .trim();
+                        boolean miniprogram = "true"
+                                .equalsIgnoreCase(properties
+                                        .getProperty(prefix + ".miniprogram", String.valueOf(def_miniprogram))
+                                        .trim());
+                        if (appid.isEmpty() || appsecret.isEmpty()) {
+                            logger.log(Level.WARNING, properties + "; has illegal weixinmp conf by prefix" + prefix);
+                            return;
+                        }
+                        MpElement element = new MpElement();
+                        element.clientid = clientid;
+                        element.appid = appid;
+                        element.appsecret = appsecret;
+                        element.mptoken = mptoken;
+                        element.miniprogram = miniprogram;
+                        map.put(appid, element);
+                        if (def_appid.equals(appid)) {
+                            map.put("", element);
+                        }
+                    });
             return map;
         }
 

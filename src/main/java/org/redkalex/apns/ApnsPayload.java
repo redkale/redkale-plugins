@@ -5,20 +5,20 @@
  */
 package org.redkalex.apns;
 
-import org.redkale.convert.json.JsonFactory;
 import java.util.*;
 import java.util.regex.*;
+import org.redkale.convert.json.JsonFactory;
 
 /**
- *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 public class ApnsPayload {
 
     private static final Pattern regex = Pattern.compile("\"");
 
-    //----------------------- alert ---------------------------------
+    // ----------------------- alert ---------------------------------
     private String alertTitle;
 
     private String alertBody;
@@ -35,7 +35,7 @@ public class ApnsPayload {
 
     private String alertLaunchImage;
 
-    //--------------------------------------------------------
+    // --------------------------------------------------------
     private int contentAvailable;
 
     private String alert;
@@ -46,8 +46,7 @@ public class ApnsPayload {
 
     private final Map<String, Object> attributes = new HashMap<>();
 
-    public ApnsPayload() {
-    }
+    public ApnsPayload() {}
 
     public ApnsPayload(String alert, int badge) {
         this.alert = alert;
@@ -89,15 +88,21 @@ public class ApnsPayload {
             alertsb.append('{');
             if (alertTitle != null) {
                 if (alertsb.length() > 1) alertsb.append(',');
-                alertsb.append("\"title\":\"").append(regex.matcher(alertTitle).replaceAll("\\\"")).append('"');
+                alertsb.append("\"title\":\"")
+                        .append(regex.matcher(alertTitle).replaceAll("\\\""))
+                        .append('"');
             }
             if (alertBody != null) {
                 if (alertsb.length() > 1) alertsb.append(',');
-                alertsb.append("\"body\":\"").append(regex.matcher(alertBody).replaceAll("\\\"")).append('"');
+                alertsb.append("\"body\":\"")
+                        .append(regex.matcher(alertBody).replaceAll("\\\""))
+                        .append('"');
             }
             if (alertTitleLocKey != null) {
                 if (alertsb.length() > 1) alertsb.append(',');
-                alertsb.append("\"title-loc-key\":\"").append(regex.matcher(alertTitleLocKey).replaceAll("\\\"")).append('"');
+                alertsb.append("\"title-loc-key\":\"")
+                        .append(regex.matcher(alertTitleLocKey).replaceAll("\\\""))
+                        .append('"');
             }
             if (alertTitleLocArgs != null && alertTitleLocArgs.length > 0) {
                 if (alertsb.length() > 1) alertsb.append(',');
@@ -105,18 +110,24 @@ public class ApnsPayload {
                 boolean first = true;
                 for (String str : alertTitleLocArgs) {
                     if (!first) alertsb.append(',');
-                    alertsb.append('"').append(regex.matcher(str).replaceAll("\\\"")).append('"');
+                    alertsb.append('"')
+                            .append(regex.matcher(str).replaceAll("\\\""))
+                            .append('"');
                     first = false;
                 }
                 alertsb.append(']');
             }
             if (alertActionLocKey != null) {
                 if (alertsb.length() > 1) alertsb.append(',');
-                alertsb.append("\"action-loc-key\":\"").append(regex.matcher(alertActionLocKey).replaceAll("\\\"")).append('"');
+                alertsb.append("\"action-loc-key\":\"")
+                        .append(regex.matcher(alertActionLocKey).replaceAll("\\\""))
+                        .append('"');
             }
             if (alertLocKey != null) {
                 if (alertsb.length() > 1) alertsb.append(',');
-                alertsb.append("\"loc-key\":\"").append(regex.matcher(alertLocKey).replaceAll("\\\"")).append('"');
+                alertsb.append("\"loc-key\":\"")
+                        .append(regex.matcher(alertLocKey).replaceAll("\\\""))
+                        .append('"');
             }
             if (alertLocArgs != null && alertLocArgs.length > 0) {
                 if (alertsb.length() > 1) alertsb.append(',');
@@ -124,14 +135,18 @@ public class ApnsPayload {
                 boolean first = true;
                 for (String str : alertLocArgs) {
                     if (!first) alertsb.append(',');
-                    alertsb.append('"').append(regex.matcher(str).replaceAll("\\\"")).append('"');
+                    alertsb.append('"')
+                            .append(regex.matcher(str).replaceAll("\\\""))
+                            .append('"');
                     first = false;
                 }
                 alertsb.append(']');
             }
             if (alertLaunchImage != null) {
                 if (alertsb.length() > 1) alertsb.append(',');
-                alertsb.append("\"launch-image\":\"").append(regex.matcher(alertLaunchImage).replaceAll("\\\"")).append('"');
+                alertsb.append("\"launch-image\":\"")
+                        .append(regex.matcher(alertLaunchImage).replaceAll("\\\""))
+                        .append('"');
             }
             alertsb.append('}');
         }
@@ -144,7 +159,11 @@ public class ApnsPayload {
         if (attributes.isEmpty()) {
             sb.append('}');
         } else {
-            sb.append(',').append(JsonFactory.root().getConvert().convertTo(attributes).substring(1));
+            sb.append(',')
+                    .append(JsonFactory.root()
+                            .getConvert()
+                            .convertTo(attributes)
+                            .substring(1));
         }
         return sb.toString();
     }
@@ -244,5 +263,4 @@ public class ApnsPayload {
     public void setSound(String sound) {
         this.sound = sound;
     }
-
 }

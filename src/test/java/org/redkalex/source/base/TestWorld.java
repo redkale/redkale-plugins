@@ -5,10 +5,7 @@ package org.redkalex.source.base;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Entity
 public class TestWorld implements Comparable<TestWorld> {
 
@@ -20,8 +17,7 @@ public class TestWorld implements Comparable<TestWorld> {
     @Column(nullable = false)
     protected int[] citys;
 
-    public TestWorld() {
-    }
+    public TestWorld() {}
 
     public TestWorld(int id, int randomNumber) {
         this.id = id;
@@ -61,5 +57,4 @@ public class TestWorld implements Comparable<TestWorld> {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

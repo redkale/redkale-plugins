@@ -5,23 +5,20 @@
  */
 package org.redkalex.mq.kafka;
 
-import org.redkale.mq.spi.MessageAgent;
-import org.redkale.mq.spi.MessageAgentProvider;
 import org.redkale.annotation.Priority;
 import org.redkale.mq.*;
+import org.redkale.mq.spi.MessageAgent;
+import org.redkale.mq.spi.MessageAgentProvider;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-800)
 public class KafkaMessageAgentProvider implements MessageAgentProvider {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
         try {
-            Object.class.isAssignableFrom(org.apache.kafka.clients.CommonClientConfigs.class); //试图加载相关类
+            Object.class.isAssignableFrom(org.apache.kafka.clients.CommonClientConfigs.class); // 试图加载相关类
             return new KafkaMessageAgent().acceptsConf(config);
         } catch (Throwable t) {
             return false;
@@ -32,5 +29,4 @@ public class KafkaMessageAgentProvider implements MessageAgentProvider {
     public MessageAgent createInstance() {
         return new KafkaMessageAgent();
     }
-
 }

@@ -3,21 +3,25 @@
  */
 package org.redkalex.source.pgsql;
 
+import static org.redkalex.source.pgsql.PgClientRequest.writeUTF8String;
+
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.source.EntityInfo.EntityColumn;
 import org.redkale.util.*;
-import static org.redkalex.source.pgsql.PgClientRequest.writeUTF8String;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgPrepareDesc {
 
     public static enum PgExtendMode {
-        FIND_ENTITY, FINDS_ENTITY, INSERT_ENTITY, UPDATE_ENTITY, UPCASE_ENTITY, LISTALL_ENTITY, OTHER_NATIVE;
+        FIND_ENTITY,
+        FINDS_ENTITY,
+        INSERT_ENTITY,
+        UPDATE_ENTITY,
+        UPCASE_ENTITY,
+        LISTALL_ENTITY,
+        OTHER_NATIVE;
     }
 
     private final int type;
@@ -40,14 +44,21 @@ public class PgPrepareDesc {
 
     private final byte[] bindNoParamBytes;
 
-    private PgColumnFormat[] paramFormats;  //预编译结果中't'信息
+    private PgColumnFormat[] paramFormats; // 预编译结果中't'信息
 
-    private PgColumnFormat[] resultFormats; //预编译结果中'T'信息
+    private PgColumnFormat[] resultFormats; // 预编译结果中'T'信息
 
-    private PgRowDesc rowDesc; //预编译结果中'T'信息
+    private PgRowDesc rowDesc; // 预编译结果中'T'信息
 
-    public PgPrepareDesc(int type, PgExtendMode mode, String sql, byte[] statement,
-        Attribute[] paramAttrs, EntityColumn[] paramCols, Attribute[] resultAttrs, EntityColumn[] resultCols) {
+    public PgPrepareDesc(
+            int type,
+            PgExtendMode mode,
+            String sql,
+            byte[] statement,
+            Attribute[] paramAttrs,
+            EntityColumn[] paramCols,
+            Attribute[] resultAttrs,
+            EntityColumn[] resultCols) {
         Objects.requireNonNull(sql);
         Objects.requireNonNull(statement);
         Objects.requireNonNull(paramAttrs);
@@ -71,9 +82,9 @@ public class PgPrepareDesc {
         ByteArray array = new ByteArray(128);
         {
             array.clear();
-            array.putInt(0); //command-length
-            array.putByte(0); // portal  
-            array.put(statement); //prepared statement
+            array.putInt(0); // command-length
+            array.putByte(0); // portal
+            array.put(statement); // prepared statement
 
             // Param columns are all in Binary format
             PgColumnFormat[] pformats = paramFormats;
@@ -119,7 +130,7 @@ public class PgPrepareDesc {
     private void writeParse(ByteArray array) { // PARSE
         array.putByte('P');
         int start = array.length();
-        array.putInt(0); //command-length
+        array.putInt(0); // command-length
         array.put(statement);
         writeUTF8String(array, sql);
         PgColumnFormat[] formats = paramFormats();
@@ -169,7 +180,8 @@ public class PgPrepareDesc {
         } else {
             resultsb.append("null");
         }
-        return "PgPrepareDesc_" + Objects.hashCode(this) + "{sql=" + sql + ", rowDesc=" + rowDesc + ", paramFormats=" + paramsb + ", resultFormats=" + resultsb + "}";
+        return "PgPrepareDesc_" + Objects.hashCode(this) + "{sql=" + sql + ", rowDesc=" + rowDesc + ", paramFormats="
+                + paramsb + ", resultFormats=" + resultsb + "}";
     }
 
     void updateParamFormats(PgColumnFormat[] paramFormats) {
@@ -236,5 +248,4 @@ public class PgPrepareDesc {
     public PgRowDesc getRowDesc() {
         return rowDesc;
     }
-
 }

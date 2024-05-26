@@ -5,21 +5,19 @@
  */
 package org.redkalex.source.pgsql;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.format.DateTimeFormatter.*;
+import static org.redkalex.source.pgsql.PgsqlOid.*;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import java.sql.*;
 import java.time.*;
-import static java.time.format.DateTimeFormatter.*;
 import java.time.format.DateTimeParseException;
 import org.redkale.source.SourceException;
 import org.redkale.util.Utility;
-import static org.redkalex.source.pgsql.PgsqlOid.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgRowColumn {
 
     final String name;
@@ -28,7 +26,7 @@ public class PgRowColumn {
 
     public PgRowColumn(String name, int oid) {
         this.name = name;
-        this.oid = oid;        
+        this.oid = oid;
     }
 
     public String getName() {
@@ -52,28 +50,47 @@ public class PgRowColumn {
             case TEXT: // fallthrough
             case CHAR: // fallthrough
             case BPCHAR: // fallthrough
-            case VARCHAR: return new String(value, UTF_8);
-            case INT2: return Short.valueOf(new String(value, UTF_8));
-            case INT4: return Integer.valueOf(new String(value, UTF_8));
-            case INT8: return Long.valueOf(new String(value, UTF_8));
-            case FLOAT4: return Float.valueOf(new String(value, UTF_8));
+            case VARCHAR:
+                return new String(value, UTF_8);
+            case INT2:
+                return Short.valueOf(new String(value, UTF_8));
+            case INT4:
+                return Integer.valueOf(new String(value, UTF_8));
+            case INT8:
+                return Long.valueOf(new String(value, UTF_8));
+            case FLOAT4:
+                return Float.valueOf(new String(value, UTF_8));
             case NUMERIC: // fallthrough
-            case FLOAT8: return new BigDecimal(new String(value, UTF_8));
-            case BIT: return Utility.hexToBin(new String(value, 2, value.length - 2, UTF_8))[0];
-            case BIT_ARRAY:// fallthrough
-            case BYTEA: return Utility.hexToBin(new String(value, 2, value.length - 2, UTF_8));
-            case DATE: String date = new String(value, UTF_8);
+            case FLOAT8:
+                return new BigDecimal(new String(value, UTF_8));
+            case BIT:
+                return Utility.hexToBin(new String(value, 2, value.length - 2, UTF_8))[0];
+            case BIT_ARRAY: // fallthrough
+            case BYTEA:
+                return Utility.hexToBin(new String(value, 2, value.length - 2, UTF_8));
+            case DATE:
+                String date = new String(value, UTF_8);
                 try {
                     return Date.valueOf(LocalDate.parse(date, ISO_LOCAL_DATE));
                 } catch (DateTimeParseException e) {
                     throw new SourceException("Invalid date: " + date);
                 }
-            case TIMETZ: return Time.valueOf(OffsetTime.parse(new String(value, UTF_8), PgsqlFormatter.TIMEZ_FORMAT).toLocalTime());
-            case TIME: return Time.valueOf(LocalTime.parse(new String(value, UTF_8), ISO_LOCAL_TIME));
-            case TIMESTAMP: return Timestamp.valueOf(LocalDateTime.parse(new String(value, UTF_8), PgsqlFormatter.TIMESTAMP_FORMAT));
-            case TIMESTAMPTZ: return Timestamp.valueOf(OffsetDateTime.parse(new String(value, UTF_8), PgsqlFormatter.TIMESTAMPZ_FORMAT).toLocalDateTime());
-            case UUID: return java.util.UUID.fromString(new String(value, UTF_8));
-            case BOOL: return 't' == value[0];
+            case TIMETZ:
+                return Time.valueOf(OffsetTime.parse(new String(value, UTF_8), PgsqlFormatter.TIMEZ_FORMAT)
+                        .toLocalTime());
+            case TIME:
+                return Time.valueOf(LocalTime.parse(new String(value, UTF_8), ISO_LOCAL_TIME));
+            case TIMESTAMP:
+                return Timestamp.valueOf(
+                        LocalDateTime.parse(new String(value, UTF_8), PgsqlFormatter.TIMESTAMP_FORMAT));
+            case TIMESTAMPTZ:
+                return Timestamp.valueOf(
+                        OffsetDateTime.parse(new String(value, UTF_8), PgsqlFormatter.TIMESTAMPZ_FORMAT)
+                                .toLocalDateTime());
+            case UUID:
+                return java.util.UUID.fromString(new String(value, UTF_8));
+            case BOOL:
+                return 't' == value[0];
 
             case INT2_ARRAY:
             case INT4_ARRAY:
@@ -94,5 +111,4 @@ public class PgRowColumn {
                 throw new IllegalStateException("Unsupported array type: " + oid);
         }
     }
-
 }

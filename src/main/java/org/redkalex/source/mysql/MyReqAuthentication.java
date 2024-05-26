@@ -11,10 +11,7 @@ import java.util.logging.Level;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyReqAuthentication extends MyClientRequest {
 
     private static final byte[] FILLER = new byte[23];
@@ -29,7 +26,12 @@ public class MyReqAuthentication extends MyClientRequest {
 
     protected Properties attributes;
 
-    public MyReqAuthentication(MyRespHandshakeResultSet handshake, String username, String password, String database, Properties attributes) {
+    public MyReqAuthentication(
+            MyRespHandshakeResultSet handshake,
+            String username,
+            String password,
+            String database,
+            Properties attributes) {
         this.handshake = handshake;
         this.username = username;
         this.password = password;
@@ -60,7 +62,8 @@ public class MyReqAuthentication extends MyClientRequest {
 
     @Override
     public String toString() {
-        return "MyReqAuthentication_" + Objects.hashCode(this) + "{username=" + username + ", password=" + password + ", database=" + database + "}";
+        return "MyReqAuthentication_" + Objects.hashCode(this) + "{username=" + username + ", password=" + password
+                + ", database=" + database + "}";
     }
 
     @Override
@@ -77,7 +80,7 @@ public class MyReqAuthentication extends MyClientRequest {
         }
         Mysqls.writeUB4(array, capabilitiesFlags);
         Mysqls.writeUB4(array, Mysqls.MAX_PACKET_SIZE);
-        array.putByte(45); //utf8mb4_general_ci("utf8mb4", "UTF-8", 45)
+        array.putByte(45); // utf8mb4_general_ci("utf8mb4", "UTF-8", 45)
         array.put(FILLER);
         if (username == null || username.isEmpty()) {
             array.putByte(0);
@@ -114,13 +117,16 @@ public class MyReqAuthentication extends MyClientRequest {
         }
         Mysqls.writeUB3(array, startPos, array.length() - startPos - 4);
         if (MysqlDataSource.debug) {
-            MyClientCodec.logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", 发送 MyReqAuthentication length=" + array.length());
+            MyClientCodec.logger.log(
+                    Level.FINEST,
+                    "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn
+                            + ", 发送 MyReqAuthentication length=" + array.length());
         }
     }
 
     private int getClientCapabilities() {
         int flag = 0;
-        flag |= Mysqls.CLIENT_DEPRECATE_EOF; //5.7.5以后，OK_Packet包含ERR_Packet格式, 必须包含属性
+        flag |= Mysqls.CLIENT_DEPRECATE_EOF; // 5.7.5以后，OK_Packet包含ERR_Packet格式, 必须包含属性
         flag |= Mysqls.CLIENT_PLUGIN_AUTH;
         flag |= Mysqls.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA;
         flag |= Mysqls.CLIENT_LONG_PASSWORD;
@@ -166,9 +172,10 @@ public class MyReqAuthentication extends MyClientRequest {
             array.putByte(3);
             array.put(scrambledPassword);
             if (MysqlDataSource.debug) {
-                MyClientCodec.logger.log(Level.FINEST, Times.nowMillis() + ": " + conn + ", 发送 MyReqAuthSwitch length=" + array.length());
+                MyClientCodec.logger.log(
+                        Level.FINEST,
+                        Times.nowMillis() + ": " + conn + ", 发送 MyReqAuthSwitch length=" + array.length());
             }
         }
-
     }
 }

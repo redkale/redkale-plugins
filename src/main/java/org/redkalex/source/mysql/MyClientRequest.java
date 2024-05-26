@@ -10,10 +10,7 @@ import org.redkale.net.client.ClientRequest;
 import org.redkale.source.EntityInfo;
 import org.redkale.util.ObjectPool;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public abstract class MyClientRequest extends ClientRequest {
 
     public static final int REQ_TYPE_AUTH = 1 << 1;
@@ -28,15 +25,15 @@ public abstract class MyClientRequest extends ClientRequest {
 
     public static final int REQ_TYPE_BATCH = 1 << 6;
 
-    public static final int REQ_TYPE_EXTEND_QUERY = (1 << 2) + 1;    //预编译的16进制值都要以1结尾
+    public static final int REQ_TYPE_EXTEND_QUERY = (1 << 2) + 1; // 预编译的16进制值都要以1结尾
 
-    public static final int REQ_TYPE_EXTEND_UPDATE = (1 << 3) + 1;   //预编译的16进制值都要以1结尾
+    public static final int REQ_TYPE_EXTEND_UPDATE = (1 << 3) + 1; // 预编译的16进制值都要以1结尾
 
-    public static final int REQ_TYPE_EXTEND_INSERT = (1 << 4) + 1;   //预编译的16进制值都要以1结尾
+    public static final int REQ_TYPE_EXTEND_INSERT = (1 << 4) + 1; // 预编译的16进制值都要以1结尾
 
-    public static final int REQ_TYPE_EXTEND_DELETE = (1 << 5) + 1;   //预编译的16进制值都要以1结尾
+    public static final int REQ_TYPE_EXTEND_DELETE = (1 << 5) + 1; // 预编译的16进制值都要以1结尾
 
-    //--------------------------------------------------
+    // --------------------------------------------------
     protected ObjectPool objpool;
 
     protected EntityInfo info;

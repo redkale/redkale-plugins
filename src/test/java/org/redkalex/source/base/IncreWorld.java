@@ -6,10 +6,7 @@ package org.redkalex.source.base;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Entity
 public class IncreWorld {
 
@@ -39,5 +36,4 @@ public class IncreWorld {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

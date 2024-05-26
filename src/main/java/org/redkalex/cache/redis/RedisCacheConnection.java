@@ -12,10 +12,7 @@ import java.util.function.Function;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, RedisCacheResult> {
 
     public RedisCacheConnection(Client client, AsyncConnection channel) {
@@ -35,11 +32,13 @@ public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, Re
         return super.writeChannel(requests);
     }
 
-    protected <T> CompletableFuture<T> writeRequest(RedisCacheRequest request, Function<RedisCacheResult, T> respTransfer) {
+    protected <T> CompletableFuture<T> writeRequest(
+            RedisCacheRequest request, Function<RedisCacheResult, T> respTransfer) {
         return super.writeChannel(request, respTransfer);
     }
 
-    protected <T> CompletableFuture<List<T>> writeRequest(RedisCacheRequest[] requests, Function<RedisCacheResult, T> respTransfer) {
+    protected <T> CompletableFuture<List<T>> writeRequest(
+            RedisCacheRequest[] requests, Function<RedisCacheResult, T> respTransfer) {
         return super.writeChannel(requests, respTransfer);
     }
 

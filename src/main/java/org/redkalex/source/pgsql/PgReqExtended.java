@@ -3,6 +3,8 @@
  */
 package org.redkalex.source.pgsql;
 
+import static org.redkalex.source.pgsql.PgClientCodec.logger;
+
 import java.io.Serializable;
 import java.util.*;
 import java.util.logging.Level;
@@ -10,13 +12,9 @@ import java.util.stream.Stream;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
-import static org.redkalex.source.pgsql.PgClientCodec.logger;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgReqExtended extends PgClientRequest {
 
     protected int type;
@@ -37,11 +35,18 @@ public class PgReqExtended extends PgClientRequest {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', type = " + getType() + ", traceid = " + getTraceid()
-            + (pkValues == null
-                ? (", paramValues = " + (paramValues != null && paramValues.length > 10 ? ("size " + paramValues.length) : JsonConvert.root().convertTo(paramValues)))
-                : (", pkValues = " + (pkValues.length > 10 ? ("size " + pkValues.length) : JsonConvert.root().convertTo(pkValues))))
-            + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{sql = '" + sql + "', type = " + getType()
+                + ", traceid = " + getTraceid()
+                + (pkValues == null
+                        ? (", paramValues = "
+                                + (paramValues != null && paramValues.length > 10
+                                        ? ("size " + paramValues.length)
+                                        : JsonConvert.root().convertTo(paramValues)))
+                        : (", pkValues = "
+                                + (pkValues.length > 10
+                                        ? ("size " + pkValues.length)
+                                        : JsonConvert.root().convertTo(pkValues))))
+                + "}";
     }
 
     @Override
@@ -75,20 +80,23 @@ public class PgReqExtended extends PgClientRequest {
         this.fetchSize = fetchSize;
     }
 
-    public <T> void preparePrimarys(int type, PgExtendMode mode, String sql, int fetchSize, final Serializable... pkValues) {
+    public <T> void preparePrimarys(
+            int type, PgExtendMode mode, String sql, int fetchSize, final Serializable... pkValues) {
         prepare(type, mode, sql, fetchSize);
         this.pkValues = pkValues;
     }
 
-    public <T> void prepareParams(int type, PgExtendMode mode, String sql, int fetchSize, final Serializable[][] paramValues) {
+    public <T> void prepareParams(
+            int type, PgExtendMode mode, String sql, int fetchSize, final Serializable[][] paramValues) {
         prepare(type, mode, sql, fetchSize);
         this.paramValues = paramValues;
     }
 
-    public <T> void prepareParams(int type, PgExtendMode mode, String sql, int fetchSize, int paramLen, final Stream<Serializable> stream) {
+    public <T> void prepareParams(
+            int type, PgExtendMode mode, String sql, int fetchSize, int paramLen, final Stream<Serializable> stream) {
         prepare(type, mode, sql, fetchSize);
         this.paramLen = paramLen;
-        this.paramValues = new Serializable[][]{stream.toArray(v -> new Serializable[v])};
+        this.paramValues = new Serializable[][] {stream.toArray(v -> new Serializable[v])};
     }
 
     private void writeBind(ByteArray array, PgPrepareDesc prepareDesc, Serializable... params) { // BIND
@@ -96,18 +104,18 @@ public class PgReqExtended extends PgClientRequest {
         array.putByte('B');
         int start = array.length();
         array.put(prepareDesc.bindPrefixBytes());
-//        array.putInt(0); //command-length
-//        array.putByte(0); // portal  
-//        array.put(prepareDesc.statement()); //prepared statement
-//
-//        // Param columns are all in Binary format
-//        PgColumnFormat[] pformats = prepareDesc.paramFormats();
-//        int paramLen = pformats.length;
-//        array.putShort(paramLen);
-//        for (PgColumnFormat f : pformats) {
-//            array.putShort(f.supportsBinary() ? 1 : 0);
-//        }
-//        array.putShort(paramLen);
+        //        array.putInt(0); //command-length
+        //        array.putByte(0); // portal
+        //        array.put(prepareDesc.statement()); //prepared statement
+        //
+        //        // Param columns are all in Binary format
+        //        PgColumnFormat[] pformats = prepareDesc.paramFormats();
+        //        int paramLen = pformats.length;
+        //        array.putShort(paramLen);
+        //        for (PgColumnFormat f : pformats) {
+        //            array.putShort(f.supportsBinary() ? 1 : 0);
+        //        }
+        //        array.putShort(paramLen);
 
         PgColumnFormat[] pformats = prepareDesc.paramFormats();
         Attribute[] pattrs = prepareDesc.paramAttrs();
@@ -117,30 +125,30 @@ public class PgReqExtended extends PgClientRequest {
                 array.putInt(-1); // NULL value
             } else {
                 int s2 = array.length();
-                array.putInt(0); //value-length
+                array.putInt(0); // value-length
                 PgColumnFormat f = pformats[c];
                 (f == null ? PgColumnFormat.VARCHAR : f).encoder().encode(array, pattrs[c], param);
                 array.putInt(s2, array.length() - s2 - 4);
             }
         }
 
-//        // Result columns are all in Binary format
-//        PgColumnFormat[] rformats = prepareDesc.resultFormats();
-//        if (rformats.length > 0) {
-//            array.putShort(rformats.length);
-//            for (PgColumnFormat f : rformats) {
-//                array.putShort(f.supportsBinary() ? 1 : 0);
-//            }
-//        } else {
-//            array.putShort(1);
-//            array.putShort(1);
-//        }
+        //        // Result columns are all in Binary format
+        //        PgColumnFormat[] rformats = prepareDesc.resultFormats();
+        //        if (rformats.length > 0) {
+        //            array.putShort(rformats.length);
+        //            for (PgColumnFormat f : rformats) {
+        //                array.putShort(f.supportsBinary() ? 1 : 0);
+        //            }
+        //        } else {
+        //            array.putShort(1);
+        //            array.putShort(1);
+        //        }
         array.put(prepareDesc.bindPostfixBytes());
 
         array.putInt(start, array.length() - start);
         // EXECUTE
         writeExecute(array, fetchSize);
-        // SYNC      
+        // SYNC
         writeSync(array);
     }
 
@@ -149,7 +157,7 @@ public class PgReqExtended extends PgClientRequest {
         array.put(prepareDesc.bindNoParamBytes());
         // EXECUTE
         writeExecute(array, fetchSize);
-        // SYNC      
+        // SYNC
         writeSync(array);
     }
 
@@ -160,7 +168,7 @@ public class PgReqExtended extends PgClientRequest {
         this.syncCount = 0;
         if (prepareDesc != null) {
             this.sendPrepare = false;
-            //绑定参数
+            // 绑定参数
             if (prepareDesc.paramFormats().length > 0) {
                 if (pkValues != null) {
                     for (Serializable pk : pkValues) {
@@ -175,15 +183,19 @@ public class PgReqExtended extends PgClientRequest {
                 writeBind(array, prepareDesc);
             }
             if (PgsqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+                logger.log(
+                        Level.FINEST,
+                        "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", "
+                                + getClass().getSimpleName() + ".sql: " + sql + ", BIND("
+                                + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
         } else {
             prepareDesc = pgconn.createPgPrepareDesc(type, mode, info, sql, paramLen);
             this.sendPrepare = true;
             prepareDesc.writeTo(conn, array);
-            // SYNC      
+            // SYNC
             writeSync(array);
-            //绑定参数
+            // 绑定参数
             if (prepareDesc.paramFormats().length > 0) {
                 if (pkValues != null) {
                     for (Serializable pk : pkValues) {
@@ -198,7 +210,11 @@ public class PgReqExtended extends PgClientRequest {
                 writeBind(array, prepareDesc);
             }
             if (PgsqlDataSource.debug) {
-                logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", " + getClass().getSimpleName() + ".sql: " + sql + ", PARSE, DESCRIBE, BIND(" + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
+                logger.log(
+                        Level.FINEST,
+                        "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", "
+                                + getClass().getSimpleName() + ".sql: " + sql + ", PARSE, DESCRIBE, BIND("
+                                + (paramValues != null ? paramValues.length : 0) + "), EXECUTE, SYNC");
             }
         }
     }
@@ -250,6 +266,9 @@ public class PgReqExtended extends PgClientRequest {
     }
 
     public static enum PgReqExtendMode {
-        FIND, FINDS, LIST_ALL, OTHER;
+        FIND,
+        FINDS,
+        LIST_ALL,
+        OTHER;
     }
 }

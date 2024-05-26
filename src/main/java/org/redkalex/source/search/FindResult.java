@@ -6,7 +6,6 @@
 package org.redkalex.source.search;
 
 /**
- *
  * @author zhangjx
  * @param <T> T
  */
@@ -17,5 +16,4 @@ public class FindResult<T> extends BaseBean {
     public int _version;
 
     public T _source;
-
 }

@@ -14,10 +14,7 @@ import org.redkale.net.client.*;
 import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 import org.redkale.util.Traces;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResultSet> {
 
     protected final boolean cachePreparedStatements;
@@ -27,26 +24,50 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
     protected final SourceUrlInfo info;
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public MyClient(String name, AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines,
-        final Properties prop, final SourceUrlInfo info, boolean autoddl, final Properties attributes) {
-        super(name, group, true, address, maxConns, maxPipelines, () -> new MyReqPing(), () -> new MyReqClose(), null); //maxConns
+    public MyClient(
+            String name,
+            AsyncGroup group,
+            String key,
+            ClientAddress address,
+            int maxConns,
+            int maxPipelines,
+            final Properties prop,
+            final SourceUrlInfo info,
+            boolean autoddl,
+            final Properties attributes) {
+        super(
+                name,
+                group,
+                true,
+                address,
+                maxConns,
+                maxPipelines,
+                () -> new MyReqPing(),
+                () -> new MyReqClose(),
+                null); // maxConns
         this.info = info;
         this.autoddl = autoddl;
         this.authenticate = traceid -> {
             Traces.currentTraceid(traceid);
             return conn -> {
                 MyRespHandshakeResultSet handshake = ((MyClientConnection) conn).handshake;
-                return writeChannel(conn, new MyReqAuthentication(handshake, info.username, info.password, info.database, attributes)).thenCompose(v -> {
-                    Traces.currentTraceid(traceid);
-                    MyRespAuthResultSet authrs = (MyRespAuthResultSet) v;
-                    if (authrs.authSwitch != null) {
-                        return writeChannel(conn, authrs.authSwitch);
-                    }
-                    return CompletableFuture.completedFuture(authrs);
-                }).thenApply(v -> conn);
+                return writeChannel(
+                                conn,
+                                new MyReqAuthentication(
+                                        handshake, info.username, info.password, info.database, attributes))
+                        .thenCompose(v -> {
+                            Traces.currentTraceid(traceid);
+                            MyRespAuthResultSet authrs = (MyRespAuthResultSet) v;
+                            if (authrs.authSwitch != null) {
+                                return writeChannel(conn, authrs.authSwitch);
+                            }
+                            return CompletableFuture.completedFuture(authrs);
+                        })
+                        .thenApply(v -> conn);
             };
         };
-        this.cachePreparedStatements = prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));
+        this.cachePreparedStatements =
+                prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));
     }
 
     @Override
@@ -54,7 +75,7 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
         return new MyClientConnection(this, channel);
     }
 
-    @Override  //构建连接上先从服务器拉取数据构建的虚拟请求
+    @Override // 构建连接上先从服务器拉取数据构建的虚拟请求
     protected MyClientRequest createVirtualRequestAfterConnect() {
         return new MyReqVirtual();
     }
@@ -65,7 +86,8 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
     }
 
     @Override
-    protected <T> CompletableFuture<T> writeChannel(ClientConnection conn, MyClientRequest request, Function<MyResultSet, T> respTransfer) {
+    protected <T> CompletableFuture<T> writeChannel(
+            ClientConnection conn, MyClientRequest request, Function<MyResultSet, T> respTransfer) {
         return super.writeChannel(conn, request, respTransfer);
     }
 
@@ -83,5 +105,4 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
     public boolean cachePreparedStatements() {
         return cachePreparedStatements;
     }
-
 }

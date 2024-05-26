@@ -9,7 +9,6 @@ import java.util.Map;
 import org.redkale.convert.ConvertDisabled;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -20,7 +19,7 @@ public class PayQueryResponse extends PayResponse {
 
     protected long payedMoney;
 
-    protected String thirdPayno = ""; //第三方的支付流水号
+    protected String thirdPayno = ""; // 第三方的支付流水号
 
     @Override
     public PayQueryResponse retcode(int retcode) {

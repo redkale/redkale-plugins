@@ -6,10 +6,7 @@ package org.redkalex.source.parser;
 import java.util.Map;
 import org.redkale.convert.json.JsonConvert;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class NativeSqlTemplet {
 
     private String jdbcSql;
@@ -17,7 +14,7 @@ public class NativeSqlTemplet {
     private Map<String, Object> templetParams;
 
     public NativeSqlTemplet() {
-        //do nothing
+        // do nothing
     }
 
     public NativeSqlTemplet(String templetSql, Map<String, Object> templetParams) {
@@ -45,5 +42,4 @@ public class NativeSqlTemplet {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

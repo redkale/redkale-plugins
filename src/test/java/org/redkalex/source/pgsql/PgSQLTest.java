@@ -5,6 +5,9 @@
  */
 package org.redkalex.source.pgsql;
 
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import static org.redkale.source.DataSources.*;
+
 import java.io.Serializable;
 import java.lang.reflect.*;
 import java.nio.ByteBuffer;
@@ -15,7 +18,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.function.BiConsumer;
 import java.util.stream.*;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingBaseHandler;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceFactory;
@@ -23,16 +25,12 @@ import org.redkale.net.*;
 import org.redkale.net.client.Client;
 import org.redkale.persistence.*;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 import org.redkalex.source.base.IncreWorld;
 import org.redkalex.source.parser.DataNativeJsqlParser;
 import org.redkalex.source.vertx.TestRecord;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgSQLTest {
 
     private static final Random random = new SecureRandom();
@@ -43,11 +41,11 @@ public class PgSQLTest {
 
     private static final String password = "1234";
 
-    private static final int count = Utility.cpus();// Runtime.getRuntime().availableProcessors() * 10;  //4.18秒
+    private static final int count = Utility.cpus(); // Runtime.getRuntime().availableProcessors() * 10;  //4.18秒
 
     public static void main(String[] args) throws Throwable {
         LoggingBaseHandler.initDebugLogConfig();
-        //run(false, true);
+        // run(false, true);
         run(true, false);
         // run(true, true);
         // run(true, false);
@@ -64,7 +62,7 @@ public class PgSQLTest {
         PgsqlDataSource.debug = false;
 
         Properties prop = new Properties();
-        if (rwSeparate) { //读写分离
+        if (rwSeparate) { // 读写分离
             prop.setProperty("redkale.datasource.default.read.url", url);
             prop.setProperty("redkale.datasource.default.read.table-autoddl", "true");
             prop.setProperty("redkale.datasource.default.read.user", user);
@@ -81,11 +79,15 @@ public class PgSQLTest {
             prop.setProperty("redkale.datasource.default.password", password);
         }
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
-        System.out.println("-------------------- " + (forFortune ? "Fortune" : "World") + " " + (rwSeparate ? "读写分离" : "读写合并") + " --------------------");
+        source.init(AnyValue.loadFromProperties(prop)
+                .getAnyValue("redkale")
+                .getAnyValue("datasource")
+                .getAnyValue("default"));
+        System.out.println("-------------------- " + (forFortune ? "Fortune" : "World") + " "
+                + (rwSeparate ? "读写分离" : "读写合并") + " --------------------");
         System.out.println("-------------------- " + "当前内核数: " + Utility.cpus() + " --------------------");
         {
-            //source.dropTable(TestRecord.class);
+            // source.dropTable(TestRecord.class);
             TestRecord entity = new TestRecord();
             entity.setRecordid("r223" + System.currentTimeMillis());
             entity.setScore(200);
@@ -94,7 +96,8 @@ public class PgSQLTest {
             entity.setCreateTime(System.currentTimeMillis());
             source.insert(entity);
 
-            Map<String, Object> params = Utility.ofMap("name", "%", "s", 10, "ids", Utility.ofList(entity.getRecordid()));
+            Map<String, Object> params =
+                    Utility.ofMap("name", "%", "s", 10, "ids", Utility.ofList(entity.getRecordid()));
             String sql = "SELECT * FROM TestRecord WHERE name LIKE :name OR recordid IN :ids";
             TestRecord one = source.nativeQueryOne(TestRecord.class, sql, params);
             System.out.println(one);
@@ -117,9 +120,14 @@ public class PgSQLTest {
         }
         if (true) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
-            System.out.println("随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
-            System.out.println("随机获取World记录2: " + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId())).join());
-            System.out.println("随机获取World记录3: " + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId()).join()));
+            System.out.println(
+                    "随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
+            System.out.println("随机获取World记录2: "
+                    + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId()))
+                            .join());
+            System.out.println("随机获取World记录3: "
+                    + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId())
+                            .join()));
             World w1 = source.findAsync(World.class, 11).join();
             World w2 = source.findAsync(World.class, 22).join();
             System.out.println("随机获取World记录4: " + w1 + ", " + w2);
@@ -130,13 +138,23 @@ public class PgSQLTest {
             w2 = source.findAsync(World.class, 22).join();
             System.out.println("修改后World记录: " + w1 + ", " + w2);
 
-            System.out.println("随机获取World记录5: " + source.findsListAsync(World.class, Stream.of(1, 2, 3, 4, 5)).join());
+            System.out.println("随机获取World记录5: "
+                    + source.findsListAsync(World.class, Stream.of(1, 2, 3, 4, 5))
+                            .join());
 
             IntStream ids = IntStream.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
-            System.out.println("组合操作1: " + source.findsListAsync(World.class, ids.boxed()).thenCompose(words -> source.updateAsync(World.modifyNumber(words)).thenApply(v -> words)).join());
+            System.out.println("组合操作1: "
+                    + source.findsListAsync(World.class, ids.boxed())
+                            .thenCompose(words -> source.updateAsync(World.modifyNumber(words))
+                                    .thenApply(v -> words))
+                            .join());
 
             ids = IntStream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
-            System.out.println("组合操作2: " + source.findsListAsync(World.class, ids.boxed()).thenCompose(words -> source.updateAsync(World.modifyNumber(words)).thenApply(v -> words)).join());
+            System.out.println("组合操作2: "
+                    + source.findsListAsync(World.class, ids.boxed())
+                            .thenCompose(words -> source.updateAsync(World.modifyNumber(words))
+                                    .thenApply(v -> words))
+                            .join());
 
             System.out.println("查询模板数据: " + source.queryList(Fortune.class));
 
@@ -151,7 +169,9 @@ public class PgSQLTest {
                 futures[i] = source.findAsync(World.class, randomId()).thenCompose(v -> source.updateAsync(v));
             }
             CompletableFuture.allOf(futures).join();
-            System.out.println("已连接数: " + prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Runtime.getRuntime().availableProcessors()));
+            System.out.println("已连接数: "
+                    + prop.getProperty(
+                            DATA_SOURCE_MAXCONNS, "" + Runtime.getRuntime().availableProcessors()));
 
             System.out.println("只读池req发送数: " + getWriteReqCounter(source.readPool()));
             System.out.println("只读池resp处理数: " + getPollRespCounter(source.readPool()));
@@ -172,31 +192,31 @@ public class PgSQLTest {
         System.out.println("IncreWorld记录: " + in1);
         System.out.println("IncreWorld记录: " + in2);
 
-        //System.out.println(source.findsList(Fortune.class, List.of(1, 222, 2, 3).stream()));
+        // System.out.println(source.findsList(Fortune.class, List.of(1, 222, 2, 3).stream()));
         source.queryList(Fortune.class);
         final int fortuneSize = source.queryList(Fortune.class).size();
         System.out.println("Fortune数量: " + fortuneSize);
 
-//        for (int i = 1; i <= 10000; i++) {
-//            if (!source.exists(World.class, i)) {
-//                World w = new World();
-//                w.id = i;
-//                w.randomNumber = i;
-//                source.insert(w);
-//            }
-//        }
-//        CompletableFuture[] ffs = new CompletableFuture[2];
-//        ffs[0] = source.findAsync(Fortune.class, 1);
-//        ffs[1] = source.findAsync(Fortune.class, 2);
-//        CompletableFuture.allOf(ffs).join();
-//        System.out.println(ffs[0].join());
-//        System.out.println(ffs[1].join());
-//        ffs = new CompletableFuture[2];
-//        ffs[0] = source.findAsync(Fortune.class, 1);
-//        ffs[1] = source.findAsync(Fortune.class, 2);
-//        CompletableFuture.allOf(ffs).join(); 
-//        System.out.println(ffs[0].join());
-//        System.out.println(ffs[1].join());
+        //        for (int i = 1; i <= 10000; i++) {
+        //            if (!source.exists(World.class, i)) {
+        //                World w = new World();
+        //                w.id = i;
+        //                w.randomNumber = i;
+        //                source.insert(w);
+        //            }
+        //        }
+        //        CompletableFuture[] ffs = new CompletableFuture[2];
+        //        ffs[0] = source.findAsync(Fortune.class, 1);
+        //        ffs[1] = source.findAsync(Fortune.class, 2);
+        //        CompletableFuture.allOf(ffs).join();
+        //        System.out.println(ffs[0].join());
+        //        System.out.println(ffs[1].join());
+        //        ffs = new CompletableFuture[2];
+        //        ffs[0] = source.findAsync(Fortune.class, 1);
+        //        ffs[1] = source.findAsync(Fortune.class, 2);
+        //        CompletableFuture.allOf(ffs).join();
+        //        System.out.println(ffs[0].join());
+        //        System.out.println(ffs[1].join());
         System.out.println("-------------------- 压测开始 --------------------");
         getWriteReqCounter(source.readPool()).reset();
         getPollRespCounter(source.readPool()).reset();
@@ -233,33 +253,38 @@ public class PgSQLTest {
                         final int index = i;
                         int id = randomId();
                         IntStream ids = ThreadLocalRandom.current().ints(20, 1, 10001);
-                        futures[index] = forFortune ? source.queryListAsync(Fortune.class) : source.findsListAsync(World.class, ids.boxed()).thenApply(v -> {
-                            if (v.size() != 20) {
-                                System.out.println("数量居然是" + v.size());
-                            }
-                            return v;
-                        });
+                        futures[index] = forFortune
+                                ? source.queryListAsync(Fortune.class)
+                                : source.findsListAsync(World.class, ids.boxed())
+                                        .thenApply(v -> {
+                                            if (v.size() != 20) {
+                                                System.out.println("数量居然是" + v.size());
+                                            }
+                                            return v;
+                                        });
                     }
-                    CompletableFuture.allOf(futures).thenCompose(v -> {
-                        if (forFortune) {
-                            List s = (List) futures[0].join();
-                            if (s.size() != fortuneSize) {
-                                System.out.println("数量居然是" + s.size());
-                            }
-                            return CompletableFuture.completedFuture(null);
-                        }
-                        return CompletableFuture.completedFuture(null);
-                        //return source.updateAsync(sort(rs));
-                    }).whenComplete((r, t) -> {
-                        cdl.countDown();
-                        if (t != null) {
-                            if (t.getCause() instanceof TimeoutException) {
-                                timeouts.incrementAndGet();
-                            } else {
-                                t.printStackTrace();
-                            }
-                        }
-                    });
+                    CompletableFuture.allOf(futures)
+                            .thenCompose(v -> {
+                                if (forFortune) {
+                                    List s = (List) futures[0].join();
+                                    if (s.size() != fortuneSize) {
+                                        System.out.println("数量居然是" + s.size());
+                                    }
+                                    return CompletableFuture.completedFuture(null);
+                                }
+                                return CompletableFuture.completedFuture(null);
+                                // return source.updateAsync(sort(rs));
+                            })
+                            .whenComplete((r, t) -> {
+                                cdl.countDown();
+                                if (t != null) {
+                                    if (t.getCause() instanceof TimeoutException) {
+                                        timeouts.incrementAndGet();
+                                    } else {
+                                        t.printStackTrace();
+                                    }
+                                }
+                            });
                 } catch (Throwable t) {
                     if (t.getCause() instanceof TimeoutException) {
                         timeouts.incrementAndGet();
@@ -347,7 +372,7 @@ public class PgSQLTest {
         return array.toString(StandardCharsets.UTF_8);
     }
 
-    //@DistributeTable(strategy = Record.TableStrategy.class)
+    // @DistributeTable(strategy = Record.TableStrategy.class)
     @Entity
     public static class Record {
 
@@ -358,7 +383,8 @@ public class PgSQLTest {
             @Override
             public String[] getTables(String table, FilterNode node) {
                 int pos = table.indexOf('.');
-                return new String[]{table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis())};
+                return new String[] {table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis())
+                };
             }
 
             @Override
@@ -379,8 +405,7 @@ public class PgSQLTest {
 
         private String name = "";
 
-        public Record() {
-        }
+        public Record() {}
 
         public Record(String name) {
             this.name = name;
@@ -406,7 +431,6 @@ public class PgSQLTest {
         public String toString() {
             return JsonConvert.root().convertTo(this);
         }
-
     }
 
     @Entity
@@ -417,8 +441,7 @@ public class PgSQLTest {
 
         private String message = "";
 
-        public Fortune() {
-        }
+        public Fortune() {}
 
         public Fortune(int id, String message) {
             this.id = id;
@@ -450,7 +473,6 @@ public class PgSQLTest {
         public String toString() {
             return JsonConvert.root().convertTo(this);
         }
-
     }
 
     @Entity
@@ -498,7 +520,5 @@ public class PgSQLTest {
         public String toString() {
             return JsonConvert.root().convertTo(this);
         }
-
     }
-
 }

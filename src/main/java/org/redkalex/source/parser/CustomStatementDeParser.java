@@ -23,7 +23,8 @@ public class CustomStatementDeParser extends StatementDeParser {
 
     protected final SelectDeParser selectDeParser;
 
-    public CustomStatementDeParser(ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder buffer) {
+    public CustomStatementDeParser(
+            ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder buffer) {
         super(expressionDeParser, selectDeParser, buffer);
         this.expressionDeParser = expressionDeParser;
         this.selectDeParser = selectDeParser;
@@ -43,7 +44,6 @@ public class CustomStatementDeParser extends StatementDeParser {
     public void visit(Update update) {
         CustomUpdateDeParser updateDeParser = new CustomUpdateDeParser(expressionDeParser, buffer);
         updateDeParser.deParse(update);
-
     }
 
     @Override
@@ -51,5 +51,4 @@ public class CustomStatementDeParser extends StatementDeParser {
         CustomMergeDeParser mergeDeParser = new CustomMergeDeParser(expressionDeParser, selectDeParser, buffer);
         mergeDeParser.deParse(merge);
     }
-
 }

@@ -8,12 +8,9 @@ package org.redkalex.source.search;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class TestComment {
-    
+
     @Id
     @Column(length = 64, comment = "评论ID= userid+'-'+createTime")
     private String commentid = "";
@@ -82,7 +79,7 @@ public class TestComment {
     public void setCreateTime(long createTime) {
         this.createTime = createTime;
     }
-    
+
     @Override
     public String toString() {
         return JsonConvert.root().convertTo(this);

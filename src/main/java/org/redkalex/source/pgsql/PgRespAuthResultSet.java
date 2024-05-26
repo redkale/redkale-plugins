@@ -7,10 +7,7 @@ package org.redkalex.source.pgsql;
 
 import java.util.List;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgRespAuthResultSet extends PgResultSet {
 
     protected boolean authOK;
@@ -21,8 +18,7 @@ public class PgRespAuthResultSet extends PgResultSet {
 
     protected PgReqAuthScramSaslContinueResult authSaslContinueResult;
 
-    public PgRespAuthResultSet() {
-    }
+    public PgRespAuthResultSet() {}
 
     public boolean isAuthOK() {
         return authOK;
@@ -55,5 +51,4 @@ public class PgRespAuthResultSet extends PgResultSet {
     public void setAuthSaslContinueResult(PgReqAuthScramSaslContinueResult authSaslContinueResult) {
         this.authSaslContinueResult = authSaslContinueResult;
     }
-
 }

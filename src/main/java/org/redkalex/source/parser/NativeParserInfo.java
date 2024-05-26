@@ -24,45 +24,44 @@ import org.redkale.util.*;
 
 /**
  * jsqlparser只能识别:xxx的参数变量形式的sql，而DataNativeSqlParser定义的参数变量形式是: ${xxx}、#{xxx}、##{xxx}
- * 此类作用是将原始sql先转换成:name形式的sql再解析出变量参数
- * 注意: 目前不支持union sql
+ * 此类作用是将原始sql先转换成:name形式的sql再解析出变量参数 注意: 目前不支持union sql
  *
  * @author zhangjx
  */
 @SuppressWarnings("unchecked")
 public class NativeParserInfo extends DataNativeSqlInfo {
 
-    //${xxx}、#{xxx}参数生成jdbc参数函数
+    // ${xxx}、#{xxx}参数生成jdbc参数函数
     private final IntFunction<String> signFunc;
 
-    //db类型
+    // db类型
     private final String dbType;
 
-    //所有参数名 arg01/xx
+    // 所有参数名 arg01/xx
     final TreeSet<String> fullJdbcNames = new TreeSet<>();
 
-    //${xx.xx}的拼接参数名
+    // ${xx.xx}的拼接参数名
     private final Map<String, NativeSqlParameter> dollarNames = new HashMap<>();
 
-    //必需的##{xx.xx}参数名
-    //key: xx.xx
+    // 必需的##{xx.xx}参数名
+    // key: xx.xx
     private final Map<String, NativeSqlParameter> requiredNumsignNames = new HashMap<>();
 
-    //jdbc参数名:argxxx对应#{xx.xx}参数名
-    //key: xx_xx, value: xx.xx
+    // jdbc参数名:argxxx对应#{xx.xx}参数名
+    // key: xx_xx, value: xx.xx
     final Map<String, String> jdbcToNumsignMap = new HashMap<>();
 
-    //#{xx.xx}参数名对应jdbc参数名:xx_xx, 包含了requiredNumsignNames ##{xx.xx}
-    //key: xx.xx
+    // #{xx.xx}参数名对应jdbc参数名:xx_xx, 包含了requiredNumsignNames ##{xx.xx}
+    // key: xx.xx
     private final Map<String, NativeSqlParameter> numsignParameters = new HashMap<>();
 
-    //根据${xx.xx}分解并将xx.xx替换成:xx_xx的sql片段
+    // 根据${xx.xx}分解并将xx.xx替换成:xx_xx的sql片段
     private final List<NativeSqlFragment> fragments = new ArrayList<>();
 
-    //包含${xx.xx}、#{xx.xx}、##{xx.xx}所有参数名
+    // 包含${xx.xx}、#{xx.xx}、##{xx.xx}所有参数名
     private final List<NativeSqlParameter> allNamedParameters = new ArrayList<>();
 
-    //非动态sql的NativeParserNode对象缓存
+    // 非动态sql的NativeParserNode对象缓存
     private final ConcurrentHashMap<String, NativeParserNode> parserNodes = new ConcurrentHashMap();
 
     public NativeParserInfo(String rawSql, String dbType, IntFunction<String> signFunc) {
@@ -97,11 +96,11 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 newParams.put(p.getJdbcName(), val);
             }
         }
-        if (templetSql == null) { //需要根据${xx.xx}参数动态构建sql
+        if (templetSql == null) { // 需要根据${xx.xx}参数动态构建sql
             StringBuilder sb = new StringBuilder();
             for (NativeSqlFragment fragment : fragments) {
                 if (fragment.isDollarable()) {
-                    sb.append(newParams.get(fragment.getText())); //不能用JsonConvert，比如 FROM user_${uid}
+                    sb.append(newParams.get(fragment.getText())); // 不能用JsonConvert，比如 FROM user_${uid}
                 } else {
                     sb.append(fragment.getText());
                 }
@@ -147,7 +146,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         final char[] chars = Utility.charArray(rawSql);
         char last = 0;
         Set<String> rootParams = new LinkedHashSet<>();
-        int type = 0; //1:${xx.xx}, 2:#{xx.xx}, 3:##{xx.xx}
+        int type = 0; // 1:${xx.xx}, 2:#{xx.xx}, 3:##{xx.xx}
         for (int i = 0; i < chars.length; i++) {
             char ch = chars[i];
             if (ch == '{') {
@@ -179,10 +178,10 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 }
                 String name = sb.toString().trim();
                 sb.delete(0, sb.length());
-                if (type == 1) { //${xx.xx}
+                if (type == 1) { // ${xx.xx}
                     dollarNames.put(name, new NativeSqlParameter(name, name, true));
                     fragments.add(new NativeSqlFragment(true, name));
-                } else if (type >= 2) { //#{xx.xx}、##{xx.xx}
+                } else if (type >= 2) { // #{xx.xx}、##{xx.xx}
                     NativeSqlParameter old = numsignParameters.get(name);
                     String jdbc = old == null ? null : old.getJdbcName();
                     if (jdbc == null) {
@@ -193,7 +192,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                         if (p.isRequired()) {
                             requiredNumsignNames.put(name, p);
                         }
-                    } else if (!old.isRequired() && type == 3) {//参数先非必需，后必需，需要更改required属性
+                    } else if (!old.isRequired() && type == 3) { // 参数先非必需，后必需，需要更改required属性
                         old.required(true);
                     }
                     fragments.add(new NativeSqlFragment(false, ":" + jdbc));
@@ -225,9 +224,9 @@ public class NativeParserInfo extends DataNativeSqlInfo {
         try {
             CCJSqlParser sqlParser = new CCJSqlParser(parserSql).withAllowComplexParsing(true);
             Statement stmt = sqlParser.SingleStatement();
-            //包含IN参数的sql必须走动态拼接sql模式
+            // 包含IN参数的sql必须走动态拼接sql模式
             final AtomicBoolean containsInExprFlag = new AtomicBoolean();
-            //参数解析器
+            // 参数解析器
             ExpressionDeParser exprDeParser = new ExpressionDeParser() {
 
                 @Override
@@ -240,7 +239,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 public void visit(InExpression expr) {
                     int size = fullJdbcNames.size();
                     super.visit(expr);
-                    //rightExpression maybe JdbcNamedParameter/ParenthesedExpressionList/ParenthesedSelect
+                    // rightExpression maybe JdbcNamedParameter/ParenthesedExpressionList/ParenthesedSelect
                     if (fullJdbcNames.size() > size && !(expr.getRightExpression() instanceof Select)) {
                         containsInExprFlag.set(true);
                     }
@@ -277,8 +276,8 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 if (updateSets != null) {
                     for (UpdateSet updateSet : updateSets) {
                         for (Expression expr : updateSet.getValues()) {
-                            //跳过SELECT子语句WHERE中的参数
-                            //UPDATE dayrecord SET money = (SELECT SUM(m) FROM order WHERE flag = #{flag})
+                            // 跳过SELECT子语句WHERE中的参数
+                            // UPDATE dayrecord SET money = (SELECT SUM(m) FROM order WHERE flag = #{flag})
                             if (!(expr instanceof ParenthesedSelect)) {
                                 expr.accept(updateDeParser);
                             }
@@ -287,7 +286,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                     updateNames.forEach(jdbcName -> {
                         for (NativeSqlParameter p : allNamedParameters) {
                             if (Objects.equals(p.getJdbcName(), jdbcName)) {
-                                if (!p.isRequired()) { //UPDATE SET中的参数都是必需的
+                                if (!p.isRequired()) { // UPDATE SET中的参数都是必需的
                                     numsignParameters.put(p.getNumsignName(), p.required(true));
                                 }
                                 return;
@@ -316,7 +315,11 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     private String formatNumsignToJdbcName(String name) {
         StringBuilder sb = new StringBuilder(name.length());
         for (char ch : name.toCharArray()) {
-            if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == '$') {
+            if ((ch >= 'a' && ch <= 'z')
+                    || (ch >= 'A' && ch <= 'Z')
+                    || (ch >= '0' && ch <= '9')
+                    || ch == '_'
+                    || ch == '$') {
                 sb.append(ch);
             } else {
                 sb.append('_');
@@ -328,13 +331,12 @@ public class NativeParserInfo extends DataNativeSqlInfo {
     @Override
     public String toString() {
         return NativeParserInfo.class.getSimpleName() + "{"
-            + "rawSql: \"" + rawSql + "\""
-            + ", templetSql: \"" + templetSql + "\""
-            + ", dollarNames: " + dollarNames
-            + ", numsignJdbcNames: " + numsignParameters
-            + ", requiredNumsignNames: " + requiredNumsignNames
-            + ", jdbcToNumsignMap: " + jdbcToNumsignMap
-            + "}";
+                + "rawSql: \"" + rawSql + "\""
+                + ", templetSql: \"" + templetSql + "\""
+                + ", dollarNames: " + dollarNames
+                + ", numsignJdbcNames: " + numsignParameters
+                + ", requiredNumsignNames: " + requiredNumsignNames
+                + ", jdbcToNumsignMap: " + jdbcToNumsignMap
+                + "}";
     }
-
 }

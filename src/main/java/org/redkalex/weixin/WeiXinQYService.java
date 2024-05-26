@@ -5,6 +5,8 @@
  */
 package org.redkalex.weixin;
 
+import static org.redkale.util.Utility.*;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -18,15 +20,13 @@ import javax.crypto.spec.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.*;
 import org.redkale.util.*;
-import static org.redkale.util.Utility.*;
-import org.redkale.annotation.ResourceChanged;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -51,13 +51,12 @@ public final class WeiXinQYService extends AbstractService {
 
     private static final Random RANDOM = new Random();
 
-    protected static final Type MAPTYPE = new TypeToken<Map<String, String>>() {
-    }.getType();
+    protected static final Type MAPTYPE = new TypeToken<Map<String, String>>() {}.getType();
 
     @Resource
     protected JsonConvert convert;
 
-    //------------------------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------------
     // http://oa.xxxx.com/pipes/wx/verifyqy
     @Resource(name = "weixin.qy.token", required = false)
     protected String qytoken = "";
@@ -77,9 +76,8 @@ public final class WeiXinQYService extends AbstractService {
 
     private final Token qyAccessToken = new Token();
 
-    //------------------------------------------------------------------------------------------------------
-    public WeiXinQYService() {
-    }
+    // ------------------------------------------------------------------------------------------------------
+    public WeiXinQYService() {}
 
     @ResourceChanged
     @Comment("通过配置中心更改配置后的回调")
@@ -96,10 +94,11 @@ public final class WeiXinQYService extends AbstractService {
         }
     }
 
-    //-----------------------------------微信企业号接口----------------------------------------------------------
+    // -----------------------------------微信企业号接口----------------------------------------------------------
     public CompletableFuture<Map<String, String>> getQYUserCode(String code, String agentid) throws IOException {
         return getQYAccessToken().thenCompose(token -> {
-            String url = "https://qyapi.weixin.qq.com/cgi-bin/user/getuserinfo?access_token=" + token + "&code=" + code + "&agentid=" + agentid;
+            String url = "https://qyapi.weixin.qq.com/cgi-bin/user/getuserinfo?access_token=" + token + "&code=" + code
+                    + "&agentid=" + agentid;
             return getHttpContentAsync(url).thenApply(json -> {
                 if (logger.isLoggable(Level.FINEST)) {
                     logger.finest(url + "--->" + json);
@@ -123,7 +122,7 @@ public final class WeiXinQYService extends AbstractService {
             String result = null;
             try {
                 message.supplyContent();
-                if (message.getText() == null) { //没内容不需要发
+                if (message.getText() == null) { // 没内容不需要发
                     future.complete(null);
                     return;
                 }
@@ -174,16 +173,19 @@ public final class WeiXinQYService extends AbstractService {
 
     /**
      * 将公众平台回复用户的消息加密打包.
+     *
      * <ol>
-     * <li>对要发送的消息进行AES-CBC加密</li>
-     * <li>生成安全签名</li>
-     * <li>将消息密文和安全签名打包成xml格式</li>
+     *   <li>对要发送的消息进行AES-CBC加密
+     *   <li>生成安全签名
+     *   <li>将消息密文和安全签名打包成xml格式
      * </ol>
+     *
      * <p>
-     * @param replyMsg  公众平台待回复用户的消息，xml格式的字符串
+     *
+     * @param replyMsg 公众平台待回复用户的消息，xml格式的字符串
      * @param timeStamp 时间戳，可以自己生成，也可以用URL参数的timestamp
-     * @param nonce     随机串，可以自己生成，也可以用URL参数的nonce
-     * <p>
+     * @param nonce 随机串，可以自己生成，也可以用URL参数的nonce
+     *     <p>
      * @return 加密后的可以直接回复用户的密文，包括msg_signature, timestamp, nonce, encrypt的xml格式的字符串
      */
     protected String encryptQYMessage(String replyMsg, String timeStamp, String nonce) {
@@ -198,15 +200,17 @@ public final class WeiXinQYService extends AbstractService {
 
         // 生成发送的xml
         return "<xml>\n<Encrypt><![CDATA[" + encrypt + "]]></Encrypt>\n"
-            + "<MsgSignature><![CDATA[" + signature + "]]></MsgSignature>\n"
-            + "<TimeStamp>" + timeStamp + "</TimeStamp>\n"
-            + "<Nonce><![CDATA[" + nonce + "]]></Nonce>\n</xml>";
+                + "<MsgSignature><![CDATA[" + signature + "]]></MsgSignature>\n"
+                + "<TimeStamp>" + timeStamp + "</TimeStamp>\n"
+                + "<Nonce><![CDATA[" + nonce + "]]></Nonce>\n</xml>";
     }
 
     protected String decryptQYMessage(String msgSignature, String timeStamp, String nonce, String postData) {
         // 密钥，公众账号的app secret
         // 提取密文
-        String encrypt = postData.substring(postData.indexOf("<Encrypt><![CDATA[") + "<Encrypt><![CDATA[".length(), postData.indexOf("]]></Encrypt>"));
+        String encrypt = postData.substring(
+                postData.indexOf("<Encrypt><![CDATA[") + "<Encrypt><![CDATA[".length(),
+                postData.indexOf("]]></Encrypt>"));
         // 验证安全签名
         if (!sha1(qytoken, timeStamp, nonce, encrypt).equals(msgSignature)) {
             throw new RedkaleException("signature verification error");
@@ -216,10 +220,11 @@ public final class WeiXinQYService extends AbstractService {
 
     /**
      * 对明文进行加密.
-     * <p>
-     * @param randomStr String
-     * @param text      需要加密的明文
      *
+     * <p>
+     *
+     * @param randomStr String
+     * @param text 需要加密的明文
      * @return 加密后base64编码的字符串
      */
     protected String encryptQY(String randomStr, String text) {
@@ -253,7 +258,8 @@ public final class WeiXinQYService extends AbstractService {
         byte[] original;
         try {
             // 使用BASE64对密文进行解码
-            original = createQYCipher(Cipher.DECRYPT_MODE).doFinal(Base64.getDecoder().decode(text));
+            original = createQYCipher(Cipher.DECRYPT_MODE)
+                    .doFinal(Base64.getDecoder().decode(text));
         } catch (Exception e) {
             throw new RedkaleException("AES解密失败", e);
         }
@@ -261,8 +267,10 @@ public final class WeiXinQYService extends AbstractService {
             // 去除补位字符
             byte[] bytes = decodePKCS7(original);
             // 分离16位随机字符串,网络字节序和corpid
-            int xmlLength = (bytes[16] & 0xFF) << 24 | (bytes[17] & 0xFF) << 16 | (bytes[18] & 0xFF) << 8 | bytes[19] & 0xFF;
-            if (!qycorpid.equals(new String(bytes, 20 + xmlLength, bytes.length - 20 - xmlLength, StandardCharsets.UTF_8))) {
+            int xmlLength =
+                    (bytes[16] & 0xFF) << 24 | (bytes[17] & 0xFF) << 16 | (bytes[18] & 0xFF) << 8 | bytes[19] & 0xFF;
+            if (!qycorpid.equals(
+                    new String(bytes, 20 + xmlLength, bytes.length - 20 - xmlLength, StandardCharsets.UTF_8))) {
                 throw new RedkaleException("corpid校验失败");
             }
             return new String(bytes, 20, xmlLength, StandardCharsets.UTF_8);
@@ -275,7 +283,9 @@ public final class WeiXinQYService extends AbstractService {
     }
 
     protected Cipher createQYCipher(int mode) throws Exception {
-        Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding"); //AES192、256位加密解密 需要将新版 local_policy.jar、US_export_policy.jar两个文件覆盖到 ${JDK_HOME}/jre/lib/security/下
+        Cipher cipher = Cipher.getInstance(
+                "AES/CBC/NoPadding"); // AES192、256位加密解密 需要将新版 local_policy.jar、US_export_policy.jar两个文件覆盖到
+        // ${JDK_HOME}/jre/lib/security/下
         if (qykeyspec == null) {
             byte[] aeskeyBytes = Base64.getDecoder().decode(qyaeskey + "=");
             qykeyspec = new SecretKeySpec(aeskeyBytes, "AES");
@@ -285,7 +295,7 @@ public final class WeiXinQYService extends AbstractService {
         return cipher;
     }
 
-    //-----------------------------------通用接口----------------------------------------------------------
+    // -----------------------------------通用接口----------------------------------------------------------
     // 随机生成16位字符串
     protected static String random16String() {
         StringBuilder sb = new StringBuilder();
@@ -297,9 +307,10 @@ public final class WeiXinQYService extends AbstractService {
 
     /**
      * 用SHA1算法生成安全签名
-     * <p>
-     * @param strings String[]
      *
+     * <p>
+     *
+     * @param strings String[]
      * @return 安全签名
      */
     protected static String sha1(String... strings) {
@@ -315,9 +326,10 @@ public final class WeiXinQYService extends AbstractService {
 
     /**
      * 获得对明文进行补位填充的字节.
-     * <p>
-     * @param count 需要进行填充补位操作的明文字节个数
      *
+     * <p>
+     *
+     * @param count 需要进行填充补位操作的明文字节个数
      * @return 补齐用的字节数组
      */
     private static byte[] encodePKCS7(int count) {
@@ -337,9 +349,10 @@ public final class WeiXinQYService extends AbstractService {
 
     /**
      * 删除解密后明文的补位字符
-     * <p>
-     * @param decrypted 解密后的明文
      *
+     * <p>
+     *
+     * @param decrypted 解密后的明文
      * @return 删除补位字符后的明文
      */
     private static byte[] decodePKCS7(byte[] decrypted) {

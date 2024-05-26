@@ -8,10 +8,7 @@ package org.redkalex.source.mongo;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Entity
 public class TestRecord {
 

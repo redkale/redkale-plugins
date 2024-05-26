@@ -5,16 +5,14 @@
  */
 package org.redkalex.source.mysql;
 
+import static org.redkalex.source.mysql.Mysqls.COM_QUERY;
+
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
-import static org.redkalex.source.mysql.Mysqls.COM_QUERY;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyReqBatch extends MyClientRequest {
 
     protected String[] sqls;

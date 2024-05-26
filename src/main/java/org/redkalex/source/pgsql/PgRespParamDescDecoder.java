@@ -3,21 +3,18 @@
  */
 package org.redkalex.source.pgsql;
 
+import static org.redkalex.source.pgsql.PgClientCodec.*;
+
 import java.nio.ByteBuffer;
 import org.redkale.source.SourceException;
 import org.redkale.util.ByteArray;
-import static org.redkalex.source.pgsql.PgClientCodec.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgRespParamDescDecoder extends PgRespDecoder<PgColumnFormat[]> {
 
     public static final PgRespParamDescDecoder instance = new PgRespParamDescDecoder();
 
-    private PgRespParamDescDecoder() {
-    }
+    private PgRespParamDescDecoder() {}
 
     @Override
     public byte messageid() {
@@ -25,7 +22,13 @@ public class PgRespParamDescDecoder extends PgRespDecoder<PgColumnFormat[]> {
     }
 
     @Override
-    public PgColumnFormat[] read(PgClientConnection conn, ByteBuffer buffer, final int length, ByteArray array, PgClientRequest request, PgResultSet dataset) {
+    public PgColumnFormat[] read(
+            PgClientConnection conn,
+            ByteBuffer buffer,
+            final int length,
+            ByteArray array,
+            PgClientRequest request,
+            PgResultSet dataset) {
         PgColumnFormat[] formats = new PgColumnFormat[buffer.getShort() & 0xFFFF];
         for (int i = 0; i < formats.length; i++) {
             int oid = buffer.getInt();

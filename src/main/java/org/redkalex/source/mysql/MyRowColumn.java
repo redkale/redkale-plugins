@@ -5,27 +5,25 @@
  */
 package org.redkalex.source.mysql;
 
-import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
 import static org.redkalex.source.mysql.MysqlType.*;
 
-/**
- *
- * @author zhangjx
- */
+import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+
+/** @author zhangjx */
 public class MyRowColumn {
 
     public byte[] catalog;
 
     public byte[] schema;
 
-    public byte[] tableLabel; //AS表名
+    public byte[] tableLabel; // AS表名
 
-    public byte[] tableName; //原始表名
+    public byte[] tableName; // 原始表名
 
-    public String columnLabel;  //AS字段名
+    public String columnLabel; // AS字段名
 
-    public String columnName;  //原始字段名
+    public String columnName; // 原始字段名
 
     public int charsetSet;
 
@@ -109,18 +107,18 @@ public class MyRowColumn {
     @Override
     public String toString() {
         return MyRowColumn.class.getSimpleName()
-            + "{catalog=" + format(catalog)
-            + ", schema=" + format(schema)
-            + ", tableLabel=" + format(tableLabel)
-            + ", tableName=" + format(tableName)
-            + ", columnLabel=" + columnLabel
-            + ", columnName=" + columnName
-            + ", charsetSet=" + charsetSet
-            + ", flags=0x" + Integer.toHexString(flags)
-            + ", type=" + type
-            + ", length=" + length
-            + ", defaultValues=" + format(defaultValues)
-            + "}";
+                + "{catalog=" + format(catalog)
+                + ", schema=" + format(schema)
+                + ", tableLabel=" + format(tableLabel)
+                + ", tableName=" + format(tableName)
+                + ", columnLabel=" + columnLabel
+                + ", columnName=" + columnName
+                + ", charsetSet=" + charsetSet
+                + ", flags=0x" + Integer.toHexString(flags)
+                + ", type=" + type
+                + ", length=" + length
+                + ", defaultValues=" + format(defaultValues)
+                + "}";
     }
 
     private static String format(byte[] bs) {

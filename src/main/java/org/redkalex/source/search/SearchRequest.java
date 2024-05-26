@@ -22,13 +22,13 @@ public class SearchRequest extends BaseBean {
     private static final StringWrapper WRAPPER_EMPTY = new StringWrapper("{}");
 
     @ConvertColumn(index = 1)
-    public Query query;  //查询条件
+    public Query query; // 查询条件
 
     @ConvertColumn(index = 2)
     public QueryFilterItem highlight;
 
     @ConvertColumn(index = 3)
-    public HashMap<String, Object> source; //更新内容
+    public HashMap<String, Object> source; // 更新内容
 
     @ConvertColumn(index = 4)
     public Object script;
@@ -40,10 +40,10 @@ public class SearchRequest extends BaseBean {
     public QueryFilterItem aggs;
 
     @ConvertColumn(index = 7)
-    public Integer from; //翻页偏移量
+    public Integer from; // 翻页偏移量
 
     @ConvertColumn(index = 8)
-    public Integer size;  //翻页条数
+    public Integer size; // 翻页条数
 
     public static SearchRequest createMatchAll() {
         SearchRequest bean = new SearchRequest();
@@ -54,7 +54,8 @@ public class SearchRequest extends BaseBean {
 
     private static QueryFilterItem filterNodeElement(FilterNode node) {
         if (node == null || node.getColumn() == null || node.getColumn().charAt(0) == '#') return null;
-        if (node instanceof FilterJoinNode) throw new IllegalArgumentException("Not supported " + FilterJoinNode.class.getSimpleName());
+        if (node instanceof FilterJoinNode)
+            throw new IllegalArgumentException("Not supported " + FilterJoinNode.class.getSimpleName());
         switch (node.getExpress()) {
             case EQ:
             case IG_EQ: {
@@ -62,31 +63,48 @@ public class SearchRequest extends BaseBean {
             }
             case NE:
             case IG_NE: {
-                return new QueryFilterItem("bool", new QueryFilterItem("must_not", new QueryFilterItem("term", new QueryFilterItem(node.getColumn(), node.getValue()))));
+                return new QueryFilterItem(
+                        "bool",
+                        new QueryFilterItem(
+                                "must_not",
+                                new QueryFilterItem("term", new QueryFilterItem(node.getColumn(), node.getValue()))));
             }
             case GT: {
-                return new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), Utility.ofMap("gt", node.getValue())));
+                return new QueryFilterItem(
+                        "range", new QueryFilterItem(node.getColumn(), Utility.ofMap("gt", node.getValue())));
             }
             case LT: {
-                return new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), Utility.ofMap("lt", node.getValue())));
+                return new QueryFilterItem(
+                        "range", new QueryFilterItem(node.getColumn(), Utility.ofMap("lt", node.getValue())));
             }
             case GE: {
-                return new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), Utility.ofMap("gte", node.getValue())));
+                return new QueryFilterItem(
+                        "range", new QueryFilterItem(node.getColumn(), Utility.ofMap("gte", node.getValue())));
             }
             case LE: {
-                return new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), Utility.ofMap("lte", node.getValue())));
+                return new QueryFilterItem(
+                        "range", new QueryFilterItem(node.getColumn(), Utility.ofMap("lte", node.getValue())));
             }
             case LIKE: {
                 return new QueryFilterItem("match_phrase", new QueryFilterItem(node.getColumn(), node.getValue()));
             }
             case NOT_LIKE: {
-                return new QueryFilterItem("bool", new QueryFilterItem("must_not", new QueryFilterItem("match_phrase", new QueryFilterItem(node.getColumn(), node.getValue()))));
+                return new QueryFilterItem(
+                        "bool",
+                        new QueryFilterItem(
+                                "must_not",
+                                new QueryFilterItem(
+                                        "match_phrase", new QueryFilterItem(node.getColumn(), node.getValue()))));
             }
             case IN: {
                 return new QueryFilterItem("terms", new QueryFilterItem(node.getColumn(), node.getValue()));
             }
             case NOT_IN: {
-                return new QueryFilterItem("bool", new QueryFilterItem("must_not", new QueryFilterItem("terms", new QueryFilterItem(node.getColumn(), node.getValue()))));
+                return new QueryFilterItem(
+                        "bool",
+                        new QueryFilterItem(
+                                "must_not",
+                                new QueryFilterItem("terms", new QueryFilterItem(node.getColumn(), node.getValue()))));
             }
             case BETWEEN: {
                 Range range = (Range) node.getValue();
@@ -104,7 +122,11 @@ public class SearchRequest extends BaseBean {
                 if (range.getMax() != null && range.getMax().compareTo(range.getMin()) > 0) {
                     rangeval.put("lte", range.getMax());
                 }
-                return new QueryFilterItem("bool", new QueryFilterItem("must_not", new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), rangeval))));
+                return new QueryFilterItem(
+                        "bool",
+                        new QueryFilterItem(
+                                "must_not",
+                                new QueryFilterItem("range", new QueryFilterItem(node.getColumn(), rangeval))));
             }
             default:
                 throw new IllegalArgumentException("Not supported FilterNode " + node);
@@ -122,8 +144,11 @@ public class SearchRequest extends BaseBean {
             for (FilterNode item : node.getNodes()) {
                 QueryFilterItem s = filterNodeBool(item, true);
                 if (s == null) continue;
-                if (s.containsKey("must") || s.containsKey("should") || s.containsKey("match")
-                    || s.containsKey("match_phrase") || s.containsKey("multi_match")) {
+                if (s.containsKey("must")
+                        || s.containsKey("should")
+                        || s.containsKey("match")
+                        || s.containsKey("match_phrase")
+                        || s.containsKey("multi_match")) {
                     items.add(new QueryFilterItem("bool", s));
                 } else {
                     items.add(s);
@@ -145,7 +170,9 @@ public class SearchRequest extends BaseBean {
         this.query = new Query();
         this.query.bool = filterNodeBool(node, false);
         SearchQuery search = (SearchQuery) node.findValue(SearchQuery.SEARCH_FILTER_NAME);
-        if (search != null && search.searchKeyword() != null && !search.searchKeyword().isEmpty()) {
+        if (search != null
+                && search.searchKeyword() != null
+                && !search.searchKeyword().isEmpty()) {
             String[] fs = search.searchFields();
             QueryFilterItem match = new QueryFilterItem("query", search.searchKeyword(), "fields", fs);
             if (search.searchAnalyzer() != null && !search.searchAnalyzer().isEmpty()) {
@@ -167,8 +194,8 @@ public class SearchRequest extends BaseBean {
                 SearchQuery.SearchHighlight hlbean = search.highlight();
                 QueryFilterItem hl = new QueryFilterItem();
                 if (hlbean.preTag() != null && !hlbean.preTag().isEmpty()) {
-                    hl.put("pre_tags", new String[]{hlbean.preTag()});
-                    hl.put("post_tags", new String[]{hlbean.postTag()});
+                    hl.put("pre_tags", new String[] {hlbean.preTag()});
+                    hl.put("post_tags", new String[] {hlbean.postTag()});
                 }
                 if (hlbean.boundaryLocale() != null && !hlbean.boundaryLocale().isEmpty()) {
                     hl.put("boundary_scanner_locale", hlbean.boundaryLocale());
@@ -212,13 +239,11 @@ public class SearchRequest extends BaseBean {
 
         public String order;
 
-        public SortOrder() {
-        }
+        public SortOrder() {}
 
         public SortOrder(String o) {
             this.order = o;
         }
-
     }
 
     public static class Query extends BaseBean {
@@ -237,7 +262,6 @@ public class SearchRequest extends BaseBean {
 
         @ConvertColumn(index = 5)
         public QueryFilterItem multi_match;
-
     }
 
     public static class QueryBool extends BaseBean {
@@ -265,13 +289,11 @@ public class SearchRequest extends BaseBean {
             if (this.should == null) this.should = new ArrayList<>();
             return this.should;
         }
-
     }
 
     public static class QueryFilterItem extends LinkedHashMap<String, Object> {
 
-        public QueryFilterItem() {
-        }
+        public QueryFilterItem() {}
 
         public QueryFilterItem(String key, Serializable val) {
             put(key, val);
@@ -285,19 +307,16 @@ public class SearchRequest extends BaseBean {
         public String toString() {
             return JsonConvert.root().convertTo(this);
         }
-
     }
 
     public static class QueryIds extends BaseBean {
 
         public String[] values;
 
-        public QueryIds() {
-        }
+        public QueryIds() {}
 
         public QueryIds(String... ids) {
             this.values = ids;
         }
-
     }
 }

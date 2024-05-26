@@ -14,13 +14,11 @@ import java.util.stream.Stream;
 import org.redkale.convert.*;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class ProtobufWriter extends Writer implements ByteTuple {
 
-    private static final int defaultSize = Integer.getInteger("convert.protobuf.writer.buffer.defsize", Integer.getInteger("convert.writer.buffer.defsize", 1024));
+    private static final int defaultSize = Integer.getInteger(
+            "convert.protobuf.writer.buffer.defsize", Integer.getInteger("convert.writer.buffer.defsize", 1024));
 
     private byte[] content;
 
@@ -116,7 +114,7 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     }
 
     public ByteBuffer[] toBuffers() {
-        return new ByteBuffer[]{ByteBuffer.wrap(content, 0, count)};
+        return new ByteBuffer[] {ByteBuffer.wrap(content, 0, count)};
     }
 
     /**
@@ -182,7 +180,7 @@ public class ProtobufWriter extends Writer implements ByteTuple {
         return this.getClass().getSimpleName() + "[count=" + this.count + "]";
     }
 
-    //------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
     public final int count() {
         return this.count;
     }
@@ -193,8 +191,7 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     }
 
     @Override
-    public void writeNull() {
-    }
+    public void writeNull() {}
 
     @Override
     public boolean needWriteClassName() {
@@ -202,8 +199,7 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     }
 
     @Override
-    public void writeClassName(String clazz) {
-    }
+    public void writeClassName(String clazz) {}
 
     @Override
     public int writeObjectB(Object obj) {
@@ -225,7 +221,7 @@ public class ProtobufWriter extends Writer implements ByteTuple {
             writeNull();
             return 0;
         } else if (size < 1) {
-            //writeUInt32(0);
+            // writeUInt32(0);
             return 0;
         } else if (obj instanceof byte[]) {
             int length = ((byte[]) obj).length;
@@ -378,25 +374,22 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     }
 
     @Override
-    public void writeArrayMark() {
-    }
+    public void writeArrayMark() {}
 
     @Override
-    public void writeArrayE() {
-    }
+    public void writeArrayE() {}
 
     @Override
-    public int writeMapB(int size, Encodeable<Writer, Object> keyEncoder, Encodeable<Writer, Object> valueEncoder, Object obj) {
+    public int writeMapB(
+            int size, Encodeable<Writer, Object> keyEncoder, Encodeable<Writer, Object> valueEncoder, Object obj) {
         return -1;
     }
 
     @Override
-    public void writeMapMark() {
-    }
+    public void writeMapMark() {}
 
     @Override
-    public void writeMapE() {
-    }
+    public void writeMapE() {}
 
     @Override
     public void writeFieldName(EnMember member, String fieldName, Type fieldType, int fieldPos) {
@@ -469,8 +462,8 @@ public class ProtobufWriter extends Writer implements ByteTuple {
                     this.writeFieldName(member);
                     ProtobufWriter tmp = new ProtobufWriter().configFieldFunc(this);
                     arrayEncoder.convertTo(tmp, member, (Object[]) value);
-                    //int length = tmp.count();
-                    //this.writeUInt32(length);
+                    // int length = tmp.count();
+                    // this.writeUInt32(length);
                     this.writeTo(tmp.toArray());
                 }
             } else {
@@ -544,12 +537,12 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     }
 
     @Override
-    public void writeInt(int value) { //writeSInt32  
+    public void writeInt(int value) { // writeSInt32
         writeUInt32((value << 1) ^ (value >> 31));
     }
 
     @Override
-    public void writeLong(long value) { //writeSInt64
+    public void writeLong(long value) { // writeSInt64
         writeUInt64((value << 1) ^ (value >> 63));
     }
 
@@ -621,17 +614,19 @@ public class ProtobufWriter extends Writer implements ByteTuple {
     }
 
     protected void writeFixed32(int value) {
-        writeTo((byte) (value & 0xFF), (byte) ((value >> 8) & 0xFF), (byte) ((value >> 16) & 0xFF), (byte) ((value >> 24) & 0xFF));
+        writeTo((byte) (value & 0xFF), (byte) ((value >> 8) & 0xFF), (byte) ((value >> 16) & 0xFF), (byte)
+                ((value >> 24) & 0xFF));
     }
 
     protected void writeFixed64(long value) {
-        writeTo((byte) ((int) (value) & 0xFF),
-            (byte) ((int) (value >> 8) & 0xFF),
-            (byte) ((int) (value >> 16) & 0xFF),
-            (byte) ((int) (value >> 24) & 0xFF),
-            (byte) ((int) (value >> 32) & 0xFF),
-            (byte) ((int) (value >> 40) & 0xFF),
-            (byte) ((int) (value >> 48) & 0xFF),
-            (byte) ((int) (value >> 56) & 0xFF));
+        writeTo(
+                (byte) ((int) (value) & 0xFF),
+                (byte) ((int) (value >> 8) & 0xFF),
+                (byte) ((int) (value >> 16) & 0xFF),
+                (byte) ((int) (value >> 24) & 0xFF),
+                (byte) ((int) (value >> 32) & 0xFF),
+                (byte) ((int) (value >> 40) & 0xFF),
+                (byte) ((int) (value >> 48) & 0xFF),
+                (byte) ((int) (value >> 56) & 0xFF));
     }
 }

@@ -5,16 +5,14 @@
  */
 package org.redkalex.source.mysql;
 
+import static org.redkale.source.DataSources.*;
+
 import org.redkale.annotation.Priority;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.source.spi.DataSourceProvider;
 import org.redkale.util.AnyValue;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-900)
 public class MysqlDataSourceProvider implements DataSourceProvider {
 
@@ -33,5 +31,4 @@ public class MysqlDataSourceProvider implements DataSourceProvider {
     public DataSource createInstance() {
         return new MysqlDataSource();
     }
-
 }

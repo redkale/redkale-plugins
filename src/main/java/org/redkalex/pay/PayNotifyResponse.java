@@ -9,24 +9,23 @@ import org.redkale.convert.ConvertDisabled;
 import org.redkale.convert.json.JsonFactory;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
 public class PayNotifyResponse extends PayResponse {
 
-    protected short payType; //支付类型; 
+    protected short payType; // 支付类型;
 
-    protected String payno = ""; //自己的订单号
+    protected String payno = ""; // 自己的订单号
 
-    protected long payedMoney = -1; //到账的金额，单位：分
+    protected long payedMoney = -1; // 到账的金额，单位：分
 
-    protected long refundedMoney = -1; //退款的金额，单位：分
+    protected long refundedMoney = -1; // 退款的金额，单位：分
 
-    protected String thirdPayno = ""; //第三方的支付流水号
+    protected String thirdPayno = ""; // 第三方的支付流水号
 
-    protected String notifyText = ""; //返回的文本信息, 常见场景是success字符串
+    protected String notifyText = ""; // 返回的文本信息, 常见场景是success字符串
 
     @Override
     public PayNotifyResponse retcode(int retcode) {

@@ -10,13 +10,10 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.AnyValue;
 import org.redkale.util.Utility;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class XxljobConfig {
 
-    //不以/结尾    
+    // 不以/结尾
     @ConvertColumn(ignore = true)
     private String domain;
 
@@ -34,11 +31,11 @@ public class XxljobConfig {
     @ConvertColumn(ignore = true)
     private Map<String, Serializable> headers;
 
-    public XxljobConfig() {
-    }
+    public XxljobConfig() {}
 
     public XxljobConfig(AnyValue conf, UnaryOperator<String> func) {
-        this.addresses = Objects.requireNonNull(func.apply(conf.getValue("addresses").trim()));
+        this.addresses =
+                Objects.requireNonNull(func.apply(conf.getValue("addresses").trim()));
         this.executorName = Objects.requireNonNull(func.apply(conf.getValue("executorName")));
         this.ip = func.apply(conf.getValue("ip", Utility.localInetAddress().getHostAddress()));
         this.port = conf.getIntValue("port", 0);
@@ -104,5 +101,4 @@ public class XxljobConfig {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

@@ -17,14 +17,13 @@ import javax.net.ssl.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.*;
 import org.redkale.util.*;
-import org.redkale.annotation.ResourceChanged;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -43,16 +42,16 @@ public final class ApnsService implements Service {
     protected File home;
 
     @Resource(name = "apns.certpwd")
-    protected String apnscertpwd = "1"; //证书的密码
+    protected String apnscertpwd = "1"; // 证书的密码
 
-    @Resource(name = "apns.certpath") //用来加载证书用
+    @Resource(name = "apns.certpath") // 用来加载证书用
     protected String apnscertpath = "apnspushdev_cert.p12";
 
-    @Resource(name = "apns.certbase64") //证书内容的64位编码
+    @Resource(name = "apns.certbase64") // 证书内容的64位编码
     protected String apnscertbase64 = "";
 
-    //测试环境:  gateway.sandbox.push.apple.com
-    //正式环境:  gateway.push.apple.com
+    // 测试环境:  gateway.sandbox.push.apple.com
+    // 正式环境:  gateway.push.apple.com
     @Resource(name = "apns.pushaddr") //
     protected String apnspushaddr = "gateway.push.apple.com";
 
@@ -73,10 +72,12 @@ public final class ApnsService implements Service {
     void onResourceChanged(ResourceEvent[] events) {
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
-            if (event.name().contains("certpwd") || event.name().contains("certbase64")) { //敏感配置不打印日志
+            if (event.name().contains("certpwd") || event.name().contains("certbase64")) { // 敏感配置不打印日志
                 sb.append("@Resource = ").append(event.name()).append(" resource changed");
             } else {
-                sb.append("@Resource = ").append(event.name()).append(" resource changed:  newVal = " + event.newValue() + ", oldVal = " + event.oldValue());
+                sb.append("@Resource = ")
+                        .append(event.name())
+                        .append(" resource changed:  newVal = " + event.newValue() + ", oldVal = " + event.oldValue());
             }
         }
         if (sb.length() > 0) {
@@ -99,12 +100,16 @@ public final class ApnsService implements Service {
             @Override
             public void run() {
                 try {
-                    File file = (apnscertpath.indexOf('/') == 0 || apnscertpath.indexOf(':') > 0) ? new File(apnscertpath) : new File(home, "conf/" + apnscertpath);
+                    File file = (apnscertpath.indexOf('/') == 0 || apnscertpath.indexOf(':') > 0)
+                            ? new File(apnscertpath)
+                            : new File(home, "conf/" + apnscertpath);
                     InputStream in;
                     if (apnscertbase64 != null && !apnscertbase64.isEmpty()) {
                         in = new ByteArrayInputStream(Base64.getDecoder().decode(apnscertbase64));
                     } else {
-                        in = file.isFile() ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + apnscertpath);
+                        in = file.isFile()
+                                ? new FileInputStream(file)
+                                : getClass().getResourceAsStream("/META-INF/" + apnscertpath);
                     }
                     KeyStore ks = KeyStore.getInstance("PKCS12");
                     KeyManagerFactory kf = null;
@@ -115,7 +120,8 @@ public final class ApnsService implements Service {
                         kf.init(ks, apnscertpwd.toCharArray());
                     }
 
-                    TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                    TrustManagerFactory tmf =
+                            TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                     tmf.init((KeyStore) null);
                     SSLContext context = SSLContext.getInstance("TLS");
                     context.init(kf == null ? new KeyManager[0] : kf.getKeyManagers(), tmf.getTrustManagers(), null);
@@ -131,8 +137,7 @@ public final class ApnsService implements Service {
     }
 
     @Override
-    public void destroy(AnyValue conf) {
-    }
+    public void destroy(AnyValue conf) {}
 
     private Socket getPushSocket() throws IOException {
         if (!this.inited) {
@@ -149,29 +154,29 @@ public final class ApnsService implements Service {
     public void pushApnsMessage(ApnsMessage message) throws IOException {
         final byte[] tokens = Utility.hexToBin(message.getToken().replaceAll("\\s+", ""));
         ByteBuffer buffer = ByteBuffer.allocate(apnsbuffersize);
-        buffer.put((byte) 2); //固定命令号 
-        buffer.putInt(0); //下面数据的长度
+        buffer.put((byte) 2); // 固定命令号
+        buffer.putInt(0); // 下面数据的长度
 
-        buffer.put((byte) 1); //token
+        buffer.put((byte) 1); // token
         buffer.putShort((short) tokens.length);
         buffer.put(tokens);
 
-        buffer.put((byte) 2);  //payload
+        buffer.put((byte) 2); // payload
         final byte[] payload = message.getPayload().toString().getBytes(StandardCharsets.UTF_8);
         buffer.putShort((short) payload.length);
         buffer.put(payload);
 
         if (message.getIdentifier() > 0) {
-            buffer.put((byte) 3);  //Notification identifier
+            buffer.put((byte) 3); // Notification identifier
             buffer.putShort((short) 4);
             buffer.putInt(message.getIdentifier());
         }
         if (message.getExpiredate() > 0) {
-            buffer.put((byte) 4); //Expiration date
+            buffer.put((byte) 4); // Expiration date
             buffer.putShort((short) 4);
             buffer.putInt(message.getExpiredate());
         }
-        buffer.put((byte) 5);  //Priority
+        buffer.put((byte) 5); // Priority
         buffer.putShort((short) 1);
         buffer.put((byte) message.getPriority());
 
@@ -185,5 +190,4 @@ public final class ApnsService implements Service {
         socket.getOutputStream().write(buffer.array(), 0, buffer.remaining());
         socket.close();
     }
-
 }

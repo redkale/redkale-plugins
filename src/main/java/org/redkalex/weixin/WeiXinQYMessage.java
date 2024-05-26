@@ -5,14 +5,15 @@
  */
 package org.redkalex.weixin;
 
-import org.redkale.convert.json.JsonFactory;
 import java.util.*;
 import java.util.function.*;
+import org.redkale.convert.json.JsonFactory;
 
 /**
  * 微信企业号Service
  *
- * 详情见: https://redkale.org
+ * <p>详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 public class WeiXinQYMessage {
@@ -33,8 +34,7 @@ public class WeiXinQYMessage {
 
     private Supplier<String> contentSupplier;
 
-    public WeiXinQYMessage() {
-    }
+    public WeiXinQYMessage() {}
 
     public WeiXinQYMessage(String agentid, String text) {
         this.agentid = agentid;

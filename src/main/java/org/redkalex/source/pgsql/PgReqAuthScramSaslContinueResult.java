@@ -7,10 +7,7 @@ package org.redkalex.source.pgsql;
 
 import org.redkale.convert.json.JsonConvert;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgReqAuthScramSaslContinueResult {
 
     public String saslmsg; // r=hu~1A]pOoftNMKg<~YWKp`1^F2avWJEdla6IQr3BiNBORfiy,s=1uyIEWcUJVLPlhSivlUMZg==,i=4096
@@ -19,13 +16,13 @@ public class PgReqAuthScramSaslContinueResult {
 
     public String password;
 
-    public String clientNonce;  //hu~1A]pOoftNMKg<~YWKp`1^
+    public String clientNonce; // hu~1A]pOoftNMKg<~YWKp`1^
 
-    public String serverNonce;  //F2avWJEdla6IQr3BiNBORfiy
+    public String serverNonce; // F2avWJEdla6IQr3BiNBORfiy
 
-    public String salt;  //1uyIEWcUJVLPlhSivlUMZg==
+    public String salt; // 1uyIEWcUJVLPlhSivlUMZg==
 
-    public int iteration;  //4096
+    public int iteration; // 4096
 
     public PgReqAuthScramSaslContinueResult(PgReqAuthScramPassword req, String saslmsg) {
         String[] msgs = saslmsg.split(",");

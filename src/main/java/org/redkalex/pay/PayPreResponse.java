@@ -9,7 +9,6 @@ import java.util.Map;
 import org.redkale.convert.*;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -23,7 +22,7 @@ public class PayPreResponse extends PayResponse {
     @ConvertColumn(ignore = true, type = ConvertType.JSON)
     private String appid = "";
 
-    private String thirdPayno = ""; //第三方的支付流水号
+    private String thirdPayno = ""; // 第三方的支付流水号
 
     @Override
     public PayPreResponse retcode(int retcode) {
@@ -71,5 +70,4 @@ public class PayPreResponse extends PayResponse {
     public void setThirdpayno(String thirdPayno) {
         this.thirdPayno = thirdPayno;
     }
-
 }

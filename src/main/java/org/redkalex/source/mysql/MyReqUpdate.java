@@ -5,18 +5,16 @@
  */
 package org.redkalex.source.mysql;
 
+import static org.redkalex.source.mysql.Mysqls.COM_QUERY;
+
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
-import static org.redkalex.source.mysql.Mysqls.COM_QUERY;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyReqUpdate extends MyClientRequest {
 
     protected int fetchSize;
@@ -32,7 +30,8 @@ public class MyReqUpdate extends MyClientRequest {
         return this;
     }
 
-    public <T> MyReqUpdate prepare(String sql, int fetchSize, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
+    public <T> MyReqUpdate prepare(
+            String sql, int fetchSize, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
         super.prepare();
         this.sql = sql;
         this.fetchSize = fetchSize;
@@ -48,7 +47,8 @@ public class MyReqUpdate extends MyClientRequest {
 
     @Override
     public String toString() {
-        return "MyReqUpdate_" + Objects.hashCode(this) + "{sql=" + sql + ", parameters=" + JsonConvert.root().convertTo(parameters) + "}";
+        return "MyReqUpdate_" + Objects.hashCode(this) + "{sql=" + sql + ", parameters="
+                + JsonConvert.root().convertTo(parameters) + "}";
     }
 
     @Override
@@ -59,5 +59,4 @@ public class MyReqUpdate extends MyClientRequest {
         array.put(COM_QUERY);
         array.put(sqlbytes);
     }
-
 }

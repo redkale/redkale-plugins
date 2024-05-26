@@ -12,10 +12,7 @@ import org.redkale.net.client.ClientConnection;
 import org.redkale.source.SourceException;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgReqAuthMd5Password extends PgClientRequest {
 
     protected String username;
@@ -37,7 +34,8 @@ public class PgReqAuthMd5Password extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqAuthMd5Password_" + Objects.hashCode(this) + "{username=" + username + ", password=" + password + ", salt=" + Arrays.toString(salt) + "}";
+        return "PgReqAuthMd5Password_" + Objects.hashCode(this) + "{username=" + username + ", password=" + password
+                + ", salt=" + Arrays.toString(salt) + "}";
     }
 
     @Override
@@ -64,5 +62,4 @@ public class PgReqAuthMd5Password extends PgClientRequest {
         array.putByte(0);
         array.putInt(start, array.length() - start);
     }
-
 }

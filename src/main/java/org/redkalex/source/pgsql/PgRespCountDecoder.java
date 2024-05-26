@@ -8,16 +8,12 @@ package org.redkalex.source.pgsql;
 import java.nio.ByteBuffer;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgRespCountDecoder extends PgRespDecoder<Integer> {
 
     public static final PgRespCountDecoder instance = new PgRespCountDecoder();
 
-    private PgRespCountDecoder() {
-    }
+    private PgRespCountDecoder() {}
 
     @Override
     public byte messageid() {
@@ -25,8 +21,14 @@ public class PgRespCountDecoder extends PgRespDecoder<Integer> {
     }
 
     @Override
-    public Integer read(PgClientConnection conn, ByteBuffer buffer, int length, ByteArray array, PgClientRequest request, PgResultSet dataset) {
-        int len = length - 5; //最后字节是(byte)0
+    public Integer read(
+            PgClientConnection conn,
+            ByteBuffer buffer,
+            int length,
+            ByteArray array,
+            PgClientRequest request,
+            PgResultSet dataset) {
+        int len = length - 5; // 最后字节是(byte)0
         byte b;
         int rows = -1;
         boolean debug = PgsqlDataSource.debug;
@@ -47,5 +49,4 @@ public class PgRespCountDecoder extends PgRespDecoder<Integer> {
         buffer.get();
         return rows;
     }
-
 }

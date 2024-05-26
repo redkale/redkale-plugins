@@ -14,10 +14,7 @@ import org.redkale.net.client.*;
 import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 import org.redkale.util.Traces;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResultSet> {
 
     private static final AtomicInteger extendedStatementIndex = new AtomicInteger();
@@ -31,8 +28,26 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
     protected final boolean autoddl;
 
     @SuppressWarnings("OverridableMethodCallInConstructor")
-    public PgClient(String name, AsyncGroup group, String key, ClientAddress address, int maxConns, int maxPipelines, boolean autoddl, final Properties prop, final SourceUrlInfo info) {
-        super(name, group, true, address, maxConns, maxPipelines, () -> new PgReqPing(), () -> new PgReqClose(), null); //maxConns
+    public PgClient(
+            String name,
+            AsyncGroup group,
+            String key,
+            ClientAddress address,
+            int maxConns,
+            int maxPipelines,
+            boolean autoddl,
+            final Properties prop,
+            final SourceUrlInfo info) {
+        super(
+                name,
+                group,
+                true,
+                address,
+                maxConns,
+                maxPipelines,
+                () -> new PgReqPing(),
+                () -> new PgReqClose(),
+                null); // maxConns
         this.autoddl = autoddl;
         this.authenticate = traceid -> {
             Traces.currentTraceid(traceid);
@@ -43,20 +58,25 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
                     return CompletableFuture.completedFuture(conn);
                 }
                 if (rs.getAuthSalt() != null) {
-                    return writeChannel(conn, new PgReqAuthMd5Password(info.username, info.password, rs.getAuthSalt())).thenApply(pg -> conn);
+                    return writeChannel(conn, new PgReqAuthMd5Password(info.username, info.password, rs.getAuthSalt()))
+                            .thenApply(pg -> conn);
                 }
-                return writeChannel(conn, new PgReqAuthScramPassword(info.username, info.password, rs.getAuthMechanisms()))
-                    .thenCompose((PgResultSet rs2) -> {
-                        Traces.currentTraceid(traceid);
-                        PgReqAuthScramSaslContinueResult cr = ((PgRespAuthResultSet) rs2).getAuthSaslContinueResult();
-                        if (cr == null) {
-                            return CompletableFuture.completedFuture(conn);
-                        }
-                        return writeChannel(conn, new PgReqAuthScramSaslFinal(cr)).thenApply(pg -> conn);
-                    });
+                return writeChannel(
+                                conn, new PgReqAuthScramPassword(info.username, info.password, rs.getAuthMechanisms()))
+                        .thenCompose((PgResultSet rs2) -> {
+                            Traces.currentTraceid(traceid);
+                            PgReqAuthScramSaslContinueResult cr =
+                                    ((PgRespAuthResultSet) rs2).getAuthSaslContinueResult();
+                            if (cr == null) {
+                                return CompletableFuture.completedFuture(conn);
+                            }
+                            return writeChannel(conn, new PgReqAuthScramSaslFinal(cr))
+                                    .thenApply(pg -> conn);
+                        });
             });
         };
-        this.cachePreparedStatements = prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));
+        this.cachePreparedStatements =
+                prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));
     }
 
     @Override
@@ -70,7 +90,8 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
     }
 
     @Override
-    protected <T> CompletableFuture<T> writeChannel(ClientConnection conn, PgClientRequest request, Function<PgResultSet, T> respTransfer) {
+    protected <T> CompletableFuture<T> writeChannel(
+            ClientConnection conn, PgClientRequest request, Function<PgResultSet, T> respTransfer) {
         return super.writeChannel(conn, request, respTransfer);
     }
 
@@ -107,5 +128,4 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
             return (byte) ('A' + c - 10);
         }
     }
-
 }

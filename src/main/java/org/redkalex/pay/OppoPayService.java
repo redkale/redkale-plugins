@@ -5,6 +5,8 @@
  */
 package org.redkalex.pay;
 
+import static org.redkalex.pay.PayRetCodes.*;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -16,15 +18,13 @@ import java.util.regex.Pattern;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
+import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.util.*;
-import static org.redkalex.pay.PayRetCodes.*;
-import org.redkale.annotation.ResourceChanged;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -33,21 +33,22 @@ import org.redkale.annotation.ResourceChanged;
 @AutoLoad(false)
 public final class OppoPayService extends AbstractPayService {
 
-    protected static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; //yyyyMMddHHmmss
+    protected static final String format = "%1$tY%1$tm%1$td%1$tH%1$tM%1$tS"; // yyyyMMddHHmmss
 
-    protected static final Pattern PAYXML = Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
+    protected static final Pattern PAYXML =
+            Pattern.compile("<([^/>]+)>(.+)</.+>"); // "<([^/>]+)><!\\[CDATA\\[(.+)\\]\\]></.+>"
 
-    //原始的配置
+    // 原始的配置
     protected Properties elementProps = new Properties();
 
-    //配置对象集合
+    // 配置对象集合
     protected Map<String, OppoPayElement> elements = new HashMap<>();
 
     @Resource
     @Comment("必须存在全局配置项，@ResourceListener才会起作用")
     protected Environment environment;
 
-    @Resource(name = "pay.oppo.conf", required = false) //支付配置文件路径
+    @Resource(name = "pay.oppo.conf", required = false) // 支付配置文件路径
     protected String conf = "config.properties";
 
     @Resource(name = "APP_HOME")
@@ -74,10 +75,14 @@ public final class OppoPayService extends AbstractPayService {
     @Comment("重新加载本地文件配置")
     public void reloadConfig(short payType) {
         Properties properties = new Properties();
-        if (this.conf != null && !this.conf.isEmpty()) { //存在微信支付配置
+        if (this.conf != null && !this.conf.isEmpty()) { // 存在微信支付配置
             try {
-                File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0) ? new File(this.conf) : new File(home, "conf/" + this.conf);
-                InputStream in = (file.isFile() && file.canRead()) ? new FileInputStream(file) : getClass().getResourceAsStream("/META-INF/" + this.conf);
+                File file = (this.conf.indexOf('/') == 0 || this.conf.indexOf(':') > 0)
+                        ? new File(this.conf)
+                        : new File(home, "conf/" + this.conf);
+                InputStream in = (file.isFile() && file.canRead())
+                        ? new FileInputStream(file)
+                        : getClass().getResourceAsStream("/META-INF/" + this.conf);
                 if (in != null) {
                     properties.load(in);
                     in.close();
@@ -91,7 +96,7 @@ public final class OppoPayService extends AbstractPayService {
         this.elementProps = properties;
     }
 
-    @ResourceChanged //     //    
+    @ResourceChanged //     //
     @Comment("通过配置中心更改配置后的回调")
     void onResourceChanged(ResourceEvent[] events) {
         Properties changeProps = new Properties();
@@ -100,11 +105,15 @@ public final class OppoPayService extends AbstractPayService {
         for (ResourceEvent event : events) {
             if (event.name().startsWith("pay.oppo.")) {
                 changeProps.put(event.name(), event.newValue().toString());
-                sb.append("@Resource change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                sb.append("@Resource change '")
+                        .append(event.name())
+                        .append("' to '")
+                        .append(event.coverNewValue())
+                        .append("'\r\n");
             }
         }
         if (sb.length() < 1) {
-            return; //无相关配置变化
+            return; // 无相关配置变化
         }
         logger.log(Level.INFO, sb.toString());
         this.elements = OppoPayElement.create(logger, changeProps, home);
@@ -150,7 +159,7 @@ public final class OppoPayService extends AbstractPayService {
             final long timestamp = System.currentTimeMillis();
             final TreeMap<String, String> map = new TreeMap<>();
             if (request.getAttach() != null) {
-                map.putAll(request.getAttach()); //含openId、appVersion、engineVersion
+                map.putAll(request.getAttach()); // 含openId、appVersion、engineVersion
             }
             map.put("appId", element.appid);
             map.put("timestamp", "" + timestamp);
@@ -161,36 +170,43 @@ public final class OppoPayService extends AbstractPayService {
             map.put("count", "1");
             map.put("currency", "CNY");
             map.put("ip", request.getClientAddr());
-            map.put("callBackUrl", ((request.notifyUrl != null && !request.notifyUrl.isEmpty()) ? request.notifyUrl : element.notifyurl));
+            map.put(
+                    "callBackUrl",
+                    ((request.notifyUrl != null && !request.notifyUrl.isEmpty())
+                            ? request.notifyUrl
+                            : element.notifyurl));
             map.put("sign", createSign(element, map, null));
 
-            return postHttpContentAsync("	https://jits.open.oppomobile.com/jitsopen/api/pay/v1.0/preOrder", joinMap(map)).thenApply(responseText -> {
-                result.setResponseText(responseText);
+            return postHttpContentAsync(
+                            "	https://jits.open.oppomobile.com/jitsopen/api/pay/v1.0/preOrder", joinMap(map))
+                    .thenApply(responseText -> {
+                        result.setResponseText(responseText);
 
-                OppoPrePayResult preresult = JsonConvert.root().convertFrom(OppoPrePayResult.class, responseText);
-                if (!"200".equals(preresult.code)) {
-                    return result.retcode(RETPAY_PAY_ERROR);
-                }
-                if (preresult.data == null) {
-                    return result.retcode(RETPAY_PAY_ERROR);
-                }
-                if (preresult.data.orderNo == null) {
-                    return result.retcode(RETPAY_PAY_ERROR);
-                }
-                result.setThirdPayno(preresult.data.orderNo);
-                final Map<String, String> retmap = new TreeMap<>();
-                retmap.put("appId", element.appid);
-                retmap.put("token", map.get("token"));
-                retmap.put("timestamp", "" + timestamp);
-                retmap.put("orderNo", preresult.data.orderNo);
-                final TreeMap<String, String> signmap = new TreeMap<>();
-                signmap.put("appKey ", element.appkey);
-                signmap.put("orderNo ", preresult.data.orderNo);
-                signmap.put("timestamp ", "" + timestamp);
-                retmap.put("paySign", createSign(element, signmap, null));
-                result.setResult(retmap);
-                return result;
-            });
+                        OppoPrePayResult preresult =
+                                JsonConvert.root().convertFrom(OppoPrePayResult.class, responseText);
+                        if (!"200".equals(preresult.code)) {
+                            return result.retcode(RETPAY_PAY_ERROR);
+                        }
+                        if (preresult.data == null) {
+                            return result.retcode(RETPAY_PAY_ERROR);
+                        }
+                        if (preresult.data.orderNo == null) {
+                            return result.retcode(RETPAY_PAY_ERROR);
+                        }
+                        result.setThirdPayno(preresult.data.orderNo);
+                        final Map<String, String> retmap = new TreeMap<>();
+                        retmap.put("appId", element.appid);
+                        retmap.put("token", map.get("token"));
+                        retmap.put("timestamp", "" + timestamp);
+                        retmap.put("orderNo", preresult.data.orderNo);
+                        final TreeMap<String, String> signmap = new TreeMap<>();
+                        signmap.put("appKey ", element.appkey);
+                        signmap.put("orderNo ", preresult.data.orderNo);
+                        signmap.put("timestamp ", "" + timestamp);
+                        retmap.put("paySign", createSign(element, signmap, null));
+                        result.setResult(retmap);
+                        return result;
+                    });
         } catch (Exception e) {
             result.setRetcode(RETPAY_PAY_ERROR);
             logger.log(Level.WARNING, "prepay_pay_error req=" + request + ", resp=" + result.responseText, e);
@@ -208,7 +224,8 @@ public final class OppoPayService extends AbstractPayService {
         request.checkVaild();
         final PayNotifyResponse result = new PayNotifyResponse();
         result.setPayType(request.getPayType());
-        final String rstext = "<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>";
+        final String rstext =
+                "<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>";
         Map<String, String> map = null;
         String appid = request.getAppid();
         if (appid == null || appid.isEmpty()) {
@@ -229,7 +246,11 @@ public final class OppoPayService extends AbstractPayService {
         if (!(map instanceof SortedMap)) {
             map = new TreeMap<>(map);
         }
-        if (!checkSign(element, map, null, request.getHeaders() == null ? null : request.getHeaders().map())) {
+        if (!checkSign(
+                element,
+                map,
+                null,
+                request.getHeaders() == null ? null : request.getHeaders().map())) {
             return result.retcode(RETPAY_FALSIFY_ERROR).notifytext(rstext).toFuture();
         }
         String state = map.get("trade_state");
@@ -294,7 +315,7 @@ public final class OppoPayService extends AbstractPayService {
     }
 
     @Override
-    protected String createSign(final PayElement element, Map<String, ?> map, String text) { //计算签名
+    protected String createSign(final PayElement element, Map<String, ?> map, String text) { // 计算签名
         final StringBuilder sb = new StringBuilder();
         map.forEach((x, y) -> {
             if (!((String) y).isEmpty()) {
@@ -303,7 +324,9 @@ public final class OppoPayService extends AbstractPayService {
         });
         try {
             KeyFactory keyf = KeyFactory.getInstance("RSA");
-            PKCS8EncodedKeySpec spec = map.containsKey("orderNo") ? ((OppoPayElement) element).appkeyPKCS8 : ((OppoPayElement) element).signkeyPKCS8;
+            PKCS8EncodedKeySpec spec = map.containsKey("orderNo")
+                    ? ((OppoPayElement) element).appkeyPKCS8
+                    : ((OppoPayElement) element).signkeyPKCS8;
             PrivateKey priKey = keyf.generatePrivate(spec);
             java.security.Signature signature = java.security.Signature.getInstance("SHA256WithRSA");
 
@@ -318,7 +341,8 @@ public final class OppoPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) {  //验证签名
+    protected boolean checkSign(
+            final PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) { // 验证签名
         if (!(map instanceof SortedMap)) {
             map = new TreeMap<>(map);
         }
@@ -374,13 +398,13 @@ public final class OppoPayService extends AbstractPayService {
     public static class OppoPayElement extends PayElement {
 
         // pay.oppo.[x].appid
-        public String appid = "";  //APP应用ID
+        public String appid = ""; // APP应用ID
 
         // pay.oppo.[x].appkey
-        public String appkey = "";  //支付签名用到的密钥
+        public String appkey = ""; // 支付签名用到的密钥
 
         // pay.oppo.[x].signkey
-        public String signkey = ""; //签名算法需要用到的密钥
+        public String signkey = ""; // 签名算法需要用到的密钥
 
         public PKCS8EncodedKeySpec appkeyPKCS8;
 
@@ -390,33 +414,47 @@ public final class OppoPayService extends AbstractPayService {
             String def_appid = properties.getProperty("pay.oppo.appid", "").trim();
             String def_appkey = properties.getProperty("pay.oppo.appkey", "").trim();
             String def_signkey = properties.getProperty("pay.oppo.signkey", "").trim();
-            String def_notifyurl = properties.getProperty("pay.oppo.notifyurl", "").trim();
+            String def_notifyurl =
+                    properties.getProperty("pay.oppo.notifyurl", "").trim();
 
             final Map<String, OppoPayElement> map = new HashMap<>();
-            properties.keySet().stream().filter(x -> x.toString().startsWith("pay.oppo.") && x.toString().endsWith(".appid")).forEach(appid_key -> {
-                final String prefix = appid_key.toString().substring(0, appid_key.toString().length() - ".appid".length());
+            properties.keySet().stream()
+                    .filter(x ->
+                            x.toString().startsWith("pay.oppo.") && x.toString().endsWith(".appid"))
+                    .forEach(appid_key -> {
+                        final String prefix = appid_key
+                                .toString()
+                                .substring(0, appid_key.toString().length() - ".appid".length());
 
-                String appid = properties.getProperty(prefix + ".appid", def_appid).trim();
-                String appkey = properties.getProperty(prefix + ".appkey", def_appkey).trim();
-                String signkey = properties.getProperty(prefix + ".signkey", def_signkey).trim();
-                String notifyurl = properties.getProperty(prefix + ".notifyurl", def_notifyurl).trim();
+                        String appid = properties
+                                .getProperty(prefix + ".appid", def_appid)
+                                .trim();
+                        String appkey = properties
+                                .getProperty(prefix + ".appkey", def_appkey)
+                                .trim();
+                        String signkey = properties
+                                .getProperty(prefix + ".signkey", def_signkey)
+                                .trim();
+                        String notifyurl = properties
+                                .getProperty(prefix + ".notifyurl", def_notifyurl)
+                                .trim();
 
-                if (appid.isEmpty() || notifyurl.isEmpty() || appkey.isEmpty() || signkey.isEmpty()) {
-                    logger.log(Level.WARNING, properties + "; has illegal oppopay conf by prefix" + prefix);
-                    return;
-                }
-                OppoPayElement element = new OppoPayElement();
-                element.appid = appid;
-                element.appkey = appkey;
-                element.signkey = signkey;
-                element.notifyurl = notifyurl;
-                if (element.initElement(logger, home)) {
-                    map.put(appid, element);
-                    if (def_appid.equals(appid)) {
-                        map.put("", element);
-                    }
-                }
-            });
+                        if (appid.isEmpty() || notifyurl.isEmpty() || appkey.isEmpty() || signkey.isEmpty()) {
+                            logger.log(Level.WARNING, properties + "; has illegal oppopay conf by prefix" + prefix);
+                            return;
+                        }
+                        OppoPayElement element = new OppoPayElement();
+                        element.appid = appid;
+                        element.appkey = appkey;
+                        element.signkey = signkey;
+                        element.notifyurl = notifyurl;
+                        if (element.initElement(logger, home)) {
+                            map.put(appid, element);
+                            if (def_appid.equals(appid)) {
+                                map.put("", element);
+                            }
+                        }
+                    });
             return map;
         }
 
@@ -432,5 +470,4 @@ public final class OppoPayService extends AbstractPayService {
             return JsonConvert.root().convertTo(this);
         }
     }
-
 }

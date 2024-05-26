@@ -12,16 +12,15 @@ import org.redkale.net.http.RestHeaders;
 import org.redkale.util.RedkaleException;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
 public class PayNotifyRequest {
 
-    protected String appid = ""; //APP账号ID
+    protected String appid = ""; // APP账号ID
 
-    protected short payType; //支付类型; 
+    protected short payType; // 支付类型;
 
     protected String body;
 
@@ -29,8 +28,7 @@ public class PayNotifyRequest {
 
     protected Map<String, String> attach;
 
-    public PayNotifyRequest() {
-    }
+    public PayNotifyRequest() {}
 
     public PayNotifyRequest(short paytype, String body) {
         this.payType = paytype;
@@ -59,7 +57,7 @@ public class PayNotifyRequest {
     public PayNotifyRequest attachByRemoveEmptyValue(Map<String, String> params) {
         final TreeMap<String, String> map = new TreeMap<>(params);
         List<String> emptyKeys = new ArrayList<>();
-        for (Map.Entry<String, String> en : map.entrySet()) { //去掉空值的参数
+        for (Map.Entry<String, String> en : map.entrySet()) { // 去掉空值的参数
             if (en.getValue().isEmpty()) {
                 emptyKeys.add(en.getKey());
             }

@@ -3,9 +3,7 @@ package org.redkalex.schedule.xxljob;
 import java.io.Serializable;
 import org.redkale.convert.json.JsonConvert;
 
-/**
- * Created by xuxueli on 17/3/2.
- */
+/** Created by xuxueli on 17/3/2. */
 public class HandleCallbackParam implements Serializable {
 
     private static final long serialVersionUID = 42L;
@@ -18,8 +16,7 @@ public class HandleCallbackParam implements Serializable {
 
     private String handleMsg;
 
-    public HandleCallbackParam() {
-    }
+    public HandleCallbackParam() {}
 
     public HandleCallbackParam(long logId, long logDateTim, int handleCode, String handleMsg) {
         this.logId = logId;
@@ -64,5 +61,4 @@ public class HandleCallbackParam implements Serializable {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

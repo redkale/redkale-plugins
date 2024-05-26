@@ -3,9 +3,10 @@
  */
 package org.redkalex.source.parser;
 
+import static java.util.stream.Collectors.joining;
+
 import java.util.Iterator;
 import java.util.List;
-import static java.util.stream.Collectors.joining;
 import net.sf.jsqlparser.expression.ExpressionVisitor;
 import net.sf.jsqlparser.expression.OracleHint;
 import net.sf.jsqlparser.expression.WindowDefinition;
@@ -27,10 +28,7 @@ import net.sf.jsqlparser.util.deparser.LimitDeparser;
 import net.sf.jsqlparser.util.deparser.OrderByDeParser;
 import net.sf.jsqlparser.util.deparser.SelectDeParser;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class CustomSelectDeParser extends SelectDeParser {
 
     public CustomSelectDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
@@ -57,8 +55,7 @@ public class CustomSelectDeParser extends SelectDeParser {
             }
             if (distinct.getOnSelectItems() != null) {
                 buffer.append("ON (");
-                for (Iterator<SelectItem<?>> iter
-                    = distinct.getOnSelectItems().iterator(); iter.hasNext();) {
+                for (Iterator<SelectItem<?>> iter = distinct.getOnSelectItems().iterator(); iter.hasNext(); ) {
                     SelectItem<?> selectItem = iter.next();
                     selectItem.accept(this);
                     if (iter.hasNext()) {
@@ -72,7 +69,7 @@ public class CustomSelectDeParser extends SelectDeParser {
 
     protected void deparseSelectItemsClause(PlainSelect plainSelect, List<SelectItem<?>> selectItems) {
         if (selectItems != null) {
-            for (Iterator<SelectItem<?>> iter = selectItems.iterator(); iter.hasNext();) {
+            for (Iterator<SelectItem<?>> iter = selectItems.iterator(); iter.hasNext(); ) {
                 SelectItem<?> selectItem = iter.next();
                 selectItem.accept(this);
                 if (iter.hasNext()) {
@@ -84,7 +81,8 @@ public class CustomSelectDeParser extends SelectDeParser {
 
     protected void deparseOrderByElementsClause(PlainSelect plainSelect, List<OrderByElement> orderByElements) {
         if (orderByElements != null) {
-            new OrderByDeParser(getExpressionVisitor(), buffer).deParse(plainSelect.isOracleSiblings(), orderByElements);
+            new OrderByDeParser(getExpressionVisitor(), buffer)
+                    .deParse(plainSelect.isOracleSiblings(), orderByElements);
         }
     }
 
@@ -97,7 +95,7 @@ public class CustomSelectDeParser extends SelectDeParser {
         List<WithItem> withItemsList = plainSelect.getWithItemsList();
         if (withItemsList != null && !withItemsList.isEmpty()) {
             buffer.append("WITH ");
-            for (Iterator<WithItem> iter = withItemsList.iterator(); iter.hasNext();) {
+            for (Iterator<WithItem> iter = withItemsList.iterator(); iter.hasNext(); ) {
                 iter.next().accept((SelectVisitor) this);
                 if (iter.hasNext()) {
                     buffer.append(",");
@@ -146,7 +144,7 @@ public class CustomSelectDeParser extends SelectDeParser {
 
         if (plainSelect.getIntoTables() != null) {
             buffer.append(" INTO ");
-            for (Iterator<Table> iter = plainSelect.getIntoTables().iterator(); iter.hasNext();) {
+            for (Iterator<Table> iter = plainSelect.getIntoTables().iterator(); iter.hasNext(); ) {
                 visit(iter.next());
                 if (iter.hasNext()) {
                     buffer.append(", ");
@@ -212,7 +210,8 @@ public class CustomSelectDeParser extends SelectDeParser {
         if (plainSelect.getWindowDefinitions() != null) {
             buffer.append(" WINDOW ");
             buffer.append(plainSelect.getWindowDefinitions().stream()
-                .map(WindowDefinition::toString).collect(joining(", ")));
+                    .map(WindowDefinition::toString)
+                    .collect(joining(", ")));
         }
         if (plainSelect.getForClause() != null) {
             plainSelect.getForClause().appendTo(buffer);
@@ -267,7 +266,6 @@ public class CustomSelectDeParser extends SelectDeParser {
         if (plainSelect.isUseWithNoLog()) {
             buffer.append(" WITH NO LOG");
         }
-
     }
 
     private void deparseOptimizeFor(OptimizeFor optimizeFor) {
@@ -275,5 +273,4 @@ public class CustomSelectDeParser extends SelectDeParser {
         buffer.append(optimizeFor.getRowCount());
         buffer.append(" ROWS");
     }
-
 }

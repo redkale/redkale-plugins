@@ -8,8 +8,8 @@ package org.redkalex.apns;
 import org.redkale.convert.json.JsonFactory;
 
 /**
- *
  * 详情见: https://redkale.org
+ *
  * @author zhangjx
  */
 public class ApnsMessage {
@@ -28,8 +28,7 @@ public class ApnsMessage {
 
     private String token;
 
-    public ApnsMessage() {
-    }
+    public ApnsMessage() {}
 
     public ApnsMessage(String token, ApnsPayload payload) {
         this(token, payload, 0);
@@ -90,5 +89,4 @@ public class ApnsMessage {
     public String toString() {
         return JsonFactory.root().getConvert().convertTo(this);
     }
-
 }

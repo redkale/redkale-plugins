@@ -9,10 +9,7 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.Column;
 import org.redkale.source.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class TestPostBean implements FilterBean {
 
     @FilterColumn(comment = "用户ID")

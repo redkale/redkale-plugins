@@ -16,17 +16,16 @@ import org.redkale.util.*;
 import org.redkalex.source.base.IncreWorld;
 import org.redkalex.source.parser.DataNativeJsqlParser;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class VertxMysqlTest {
 
     public static void main(String[] args) throws Throwable {
         Properties prop = new Properties();
         prop.setProperty("redkale.datasource.default.maxconns", "2");
 
-        prop.setProperty("redkale.datasource.default.url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty(
+                "redkale.datasource.default.url",
+                "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&amp;rewriteBatchedStatements=true&amp;serverTimezone=UTC&amp;characterEncoding=utf8"); // 192.168.175.1  127.0.0.1 192.168.1.103
         prop.setProperty("redkale.datasource.default.table-autoddl", "true");
         prop.setProperty("redkale.datasource.default.user", "root");
         prop.setProperty("redkale.datasource.default.password", "");
@@ -41,7 +40,10 @@ public class VertxMysqlTest {
         factory.register("", new DataNativeJsqlParser());
         final VertxSqlDataSource source = new VertxSqlDataSource();
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
+        source.init(AnyValue.loadFromProperties(prop)
+                .getAnyValue("redkale")
+                .getAnyValue("datasource")
+                .getAnyValue("default"));
         Pool pool = source.readThreadPool;
         Field f = PoolBase.class.getDeclaredField("delegate");
         f.setAccessible(true);
@@ -98,7 +100,7 @@ public class VertxMysqlTest {
         sheet = source.nativeQuerySheet(TestRecord.class, sheetSql, flipper, params);
         System.out.println(sheet);
         System.out.println("获得总数: " + sheet.getTotal());
-        
+
         System.out.println("运行完成");
         source.destroy(null);
     }

@@ -11,10 +11,7 @@ import org.redkale.convert.Convert;
 import org.redkale.net.http.*;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class FreemarkerTemplateRender implements org.redkale.net.http.HttpRender {
 
     @Resource(name = "APP_HOME")
@@ -25,7 +22,9 @@ public class FreemarkerTemplateRender implements org.redkale.net.http.HttpRender
     @Override
     public void init(HttpContext context, AnyValue config) {
         this.engine = new freemarker.template.Configuration(freemarker.template.Configuration.VERSION_2_3_31);
-        String path = config == null ? new File(home, "templates").getPath() : config.getOrDefault("path", new File(home, "templates").getPath());
+        String path = config == null
+                ? new File(home, "templates").getPath()
+                : config.getOrDefault("path", new File(home, "templates").getPath());
         try {
             this.engine.setDirectoryForTemplateLoading(new File(path));
         } catch (IOException e) {

@@ -5,16 +5,14 @@
  */
 package org.redkalex.source.vertx;
 
+import static org.redkale.source.DataSources.*;
+
 import org.redkale.annotation.Priority;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.source.spi.DataSourceProvider;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-300)
 public class VertxSqlDataSourceProvider implements DataSourceProvider {
 
@@ -29,8 +27,10 @@ public class VertxSqlDataSourceProvider implements DataSourceProvider {
         try {
             boolean pgsql = "postgresql".equalsIgnoreCase(dbtype);
             if (pgsql) {
-                io.vertx.sqlclient.spi.Driver.class.isAssignableFrom(io.vertx.pgclient.spi.PgDriver.class); //试图加载PgClient相关类
-                Class clazz = Thread.currentThread().getContextClassLoader().loadClass("io.vertx.pgclient.PgConnectOptions");
+                io.vertx.sqlclient.spi.Driver.class.isAssignableFrom(
+                        io.vertx.pgclient.spi.PgDriver.class); // 试图加载PgClient相关类
+                Class clazz =
+                        Thread.currentThread().getContextClassLoader().loadClass("io.vertx.pgclient.PgConnectOptions");
                 RedkaleClassLoader.putReflectionClass(clazz.getName());
                 RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
                 return pgsql;
@@ -41,8 +41,11 @@ public class VertxSqlDataSourceProvider implements DataSourceProvider {
         try {
             boolean mysql = "mysql".equalsIgnoreCase(dbtype);
             if (mysql) {
-                io.vertx.sqlclient.spi.Driver.class.isAssignableFrom(io.vertx.mysqlclient.spi.MySQLDriver.class); //试图加载MySQLClient相关类
-                Class clazz = Thread.currentThread().getContextClassLoader().loadClass("io.vertx.mysqlclient.MySQLConnectOptions");
+                io.vertx.sqlclient.spi.Driver.class.isAssignableFrom(
+                        io.vertx.mysqlclient.spi.MySQLDriver.class); // 试图加载MySQLClient相关类
+                Class clazz = Thread.currentThread()
+                        .getContextClassLoader()
+                        .loadClass("io.vertx.mysqlclient.MySQLConnectOptions");
                 RedkaleClassLoader.putReflectionClass(clazz.getName());
                 RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
                 return mysql;
@@ -57,5 +60,4 @@ public class VertxSqlDataSourceProvider implements DataSourceProvider {
     public DataSource createInstance() {
         return new VertxSqlDataSource();
     }
-
 }

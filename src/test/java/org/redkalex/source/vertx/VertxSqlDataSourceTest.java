@@ -15,10 +15,7 @@ import org.redkale.persistence.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class VertxSqlDataSourceTest {
 
     private static final Random random = new SecureRandom();
@@ -30,14 +27,19 @@ public class VertxSqlDataSourceTest {
     public static void main(String[] args) throws Throwable {
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource.default.url", "jdbc:postgresql://127.0.0.1:5432/hello_world"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty(
+                "redkale.datasource.default.url",
+                "jdbc:postgresql://127.0.0.1:5432/hello_world"); // 192.168.175.1  127.0.0.1 192.168.1.103
         prop.setProperty("redkale.datasource.default.preparecache", "true");
         prop.setProperty("redkale.datasource.default.table-autoddl", "true");
         prop.setProperty("redkale.datasource.default.user", "postgres");
         prop.setProperty("redkale.datasource.default.password", "1234");
 
         final VertxSqlDataSource source = new VertxSqlDataSource();
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
+        source.init(AnyValue.loadFromProperties(prop)
+                .getAnyValue("redkale")
+                .getAnyValue("datasource")
+                .getAnyValue("default"));
         System.out.println(source.find(Fortune.class, 5));
         System.out.println(source.queryList(Fortune.class));
         System.out.println("findsList: " + source.findsList(Fortune.class, List.of(2, 3, 1, 0, 30).stream()));
@@ -70,7 +72,7 @@ public class VertxSqlDataSourceTest {
         return array.toString(StandardCharsets.UTF_8);
     }
 
-    //@DistributeTable(strategy = Record.TableStrategy.class)
+    // @DistributeTable(strategy = Record.TableStrategy.class)
     @Entity
     public static class Record {
 
@@ -81,7 +83,8 @@ public class VertxSqlDataSourceTest {
             @Override
             public String[] getTables(String table, FilterNode node) {
                 int pos = table.indexOf('.');
-                return new String[]{table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis())};
+                return new String[] {table.substring(pos + 1) + "_" + String.format(format, System.currentTimeMillis())
+                };
             }
 
             @Override
@@ -102,8 +105,7 @@ public class VertxSqlDataSourceTest {
 
         private String name = "";
 
-        public Record() {
-        }
+        public Record() {}
 
         public Record(String name) {
             this.name = name;
@@ -129,7 +131,6 @@ public class VertxSqlDataSourceTest {
         public String toString() {
             return JsonConvert.root().convertTo(this);
         }
-
     }
 
     @Entity
@@ -140,8 +141,7 @@ public class VertxSqlDataSourceTest {
 
         private String message = "";
 
-        public Fortune() {
-        }
+        public Fortune() {}
 
         public Fortune(int id, String message) {
             this.id = id;
@@ -173,7 +173,6 @@ public class VertxSqlDataSourceTest {
         public String toString() {
             return JsonConvert.root().convertTo(this);
         }
-
     }
 
     @Entity
@@ -214,7 +213,5 @@ public class VertxSqlDataSourceTest {
         public String toString() {
             return JsonConvert.root().convertTo(this);
         }
-
     }
-
 }

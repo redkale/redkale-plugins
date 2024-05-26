@@ -5,25 +5,26 @@
  */
 package org.redkalex.source.search;
 
+import static org.redkale.source.DataSources.*;
+import static org.redkale.source.SearchQuery.SEARCH_FILTER_NAME;
+
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.source.Range.LongRange;
-import static org.redkale.source.SearchQuery.SEARCH_FILTER_NAME;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class Main {
 
     public static void main(String[] args) throws Throwable {
         {
-            FilterNode node = FilterNodes.eq("power", 7).and(FilterNodes.eq("type", "words").or("createTime", 1621581722242L));
+            FilterNode node = FilterNodes.eq("power", 7)
+                    .and(FilterNodes.eq("type", "words").or("createTime", 1621581722242L));
             System.out.println(node.getExpress() + "========" + node.toString());
             System.out.println(new SearchRequest().filterNode(null, node));
-            node = FilterNodes.eq("power", 7).eq("power2", 6).or(FilterNodes.eq("type", "words").eq("createTime", 1621581722242L));
+            node = FilterNodes.eq("power", 7)
+                    .eq("power2", 6)
+                    .or(FilterNodes.eq("type", "words").eq("createTime", 1621581722242L));
             System.out.println(node.getExpress() + "========" + node.toString());
             System.out.println(new SearchRequest().filterNode(null, node));
         }
@@ -92,27 +93,38 @@ public class Main {
                 comment.setContent("这是一个评论的内容");
                 source.insert(comment);
             }
-            //source.updateMapping(TestPost.class);
+            // source.updateMapping(TestPost.class);
             Utility.sleep(1000);
             System.out.println("第1个find结果: " + source.find(TestPost.class, "createTime", post.getCreateTime()));
-            System.out.println("第2个find结果: " + source.find(TestPost.class, SelectColumn.excludes("pubContent"), post2.getPostid()));
-            System.out.println("第3个find结果: " + source.find(TestPost.class, SelectColumn.includes("pubContent"), post3.getPostid()));
-            //System.out.println("第4个delete结果: " + source.delete(TestPost.class, post4.getPostid()));
-            System.out.println(source.queryColumnList("power", TestPost.class, FilterNodes.between("createTime", new LongRange(post3.getCreateTime() + 1, -1L))));
+            System.out.println("第2个find结果: "
+                    + source.find(TestPost.class, SelectColumn.excludes("pubContent"), post2.getPostid()));
+            System.out.println("第3个find结果: "
+                    + source.find(TestPost.class, SelectColumn.includes("pubContent"), post3.getPostid()));
+            // System.out.println("第4个delete结果: " + source.delete(TestPost.class, post4.getPostid()));
+            System.out.println(source.queryColumnList(
+                    "power",
+                    TestPost.class,
+                    FilterNodes.between("createTime", new LongRange(post3.getCreateTime() + 1, -1L))));
         }
-        //System.out.println(FilterNode.create("power", new int[]{1, 3}).and("createTime", 1621743242363L));
+        // System.out.println(FilterNode.create("power", new int[]{1, 3}).and("createTime", 1621743242363L));
         SearchQuery.SearchSimpleQuery searchBean = SearchQuery.create("dddd内容", "title", "content", "pubContent");
         SearchQuery.SearchSimpleHighlight highlightBean = SearchQuery.createHighlight();
         highlightBean.tag("<font color=red>", "</font>");
         searchBean.setHighlight(highlightBean);
-        System.out.println(source.queryList(TestPost.class, new Flipper(5, 5, "createTime DESC"), FilterNodes.eq(SEARCH_FILTER_NAME, searchBean).gt("createTime", 1L)));
-        //System.out.println(source.queryColumnSet("power", TestPost.class, FilterNode.create("power", new int[]{1, 3}).and("createTime", 1621581722242L)));
-        //System.out.println(source.queryColumnMap(TestPost.class, "power", FilterFunc.DISTINCTCOUNT, null));
-        //System.out.println(source.getNumberResult(TestPost.class, FilterFunc.MIN, 5, "power", (FilterNode) null));
-        //System.out.println(source.delete(TestPost.class, "fqo4-kos8mcmd", "fqo4-koscfh48"));
-        //System.out.println(source.updateColumn(TestPost.class, "w7ek8-koscfh4i", ColumnValue.inc("power2", 3), ColumnValue.mov("payCount2", 11)));
-//        String json = "{\"_index\":\"platf\",\"_type\":\"postrecord\",\"_id\":\"w7ek8-koscfh4i\",\"_version\":3,\"_seq_no\":8,\"_primary_term\":1,\"found\":true,\"_source\":{\"commentCount\":0,\"commentFlag\":10,\"createTime\":1621239988338,\"freeImgCount\":0,\"hideEscapedFlag\":0,\"imgCount\":0,\"lastCommentTime\":0,\"lastCommentUserid\":0,\"likeCount\":0,\"niceFlag\":10,\"payCount\":11,\"postid\":\"w7ek8-koscfh4i\",\"power\":7,\"pubContent\":\"这是一个论坛2222内容 Hello World！\",\"pubEscapedFlag\":0,\"pwdCount\":0,\"rewardCoin\":0,\"rewardFlag\":10,\"seeCoin\":0,\"shareCount\":0,\"status\":0,\"topFlag\":10,\"type\":\"words\",\"userid\":345464,\"visitCount\":0}}";
-//        System.out.println(JsonConvert.root().convertFrom(new TypeToken<FindResult<PostRecord>>(){}.getType(), json).filterNodeBool()); 
+        System.out.println(source.queryList(
+                TestPost.class,
+                new Flipper(5, 5, "createTime DESC"),
+                FilterNodes.eq(SEARCH_FILTER_NAME, searchBean).gt("createTime", 1L)));
+        // System.out.println(source.queryColumnSet("power", TestPost.class, FilterNode.create("power", new int[]{1,
+        // 3}).and("createTime", 1621581722242L)));
+        // System.out.println(source.queryColumnMap(TestPost.class, "power", FilterFunc.DISTINCTCOUNT, null));
+        // System.out.println(source.getNumberResult(TestPost.class, FilterFunc.MIN, 5, "power", (FilterNode) null));
+        // System.out.println(source.delete(TestPost.class, "fqo4-kos8mcmd", "fqo4-koscfh48"));
+        // System.out.println(source.updateColumn(TestPost.class, "w7ek8-koscfh4i", ColumnValue.inc("power2", 3),
+        // ColumnValue.mov("payCount2", 11)));
+        //        String json =
+        // "{\"_index\":\"platf\",\"_type\":\"postrecord\",\"_id\":\"w7ek8-koscfh4i\",\"_version\":3,\"_seq_no\":8,\"_primary_term\":1,\"found\":true,\"_source\":{\"commentCount\":0,\"commentFlag\":10,\"createTime\":1621239988338,\"freeImgCount\":0,\"hideEscapedFlag\":0,\"imgCount\":0,\"lastCommentTime\":0,\"lastCommentUserid\":0,\"likeCount\":0,\"niceFlag\":10,\"payCount\":11,\"postid\":\"w7ek8-koscfh4i\",\"power\":7,\"pubContent\":\"这是一个论坛2222内容 Hello World！\",\"pubEscapedFlag\":0,\"pwdCount\":0,\"rewardCoin\":0,\"rewardFlag\":10,\"seeCoin\":0,\"shareCount\":0,\"status\":0,\"topFlag\":10,\"type\":\"words\",\"userid\":345464,\"visitCount\":0}}";
+        //        System.out.println(JsonConvert.root().convertFrom(new TypeToken<FindResult<PostRecord>>(){}.getType(),
+        // json).filterNodeBool());
     }
-
 }

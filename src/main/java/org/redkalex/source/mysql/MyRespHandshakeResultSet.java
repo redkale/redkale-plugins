@@ -7,10 +7,7 @@ package org.redkalex.source.mysql;
 
 import org.redkale.convert.json.JsonConvert;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyRespHandshakeResultSet extends MyResultSet {
 
     public int protocolVersion;

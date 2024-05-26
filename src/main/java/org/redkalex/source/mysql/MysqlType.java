@@ -12,10 +12,7 @@ import java.time.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MysqlType {
 
     // Protocol field flag numbers
@@ -224,7 +221,8 @@ public class MysqlType {
             // ProtocolBinary::MYSQL_TYPE_DOUBLE
             return FIELD_TYPE_DOUBLE;
         } else if (value instanceof byte[]) {
-            // ProtocolBinary::MYSQL_TYPE_LONG_BLOB, ProtocolBinary::MYSQL_TYPE_MEDIUM_BLOB, ProtocolBinary::MYSQL_TYPE_BLOB, ProtocolBinary::MYSQL_TYPE_TINY_BLOB
+            // ProtocolBinary::MYSQL_TYPE_LONG_BLOB, ProtocolBinary::MYSQL_TYPE_MEDIUM_BLOB,
+            // ProtocolBinary::MYSQL_TYPE_BLOB, ProtocolBinary::MYSQL_TYPE_TINY_BLOB
             return FIELD_TYPE_BLOB;
         } else if (value instanceof LocalDate) {
             // ProtocolBinary::MYSQL_TYPE_DATE
@@ -388,7 +386,7 @@ public class MysqlType {
             return param.toString().getBytes(StandardCharsets.UTF_8);
         }
         if (param instanceof Boolean) {
-            return (Boolean) param ? new byte[]{0x31} : new byte[]{0x30};
+            return (Boolean) param ? new byte[] {0x31} : new byte[] {0x30};
         }
         if (param instanceof byte[]) {
             return (byte[]) param;
@@ -401,8 +399,11 @@ public class MysqlType {
                 throw new SourceException(e);
             }
         }
-        if (!(param instanceof Number) && !(param instanceof CharSequence) && !(param instanceof java.util.Date)
-            && !param.getClass().getName().startsWith("java.sql.") && !param.getClass().getName().startsWith("java.time.")) {
+        if (!(param instanceof Number)
+                && !(param instanceof CharSequence)
+                && !(param instanceof java.util.Date)
+                && !param.getClass().getName().startsWith("java.sql.")
+                && !param.getClass().getName().startsWith("java.time.")) {
             if (attr == null) {
                 return info.getJsonConvert().convertTo(param).getBytes(StandardCharsets.UTF_8);
             }

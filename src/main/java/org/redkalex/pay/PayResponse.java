@@ -12,7 +12,6 @@ import org.redkale.convert.json.JsonFactory;
 import org.redkale.service.RetResult;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -20,10 +19,9 @@ import org.redkale.service.RetResult;
 public class PayResponse extends RetResult<Map<String, String>> {
 
     @ConvertColumn(ignore = true, type = ConvertType.JSON)
-    protected String responseText = ""; //第三方支付返回的原始结果字符串
+    protected String responseText = ""; // 第三方支付返回的原始结果字符串
 
-    public PayResponse() {
-    }
+    public PayResponse() {}
 
     public PayResponse(Map<String, String> result) {
         super(result);
@@ -91,5 +89,4 @@ public class PayResponse extends RetResult<Map<String, String>> {
     public void setResponsetext(String responseText) {
         this.responseText = responseText;
     }
-
 }

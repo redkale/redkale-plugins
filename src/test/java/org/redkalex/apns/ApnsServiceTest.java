@@ -5,15 +5,12 @@
  */
 package org.redkalex.apns;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class ApnsServiceTest {
 
     public static void main(String[] args) throws Exception {
         ApnsService service = new ApnsService();
-        service.apnspushaddr = "gateway.push.apple.com"; //正式环境
+        service.apnspushaddr = "gateway.push.apple.com"; // 正式环境
         service.apnscertpwd = "1";
         service.apnscertpath = "D:/apns.xxx.release.p12";
         service.init(null);

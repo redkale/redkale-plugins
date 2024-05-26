@@ -3,13 +3,14 @@
  */
 package org.redkalex.source.mysql;
 
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.convert.json.*;
 import org.redkale.inject.ResourceFactory;
@@ -21,10 +22,7 @@ import org.redkalex.source.base.IncreWorld;
 import org.redkalex.source.parser.DataNativeJsqlParser;
 import org.redkalex.source.vertx.TestRecord;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MySQLJdbcTest {
 
     public static void main(String[] args) throws Throwable {
@@ -37,26 +35,33 @@ public class MySQLJdbcTest {
         factory.register("", new DataNativeJsqlParser());
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource.default.url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty(
+                "redkale.datasource.default.url",
+                "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); // 192.168.175.1  127.0.0.1 192.168.1.103
         prop.setProperty("redkale.datasource.default.maxconns", "1");
         prop.setProperty("redkale.datasource.default.table-autoddl", "true");
         prop.setProperty("redkale.datasource.default.user", "root");
         prop.setProperty("redkale.datasource.default.password", "");
 
-        Connection conn = DriverManager.getConnection(prop.getProperty("redkale.datasource.default.url"),
-            prop.getProperty("redkale.datasource.default.user"), prop.getProperty("redkale.datasource.default.password"));
+        Connection conn = DriverManager.getConnection(
+                prop.getProperty("redkale.datasource.default.url"),
+                prop.getProperty("redkale.datasource.default.user"),
+                prop.getProperty("redkale.datasource.default.password"));
         System.out.println(conn);
         conn.close();
 
         DataJdbcSource source = new DataJdbcSource();
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
+        source.init(AnyValue.loadFromProperties(prop)
+                .getAnyValue("redkale")
+                .getAnyValue("datasource")
+                .getAnyValue("default"));
         System.out.println("---------");
 
         System.out.println("当前机器CPU核数: " + Utility.cpus());
         System.out.println("清空DayRecord表: " + source.clearTable(OneRecord.class));
         {
-            //source.dropTable(TestRecord.class);
+            // source.dropTable(TestRecord.class);
             TestRecord entity = new TestRecord();
             entity.setRecordid("r223" + System.currentTimeMillis());
             entity.setScore(200);
@@ -134,12 +139,16 @@ public class MySQLJdbcTest {
         r2 = source.findAsync(OneRecord.class, record2.getRecordid()).join();
         Assertions.assertTrue("这是内容2XX".equals(r2.getContent()));
         System.out.println(source.queryList(OneRecord.class));
-        System.out.println(source.findsListAsync(OneRecord.class, Stream.of("11", record2.getRecordid())).join());
+        System.out.println(source.findsListAsync(OneRecord.class, Stream.of("11", record2.getRecordid()))
+                .join());
         System.out.println(source.findsList(OneRecord.class, Stream.of("11", record2.getRecordid())));
         System.out.println(source.nativeQueryOne(OneRecord.class, "select * from onerecord where recordid = 'rid-1' "));
-        System.out.println(source.nativeQueryList(OneRecord.class, "select * from onerecord where recordid = 'rid-1' "));
-        System.out.println("Map-List: " + source.nativeQueryList(Map.class, "select * from onerecord where recordid = 'rid-1' "));
-        System.out.println("JsonObject-List: " + source.nativeQueryList(JsonObject.class, "select * from onerecord where recordid = 'rid-1' "));
+        System.out.println(
+                source.nativeQueryList(OneRecord.class, "select * from onerecord where recordid = 'rid-1' "));
+        System.out.println(
+                "Map-List: " + source.nativeQueryList(Map.class, "select * from onerecord where recordid = 'rid-1' "));
+        System.out.println("JsonObject-List: "
+                + source.nativeQueryList(JsonObject.class, "select * from onerecord where recordid = 'rid-1' "));
 
         TwoIntRecord t1 = new TwoIntRecord();
         t1.setId(1);
@@ -167,7 +176,7 @@ public class MySQLJdbcTest {
         System.out.println("IncreWorld记录: " + in1);
         System.out.println("IncreWorld记录: " + in2);
 
-        if (true) { //压测
+        if (true) { // 压测
             int count = 500;
             CountDownLatch sr = new CountDownLatch(count);
             CountDownLatch cdl = new CountDownLatch(count);
@@ -175,16 +184,17 @@ public class MySQLJdbcTest {
             AtomicInteger rand = new AtomicInteger();
             for (int i = 0; i < count; i++) {
                 new Thread(() -> {
-                    sr.countDown();
-                    try {
-                        sr.await();
-                        source.find(OneRecord.class, record2.getRecordid() + rand.incrementAndGet());
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        cdl.countDown();
-                    }
-                }).start();
+                            sr.countDown();
+                            try {
+                                sr.await();
+                                source.find(OneRecord.class, record2.getRecordid() + rand.incrementAndGet());
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            } finally {
+                                cdl.countDown();
+                            }
+                        })
+                        .start();
             }
             cdl.await();
             long e = System.currentTimeMillis() - s;
@@ -268,5 +278,4 @@ public class MySQLJdbcTest {
             return JsonConvert.root().convertTo(this);
         }
     }
-
 }

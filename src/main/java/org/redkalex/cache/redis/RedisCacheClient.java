@@ -12,39 +12,53 @@ import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.util.Traces;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheRequest, RedisCacheResult> {
 
-    public RedisCacheClient(String appName, String name, AsyncGroup group, String key,
-        ClientAddress address, int maxConns, int maxPipelines, RedisCacheReqAuth authReq, RedisCacheReqDB dbReq) {
-        super(name, group, true, address, maxConns, maxPipelines, () -> new RedisCacheReqPing(), () -> new RedisCacheReqClose(), null); //maxConns
+    public RedisCacheClient(
+            String appName,
+            String name,
+            AsyncGroup group,
+            String key,
+            ClientAddress address,
+            int maxConns,
+            int maxPipelines,
+            RedisCacheReqAuth authReq,
+            RedisCacheReqDB dbReq) {
+        super(
+                name,
+                group,
+                true,
+                address,
+                maxConns,
+                maxPipelines,
+                () -> new RedisCacheReqPing(),
+                () -> new RedisCacheReqClose(),
+                null); // maxConns
         RedisCacheReqClientName clientNameReq = new RedisCacheReqClientName(appName, name);
         if (authReq != null && dbReq != null) {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
-                return conn -> writeChannelBatch(conn, authReq.createTime(), dbReq.createTime(), clientNameReq.createTime())
-                    .thenApply(v -> conn);
+                return conn -> writeChannelBatch(
+                                conn, authReq.createTime(), dbReq.createTime(), clientNameReq.createTime())
+                        .thenApply(v -> conn);
             };
         } else if (authReq != null) {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
                 return conn -> writeChannelBatch(conn, authReq.createTime(), clientNameReq.createTime())
-                    .thenApply(v -> conn);
+                        .thenApply(v -> conn);
             };
         } else if (dbReq != null) {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
                 return conn -> writeChannelBatch(conn, dbReq.createTime(), clientNameReq.createTime())
-                    .thenApply(v -> conn);
+                        .thenApply(v -> conn);
             };
         } else {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
-                return conn -> writeChannel(conn, clientNameReq.createTime())
-                    .thenApply(v -> conn);
+                return conn -> writeChannel(conn, clientNameReq.createTime()).thenApply(v -> conn);
             };
         }
         this.readTimeoutSeconds = 3;
@@ -61,7 +75,7 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
         return super.connect(request);
     }
 
-    @Override //根据请求获取地址
+    @Override // 根据请求获取地址
     protected SocketAddress getAddress(@Nullable RedisCacheRequest request) {
         return super.getAddress(request);
     }

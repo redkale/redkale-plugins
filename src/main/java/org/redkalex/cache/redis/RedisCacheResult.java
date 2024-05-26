@@ -13,17 +13,14 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientResult;
 import org.redkale.source.CacheScoredValue;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class RedisCacheResult implements ClientResult {
 
-    //$   块字符串类型
-    //*   数组
-    //+   简单字符串类型
-    //-   错误类型
-    //:   整型
+    // $   块字符串类型
+    // *   数组
+    // +   简单字符串类型
+    // -   错误类型
+    // :   整型
     protected byte frameType;
 
     protected byte[] frameCursor;
@@ -257,5 +254,4 @@ public class RedisCacheResult implements ClientResult {
         }
         return sb.append("}").toString();
     }
-
 }

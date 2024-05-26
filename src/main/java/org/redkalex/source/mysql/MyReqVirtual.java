@@ -7,15 +7,11 @@ import java.util.Objects;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyReqVirtual extends MyClientRequest {
 
     @Override
-    public void writeTo(ClientConnection conn, ByteArray array) {
-    }
+    public void writeTo(ClientConnection conn, ByteArray array) {}
 
     @Override
     public int getType() {
@@ -31,5 +27,4 @@ public class MyReqVirtual extends MyClientRequest {
     public String toString() {
         return getClass().getSimpleName() + "_" + Objects.hash(this) + "{virtual}";
     }
-
 }

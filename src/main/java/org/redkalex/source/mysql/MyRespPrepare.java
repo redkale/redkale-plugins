@@ -7,25 +7,22 @@ package org.redkalex.source.mysql;
 
 import org.redkale.convert.json.JsonConvert;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyRespPrepare {
 
     public Long statementId;
 
-    public int numberOfParameters;  //先param后column
+    public int numberOfParameters; // 先param后column
 
     public int numberOfColumns;
 
     public int numberOfWarnings;
 
-    MyRowDesc paramDescs; //STATUS_PREPARE_PARAM时赋值
+    MyRowDesc paramDescs; // STATUS_PREPARE_PARAM时赋值
 
     int paramDecodeIndex = -1;
 
-    MyRowDesc columnDescs; //STATUS_PREPARE_PARAM时赋值
+    MyRowDesc columnDescs; // STATUS_PREPARE_PARAM时赋值
 
     int columnDecodeIndex = -1;
 

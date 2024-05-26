@@ -7,10 +7,7 @@ package org.redkalex.source.mysql;
 
 import java.util.Arrays;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyRowDesc {
 
     final MyRowColumn[] columns;

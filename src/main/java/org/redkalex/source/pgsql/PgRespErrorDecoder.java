@@ -5,15 +5,13 @@
  */
 package org.redkalex.source.pgsql;
 
+import static org.redkalex.source.pgsql.PgClientCodec.*;
+
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import org.redkale.util.ByteArray;
-import static org.redkalex.source.pgsql.PgClientCodec.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgRespErrorDecoder extends PgRespDecoder<SQLException> {
 
     public static final byte ERROR_OR_NOTICE_SEVERITY = 'S';
@@ -52,8 +50,7 @@ public class PgRespErrorDecoder extends PgRespDecoder<SQLException> {
 
     public static final PgRespErrorDecoder instance = new PgRespErrorDecoder();
 
-    private PgRespErrorDecoder() {
-    }
+    private PgRespErrorDecoder() {}
 
     @Override
     public byte messageid() {
@@ -61,7 +58,13 @@ public class PgRespErrorDecoder extends PgRespDecoder<SQLException> {
     }
 
     @Override
-    public SQLException read(PgClientConnection conn, final ByteBuffer buffer, final int length, ByteArray array, PgClientRequest request, PgResultSet dataset) {
+    public SQLException read(
+            PgClientConnection conn,
+            final ByteBuffer buffer,
+            final int length,
+            ByteArray array,
+            PgClientRequest request,
+            PgResultSet dataset) {
         String severity = null, code = null, message = null, detail = null, hint = null, line = null, table = null;
         for (byte type = buffer.get(); type != 0; type = buffer.get()) {
             String value = PgClientCodec.readUTF8String(buffer, array);
@@ -81,7 +84,7 @@ public class PgRespErrorDecoder extends PgRespDecoder<SQLException> {
                 table = value;
             }
         }
-        return new SQLException(detail == null ? message : (message + " (" + detail + ")"), code, "ERROR".equals(severity) ? 1 : 0);
+        return new SQLException(
+                detail == null ? message : (message + " (" + detail + ")"), code, "ERROR".equals(severity) ? 1 : 0);
     }
-
 }

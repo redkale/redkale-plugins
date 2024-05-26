@@ -45,7 +45,7 @@ public class CustomUpdateDeParser extends UpdateDeParser {
     public void deParse(Update update) {
         if (update.getWithItemsList() != null && !update.getWithItemsList().isEmpty()) {
             buffer.append("WITH ");
-            for (Iterator<WithItem> iter = update.getWithItemsList().iterator(); iter.hasNext();) {
+            for (Iterator<WithItem> iter = update.getWithItemsList().iterator(); iter.hasNext(); ) {
                 WithItem withItem = iter.next();
                 buffer.append(withItem);
                 if (iter.hasNext()) {
@@ -108,5 +108,4 @@ public class CustomUpdateDeParser extends UpdateDeParser {
             update.getReturningClause().appendTo(buffer);
         }
     }
-
 }

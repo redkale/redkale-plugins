@@ -14,7 +14,7 @@ import org.redkale.util.AnyValue;
 /**
  * Http Template Express Language
  *
- * 尚未实现
+ * <p>尚未实现
  *
  * @author zhangjx
  */
@@ -24,12 +24,10 @@ public class HttpTemplateRender implements org.redkale.net.http.HttpRender {
     protected File home;
 
     @Override
-    public void init(HttpContext context, AnyValue config) {
-    }
+    public void init(HttpContext context, AnyValue config) {}
 
     @Override
     public void renderTo(HttpRequest request, HttpResponse response, Convert convert, HttpScope scope) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-
 }

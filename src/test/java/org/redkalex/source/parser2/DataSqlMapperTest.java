@@ -3,16 +3,14 @@
  */
 package org.redkalex.source.parser2;
 
+import static org.redkale.source.spi.DataSqlMapperBuilder.createMapper;
+
 import org.junit.jupiter.api.Test;
 import org.redkale.source.DataJdbcSource;
 import org.redkale.source.DataNativeSqlParser;
 import org.redkale.source.DataSqlSource;
-import static org.redkale.source.spi.DataSqlMapperBuilder.createMapper;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class DataSqlMapperTest {
 
     private static DataNativeSqlParser parser = DataNativeSqlParser.loadFirst();

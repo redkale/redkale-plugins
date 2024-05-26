@@ -10,10 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyRespHandshakeDecoder extends MyRespDecoder<MyRespHandshakeResultSet> {
 
     public static final MyRespHandshakeDecoder instance = new MyRespHandshakeDecoder();
@@ -25,11 +22,19 @@ public class MyRespHandshakeDecoder extends MyRespDecoder<MyRespHandshakeResultS
     private static final byte[] FILLER_10 = new byte[10];
 
     @Override
-    public MyRespHandshakeResultSet read(MyClientConnection conn, ByteBuffer buffer, int length, byte index, ByteArray array, MyClientRequest request, MyResultSet dataset) throws SQLException {
+    public MyRespHandshakeResultSet read(
+            MyClientConnection conn,
+            ByteBuffer buffer,
+            int length,
+            byte index,
+            ByteArray array,
+            MyClientRequest request,
+            MyResultSet dataset)
+            throws SQLException {
         MyRespHandshakeResultSet rs = new MyRespHandshakeResultSet();
-        //protocol version
+        // protocol version
         rs.protocolVersion = buffer.get() & 0xff;
-        if (rs.protocolVersion == 0xff) {  //0
+        if (rs.protocolVersion == 0xff) { // 0
             int vendorCode = Mysqls.readUB2(buffer);
             String desc = Mysqls.readASCIIString(buffer, array);
             throw new SQLException(desc + " (vendorCode=" + vendorCode + ")", null, vendorCode);
@@ -37,7 +42,7 @@ public class MyRespHandshakeDecoder extends MyRespDecoder<MyRespHandshakeResultS
         if (rs.protocolVersion < 10) {
             throw new SQLException("Not supported protocolVersion(" + rs.protocolVersion + "), must greaterthan 10");
         }
-        //server version
+        // server version
         rs.serverVersion = Mysqls.readASCIIString(buffer, array);
         if (Integer.parseInt(rs.serverVersion.substring(0, rs.serverVersion.indexOf('.'))) < 5) {
             throw new SQLException("Not supported serverVersion(" + rs.serverVersion + "), must greaterthan 5.0");
@@ -45,7 +50,7 @@ public class MyRespHandshakeDecoder extends MyRespDecoder<MyRespHandshakeResultS
 
         rs.threadId = Mysqls.readUB4(buffer);
         rs.seed = Mysqls.readBytes(buffer, array, AUTH_PLUGIN_DATA_PART1_LENGTH);
-        buffer.get(); //读掉\0
+        buffer.get(); // 读掉\0
         int lowerServerCapabilitiesFlags = Mysqls.readUB2(buffer);
         rs.serverCharsetIndex = buffer.get() & 0xff;
         rs.serverStatus = Mysqls.readUB2(buffer);
@@ -62,15 +67,14 @@ public class MyRespHandshakeDecoder extends MyRespDecoder<MyRespHandshakeResultS
             buffer.get();
             lenOfAuthPluginData = 0;
         }
-        buffer.get(FILLER_10); //预留字节
-        rs.seed2 = Mysqls.readBytes(buffer, array, Math.max(NONCE_LENGTH - AUTH_PLUGIN_DATA_PART1_LENGTH, lenOfAuthPluginData - 9));
-        buffer.get(); //读掉\0
+        buffer.get(FILLER_10); // 预留字节
+        rs.seed2 = Mysqls.readBytes(
+                buffer, array, Math.max(NONCE_LENGTH - AUTH_PLUGIN_DATA_PART1_LENGTH, lenOfAuthPluginData - 9));
+        buffer.get(); // 读掉\0
         rs.authPluginName = new String(Mysqls.readBytes(buffer, array), StandardCharsets.UTF_8);
-        if (!"caching_sha2_password".equals(rs.authPluginName)
-            && !"mysql_native_password".equals(rs.authPluginName)) {
+        if (!"caching_sha2_password".equals(rs.authPluginName) && !"mysql_native_password".equals(rs.authPluginName)) {
             throw new SQLException("Not supported auth-plugin(" + rs.authPluginName + ")");
         }
         return rs;
     }
-
 }

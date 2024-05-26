@@ -5,10 +5,7 @@
  */
 package org.redkalex.source.search;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class BulkResult extends BaseBean {
 
     public long took;
@@ -44,6 +41,5 @@ public class BulkResult extends BaseBean {
             if (delete != null) return delete;
             return index;
         }
-
     }
 }

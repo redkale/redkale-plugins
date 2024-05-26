@@ -10,32 +10,31 @@ import org.redkale.convert.ConvertDisabled;
 import org.redkale.util.RedkaleException;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
 public class PayPreRequest extends PayRequest {
 
-    protected long payMoney; //  支付金额。 单位:分 
+    protected long payMoney; //  支付金额。 单位:分
 
     protected String payCurrency; //  币种,一般币值*100
 
-    protected String payTitle = ""; //订单标题
+    protected String payTitle = ""; // 订单标题
 
-    protected String payBody = ""; //订单内容描述
+    protected String payBody = ""; // 订单内容描述
 
-    protected String notifyUrl = ""; //回调url 不为空时会替换默认的回调url
+    protected String notifyUrl = ""; // 回调url 不为空时会替换默认的回调url
 
-    protected String returnUrl = ""; //页面返回url
+    protected String returnUrl = ""; // 页面返回url
 
-    protected int timeoutSeconds = 10 * 60; //支付超时的分钟数
+    protected int timeoutSeconds = 10 * 60; // 支付超时的分钟数
 
-    protected String clientHost = ""; //HTTP请求的Host
+    protected String clientHost = ""; // HTTP请求的Host
 
-    protected String clientAddr = "";  //客户端IP地址
+    protected String clientAddr = ""; // 客户端IP地址
 
-    protected Map<String, String> attach; //扩展信息
+    protected Map<String, String> attach; // 扩展信息
 
     @Override
     public void checkVaild() {
@@ -278,5 +277,4 @@ public class PayPreRequest extends PayRequest {
     public void setMap(Map<String, String> map) {
         this.attach = map;
     }
-
 }

@@ -10,19 +10,18 @@ import org.redkale.convert.ConvertDisabled;
 import org.redkale.util.Copier;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
 public class PayCreatResponse extends PayResponse {
 
-    private static final Copier< PayPreResponse, PayCreatResponse> copier = Copier.create(PayPreResponse.class, PayCreatResponse.class);
+    private static final Copier<PayPreResponse, PayCreatResponse> copier =
+            Copier.create(PayPreResponse.class, PayCreatResponse.class);
 
-    private String thirdPayno = ""; //第三方的支付流水号
+    private String thirdPayno = ""; // 第三方的支付流水号
 
-    public PayCreatResponse() {
-    }
+    public PayCreatResponse() {}
 
     public PayCreatResponse(PayPreResponse resp) {
         copier.apply(resp, this);

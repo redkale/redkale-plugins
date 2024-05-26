@@ -2,17 +2,15 @@
  */
 package org.redkalex.source.mysql;
 
-import java.util.Properties;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+
+import java.util.Properties;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MySourceTest {
 
     public static void main(String[] args) throws Throwable {
@@ -24,14 +22,19 @@ public class MySourceTest {
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource.default.url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8");
+        prop.setProperty(
+                "redkale.datasource.default.url",
+                "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8");
         prop.setProperty("redkale.datasource.default.table-autoddl", "true");
         prop.setProperty("redkale.datasource.default.user", "root");
         prop.setProperty("redkale.datasource.default.password", "");
 
         MysqlDataSource source = new MysqlDataSource();
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
+        source.init(AnyValue.loadFromProperties(prop)
+                .getAnyValue("redkale")
+                .getAnyValue("datasource")
+                .getAnyValue("default"));
         System.out.println("---------");
         source.clearTable(World.class);
         World[] words = new World[10000];

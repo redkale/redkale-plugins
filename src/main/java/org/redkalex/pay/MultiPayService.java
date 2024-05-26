@@ -5,6 +5,8 @@
  */
 package org.redkalex.pay;
 
+import static org.redkalex.pay.Pays.*;
+
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -14,10 +16,8 @@ import org.redkale.annotation.Comment;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.service.Local;
 import org.redkale.util.*;
-import static org.redkalex.pay.Pays.*;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -58,7 +58,8 @@ public class MultiPayService extends AbstractPayService {
             if (!(service instanceof AbstractPayService)) return false;
             DIYPayService diy = service.getClass().getAnnotation(DIYPayService.class);
             if (diy == null) return false;
-            if (diy.payType() < Pays.MIN_DIY_PAYTYPE) throw new RedkaleException("DIYPayService.paytype must be greater than " + Pays.MIN_DIY_PAYTYPE);
+            if (diy.payType() < Pays.MIN_DIY_PAYTYPE)
+                throw new RedkaleException("DIYPayService.paytype must be greater than " + Pays.MIN_DIY_PAYTYPE);
             return true;
         });
         for (AbstractPayService service : services) {
@@ -307,7 +308,8 @@ public class MultiPayService extends AbstractPayService {
     }
 
     @Override
-    protected boolean checkSign(final PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) {
+    protected boolean checkSign(
+            final PayElement element, Map<String, ?> map, String text, Map<String, Serializable> respHeaders) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -369,5 +371,4 @@ public class MultiPayService extends AbstractPayService {
     public OppoPayService getOppoPayService() {
         return oppoPayService;
     }
-
 }

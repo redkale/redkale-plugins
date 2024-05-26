@@ -7,10 +7,7 @@ import org.redkale.props.spi.PropertiesAgent;
 import org.redkale.props.spi.PropertiesAgentProvider;
 import org.redkale.util.AnyValue;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-900)
 public class NacosPropertiesAgentProvider implements PropertiesAgentProvider {
 
@@ -27,5 +24,4 @@ public class NacosPropertiesAgentProvider implements PropertiesAgentProvider {
     public PropertiesAgent createInstance() {
         return new NacosPropertiesAgent();
     }
-
 }

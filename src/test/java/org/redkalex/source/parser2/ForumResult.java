@@ -5,10 +5,7 @@ package org.redkalex.source.parser2;
 
 import org.redkale.convert.json.JsonConvert;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class ForumResult {
 
     private String forumGroupid;
@@ -35,5 +32,4 @@ public class ForumResult {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

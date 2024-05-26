@@ -5,6 +5,11 @@
  */
 package org.redkalex.cache.redis;
 
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import static org.redkale.util.Utility.*;
+import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_COUNT;
+import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
+
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -18,7 +23,6 @@ import java.util.logging.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
@@ -31,13 +35,9 @@ import org.redkale.net.client.ClientResponse;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkale.util.Utility.*;
-import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_COUNT;
-import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
 
 /**
  * 详情见: https://redkale.org
- *
  *
  * @author zhangjx
  */
@@ -46,7 +46,8 @@ import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
 @ResourceType(CacheSource.class)
 public final class RedisCacheSource extends RedisSource {
 
-    static final boolean debug = false; //System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
+    static final boolean debug =
+            false; // System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
 
     protected static final byte[] NX = "NX".getBytes();
 
@@ -69,8 +70,9 @@ public final class RedisCacheSource extends RedisSource {
 
     private final ReentrantLock pubSubLock = new ReentrantLock();
 
-    //key: topic
-    private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubSubListeners = new ConcurrentHashMap<>();
+    // key: topic
+    private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubSubListeners =
+            new ConcurrentHashMap<>();
 
     @Override
     public void init(AnyValue conf) {
@@ -84,7 +86,8 @@ public final class RedisCacheSource extends RedisSource {
     private void initClient(AnyValue conf) {
         RedisConfig config = RedisConfig.create(conf);
         if (config.getAddresses().size() != 1) {
-            throw new RedkaleException("Only one address supported for " + getClass().getSimpleName());
+            throw new RedkaleException(
+                    "Only one address supported for " + getClass().getSimpleName());
         }
         String oneAddr = config.getAddresses().get(0);
         if (oneAddr.contains("://")) {
@@ -92,18 +95,27 @@ public final class RedisCacheSource extends RedisSource {
             address = new InetSocketAddress(uri.getHost(), uri.getPort() > 0 ? uri.getPort() : 6379);
         } else {
             int pos = oneAddr.indexOf(':');
-            address = new InetSocketAddress(pos < 0 ? oneAddr : oneAddr.substring(0, pos), pos < 0 ? 6379 : Integer.parseInt(oneAddr.substring(pos + 1)));
+            address = new InetSocketAddress(
+                    pos < 0 ? oneAddr : oneAddr.substring(0, pos),
+                    pos < 0 ? 6379 : Integer.parseInt(oneAddr.substring(pos + 1)));
         }
         AsyncGroup ioGroup = clientAsyncGroup;
         if (clientAsyncGroup == null) {
             String f = "Redkalex-Redis-IOThread-" + resourceName() + "-%s";
-            ioGroup = AsyncGroup.create(f, workExecutor, 16 * 1024, Utility.cpus() * 4).start();
+            ioGroup = AsyncGroup.create(f, workExecutor, 16 * 1024, Utility.cpus() * 4)
+                    .start();
         }
         RedisCacheClient old = this.client;
-        this.client = new RedisCacheClient(appName, resourceName(), ioGroup, resourceName() + "." + config.getDb(),
-            new ClientAddress(address), config.getMaxconns(Utility.cpus()), config.getPipelines(),
-            isEmpty(config.getPassword()) ? null : new RedisCacheReqAuth(config.getPassword()),
-            config.getDb() < 1 ? null : new RedisCacheReqDB(config.getDb()));
+        this.client = new RedisCacheClient(
+                appName,
+                resourceName(),
+                ioGroup,
+                resourceName() + "." + config.getDb(),
+                new ClientAddress(address),
+                config.getMaxconns(Utility.cpus()),
+                config.getPipelines(),
+                isEmpty(config.getPassword()) ? null : new RedisCacheReqAuth(config.getPassword()),
+                config.getDb() < 1 ? null : new RedisCacheReqDB(config.getDb()));
         if (this.pubSubConn != null) {
             this.pubSubConn.dispose(null);
             this.pubSubConn = null;
@@ -114,9 +126,10 @@ public final class RedisCacheSource extends RedisSource {
         if (!pubSubListeners.isEmpty()) {
             pubSubConn().join();
         }
-//        if (logger.isLoggable(Level.FINE)) {
-//            logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" + db);
-//        }
+        //        if (logger.isLoggable(Level.FINE)) {
+        //            logger.log(Level.FINE, RedisCacheSource.class.getSimpleName() + ": addr=" + address + ", db=" +
+        // db);
+        //        }
     }
 
     @Override
@@ -127,7 +140,13 @@ public final class RedisCacheSource extends RedisSource {
         }
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
-            sb.append("CacheSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+            sb.append("CacheSource(name=")
+                    .append(resourceName())
+                    .append(") change '")
+                    .append(event.name())
+                    .append("' to '")
+                    .append(event.coverNewValue())
+                    .append("'\r\n");
         }
         initClient(this.conf);
         if (sb.length() > 0) {
@@ -142,7 +161,8 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{name=" + resourceName() + ", addrs=" + this.address + ", db=" + this.db + "}";
+        return getClass().getSimpleName() + "{name=" + resourceName() + ", addrs=" + this.address + ", db=" + this.db
+                + "}";
     }
 
     @Override
@@ -181,24 +201,31 @@ public final class RedisCacheSource extends RedisSource {
                                                     try {
                                                         item.onMessage(channel, msg);
                                                     } catch (Throwable t) {
-                                                        logger.log(Level.SEVERE, "CacheSource subscribe message error, topic: " + channel, t);
+                                                        logger.log(
+                                                                Level.SEVERE,
+                                                                "CacheSource subscribe message error, topic: "
+                                                                        + channel,
+                                                                t);
                                                     }
                                                 });
                                             }
                                         }
                                     } else {
                                         RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
-                                        ClientFuture respFuture = ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
+                                        ClientFuture respFuture =
+                                                ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
                                         respFuture.complete(result);
                                     }
                                 } else {
                                     RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
-                                    ClientFuture respFuture = ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
+                                    ClientFuture respFuture =
+                                            ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
                                     respFuture.complete(result);
                                 }
                             } else {
                                 RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
-                                ClientFuture respFuture = ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
+                                ClientFuture respFuture =
+                                        ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
                                 respFuture.completeExceptionally(resp.getCause());
                             }
                         }
@@ -207,11 +234,13 @@ public final class RedisCacheSource extends RedisSource {
                             pubSubConn = null;
                         }
                     });
-                    //重连时重新订阅
+                    // 重连时重新订阅
                     if (!pubSubListeners.isEmpty()) {
                         final Map<CacheEventListener<byte[]>, HashSet<String>> listeners = new HashMap<>();
                         pubSubListeners.forEach((t, s) -> {
-                            s.forEach(l -> listeners.computeIfAbsent(l, x -> new HashSet<>()).add(t));
+                            s.forEach(l -> listeners
+                                    .computeIfAbsent(l, x -> new HashSet<>())
+                                    .add(t));
                         });
                         listeners.forEach((listener, topics) -> {
                             subscribeAsync(listener, topics.toArray(Creator.funcStringArray()));
@@ -230,11 +259,12 @@ public final class RedisCacheSource extends RedisSource {
         return CompletableFuture.completedFuture(client != null);
     }
 
-    //------------------------ 订阅发布 SUB/PUB ------------------------     
+    // ------------------------ 订阅发布 SUB/PUB ------------------------
     @Override
     public CompletableFuture<List<String>> pubsubChannelsAsync(@Nullable String pattern) {
-        CompletableFuture<RedisCacheResult> future = pattern == null ? sendAsync(RedisCommand.PUBSUB, "CHANNELS", CHANNELS)
-            : sendAsync(RedisCommand.PUBSUB, "CHANNELS", CHANNELS, pattern.getBytes(StandardCharsets.UTF_8));
+        CompletableFuture<RedisCacheResult> future = pattern == null
+                ? sendAsync(RedisCommand.PUBSUB, "CHANNELS", CHANNELS)
+                : sendAsync(RedisCommand.PUBSUB, "CHANNELS", CHANNELS, pattern.getBytes(StandardCharsets.UTF_8));
         return future.thenApply(v -> v.getListValue("CHANNELS", null, String.class));
     }
 
@@ -245,21 +275,19 @@ public final class RedisCacheSource extends RedisSource {
             throw new RedkaleException("topics is empty");
         }
         RedisCacheRequest req = RedisCacheRequest.create(RedisCommand.SUBSCRIBE, null, keysArgs(topics));
-        return pubSubConn()
-            .thenCompose(conn
-                -> conn.writeRequest(req)
-                .thenApply(v -> {
-                    for (String topic : topics) {
-                        pubSubListeners.computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>()).add(listener);
-                    }
-                    return null;
-                })
-            );
+        return pubSubConn().thenCompose(conn -> conn.writeRequest(req).thenApply(v -> {
+            for (String topic : topics) {
+                pubSubListeners
+                        .computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>())
+                        .add(listener);
+            }
+            return null;
+        }));
     }
 
     @Override
     public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
-        if (listener == null) { //清掉指定topic的所有订阅者            
+        if (listener == null) { // 清掉指定topic的所有订阅者
             Set<String> delTopics = new HashSet<>();
             if (topics == null || topics.length < 1) {
                 delTopics.addAll(pubSubListeners.keySet());
@@ -268,15 +296,15 @@ public final class RedisCacheSource extends RedisSource {
             }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             delTopics.forEach(topic -> {
-                futures.add(pubSubConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
-                    .thenApply(r -> {
-                        pubSubListeners.remove(topic);
-                        return null;
-                    })
-                ));
+                futures.add(pubSubConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(
+                                RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
+                        .thenApply(r -> {
+                            pubSubListeners.remove(topic);
+                            return null;
+                        })));
             });
             return returnFutureSize(futures);
-        } else {  //清掉指定topic的指定订阅者         
+        } else { // 清掉指定topic的指定订阅者
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (String topic : topics) {
                 CopyOnWriteArraySet<CacheEventListener<byte[]>> listens = pubSubListeners.get(topic);
@@ -285,12 +313,12 @@ public final class RedisCacheSource extends RedisSource {
                 }
                 listens.remove(listener);
                 if (listens.isEmpty()) {
-                    futures.add(pubSubConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
-                        .thenApply(r -> {
-                            pubSubListeners.remove(topic);
-                            return null;
-                        })
-                    ));
+                    futures.add(pubSubConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(
+                                    RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
+                            .thenApply(r -> {
+                                pubSubListeners.remove(topic);
+                                return null;
+                            })));
                 }
             }
             return returnFutureSize(futures);
@@ -301,25 +329,27 @@ public final class RedisCacheSource extends RedisSource {
     public CompletableFuture<Integer> publishAsync(String topic, byte[] message) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(message);
-        return sendAsync(RedisCommand.PUBLISH, topic, topic.getBytes(StandardCharsets.UTF_8), message).thenApply(v -> v.getIntValue(0));
+        return sendAsync(RedisCommand.PUBLISH, topic, topic.getBytes(StandardCharsets.UTF_8), message)
+                .thenApply(v -> v.getIntValue(0));
     }
 
-    //--------------------- exists ------------------------------
+    // --------------------- exists ------------------------------
     @Override
     public CompletableFuture<Boolean> existsAsync(String key) {
         return sendAsync(RedisCommand.EXISTS, key, keyArgs(key)).thenApply(v -> v.getIntValue(0) > 0);
     }
 
-    //--------------------- get ------------------------------
+    // --------------------- get ------------------------------
     @Override
     public <T> CompletableFuture<T> getAsync(String key, Type type) {
         return sendAsync(RedisCommand.GET, key, keyArgs(key)).thenApply(v -> v.getObjectValue(key, cryptor, type));
     }
 
-    //--------------------- getex ------------------------------
+    // --------------------- getex ------------------------------
     @Override
     public <T> CompletableFuture<T> getexAsync(String key, int expireSeconds, final Type type) {
-        return sendAsync(RedisCommand.GETEX, key, keyArgs(key, "EX", expireSeconds)).thenApply(v -> v.getObjectValue(key, cryptor, type));
+        return sendAsync(RedisCommand.GETEX, key, keyArgs(key, "EX", expireSeconds))
+                .thenApply(v -> v.getObjectValue(key, cryptor, type));
     }
 
     @Override
@@ -327,7 +357,8 @@ public final class RedisCacheSource extends RedisSource {
         if (keyVals.length % 2 != 0) {
             throw new RedkaleException("key value must be paired");
         }
-        return sendAsync(RedisCommand.MSET, keyVals[0].toString(), keymArgs(keyVals)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.MSET, keyVals[0].toString(), keymArgs(keyVals))
+                .thenApply(v -> v.getVoidValue());
     }
 
     @Override
@@ -335,7 +366,11 @@ public final class RedisCacheSource extends RedisSource {
         if (isEmpty(map)) {
             return CompletableFuture.completedFuture(null);
         }
-        return sendAsync(RedisCommand.MSET, map.keySet().stream().findFirst().orElse("").toString(), keymArgs(map)).thenApply(v -> v.getVoidValue());
+        return sendAsync(
+                        RedisCommand.MSET,
+                        map.keySet().stream().findFirst().orElse("").toString(),
+                        keymArgs(map))
+                .thenApply(v -> v.getVoidValue());
     }
 
     @Override
@@ -343,7 +378,8 @@ public final class RedisCacheSource extends RedisSource {
         if (keyVals.length % 2 != 0) {
             throw new RedkaleException("key value must be paired");
         }
-        return sendAsync(RedisCommand.MSETNX, keyVals[0].toString(), keymArgs(keyVals)).thenApply(v -> v.getBoolValue());
+        return sendAsync(RedisCommand.MSETNX, keyVals[0].toString(), keymArgs(keyVals))
+                .thenApply(v -> v.getBoolValue());
     }
 
     @Override
@@ -351,23 +387,30 @@ public final class RedisCacheSource extends RedisSource {
         if (isEmpty(map)) {
             return CompletableFuture.completedFuture(null);
         }
-        return sendAsync(RedisCommand.MSETNX, map.keySet().stream().findFirst().orElse("").toString(), keymArgs(map)).thenApply(v -> v.getBoolValue());
+        return sendAsync(
+                        RedisCommand.MSETNX,
+                        map.keySet().stream().findFirst().orElse("").toString(),
+                        keymArgs(map))
+                .thenApply(v -> v.getBoolValue());
     }
 
-    //--------------------- setex ------------------------------
+    // --------------------- setex ------------------------------
     @Override
     public <T> CompletableFuture<Void> setAsync(String key, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.SET, key, keyArgs(key, convert, type, value)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, convert, type, value))
+                .thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public <T> CompletableFuture<Boolean> setnxAsync(String key, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.SET, key, keyArgs(key, NX, convert, type, value)).thenApply(v -> v.getBoolValue());
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, NX, convert, type, value))
+                .thenApply(v -> v.getBoolValue());
     }
 
     @Override
     public <T> CompletableFuture<T> getSetAsync(String key, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.GETSET, key, keyArgs(key, convert, type, value)).thenApply(v -> v.getObjectValue(key, cryptor, type));
+        return sendAsync(RedisCommand.GETSET, key, keyArgs(key, convert, type, value))
+                .thenApply(v -> v.getObjectValue(key, cryptor, type));
     }
 
     @Override
@@ -375,28 +418,36 @@ public final class RedisCacheSource extends RedisSource {
         return sendAsync(RedisCommand.GETDEL, key, keyArgs(key)).thenApply(v -> v.getObjectValue(key, cryptor, type));
     }
 
-    //--------------------- setex ------------------------------    
+    // --------------------- setex ------------------------------
     @Override
-    public <T> CompletableFuture<Void> setexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.SET, key, keyArgs(key, expireSeconds, EX, convert, type, value)).thenApply(v -> v.getVoidValue());
+    public <T> CompletableFuture<Void> setexAsync(
+            String key, int expireSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, expireSeconds, EX, convert, type, value))
+                .thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> CompletableFuture<Void> psetexAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.SET, key, keyArgs(key, milliSeconds, PX, convert, type, value)).thenApply(v -> v.getVoidValue());
+    public <T> CompletableFuture<Void> psetexAsync(
+            String key, long milliSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, milliSeconds, PX, convert, type, value))
+                .thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> setnxexAsync(String key, int expireSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.SET, key, keyArgs(key, expireSeconds, NX, EX, convert, type, value)).thenApply(v -> v.getBoolValue());
+    public <T> CompletableFuture<Boolean> setnxexAsync(
+            String key, int expireSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, expireSeconds, NX, EX, convert, type, value))
+                .thenApply(v -> v.getBoolValue());
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> setnxpxAsync(String key, long milliSeconds, Convert convert, final Type type, T value) {
-        return sendAsync(RedisCommand.SET, key, keyArgs(key, milliSeconds, NX, PX, convert, type, value)).thenApply(v -> v.getBoolValue());
+    public <T> CompletableFuture<Boolean> setnxpxAsync(
+            String key, long milliSeconds, Convert convert, final Type type, T value) {
+        return sendAsync(RedisCommand.SET, key, keyArgs(key, milliSeconds, NX, PX, convert, type, value))
+                .thenApply(v -> v.getBoolValue());
     }
 
-    //--------------------- expire ------------------------------    
+    // --------------------- expire ------------------------------
     @Override
     public CompletableFuture<Void> expireAsync(String key, int expireSeconds) {
         return sendAsync(RedisCommand.EXPIRE, key, keyArgs(key, expireSeconds)).thenApply(v -> v.getVoidValue());
@@ -417,7 +468,7 @@ public final class RedisCacheSource extends RedisSource {
         return sendAsync(RedisCommand.PEXPIREAT, key, keyArgs(key, milliTime)).thenApply(v -> v.getVoidValue());
     }
 
-    //--------------------- ttl ------------------------------    
+    // --------------------- ttl ------------------------------
     @Override
     public CompletableFuture<Long> ttlAsync(String key) {
         return sendAsync(RedisCommand.TTL, key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
@@ -438,13 +489,13 @@ public final class RedisCacheSource extends RedisSource {
         return sendAsync(RedisCommand.PEXPIRETIME, key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
     }
 
-    //--------------------- persist ------------------------------    
+    // --------------------- persist ------------------------------
     @Override
     public CompletableFuture<Boolean> persistAsync(String key) {
         return sendAsync(RedisCommand.PERSIST, key, keyArgs(key)).thenApply(v -> v.getBoolValue());
     }
 
-    //--------------------- rename ------------------------------    
+    // --------------------- rename ------------------------------
     @Override
     public CompletableFuture<Boolean> renameAsync(String oldKey, String newKey) {
         return sendAsync(RedisCommand.RENAME, oldKey, keysArgs(oldKey, newKey)).thenApply(v -> v.getBoolValue());
@@ -452,7 +503,8 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public CompletableFuture<Boolean> renamenxAsync(String oldKey, String newKey) {
-        return sendAsync(RedisCommand.RENAMENX, oldKey, keysArgs(oldKey, newKey)).thenApply(v -> v.getBoolValue());
+        return sendAsync(RedisCommand.RENAMENX, oldKey, keysArgs(oldKey, newKey))
+                .thenApply(v -> v.getBoolValue());
     }
 
     @Override
@@ -481,13 +533,19 @@ public final class RedisCacheSource extends RedisSource {
             } else {
                 Class t = TypeToken.typeToClass(type);
                 if (List.class.isAssignableFrom(t)) {
-                    Type componentType = type instanceof ParameterizedType ? ((ParameterizedType) type).getActualTypeArguments()[0] : String.class;
+                    Type componentType = type instanceof ParameterizedType
+                            ? ((ParameterizedType) type).getActualTypeArguments()[0]
+                            : String.class;
                     return (T) v.getListValue(key, cryptor, componentType);
                 } else if (Set.class.isAssignableFrom(t)) {
-                    Type componentType = type instanceof ParameterizedType ? ((ParameterizedType) type).getActualTypeArguments()[0] : String.class;
+                    Type componentType = type instanceof ParameterizedType
+                            ? ((ParameterizedType) type).getActualTypeArguments()[0]
+                            : String.class;
                     return (T) v.getSetValue(key, cryptor, componentType);
                 } else if (Map.class.isAssignableFrom(t)) {
-                    Type componentType = type instanceof ParameterizedType ? ((ParameterizedType) type).getActualTypeArguments()[1] : String.class;
+                    Type componentType = type instanceof ParameterizedType
+                            ? ((ParameterizedType) type).getActualTypeArguments()[1]
+                            : String.class;
                     return (T) v.getMapValue(key, cryptor, componentType);
                 }
                 return v.getObjectValue(key, cryptor, type);
@@ -495,7 +553,7 @@ public final class RedisCacheSource extends RedisSource {
         });
     }
 
-    //--------------------- del ------------------------------    
+    // --------------------- del ------------------------------
     @Override
     public CompletableFuture<Long> delAsync(String... keys) {
         if (keys.length == 0) {
@@ -509,10 +567,11 @@ public final class RedisCacheSource extends RedisSource {
         if (key == null) {
             return CompletableFuture.completedFuture(0L);
         }
-        return sendAsync(RedisCommand.EVAL, key, keyArgs(SCRIPT_DELEX, 1, key, expectedValue)).thenApply(v -> v.getLongValue(0L));
+        return sendAsync(RedisCommand.EVAL, key, keyArgs(SCRIPT_DELEX, 1, key, expectedValue))
+                .thenApply(v -> v.getLongValue(0L));
     }
 
-    //--------------------- incrby ------------------------------    
+    // --------------------- incrby ------------------------------
     @Override
     public CompletableFuture<Long> incrAsync(final String key) {
         return sendAsync(RedisCommand.INCR, key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
@@ -528,7 +587,7 @@ public final class RedisCacheSource extends RedisSource {
         return sendAsync(RedisCommand.INCRBYFLOAT, key, keyArgs(key, num)).thenApply(v -> v.getDoubleValue(0.d));
     }
 
-    //--------------------- decrby ------------------------------    
+    // --------------------- decrby ------------------------------
     @Override
     public CompletableFuture<Long> decrAsync(final String key) {
         return sendAsync(RedisCommand.DECR, key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
@@ -551,7 +610,8 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public CompletableFuture<List<String>> hkeysAsync(final String key) {
-        return sendAsync(RedisCommand.HKEYS, key, keyArgs(key)).thenApply(v -> (List) v.getListValue(key, cryptor, String.class));
+        return sendAsync(RedisCommand.HKEYS, key, keyArgs(key))
+                .thenApply(v -> (List) v.getListValue(key, cryptor, String.class));
     }
 
     @Override
@@ -561,12 +621,14 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public CompletableFuture<Long> hincrbyAsync(final String key, String field, long num) {
-        return sendAsync(RedisCommand.HINCRBY, key, keysArgs(key, field, String.valueOf(num))).thenApply(v -> v.getLongValue(0L));
+        return sendAsync(RedisCommand.HINCRBY, key, keysArgs(key, field, String.valueOf(num)))
+                .thenApply(v -> v.getLongValue(0L));
     }
 
     @Override
     public CompletableFuture<Double> hincrbyFloatAsync(final String key, String field, double num) {
-        return sendAsync(RedisCommand.HINCRBYFLOAT, key, keysArgs(key, field, String.valueOf(num))).thenApply(v -> v.getDoubleValue(0.d));
+        return sendAsync(RedisCommand.HINCRBYFLOAT, key, keysArgs(key, field, String.valueOf(num)))
+                .thenApply(v -> v.getDoubleValue(0.d));
     }
 
     @Override
@@ -585,19 +647,23 @@ public final class RedisCacheSource extends RedisSource {
     }
 
     @Override
-    public <T> CompletableFuture<Void> hsetAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
+    public <T> CompletableFuture<Void> hsetAsync(
+            final String key, final String field, final Convert convert, final Type type, final T value) {
         if (value == null) {
             return CompletableFuture.completedFuture(null);
         }
-        return sendAsync(RedisCommand.HSET, key, keyArgs(key, field, convert, type, value)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.HSET, key, keyArgs(key, field, convert, type, value))
+                .thenApply(v -> v.getVoidValue());
     }
 
     @Override
-    public <T> CompletableFuture<Boolean> hsetnxAsync(final String key, final String field, final Convert convert, final Type type, final T value) {
+    public <T> CompletableFuture<Boolean> hsetnxAsync(
+            final String key, final String field, final Convert convert, final Type type, final T value) {
         if (value == null) {
             return CompletableFuture.completedFuture(null);
         }
-        return sendAsync(RedisCommand.HSETNX, key, keyArgs(key, field, convert, type, value)).thenApply(v -> v.getBoolValue());
+        return sendAsync(RedisCommand.HSETNX, key, keyArgs(key, field, convert, type, value))
+                .thenApply(v -> v.getBoolValue());
     }
 
     @Override
@@ -615,16 +681,19 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public CompletableFuture<List<Serializable>> hmgetAsync(final String key, final Type type, final String... fields) {
-        return sendAsync(RedisCommand.HMGET, key, keysArgs(key, fields)).thenApply(v -> (List) v.getListValue(key, cryptor, type));
+        return sendAsync(RedisCommand.HMGET, key, keysArgs(key, fields))
+                .thenApply(v -> (List) v.getListValue(key, cryptor, type));
     }
 
     @Override
-    public <T> CompletableFuture<Map<String, T>> hscanAsync(final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
-        return sendAsync(RedisCommand.HSCAN, key, keyArgs(key, cursor, limit, pattern)).thenApply(v -> {
-            Map map = v.getMapValue(key, cryptor, type);
-            cursor.set(v.getCursor());
-            return map;
-        });
+    public <T> CompletableFuture<Map<String, T>> hscanAsync(
+            final String key, final Type type, AtomicLong cursor, int limit, String pattern) {
+        return sendAsync(RedisCommand.HSCAN, key, keyArgs(key, cursor, limit, pattern))
+                .thenApply(v -> {
+                    Map map = v.getMapValue(key, cryptor, type);
+                    cursor.set(v.getCursor());
+                    return map;
+                });
     }
 
     @Override
@@ -639,7 +708,8 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public <T> CompletableFuture<T> hgetAsync(final String key, final String field, final Type type) {
-        return sendAsync(RedisCommand.HGET, key, keysArgs(key, field)).thenApply(v -> v.getObjectValue(key, cryptor, type));
+        return sendAsync(RedisCommand.HGET, key, keysArgs(key, field))
+                .thenApply(v -> v.getObjectValue(key, cryptor, type));
     }
 
     @Override
@@ -649,27 +719,32 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public <T> CompletableFuture<Set<T>> smembersAsync(String key, final Type componentType) {
-        return sendAsync(RedisCommand.SMEMBERS, key, keyArgs(key)).thenApply(v -> v.getSetValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.SMEMBERS, key, keyArgs(key))
+                .thenApply(v -> v.getSetValue(key, cryptor, componentType));
     }
 
     @Override
     public <T> CompletableFuture<List<T>> lrangeAsync(String key, final Type componentType, int start, int stop) {
-        return sendAsync(RedisCommand.LRANGE, key, keyArgs(key, start, stop)).thenApply(v -> v.getListValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.LRANGE, key, keyArgs(key, start, stop))
+                .thenApply(v -> v.getListValue(key, cryptor, componentType));
     }
 
     @Override
     public <T> CompletableFuture<T> lindexAsync(String key, Type componentType, int index) {
-        return sendAsync(RedisCommand.LINDEX, key, keyArgs(key, index)).thenApply(v -> v.getObjectValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.LINDEX, key, keyArgs(key, index))
+                .thenApply(v -> v.getObjectValue(key, cryptor, componentType));
     }
 
     @Override
     public <T> CompletableFuture<Long> linsertBeforeAsync(String key, Type componentType, T pivot, T value) {
-        return sendAsync(RedisCommand.LINSERT, key, keyArgs(key, "BEFORE", componentType, pivot, value)).thenApply(v -> v.getLongValue(0L));
+        return sendAsync(RedisCommand.LINSERT, key, keyArgs(key, "BEFORE", componentType, pivot, value))
+                .thenApply(v -> v.getLongValue(0L));
     }
 
     @Override
     public <T> CompletableFuture<Long> linsertAfterAsync(String key, Type componentType, T pivot, T value) {
-        return sendAsync(RedisCommand.LINSERT, key, keyArgs(key, "AFTER", componentType, pivot, value)).thenApply(v -> v.getLongValue(0L));
+        return sendAsync(RedisCommand.LINSERT, key, keyArgs(key, "AFTER", componentType, pivot, value))
+                .thenApply(v -> v.getLongValue(0L));
     }
 
     @Override
@@ -679,30 +754,35 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public <T> CompletableFuture<T> lpopAsync(final String key, final Type componentType) {
-        return sendAsync(RedisCommand.LPOP, key, keyArgs(key)).thenApply(v -> v.getObjectValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.LPOP, key, keyArgs(key))
+                .thenApply(v -> v.getObjectValue(key, cryptor, componentType));
     }
 
     @Override
     public <T> CompletableFuture<Void> lpushAsync(final String key, final Type componentType, T... values) {
-        return sendAsync(RedisCommand.LPUSH, key, keyArgs(key, componentType, values)).thenApply(v -> null);
+        return sendAsync(RedisCommand.LPUSH, key, keyArgs(key, componentType, values))
+                .thenApply(v -> null);
     }
 
     @Override
     public <T> CompletableFuture<Void> lpushxAsync(final String key, final Type componentType, T... values) {
-        return sendAsync(RedisCommand.LPUSHX, key, keyArgs(key, componentType, values)).thenApply(v -> null);
+        return sendAsync(RedisCommand.LPUSHX, key, keyArgs(key, componentType, values))
+                .thenApply(v -> null);
     }
 
     @Override
     public <T> CompletableFuture<T> rpopAsync(final String key, final Type componentType) {
-        return sendAsync(RedisCommand.RPOP, key, keyArgs(key)).thenApply(v -> v.getObjectValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.RPOP, key, keyArgs(key))
+                .thenApply(v -> v.getObjectValue(key, cryptor, componentType));
     }
 
     @Override
     public <T> CompletableFuture<T> rpoplpushAsync(final String key, final String key2, final Type componentType) {
-        return sendAsync(RedisCommand.RPOPLPUSH, key, keysArgs(key, key2)).thenApply(v -> v.getObjectValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.RPOPLPUSH, key, keysArgs(key, key2))
+                .thenApply(v -> v.getObjectValue(key, cryptor, componentType));
     }
 
-    //--------------------- collection ------------------------------  
+    // --------------------- collection ------------------------------
     @Override
     public CompletableFuture<Long> llenAsync(String key) {
         return sendAsync(RedisCommand.LLEN, key, keyArgs(key)).thenApply(v -> v.getLongValue(0L));
@@ -715,52 +795,64 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public <T> CompletableFuture<List<Boolean>> smismembersAsync(final String key, final String... members) {
-        return sendAsync(RedisCommand.SMISMEMBER, key, keysArgs(key, members)).thenApply(v -> v.getListValue(key, cryptor, Boolean.class));
+        return sendAsync(RedisCommand.SMISMEMBER, key, keysArgs(key, members))
+                .thenApply(v -> v.getListValue(key, cryptor, Boolean.class));
     }
 
     @Override
     public <T> CompletableFuture<Boolean> smoveAsync(String key, String key2, Type componentType, T member) {
-        return sendAsync(RedisCommand.SMOVE, key, keyArgs(key, key2, componentType, member)).thenApply(v -> v.getBoolValue());
+        return sendAsync(RedisCommand.SMOVE, key, keyArgs(key, key2, componentType, member))
+                .thenApply(v -> v.getBoolValue());
     }
 
     @Override
     public <T> CompletableFuture<List<T>> srandmemberAsync(String key, Type componentType, int count) {
-        return sendAsync(RedisCommand.SRANDMEMBER, key, keyArgs(key, count)).thenApply(v -> v.getListValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.SRANDMEMBER, key, keyArgs(key, count))
+                .thenApply(v -> v.getListValue(key, cryptor, componentType));
     }
 
     @Override
     public <T> CompletableFuture<Set<T>> sdiffAsync(final String key, final Type componentType, final String... key2s) {
-        return sendAsync(RedisCommand.SDIFF, key, keysArgs(key, key2s)).thenApply(v -> v.getSetValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.SDIFF, key, keysArgs(key, key2s))
+                .thenApply(v -> v.getSetValue(key, cryptor, componentType));
     }
 
     @Override
     public CompletableFuture<Long> sdiffstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
-        return sendAsync(RedisCommand.SDIFFSTORE, key, keysArgs(Utility.append(key, srcKey, srcKey2s))).thenApply(v -> v.getLongValue(0L));
+        return sendAsync(RedisCommand.SDIFFSTORE, key, keysArgs(Utility.append(key, srcKey, srcKey2s)))
+                .thenApply(v -> v.getLongValue(0L));
     }
 
     @Override
-    public <T> CompletableFuture<Set<T>> sinterAsync(final String key, final Type componentType, final String... key2s) {
-        return sendAsync(RedisCommand.SINTER, key, keysArgs(key, key2s)).thenApply(v -> v.getSetValue(key, cryptor, componentType));
+    public <T> CompletableFuture<Set<T>> sinterAsync(
+            final String key, final Type componentType, final String... key2s) {
+        return sendAsync(RedisCommand.SINTER, key, keysArgs(key, key2s))
+                .thenApply(v -> v.getSetValue(key, cryptor, componentType));
     }
 
     @Override
     public CompletableFuture<Long> sinterstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
-        return sendAsync(RedisCommand.SINTERSTORE, key, keysArgs(Utility.append(key, srcKey, srcKey2s))).thenApply(v -> v.getLongValue(0L));
+        return sendAsync(RedisCommand.SINTERSTORE, key, keysArgs(Utility.append(key, srcKey, srcKey2s)))
+                .thenApply(v -> v.getLongValue(0L));
     }
 
     @Override
-    public <T> CompletableFuture<Set<T>> sunionAsync(final String key, final Type componentType, final String... key2s) {
-        return sendAsync(RedisCommand.SUNION, key, keysArgs(key, key2s)).thenApply(v -> v.getSetValue(key, cryptor, componentType));
+    public <T> CompletableFuture<Set<T>> sunionAsync(
+            final String key, final Type componentType, final String... key2s) {
+        return sendAsync(RedisCommand.SUNION, key, keysArgs(key, key2s))
+                .thenApply(v -> v.getSetValue(key, cryptor, componentType));
     }
 
     @Override
     public CompletableFuture<Long> sunionstoreAsync(final String key, final String srcKey, final String... srcKey2s) {
-        return sendAsync(RedisCommand.SUNIONSTORE, key, keysArgs(Utility.append(key, srcKey, srcKey2s))).thenApply(v -> v.getLongValue(0L));
+        return sendAsync(RedisCommand.SUNIONSTORE, key, keysArgs(Utility.append(key, srcKey, srcKey2s)))
+                .thenApply(v -> v.getLongValue(0L));
     }
 
     @Override
     public <T> CompletableFuture<List<T>> mgetAsync(final Type componentType, final String... keys) {
-        return sendAsync(RedisCommand.MGET, keys[0], keysArgs(keys)).thenApply(v -> (List) v.getListValue(keys[0], cryptor, componentType));
+        return sendAsync(RedisCommand.MGET, keys[0], keysArgs(keys))
+                .thenApply(v -> (List) v.getListValue(keys[0], cryptor, componentType));
     }
 
     @Override
@@ -805,57 +897,67 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public <T> CompletableFuture<Boolean> sismemberAsync(String key, final Type componentType, T value) {
-        return sendAsync(RedisCommand.SISMEMBER, key, keyArgs(key, componentType, value)).thenApply(v -> v.getIntValue(0) > 0);
+        return sendAsync(RedisCommand.SISMEMBER, key, keyArgs(key, componentType, value))
+                .thenApply(v -> v.getIntValue(0) > 0);
     }
 
-    //--------------------- rpush ------------------------------  
+    // --------------------- rpush ------------------------------
     @Override
     public <T> CompletableFuture<Void> rpushAsync(String key, final Type componentType, T... values) {
-        return sendAsync(RedisCommand.RPUSH, key, keyArgs(key, componentType, values)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.RPUSH, key, keyArgs(key, componentType, values))
+                .thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public <T> CompletableFuture<Void> rpushxAsync(String key, final Type componentType, T... values) {
-        return sendAsync(RedisCommand.RPUSHX, key, keyArgs(key, componentType, values)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.RPUSHX, key, keyArgs(key, componentType, values))
+                .thenApply(v -> v.getVoidValue());
     }
 
-    //--------------------- lrem ------------------------------  
+    // --------------------- lrem ------------------------------
     @Override
     public <T> CompletableFuture<Long> lremAsync(String key, final Type componentType, T value) {
-        return sendAsync(RedisCommand.LREM, key, keyArgs(key, 0, componentType, value)).thenApply(v -> v.getLongValue(0L));
+        return sendAsync(RedisCommand.LREM, key, keyArgs(key, 0, componentType, value))
+                .thenApply(v -> v.getLongValue(0L));
     }
 
-    //--------------------- sadd ------------------------------  
+    // --------------------- sadd ------------------------------
     @Override
     public <T> CompletableFuture<Void> saddAsync(String key, Type componentType, T... values) {
-        return sendAsync(RedisCommand.SADD, key, keyArgs(key, componentType, values)).thenApply(v -> v.getVoidValue());
+        return sendAsync(RedisCommand.SADD, key, keyArgs(key, componentType, values))
+                .thenApply(v -> v.getVoidValue());
     }
 
     @Override
     public <T> CompletableFuture<T> spopAsync(String key, Type componentType) {
-        return sendAsync(RedisCommand.SPOP, key, keyArgs(key)).thenApply(v -> v.getObjectValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.SPOP, key, keyArgs(key))
+                .thenApply(v -> v.getObjectValue(key, cryptor, componentType));
     }
 
     @Override
     public <T> CompletableFuture<Set<T>> spopAsync(String key, int count, Type componentType) {
-        return sendAsync(RedisCommand.SPOP, key, keyArgs(key, count)).thenApply(v -> v.getSetValue(key, cryptor, componentType));
+        return sendAsync(RedisCommand.SPOP, key, keyArgs(key, count))
+                .thenApply(v -> v.getSetValue(key, cryptor, componentType));
     }
 
     @Override
-    public <T> CompletableFuture<Set< T>> sscanAsync(final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
-        return sendAsync(RedisCommand.SSCAN, key, keyArgs(key, cursor, limit, pattern)).thenApply(v -> {
-            Set set = v.getSetValue(key, cryptor, componentType);
-            cursor.set(v.getCursor());
-            return set;
-        });
+    public <T> CompletableFuture<Set<T>> sscanAsync(
+            final String key, final Type componentType, AtomicLong cursor, int limit, String pattern) {
+        return sendAsync(RedisCommand.SSCAN, key, keyArgs(key, cursor, limit, pattern))
+                .thenApply(v -> {
+                    Set set = v.getSetValue(key, cryptor, componentType);
+                    cursor.set(v.getCursor());
+                    return set;
+                });
     }
 
     @Override
     public <T> CompletableFuture<Long> sremAsync(String key, final Type componentType, T... values) {
-        return sendAsync(RedisCommand.SREM, key, keyArgs(key, componentType, values)).thenApply(v -> v.getLongValue(0L));
+        return sendAsync(RedisCommand.SREM, key, keyArgs(key, componentType, values))
+                .thenApply(v -> v.getLongValue(0L));
     }
 
-    //--------------------- sorted set ------------------------------ 
+    // --------------------- sorted set ------------------------------
     @Override
     public CompletableFuture<Void> zaddAsync(String key, CacheScoredValue... values) {
         return sendAsync(RedisCommand.ZADD, key, keyArgs(key, values)).thenApply(v -> v.getVoidValue());
@@ -863,7 +965,9 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public <T extends Number> CompletableFuture<T> zincrbyAsync(String key, CacheScoredValue value) {
-        return sendAsync(RedisCommand.ZINCRBY, key, keyArgs(key, value)).thenApply(v -> v.getObjectValue(key, (RedisCryptor) null, value.getScore().getClass()));
+        return sendAsync(RedisCommand.ZINCRBY, key, keyArgs(key, value))
+                .thenApply(v -> v.getObjectValue(
+                        key, (RedisCryptor) null, value.getScore().getClass()));
     }
 
     @Override
@@ -872,13 +976,16 @@ public final class RedisCacheSource extends RedisSource {
     }
 
     @Override
-    public <T extends Number> CompletableFuture<List<T>> zmscoreAsync(String key, Class<T> scoreType, String... members) {
-        return sendAsync(RedisCommand.ZMSCORE, key, keysArgs(key, members)).thenApply(v -> v.getListValue(key, (RedisCryptor) null, scoreType));
+    public <T extends Number> CompletableFuture<List<T>> zmscoreAsync(
+            String key, Class<T> scoreType, String... members) {
+        return sendAsync(RedisCommand.ZMSCORE, key, keysArgs(key, members))
+                .thenApply(v -> v.getListValue(key, (RedisCryptor) null, scoreType));
     }
 
     @Override
     public <T extends Number> CompletableFuture<T> zscoreAsync(String key, Class<T> scoreType, String member) {
-        return sendAsync(RedisCommand.ZSCORE, key, keysArgs(key, member)).thenApply(v -> v.getObjectValue(key, (RedisCryptor) null, scoreType));
+        return sendAsync(RedisCommand.ZSCORE, key, keysArgs(key, member))
+                .thenApply(v -> v.getObjectValue(key, (RedisCryptor) null, scoreType));
     }
 
     @Override
@@ -898,35 +1005,40 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public CompletableFuture<List<String>> zrangeAsync(String key, int start, int stop) {
-        return sendAsync(RedisCommand.ZRANGE, key, keyArgs(key, start, stop)).thenApply(v -> v.getListValue(key, (RedisCryptor) null, String.class));
+        return sendAsync(RedisCommand.ZRANGE, key, keyArgs(key, start, stop))
+                .thenApply(v -> v.getListValue(key, (RedisCryptor) null, String.class));
     }
 
     @Override
-    public CompletableFuture<List<CacheScoredValue>> zscanAsync(String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
-        return sendAsync(RedisCommand.ZSCAN, null, keyArgs(key, cursor, limit, pattern)).thenApply(v -> {
-            List<CacheScoredValue> set = v.getScoreListValue(null, (RedisCryptor) null, scoreType);
-            cursor.set(v.getCursor());
-            return set;
-        });
+    public CompletableFuture<List<CacheScoredValue>> zscanAsync(
+            String key, Type scoreType, AtomicLong cursor, int limit, String pattern) {
+        return sendAsync(RedisCommand.ZSCAN, null, keyArgs(key, cursor, limit, pattern))
+                .thenApply(v -> {
+                    List<CacheScoredValue> set = v.getScoreListValue(null, (RedisCryptor) null, scoreType);
+                    cursor.set(v.getCursor());
+                    return set;
+                });
     }
 
-    //--------------------- keys ------------------------------  
+    // --------------------- keys ------------------------------
     @Override
     public CompletableFuture<List<String>> keysAsync(String pattern) {
         String key = isEmpty(pattern) ? "*" : pattern;
-        return sendAsync(RedisCommand.KEYS, key, keyArgs(key)).thenApply(v -> (List) v.getListValue(key, (RedisCryptor) null, String.class));
+        return sendAsync(RedisCommand.KEYS, key, keyArgs(key))
+                .thenApply(v -> (List) v.getListValue(key, (RedisCryptor) null, String.class));
     }
 
     @Override
     public CompletableFuture<List<String>> scanAsync(AtomicLong cursor, int limit, String pattern) {
-        return sendAsync(RedisCommand.SCAN, null, keyArgs(null, cursor, limit, pattern)).thenApply(v -> {
-            List<String> list = v.getListValue(null, (RedisCryptor) null, String.class);
-            cursor.set(v.getCursor());
-            return list;
-        });
+        return sendAsync(RedisCommand.SCAN, null, keyArgs(null, cursor, limit, pattern))
+                .thenApply(v -> {
+                    List<String> list = v.getListValue(null, (RedisCryptor) null, String.class);
+                    cursor.set(v.getCursor());
+                    return list;
+                });
     }
 
-    //--------------------- dbsize ------------------------------  
+    // --------------------- dbsize ------------------------------
     @Override
     public CompletableFuture<Long> dbsizeAsync() {
         return sendAsync(RedisCommand.DBSIZE, null).thenApply(v -> v.getLongValue(0L));
@@ -942,35 +1054,36 @@ public final class RedisCacheSource extends RedisSource {
         return sendAsync(RedisCommand.FLUSHALL, null).thenApply(v -> null);
     }
 
-    //--------------------- send ------------------------------  
+    // --------------------- send ------------------------------
     @Local
-    public CompletableFuture<RedisCacheResult> sendAsync(final RedisCommand command, final String key, final byte[]... args) {
+    public CompletableFuture<RedisCacheResult> sendAsync(
+            final RedisCommand command, final String key, final byte[]... args) {
         WorkThread workThread = WorkThread.currentWorkThread();
         String traceid = Traces.currentTraceid();
         RedisCacheRequest req = RedisCacheRequest.create(command, key, args);
         if (false && logger.isLoggable(Level.FINEST)) {
             logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") " + command + " " + key);
-            CompletableFuture<RedisCacheResult> future = client.connect(req)
-                .thenCompose(conn -> {
-                    if (isNotEmpty(traceid)) {
-                        Traces.computeIfAbsent(traceid);
-                    }
-                    logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") request: " + req);
-                    return conn.writeRequest(req).thenApply(v -> {
-                        logger.log(Level.FINEST, "redis.callback(traceid=" + traceid + ") response: " + v);
-                        return v;
-                    });
+            CompletableFuture<RedisCacheResult> future = client.connect(req).thenCompose(conn -> {
+                if (isNotEmpty(traceid)) {
+                    Traces.computeIfAbsent(traceid);
+                }
+                logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") request: " + req);
+                return conn.writeRequest(req).thenApply(v -> {
+                    logger.log(Level.FINEST, "redis.callback(traceid=" + traceid + ") response: " + v);
+                    return v;
                 });
-            return Utility.orTimeout(future, () -> "redis (" + command + " " + key + ") timeout", 6010, TimeUnit.MILLISECONDS);
+            });
+            return Utility.orTimeout(
+                    future, () -> "redis (" + command + " " + key + ") timeout", 6010, TimeUnit.MILLISECONDS);
         } else {
-            CompletableFuture<RedisCacheResult> future = client.connect(req)
-                .thenCompose(conn -> {
-                    if (isNotEmpty(traceid)) {
-                        Traces.computeIfAbsent(traceid);
-                    }
-                    return conn.writeRequest(req);
-                });
-            return Utility.orTimeout(future, () -> "redis (" + command + " " + key + ") timeout", 6010, TimeUnit.MILLISECONDS);
+            CompletableFuture<RedisCacheResult> future = client.connect(req).thenCompose(conn -> {
+                if (isNotEmpty(traceid)) {
+                    Traces.computeIfAbsent(traceid);
+                }
+                return conn.writeRequest(req);
+            });
+            return Utility.orTimeout(
+                    future, () -> "redis (" + command + " " + key + ") timeout", 6010, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -982,17 +1095,18 @@ public final class RedisCacheSource extends RedisSource {
             request.workThread(workThread).traceid(traceid);
         }
         CompletableFuture<List<RedisCacheResult>> future = client.connect(requests[0])
-            .thenCompose(conn -> {
-                if (isNotEmpty(traceid)) {
-                    Traces.computeIfAbsent(traceid);
-                }
-                return conn.writeRequest(requests);
-            });
-        return Utility.orTimeout(future, () -> "redis " + Arrays.toString(requests) + " timeout", 6010, TimeUnit.MILLISECONDS);
+                .thenCompose(conn -> {
+                    if (isNotEmpty(traceid)) {
+                        Traces.computeIfAbsent(traceid);
+                    }
+                    return conn.writeRequest(requests);
+                });
+        return Utility.orTimeout(
+                future, () -> "redis " + Arrays.toString(requests) + " timeout", 6010, TimeUnit.MILLISECONDS);
     }
 
     private byte[][] keyArgs(String key) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8)};
+        return new byte[][] {key.getBytes(StandardCharsets.UTF_8)};
     }
 
     private byte[][] keyArgs(final String key, AtomicLong cursor, int limit, String pattern) {
@@ -1021,61 +1135,86 @@ public final class RedisCacheSource extends RedisSource {
     }
 
     private byte[][] keyArgs(String key, Number numValue) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8), numValue.toString().getBytes(StandardCharsets.UTF_8)};
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8), numValue.toString().getBytes(StandardCharsets.UTF_8)
+        };
     }
 
     private byte[][] keyArgs(String key, int numValue) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8), String.valueOf(numValue).getBytes(StandardCharsets.UTF_8)};
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8), String.valueOf(numValue).getBytes(StandardCharsets.UTF_8)
+        };
     }
 
     private byte[][] keyArgs(String key, long numValue) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8), String.valueOf(numValue).getBytes(StandardCharsets.UTF_8)};
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8), String.valueOf(numValue).getBytes(StandardCharsets.UTF_8)
+        };
     }
 
     private byte[][] keyArgs(String key, String ex, int numValue) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8),
             ex.getBytes(StandardCharsets.UTF_8),
-            String.valueOf(numValue).getBytes(StandardCharsets.UTF_8)};
+            String.valueOf(numValue).getBytes(StandardCharsets.UTF_8)
+        };
     }
 
     private byte[][] keyArgs(String key, int start, int stop) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8),
             String.valueOf(start).getBytes(StandardCharsets.UTF_8),
-            String.valueOf(stop).getBytes(StandardCharsets.UTF_8)};
+            String.valueOf(stop).getBytes(StandardCharsets.UTF_8)
+        };
     }
 
     private byte[][] keyArgs(String key, Type type, Object value) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8), encodeValue(key, cryptor, null, type, value)};
+        return new byte[][] {key.getBytes(StandardCharsets.UTF_8), encodeValue(key, cryptor, null, type, value)};
     }
 
     private byte[][] keyArgs(String key, Convert convert, Type type, Object value) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8), encodeValue(key, cryptor, convert, type, value)};
+        return new byte[][] {key.getBytes(StandardCharsets.UTF_8), encodeValue(key, cryptor, convert, type, value)};
     }
 
     private byte[][] keyArgs(String key, String field, Type type, Object value) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), encodeValue(key, cryptor, null, type, value)};
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8),
+            field.getBytes(StandardCharsets.UTF_8),
+            encodeValue(key, cryptor, null, type, value)
+        };
     }
 
     private byte[][] keyArgs(String key, String field, Convert convert, Type type, Object value) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8), encodeValue(key, cryptor, convert, type, value)};
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8),
+            field.getBytes(StandardCharsets.UTF_8),
+            encodeValue(key, cryptor, convert, type, value)
+        };
     }
 
     private byte[][] keyArgs(String script, int len, String key, String arg) {
-        return new byte[][]{script.getBytes(StandardCharsets.UTF_8),
+        return new byte[][] {
+            script.getBytes(StandardCharsets.UTF_8),
             String.valueOf(len).getBytes(StandardCharsets.UTF_8),
-            key.getBytes(StandardCharsets.UTF_8), arg.getBytes(StandardCharsets.UTF_8)};
+            key.getBytes(StandardCharsets.UTF_8),
+            arg.getBytes(StandardCharsets.UTF_8)
+        };
     }
 
     private byte[][] keyArgs(String key, long expire, Type type, Object value) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8),
             String.valueOf(expire).getBytes(StandardCharsets.UTF_8),
-            encodeValue(key, cryptor, null, type, value)};
+            encodeValue(key, cryptor, null, type, value)
+        };
     }
 
     private byte[][] keyArgs(String key, long expire, Convert convert, Type type, Object value) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8),
             String.valueOf(expire).getBytes(StandardCharsets.UTF_8),
-            encodeValue(key, cryptor, convert, type, value)};
+            encodeValue(key, cryptor, convert, type, value)
+        };
     }
 
     private <T> byte[][] keyArgs(String key, final Type componentType, T... values) {
@@ -1108,20 +1247,26 @@ public final class RedisCacheSource extends RedisSource {
     }
 
     private byte[][] keyArgs(String key, byte[] nx, Convert convert, Type type, Object value) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
-            encodeValue(key, cryptor, convert, type, value), nx};
+        return new byte[][] {key.getBytes(StandardCharsets.UTF_8), encodeValue(key, cryptor, convert, type, value), nx};
     }
 
     private byte[][] keyArgs(String key, long expire, byte[] nex, Convert convert, Type type, Object value) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
-            encodeValue(key, cryptor, convert, type, value), nex,
-            String.valueOf(expire).getBytes(StandardCharsets.UTF_8)};
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8),
+            encodeValue(key, cryptor, convert, type, value),
+            nex,
+            String.valueOf(expire).getBytes(StandardCharsets.UTF_8)
+        };
     }
 
     private byte[][] keyArgs(String key, long expire, byte[] nx, byte[] epx, Convert convert, Type type, Object value) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
-            encodeValue(key, cryptor, convert, type, value), nx, epx,
-            String.valueOf(expire).getBytes(StandardCharsets.UTF_8)};
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8),
+            encodeValue(key, cryptor, convert, type, value),
+            nx,
+            epx,
+            String.valueOf(expire).getBytes(StandardCharsets.UTF_8)
+        };
     }
 
     private byte[][] keyMapArgs(String key, Serializable... keyVals) {
@@ -1164,13 +1309,15 @@ public final class RedisCacheSource extends RedisSource {
     }
 
     private byte[][] keysArgs(String key, String field) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8)};
+        return new byte[][] {key.getBytes(StandardCharsets.UTF_8), field.getBytes(StandardCharsets.UTF_8)};
     }
 
     private byte[][] keysArgs(String key, String field, String num) {
-        return new byte[][]{key.getBytes(StandardCharsets.UTF_8),
+        return new byte[][] {
+            key.getBytes(StandardCharsets.UTF_8),
             field.getBytes(StandardCharsets.UTF_8),
-            num.getBytes(StandardCharsets.UTF_8)};
+            num.getBytes(StandardCharsets.UTF_8)
+        };
     }
 
     private byte[][] keysArgs(String... keys) {
@@ -1253,7 +1400,7 @@ public final class RedisCacheSource extends RedisSource {
             return value.toString().getBytes(StandardCharsets.US_ASCII);
         }
         if (convert0 == null) {
-            if (convert == null) { //compile模式下convert可能为null
+            if (convert == null) { // compile模式下convert可能为null
                 convert = JsonConvert.root();
             }
             convert0 = convert;
@@ -1272,27 +1419,34 @@ public final class RedisCacheSource extends RedisSource {
         return bs;
     }
 
-    //-------------------------- 过期方法 ----------------------------------
+    // -------------------------- 过期方法 ----------------------------------
     @Override
     @Deprecated(since = "2.8.0")
-    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(final boolean set, final Type componentType, final String... keys) {
+    public <T> CompletableFuture<Map<String, Collection<T>>> getCollectionMapAsync(
+            final boolean set, final Type componentType, final String... keys) {
         final CompletableFuture<Map<String, Collection<T>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<T>> map = new LinkedHashMap<>();
         final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenAccept(v -> {
-                Collection c = set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType);
-                if (c != null) {
-                    mapLock.lock();
-                    try {
-                        map.put(key, (Collection) c);
-                    } finally {
-                        mapLock.unlock();
-                    }
-                }
-            });
+            futures[i] = sendAsync(
+                            set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE,
+                            key,
+                            set ? keyArgs(key) : keyArgs(key, 0, -1))
+                    .thenAccept(v -> {
+                        Collection c = set
+                                ? v.getSetValue(key, cryptor, componentType)
+                                : v.getListValue(key, cryptor, componentType);
+                        if (c != null) {
+                            mapLock.lock();
+                            try {
+                                map.put(key, (Collection) c);
+                            } finally {
+                                mapLock.unlock();
+                            }
+                        }
+                    });
         }
         CompletableFuture.allOf(futures).whenComplete((w, e) -> {
             if (e != null) {
@@ -1312,7 +1466,8 @@ public final class RedisCacheSource extends RedisSource {
             if (type == null) {
                 return CompletableFuture.completedFuture(0);
             }
-            return sendAsync(type.contains("list") ? RedisCommand.LLEN : RedisCommand.SCARD, key, keyArgs(key)).thenApply(v -> v.getIntValue(0));
+            return sendAsync(type.contains("list") ? RedisCommand.LLEN : RedisCommand.SCARD, key, keyArgs(key))
+                    .thenApply(v -> v.getIntValue(0));
         });
     }
 
@@ -1325,7 +1480,13 @@ public final class RedisCacheSource extends RedisSource {
                 return CompletableFuture.completedFuture(null);
             }
             boolean set = !type.contains("list");
-            return sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenApply(v -> set ? v.getSetValue(key, cryptor, componentType) : v.getListValue(key, cryptor, componentType));
+            return sendAsync(
+                            set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE,
+                            key,
+                            set ? keyArgs(key) : keyArgs(key, 0, -1))
+                    .thenApply(v -> set
+                            ? v.getSetValue(key, cryptor, componentType)
+                            : v.getListValue(key, cryptor, componentType));
         });
     }
 
@@ -1386,30 +1547,43 @@ public final class RedisCacheSource extends RedisSource {
                 return CompletableFuture.completedFuture(null);
             }
             boolean set = !type.contains("list");
-            return sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenApply(v -> set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class));
+            return sendAsync(
+                            set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE,
+                            key,
+                            set ? keyArgs(key) : keyArgs(key, 0, -1))
+                    .thenApply(v -> set
+                            ? v.getSetValue(key, cryptor, String.class)
+                            : v.getListValue(key, cryptor, String.class));
         });
     }
 
     @Override
     @Deprecated(since = "2.8.0")
-    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(final boolean set, String... keys) {
+    public CompletableFuture<Map<String, Collection<String>>> getStringCollectionMapAsync(
+            final boolean set, String... keys) {
         final CompletableFuture<Map<String, Collection<String>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<String>> map = new LinkedHashMap<>();
         final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenAccept(v -> {
-                Collection<String> c = set ? v.getSetValue(key, cryptor, String.class) : v.getListValue(key, cryptor, String.class);
-                if (c != null) {
-                    mapLock.lock();
-                    try {
-                        map.put(key, (Collection) c);
-                    } finally {
-                        mapLock.unlock();
-                    }
-                }
-            });
+            futures[i] = sendAsync(
+                            set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE,
+                            key,
+                            set ? keyArgs(key) : keyArgs(key, 0, -1))
+                    .thenAccept(v -> {
+                        Collection<String> c = set
+                                ? v.getSetValue(key, cryptor, String.class)
+                                : v.getListValue(key, cryptor, String.class);
+                        if (c != null) {
+                            mapLock.lock();
+                            try {
+                                map.put(key, (Collection) c);
+                            } finally {
+                                mapLock.unlock();
+                            }
+                        }
+                    });
         }
         CompletableFuture.allOf(futures).whenComplete((w, e) -> {
             if (e != null) {
@@ -1430,31 +1604,42 @@ public final class RedisCacheSource extends RedisSource {
                 return CompletableFuture.completedFuture(null);
             }
             boolean set = !type.contains("list");
-            return sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1))
-                .thenApply(v -> set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class));
+            return sendAsync(
+                            set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE,
+                            key,
+                            set ? keyArgs(key) : keyArgs(key, 0, -1))
+                    .thenApply(v ->
+                            set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class));
         });
     }
 
     @Override
     @Deprecated(since = "2.8.0")
-    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(final boolean set, String... keys) {
+    public CompletableFuture<Map<String, Collection<Long>>> getLongCollectionMapAsync(
+            final boolean set, String... keys) {
         final CompletableFuture<Map<String, Collection<Long>>> rsFuture = new CompletableFuture<>();
         final Map<String, Collection<Long>> map = new LinkedHashMap<>();
         final ReentrantLock mapLock = new ReentrantLock();
         final CompletableFuture[] futures = new CompletableFuture[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final String key = keys[i];
-            futures[i] = sendAsync(set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE, key, set ? keyArgs(key) : keyArgs(key, 0, -1)).thenAccept(v -> {
-                Collection<Long> c = set ? v.getSetValue(key, cryptor, long.class) : v.getListValue(key, cryptor, long.class);
-                if (c != null) {
-                    mapLock.lock();
-                    try {
-                        map.put(key, (Collection) c);
-                    } finally {
-                        mapLock.unlock();
-                    }
-                }
-            });
+            futures[i] = sendAsync(
+                            set ? RedisCommand.SMEMBERS : RedisCommand.LRANGE,
+                            key,
+                            set ? keyArgs(key) : keyArgs(key, 0, -1))
+                    .thenAccept(v -> {
+                        Collection<Long> c = set
+                                ? v.getSetValue(key, cryptor, long.class)
+                                : v.getListValue(key, cryptor, long.class);
+                        if (c != null) {
+                            mapLock.lock();
+                            try {
+                                map.put(key, (Collection) c);
+                            } finally {
+                                mapLock.unlock();
+                            }
+                        }
+                    });
         }
         CompletableFuture.allOf(futures).whenComplete((w, e) -> {
             if (e != null) {
@@ -1466,11 +1651,13 @@ public final class RedisCacheSource extends RedisSource {
         return rsFuture;
     }
 
-    //--------------------- getexCollection ------------------------------  
+    // --------------------- getexCollection ------------------------------
     @Override
     @Deprecated(since = "2.8.0")
-    public <T> CompletableFuture<Collection<T>> getexCollectionAsync(String key, int expireSeconds, final Type componentType) {
-        return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
+    public <T> CompletableFuture<Collection<T>> getexCollectionAsync(
+            String key, int expireSeconds, final Type componentType) {
+        return (CompletableFuture)
+                expireAsync(key, expireSeconds).thenCompose(v -> getCollectionAsync(key, componentType));
     }
 
     @Override
@@ -1484,5 +1671,4 @@ public final class RedisCacheSource extends RedisSource {
     public CompletableFuture<Collection<Long>> getexLongCollectionAsync(String key, int expireSeconds) {
         return (CompletableFuture) expireAsync(key, expireSeconds).thenCompose(v -> getLongCollectionAsync(key));
     }
-
 }

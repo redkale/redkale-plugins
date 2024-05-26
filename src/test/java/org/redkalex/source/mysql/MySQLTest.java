@@ -5,13 +5,14 @@
  */
 package org.redkalex.source.mysql;
 
-//import org.redkalex.source.mysql_old.MysqlDataSource;
+// import org.redkalex.source.mysql_old.MysqlDataSource;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.stream.*;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceFactory;
@@ -22,10 +23,7 @@ import org.redkale.util.*;
 import org.redkalex.source.parser.DataNativeJsqlParser;
 import org.redkalex.source.vertx.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MySQLTest {
 
     public static void main(String[] args) throws Throwable {
@@ -38,7 +36,9 @@ public class MySQLTest {
         factory.register("", new DataNativeJsqlParser());
 
         Properties prop = new Properties();
-        prop.setProperty("redkale.datasource.default.url", "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); //192.168.175.1  127.0.0.1 192.168.1.103
+        prop.setProperty(
+                "redkale.datasource.default.url",
+                "jdbc:mysql://127.0.0.1:3389/aa_test?useSSL=false&rewriteBatchedStatements=true&serverTimezone=UTC&characterEncoding=utf8"); // 192.168.175.1  127.0.0.1 192.168.1.103
         prop.setProperty("redkale.datasource.default.maxconns", "10");
         prop.setProperty("redkale.datasource.default.table-autoddl", "true");
         prop.setProperty("redkale.datasource.default.user", "root");
@@ -50,15 +50,18 @@ public class MySQLTest {
         ExecutorService workExecutor = WorkThread.createExecutor(20, "Thread-%s");
         MysqlDataSource source = new MysqlDataSource();
         MysqlDataSource.debug = true;
-        //DataJdbcSource source = new DataJdbcSource();
+        // DataJdbcSource source = new DataJdbcSource();
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
+        source.init(AnyValue.loadFromProperties(prop)
+                .getAnyValue("redkale")
+                .getAnyValue("datasource")
+                .getAnyValue("default"));
         System.out.println("---------");
         Function<DataResultSet, String> func = set -> set.next() ? ("" + set.getObject(1)) : null;
-        //System.out.println("查询结果: " + source.nativeQuery("SHOW TABLES", func));
-        //System.out.println("执行结果: " + source.nativeExecute("SET NAMES UTF8MB4"));
+        // System.out.println("查询结果: " + source.nativeQuery("SHOW TABLES", func));
+        // System.out.println("执行结果: " + source.nativeExecute("SET NAMES UTF8MB4"));
         {
-            //source.dropTable(TestRecord.class);
+            // source.dropTable(TestRecord.class);
             TestRecord entity = new TestRecord();
             entity.setRecordid("r223" + System.currentTimeMillis());
             entity.setScore(200);
@@ -91,9 +94,14 @@ public class MySQLTest {
         if (false) {
             System.out.println("当前机器CPU核数: " + Utility.cpus());
             System.out.println("执行结果: " + source.nativeUpdate("UPDATE World set id =0 where id =0"));
-            System.out.println("随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
-            System.out.println("随机获取World记录2: " + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId())).join());
-            System.out.println("随机获取World记录3: " + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId()).join()));
+            System.out.println(
+                    "随机获取World记录1: " + source.findAsync(World.class, randomId()).join());
+            System.out.println("随机获取World记录2: "
+                    + source.findsListAsync(World.class, Stream.of(randomId(), -1122, randomId()))
+                            .join());
+            System.out.println("随机获取World记录3: "
+                    + Arrays.toString(source.findsAsync(World.class, randomId(), -1122, randomId())
+                            .join()));
             World w1 = source.findAsync(World.class, 11).join();
             World w2 = source.findAsync(World.class, 22).join();
             System.out.println("随机获取World记录4: " + w1 + ", " + w2);
@@ -104,10 +112,16 @@ public class MySQLTest {
             w2 = source.findAsync(World.class, 22).join();
             System.out.println("修改后World记录: " + w1 + ", " + w2);
 
-            System.out.println("随机获取World记录5: " + source.findsListAsync(World.class, Stream.of(randomId(), randomId())).join());
+            System.out.println("随机获取World记录5: "
+                    + source.findsListAsync(World.class, Stream.of(randomId(), randomId()))
+                            .join());
 
             IntStream ids = IntStream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
-            System.out.println("组合操作: " + source.findsListAsync(World.class, ids.boxed()).thenCompose(words -> source.updateAsync(words.toArray()).thenApply(v -> words)).join());
+            System.out.println("组合操作: "
+                    + source.findsListAsync(World.class, ids.boxed())
+                            .thenCompose(
+                                    words -> source.updateAsync(words.toArray()).thenApply(v -> words))
+                            .join());
             System.out.println(source.queryList(Fortune.class));
             System.out.println();
             System.out.println();
@@ -121,7 +135,10 @@ public class MySQLTest {
                         int size = 20;
                         try {
                             IntStream ii = ThreadLocalRandom.current().ints(size, 1, 10001);
-                            source.findsListAsync(World.class, ii.boxed()).thenCompose(words -> source.updateAsync(words.toArray()).thenApply(v -> words)).join();
+                            source.findsListAsync(World.class, ii.boxed())
+                                    .thenCompose(words ->
+                                            source.updateAsync(words.toArray()).thenApply(v -> words))
+                                    .join();
                         } catch (Exception e) {
                             e.printStackTrace();
                         } finally {
@@ -164,19 +181,21 @@ public class MySQLTest {
                 //    record2.setContent(record2.getContent() + " ******** ");
             }
 
-            //int rs = source.updateAsync(record1, record2, record3, record4).join();
+            // int rs = source.updateAsync(record1, record2, record3, record4).join();
             int rs = source.update(record1, record2, record3, record4);
             System.out.println("-------修改成功数: " + rs + "---------");
 
-            FilterNode node = FilterNodes.between("createTime", new Range.LongRange(record4.getCreateTime(), record1.getCreateTime()));
+            FilterNode node = FilterNodes.between(
+                    "createTime", new Range.LongRange(record4.getCreateTime(), record1.getCreateTime()));
             System.out.println("查询结果: " + source.querySheet(DayRecord.class, new Flipper(), node));
 
-            FilterNode pkFilter = FilterNodes.in("recordid", (Serializable) Utility.ofList(record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid()));
+            FilterNode pkFilter = FilterNodes.in("recordid", (Serializable) Utility.ofList(
+                    record1.getRecordid(), record2.getRecordid(), record3.getRecordid(), record4.getRecordid()));
 
             rs = source.updateColumn(record1, pkFilter, SelectColumn.includes("content"));
             System.out.println("-------修改成功数: " + rs + "---------");
 
-            //rs = source.delete(record1, record2, record3, record4);
+            // rs = source.delete(record1, record2, record3, record4);
             rs = source.delete(DayRecord.class, pkFilter);
             System.out.println("-------删除成功数: " + rs + "---------");
 
@@ -189,10 +208,10 @@ public class MySQLTest {
         }
 
         System.out.println("清空表: " + source.clearTable(World.class));
-        //System.out.println("----------新增记录----------");
+        // System.out.println("----------新增记录----------");
 
-        //EntityInfo info = ((MysqlDataSource)source).loadEntityInfo(SmsRecord.class);
-        //System.out.println(Arrays.toString(info.getQueryAttributes()));
+        // EntityInfo info = ((MysqlDataSource)source).loadEntityInfo(SmsRecord.class);
+        // System.out.println(Arrays.toString(info.getQueryAttributes()));
         System.out.println("查询List结果: " + source.queryList(World.class));
         System.out.println("查询List结束========");
 
@@ -220,10 +239,11 @@ public class MySQLTest {
         List<Integer> list2 = List.of(3);
         System.out.println(Arrays.toString(source.finds(World.class, list2.stream())));
 
-        int[] cs = source.nativeUpdates("update world set randomNumber =11 where id =2", "update world set randomNumber =11 where id =-1");
+        int[] cs = source.nativeUpdates(
+                "update world set randomNumber =11 where id =2", "update world set randomNumber =11 where id =-1");
         System.out.println("批量处理结果: " + Arrays.toString(cs));
 
-        //if (true) return;
+        // if (true) return;
         final SmsRecord record = new SmsRecord((short) 2, "12345678901", "这是内容");
         record.setSmsid("sms1-" + record.getCreateTime());
         SmsRecord record2 = new SmsRecord((short) 2, "12345678901", "这是内容");
@@ -239,7 +259,7 @@ public class MySQLTest {
             source.insert(record);
         }
 
-        //if (true) return;
+        // if (true) return;
         System.out.println(source.find(SmsRecord.class, "sms1-1632282662741"));
         System.out.println("--------------继续查询单个记录------------------");
         SmsRecord sms = source.find(SmsRecord.class, FilterNodes.eq("smsid", record.getSmsid()));
@@ -263,7 +283,10 @@ public class MySQLTest {
         ResourceFactory factory2 = ResourceFactory.create();
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup2);
         factory2.inject(source2);
-        source2.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
+        source2.init(AnyValue.loadFromProperties(prop)
+                .getAnyValue("redkale")
+                .getAnyValue("datasource")
+                .getAnyValue("default"));
 
         final String json = JsonConvert.root().convertTo(record);
         int count = 200;
@@ -278,7 +301,9 @@ public class MySQLTest {
                             String smsid = record.getSmsid().replace("sms1", "sms" + ((b + 1) % 5 + 100));
                             source2.delete(SmsRecord.class, smsid);
                         } else if (b % 2 == 0) {
-                            source2.findAsync(SmsRecord.class, record.getSmsid()).thenCompose(v -> source2.updateAsync(v)).join();
+                            source2.findAsync(SmsRecord.class, record.getSmsid())
+                                    .thenCompose(v -> source2.updateAsync(v))
+                                    .join();
                         } else {
                             String smsid = record.getSmsid().replace("sms1", "sms" + (b + 1) % 5);
                             String content = "这是内容," + ((b + 1) % 5);
@@ -313,8 +338,7 @@ public class MySQLTest {
 
         private String message = "";
 
-        public Fortune() {
-        }
+        public Fortune() {}
 
         public Fortune(int id, String message) {
             this.id = id;
@@ -346,7 +370,5 @@ public class MySQLTest {
         public String toString() {
             return JsonConvert.root().convertTo(this);
         }
-
     }
-
 }

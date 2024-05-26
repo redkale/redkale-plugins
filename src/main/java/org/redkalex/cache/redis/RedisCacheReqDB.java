@@ -9,10 +9,7 @@ import java.nio.charset.StandardCharsets;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class RedisCacheReqDB extends RedisCacheRequest {
 
     protected int db;
@@ -31,7 +28,6 @@ public class RedisCacheReqDB extends RedisCacheRequest {
         writer.put(bulkLengthBytes(dbs.length));
         writer.put(dbs);
         writer.put(CRLF);
-
     }
 
     @Override

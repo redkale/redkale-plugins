@@ -10,18 +10,14 @@ import java.util.*;
 import org.redkale.source.*;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class UpdatePart extends BaseBean {
 
     public Object doc;
 
     public UpdateScript script;
 
-    public UpdatePart() {
-    }
+    public UpdatePart() {}
 
     public UpdatePart(SearchInfo info, Object entity) {
         this.doc = entity;
@@ -87,28 +83,60 @@ public class UpdatePart extends BaseBean {
     private void build(StringBuilder sb, ColumnValue val) {
         switch (val.getExpress()) {
             case SET:
-                sb.append("ctx._source.").append(val.getColumn()).append(" = params.").append(val.getColumn()).append(";");
+                sb.append("ctx._source.")
+                        .append(val.getColumn())
+                        .append(" = params.")
+                        .append(val.getColumn())
+                        .append(";");
                 break;
             case INC:
-                sb.append("ctx._source.").append(val.getColumn()).append(" += params.").append(val.getColumn()).append(";");
+                sb.append("ctx._source.")
+                        .append(val.getColumn())
+                        .append(" += params.")
+                        .append(val.getColumn())
+                        .append(";");
                 break;
             case DEC:
-                sb.append("ctx._source.").append(val.getColumn()).append(" -= params.").append(val.getColumn()).append(";");
+                sb.append("ctx._source.")
+                        .append(val.getColumn())
+                        .append(" -= params.")
+                        .append(val.getColumn())
+                        .append(";");
                 break;
             case MUL:
-                sb.append("ctx._source.").append(val.getColumn()).append(" *= params.").append(val.getColumn()).append(";");
+                sb.append("ctx._source.")
+                        .append(val.getColumn())
+                        .append(" *= params.")
+                        .append(val.getColumn())
+                        .append(";");
                 break;
             case DIV:
-                sb.append("ctx._source.").append(val.getColumn()).append(" /= params.").append(val.getColumn()).append(";");
+                sb.append("ctx._source.")
+                        .append(val.getColumn())
+                        .append(" /= params.")
+                        .append(val.getColumn())
+                        .append(";");
                 break;
             case MOD:
-                sb.append("ctx._source.").append(val.getColumn()).append(" %= params.").append(val.getColumn()).append(";");
+                sb.append("ctx._source.")
+                        .append(val.getColumn())
+                        .append(" %= params.")
+                        .append(val.getColumn())
+                        .append(";");
                 break;
             case AND:
-                sb.append("ctx._source.").append(val.getColumn()).append(" &= params.").append(val.getColumn()).append(";");
+                sb.append("ctx._source.")
+                        .append(val.getColumn())
+                        .append(" &= params.")
+                        .append(val.getColumn())
+                        .append(";");
                 break;
             case ORR:
-                sb.append("ctx._source.").append(val.getColumn()).append(" |= params.").append(val.getColumn()).append(";");
+                sb.append("ctx._source.")
+                        .append(val.getColumn())
+                        .append(" |= params.")
+                        .append(val.getColumn())
+                        .append(";");
                 break;
         }
     }

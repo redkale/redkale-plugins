@@ -7,10 +7,7 @@ package org.redkalex.source.pgsql;
 
 import org.redkale.convert.json.JsonConvert;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgRowDesc {
 
     final PgRowColumn[] columns;

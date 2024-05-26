@@ -5,12 +5,8 @@ package org.redkalex.cache.redis;
 
 import java.nio.charset.StandardCharsets;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public enum RedisCommand {
-
     EXISTS("EXISTS", true),
     GET("GET", true),
     GETEX("GETEX", true),

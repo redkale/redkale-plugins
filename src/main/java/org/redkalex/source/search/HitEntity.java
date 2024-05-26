@@ -8,7 +8,6 @@ package org.redkalex.source.search;
 import java.util.Map;
 
 /**
- *
  * @author zhangjx
  * @param <T> T
  */

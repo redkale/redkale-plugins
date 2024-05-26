@@ -52,5 +52,4 @@ public class NativeCountDeParser extends CustomSelectDeParser {
             super.deparseOrderByElementsClause(plainSelect, orderByElements);
         }
     }
-
 }

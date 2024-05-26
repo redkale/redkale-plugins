@@ -9,14 +9,10 @@ import java.lang.reflect.Type;
 import java.util.Map;
 import org.redkale.util.TypeToken;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class SearchMapping extends BaseBean {
 
-    public static final Type MAPPING_MAP_TYPE = new TypeToken<Map<String, SearchMapping>>() {
-    }.getType();
+    public static final Type MAPPING_MAP_TYPE = new TypeToken<Map<String, SearchMapping>>() {}.getType();
 
     public SearchProperties mappings;
 
@@ -47,7 +43,5 @@ public class SearchMapping extends BaseBean {
         public String analyzer;
 
         public Integer ignore_above;
-
     }
-
 }

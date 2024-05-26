@@ -22,10 +22,7 @@ import org.redkale.mq.MessageConext;
 import org.redkale.mq.MessageConsumer;
 import org.redkale.mq.spi.MessageAgent.MessageConsumerWrapper;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 class KafkaMessageConsumer implements Runnable {
 
     private final ReentrantLock startCloseLock = new ReentrantLock();
@@ -52,7 +49,8 @@ class KafkaMessageConsumer implements Runnable {
 
     private boolean closed;
 
-    protected KafkaMessageConsumer(KafkaMessageAgent messageAgent, String group, Map<String, MessageConsumerWrapper> consumerMap) {
+    protected KafkaMessageConsumer(
+            KafkaMessageAgent messageAgent, String group, Map<String, MessageConsumerWrapper> consumerMap) {
         this.messageAgent = messageAgent;
         this.group = group;
         this.consumerMap = consumerMap;
@@ -61,7 +59,10 @@ class KafkaMessageConsumer implements Runnable {
 
     @Override
     public void run() {
-        this.consumer = new KafkaConsumer<>(this.messageAgent.createConsumerProperties(this.group), new StringDeserializer(), new ByteArrayDeserializer());
+        this.consumer = new KafkaConsumer<>(
+                this.messageAgent.createConsumerProperties(this.group),
+                new StringDeserializer(),
+                new ByteArrayDeserializer());
         this.consumer.subscribe(this.topics);
         this.startFuture.complete(null);
         if (logger.isLoggable(Level.FINE)) {
@@ -76,7 +77,10 @@ class KafkaMessageConsumer implements Runnable {
                     records = this.consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
                 } catch (Exception ex) {
                     if (!this.closed) {
-                        logger.log(Level.WARNING, getClass().getSimpleName() + "(topics=" + this.topics + ") poll error", ex);
+                        logger.log(
+                                Level.WARNING,
+                                getClass().getSimpleName() + "(topics=" + this.topics + ") poll error",
+                                ex);
                     }
                     break;
                 }
@@ -89,37 +93,52 @@ class KafkaMessageConsumer implements Runnable {
                     this.consumer.commitSync();
                     long ce = System.currentTimeMillis() - cs;
                     if (ce > 100 && logger.isLoggable(Level.FINE)) {
-                        logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") processor async commit in " + ce + "ms");
+                        logger.log(
+                                Level.FINE,
+                                getClass().getSimpleName() + "(topics=" + this.topics + ") processor async commit in "
+                                        + ce + "ms");
                     }
                 }
                 map.clear();
                 long s = System.currentTimeMillis();
                 try {
                     for (ConsumerRecord<String, byte[]> r : records) {
-                        map.computeIfAbsent(r.topic(), t -> new LinkedHashMap<>()).computeIfAbsent(r.partition(), p -> new ArrayList<>()).add(r);
+                        map.computeIfAbsent(r.topic(), t -> new LinkedHashMap<>())
+                                .computeIfAbsent(r.partition(), p -> new ArrayList<>())
+                                .add(r);
                     }
                     map.forEach((topic, items) -> {
                         MessageConsumerWrapper wrapper = consumerMap.get(topic);
                         if (wrapper != null) {
                             items.forEach((partition, list) -> {
-                                MessageConext context = contexts.computeIfAbsent(topic, t -> new HashMap<>()).computeIfAbsent(partition, p -> messageAgent.createMessageConext(topic, p));
+                                MessageConext context = contexts.computeIfAbsent(topic, t -> new HashMap<>())
+                                        .computeIfAbsent(partition, p -> messageAgent.createMessageConext(topic, p));
                                 list.forEach(r -> wrapper.onMessage(context, r.key(), r.value()));
                             });
                         }
                     });
                 } catch (Throwable e) {
-                    logger.log(Level.SEVERE, getClass().getSimpleName() + "(topics=" + this.topics + ") process " + map + " error", e);
+                    logger.log(
+                            Level.SEVERE,
+                            getClass().getSimpleName() + "(topics=" + this.topics + ") process " + map + " error",
+                            e);
                 }
                 long e = System.currentTimeMillis() - s;
                 if (e > 1000 && logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, getClass().getSimpleName() 
-                        + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slower = " + e + " ms)， msgs=" + map);
+                    logger.log(
+                            Level.FINE,
+                            getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count
+                                    + ", mq.cost-slower = " + e + " ms)， msgs=" + map);
                 } else if (e > 100 && logger.isLoggable(Level.FINER)) {
-                    logger.log(Level.FINER, getClass().getSimpleName() 
-                        + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-slowly = " + e + " ms)， msgs=" + map);
+                    logger.log(
+                            Level.FINER,
+                            getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count
+                                    + ", mq.cost-slowly = " + e + " ms)， msgs=" + map);
                 } else if (e > 10 && logger.isLoggable(Level.FINEST)) {
-                    logger.log(Level.FINEST, getClass().getSimpleName() 
-                        + "(topics=" + this.topics + ").consumer (mq.count = " + count + ", mq.cost-normal = " + e + " ms)");
+                    logger.log(
+                            Level.FINEST,
+                            getClass().getSimpleName() + "(topics=" + this.topics + ").consumer (mq.count = " + count
+                                    + ", mq.cost-normal = " + e + " ms)");
                 }
                 map.clear();
             }
@@ -185,5 +204,4 @@ class KafkaMessageConsumer implements Runnable {
             startCloseLock.unlock();
         }
     }
-
 }

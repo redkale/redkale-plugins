@@ -5,6 +5,8 @@
  */
 package org.redkalex.source.mongo;
 
+import static org.redkale.source.DataSources.*;
+
 import com.mongodb.*;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.model.*;
@@ -26,13 +28,11 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
  * Mongodb版的DataSource实现 <br>
  * 注意: datasource.url 需要指定为 mongodb:， 例如：mongodb://127.0.0.1:5005
- *
  *
  * @author zhangjx
  */
@@ -40,7 +40,8 @@ import org.redkale.util.*;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class MongodbDriverDataSource extends AbstractDataSource implements java.util.function.Function<Class, EntityInfo> {
+public class MongodbDriverDataSource extends AbstractDataSource
+        implements java.util.function.Function<Class, EntityInfo> {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
@@ -66,13 +67,13 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     public void init(AnyValue conf) {
         super.init(conf);
         this.name = conf.getValue("name", "");
-        if (conf.getAnyValue("read") == null) { //没有读写分离
+        if (conf.getAnyValue("read") == null) { // 没有读写分离
             Properties rwConf = new Properties();
             conf.forEach((k, v) -> rwConf.put(k, decryptProperty(k, v)));
             initProperties(rwConf);
             this.readConfProps = rwConf;
             this.writeConfProps = rwConf;
-        } else { //读写分离
+        } else { // 读写分离
             Properties readConf = new Properties();
             Properties writeConf = new Properties();
             conf.getAnyValue("read").forEach((k, v) -> readConf.put(k, decryptProperty(k, v)));
@@ -99,14 +100,16 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         if (events == null || events.length < 1) {
             return;
         }
-        //不支持读写分离模式的动态切换
+        // 不支持读写分离模式的动态切换
         if (readConfProps == writeConfProps
-            && (events[0].name().startsWith("read.") || events[0].name().startsWith("write."))) {
-            throw new SourceException("DataSource(name=" + resourceName() + ") not support to change to read/write separation mode");
+                && (events[0].name().startsWith("read.") || events[0].name().startsWith("write."))) {
+            throw new SourceException(
+                    "DataSource(name=" + resourceName() + ") not support to change to read/write separation mode");
         }
         if (readConfProps != writeConfProps
-            && (!events[0].name().startsWith("read.") && !events[0].name().startsWith("write."))) {
-            throw new SourceException("DataSource(name=" + resourceName() + ") not support to change to non read/write separation mode");
+                && (!events[0].name().startsWith("read.") && !events[0].name().startsWith("write."))) {
+            throw new SourceException(
+                    "DataSource(name=" + resourceName() + ") not support to change to non read/write separation mode");
         }
 
         StringBuilder sb = new StringBuilder();
@@ -114,13 +117,19 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             List<ResourceEvent> allEvents = new ArrayList<>();
             Properties newProps = new Properties();
             newProps.putAll(this.readConfProps);
-            for (ResourceEvent event : events) { //可能需要解密
+            for (ResourceEvent event : events) { // 可能需要解密
                 String newValue = decryptProperty(event.name(), event.newValue().toString());
                 allEvents.add(ResourceEvent.create(event.name(), newValue, event.oldValue()));
                 newProps.put(event.name(), newValue);
-                sb.append("DataSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                sb.append("DataSource(name=")
+                        .append(resourceName())
+                        .append(") change '")
+                        .append(event.name())
+                        .append("' to '")
+                        .append(event.coverNewValue())
+                        .append("'\r\n");
             }
-            { //更新MongoClient
+            { // 更新MongoClient
                 MongoClient oldClient = this.readMongoClient;
                 this.readMongoClient = createMongoClient(true, newProps);
                 this.writeMongoClient = this.readMongoClient;
@@ -142,32 +151,40 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             for (ResourceEvent event : events) {
                 if (event.name().startsWith("read.")) {
                     String newName = event.name().substring("read.".length());
-                    String newValue = decryptProperty(event.name(), event.newValue().toString());
+                    String newValue =
+                            decryptProperty(event.name(), event.newValue().toString());
                     readEvents.add(ResourceEvent.create(newName, newValue, event.oldValue()));
                     newReadProps.put(event.name(), newValue);
                 } else {
                     String newName = event.name().substring("write.".length());
-                    String newValue = decryptProperty(event.name(), event.newValue().toString());
+                    String newValue =
+                            decryptProperty(event.name(), event.newValue().toString());
                     writeEvents.add(ResourceEvent.create(newName, newValue, event.oldValue()));
                     newWriteProps.put(event.name(), newValue);
                 }
-                sb.append("DataSource(name=").append(resourceName()).append(") change '").append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                sb.append("DataSource(name=")
+                        .append(resourceName())
+                        .append(") change '")
+                        .append(event.name())
+                        .append("' to '")
+                        .append(event.coverNewValue())
+                        .append("'\r\n");
             }
-            if (!readEvents.isEmpty()) { //更新Read MongoClient
+            if (!readEvents.isEmpty()) { // 更新Read MongoClient
                 MongoClient oldClient = this.readMongoClient;
                 this.readMongoClient = createMongoClient(true, newReadProps);
                 if (oldClient != null) {
                     oldClient.close();
                 }
             }
-            if (!writeEvents.isEmpty()) {//更新Write MongoClient
+            if (!writeEvents.isEmpty()) { // 更新Write MongoClient
                 MongoClient oldClient = this.writeMongoClient;
                 this.writeMongoClient = createMongoClient(false, newReadProps);
                 if (oldClient != null) {
                     oldClient.close();
                 }
             }
-            //更新Properties
+            // 更新Properties
             if (!readEvents.isEmpty()) {
                 for (ResourceEvent event : readEvents) {
                     this.readConfProps.put(event.name(), event.newValue());
@@ -202,20 +219,21 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             this.writedb = cc.getDatabase();
         }
         settingBuilder.applyConnectionString(cc);
-        CodecRegistry registry = CodecRegistries.fromRegistries(MongoClientSettings.getDefaultCodecRegistry(),
-            CodecRegistries.fromProviders(PojoCodecProvider.builder().automatic(true).build()));
+        CodecRegistry registry = CodecRegistries.fromRegistries(
+                MongoClientSettings.getDefaultCodecRegistry(),
+                CodecRegistries.fromProviders(
+                        PojoCodecProvider.builder().automatic(true).build()));
         settingBuilder.codecRegistry(registry);
         return MongoClients.create(settingBuilder.build());
     }
 
-    //解密可能存在的加密字段, 可重载
+    // 解密可能存在的加密字段, 可重载
     protected String decryptProperty(String key, String value) {
         return value;
     }
 
-    //可重载
-    protected void initProperties(Properties props) {
-    }
+    // 可重载
+    protected void initProperties(Properties props) {}
 
     @Override
     public void destroy(AnyValue config) {
@@ -231,7 +249,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     @Override
     public String toString() {
         if (readConfProps == null) {
-            return getClass().getSimpleName() + "{}"; //compileMode模式下会为null
+            return getClass().getSimpleName() + "{}"; // compileMode模式下会为null
         }
         return getClass().getSimpleName() + "{url=" + readConfProps.getProperty(DATA_SOURCE_URL) + "}";
     }
@@ -300,7 +318,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         return this.getWriteMongoDatabase().getCollection(info.getTable((T) null));
     }
 
-    //可重载此方法以支持特殊数据类型， 例如：Date、Time
+    // 可重载此方法以支持特殊数据类型， 例如：Date、Time
     protected <T> Object formatFilterValue(EntityInfo<T> info, Serializable val) {
         return val;
     }
@@ -351,21 +369,33 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         String key = colval.getColumn();
         ColumnNode val = colval.getValue();
         switch (colval.getExpress()) {
-            case SET:// col = val
+            case SET: // col = val
                 return new BsonDocument("$set", new BsonDocument(key, formatToBsonValue(val)));
-            case INC:// col = col + val
+            case INC: // col = col + val
                 return new BsonDocument("$inc", new BsonDocument(key, formatToBsonValue(val)));
-            case DEC:// col = col - val
+            case DEC: // col = col - val
                 return new BsonDocument("$inc", new BsonDocument(key, formatToBsonValue(val, true)));
-            case MUL:// col = col * val
+            case MUL: // col = col * val
                 return new BsonDocument("$mul", new BsonDocument(key, formatToBsonValue(val)));
-            case DIV:// col = col / val
-                return new BsonDocument("$set", new BsonDocument(key, new BsonDocument("$divide", new BsonArray(List.of(new BsonString("$" + key), formatToBsonValue(val))))));
-            case MOD:// col = col % val
-                return new BsonDocument("$set", new BsonDocument(key, new BsonDocument("$mod", new BsonArray(List.of(new BsonString("$" + key), formatToBsonValue(val))))));
+            case DIV: // col = col / val
+                return new BsonDocument(
+                        "$set",
+                        new BsonDocument(
+                                key,
+                                new BsonDocument(
+                                        "$divide",
+                                        new BsonArray(List.of(new BsonString("$" + key), formatToBsonValue(val))))));
+            case MOD: // col = col % val
+                return new BsonDocument(
+                        "$set",
+                        new BsonDocument(
+                                key,
+                                new BsonDocument(
+                                        "$mod",
+                                        new BsonArray(List.of(new BsonString("$" + key), formatToBsonValue(val))))));
             case AND: // col = col & val
                 return new BsonDocument("$bit", new BsonDocument(key, new BsonDocument("and", formatToBsonValue(val))));
-            case ORR: //col = col | val
+            case ORR: // col = col | val
                 return new BsonDocument("$bit", new BsonDocument(key, new BsonDocument("or", formatToBsonValue(val))));
         }
         return null;
@@ -391,7 +421,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         } else if (func == FilterFunc.SUM) {
             bf = Accumulators.sum(fieldName, "$" + column);
         } else {
-            throw new UnsupportedOperationException(FilterFunc.class.getSimpleName() + " " + func + " not supported yet.");
+            throw new UnsupportedOperationException(
+                    FilterFunc.class.getSimpleName() + " " + func + " not supported yet.");
         }
         return bf;
     }
@@ -466,7 +497,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         if (items.size() == 1) {
             return items.get(0);
         }
-        return node.isOr() ? Filters.or(items.toArray(new Bson[items.size()])) : Filters.and(items.toArray(new Bson[items.size()]));
+        return node.isOr()
+                ? Filters.or(items.toArray(new Bson[items.size()]))
+                : Filters.and(items.toArray(new Bson[items.size()]));
     }
 
     private <T> Bson createFilterElement(EntityInfo<T> info, FilterNode node) {
@@ -506,15 +539,25 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 return Filters.not(Filters.regex(node.getColumn(), "/" + node.getValue() + "/"));
             }
             case IN: {
-                return Filters.in(node.getColumn(), node.getValue() instanceof Collection ? (Collection) node.getValue() : List.of((Object[]) node.getValue()));
+                return Filters.in(
+                        node.getColumn(),
+                        node.getValue() instanceof Collection
+                                ? (Collection) node.getValue()
+                                : List.of((Object[]) node.getValue()));
             }
             case NOT_IN: {
-                return Filters.not(Filters.in(node.getColumn(), node.getValue() instanceof Collection ? (Collection) node.getValue() : (Object[]) node.getValue()));
+                return Filters.not(Filters.in(
+                        node.getColumn(),
+                        node.getValue() instanceof Collection
+                                ? (Collection) node.getValue()
+                                : (Object[]) node.getValue()));
             }
             case BETWEEN: {
                 Range range = (Range) node.getValue();
                 if (range.getMax() != null && range.getMax().compareTo(range.getMin()) > 0) {
-                    return Filters.and(Filters.gte(node.getColumn(), range.getMin()), Filters.lte(node.getColumn(), range.getMax()));
+                    return Filters.and(
+                            Filters.gte(node.getColumn(), range.getMin()),
+                            Filters.lte(node.getColumn(), range.getMax()));
                 } else {
                     return Filters.gte(node.getColumn(), range.getMin());
                 }
@@ -523,7 +566,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 Range range = (Range) node.getValue();
                 Bson bson;
                 if (range.getMax() != null && range.getMax().compareTo(range.getMin()) > 0) {
-                    bson = Filters.and(Filters.gte(node.getColumn(), range.getMin()), Filters.lte(node.getColumn(), range.getMax()));
+                    bson = Filters.and(
+                            Filters.gte(node.getColumn(), range.getMin()),
+                            Filters.lte(node.getColumn(), range.getMax()));
                 } else {
                     bson = Filters.gte(node.getColumn(), range.getMin());
                 }
@@ -606,7 +651,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<DeleteResult> future = new ReatorFuture<>();
-        collection.deleteMany(Filters.in(info.getPrimaryField(), pks)).subscribe(future); //deleteOne bug?
+        collection.deleteMany(Filters.in(info.getPrimaryField(), pks)).subscribe(future); // deleteOne bug?
         return future.thenApply(v -> (int) v.getDeletedCount());
     }
 
@@ -704,12 +749,15 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, Serializable pk, String column, Serializable value) {
+    public <T> CompletableFuture<Integer> updateColumnAsync(
+            Class<T> clazz, Serializable pk, String column, Serializable value) {
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
-        collection.updateOne(Filters.eq(info.getPrimaryField(), pk), Updates.set(column, value)).subscribe(future);
+        collection
+                .updateOne(Filters.eq(info.getPrimaryField(), pk), Updates.set(column, value))
+                .subscribe(future);
         return future.thenApply(v -> (int) v.getModifiedCount());
     }
 
@@ -719,13 +767,16 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, String column, Serializable value, FilterNode node) {
+    public <T> CompletableFuture<Integer> updateColumnAsync(
+            Class<T> clazz, String column, Serializable value, FilterNode node) {
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
         UpdateOptions options = null;
-        collection.updateMany(createFilterBson(info, node), Updates.set(column, value), options).subscribe(future);
+        collection
+                .updateMany(createFilterBson(info, node), Updates.set(column, value), options)
+                .subscribe(future);
         return future.thenApply(v -> (int) v.getModifiedCount());
     }
 
@@ -744,7 +795,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
-        collection.updateOne(Filters.eq(info.getPrimaryField(), pk), Updates.combine(items)).subscribe(future);
+        collection
+                .updateOne(Filters.eq(info.getPrimaryField(), pk), Updates.combine(items))
+                .subscribe(future);
         return future.thenApply(v -> (int) v.getModifiedCount());
     }
 
@@ -754,7 +807,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <T> CompletableFuture<Integer> updateColumnAsync(Class<T> clazz, FilterNode node, Flipper flipper, ColumnValue... values) {
+    public <T> CompletableFuture<Integer> updateColumnAsync(
+            Class<T> clazz, FilterNode node, Flipper flipper, ColumnValue... values) {
         if (values.length == 0) {
             return CompletableFuture.completedFuture(0);
         }
@@ -769,7 +823,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
-        collection.updateMany(createFilterBson(info, node), Updates.combine(items)).subscribe(future);
+        collection
+                .updateMany(createFilterBson(info, node), Updates.combine(items))
+                .subscribe(future);
         return future.thenApply(v -> (int) v.getModifiedCount());
     }
 
@@ -793,7 +849,9 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
-        collection.updateMany(createFilterBson(info, node), Updates.combine(items)).subscribe(future);
+        collection
+                .updateMany(createFilterBson(info, node), Updates.combine(items))
+                .subscribe(future);
         return future.thenApply(v -> (int) v.getModifiedCount());
     }
 
@@ -803,12 +861,14 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public CompletableFuture<Number> getNumberResultAsync(Class entityClass, FilterFunc func, Number defVal, String column, FilterNode node) {
+    public CompletableFuture<Number> getNumberResultAsync(
+            Class entityClass, FilterFunc func, Number defVal, String column, FilterNode node) {
         EntityInfo info = loadEntityInfo(entityClass);
         MongoCollection<Document> collection = getReadMongoDocumentCollection(info);
         Bson filter = createFilterBson(info, node);
         if (func == FilterFunc.COUNT) {
-            Publisher<Long> publisher = filter == null ? collection.countDocuments() : collection.countDocuments(filter);
+            Publisher<Long> publisher =
+                    filter == null ? collection.countDocuments() : collection.countDocuments(filter);
             ReatorFuture<Long> future = new ReatorFuture<>();
             publisher.subscribe(future);
             return future.thenApply(v -> v.intValue());
@@ -819,7 +879,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             if (filter != null) {
                 items.add(Aggregates.match(filter));
             }
-            //[{$group:{_id:"$fieldName"}}, {$group:{_id:1, count:{$sum:1}}}]
+            // [{$group:{_id:"$fieldName"}}, {$group:{_id:1, count:{$sum:1}}}]
             items.add(Aggregates.group("$" + key));
             items.add(Aggregates.group(1, Accumulators.sum("count", 1)));
             collection.aggregate(items).subscribe(future);
@@ -832,19 +892,21 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             }
             BsonField bf = createBsonField(func, column, column);
             items.add(Aggregates.group(null, bf));
-            //System.println(items.get(0).toBsonDocument().toJson(JsonWriterSettings.builder().indent(true).build()));
+            // System.println(items.get(0).toBsonDocument().toJson(JsonWriterSettings.builder().indent(true).build()));
             collection.aggregate(items).subscribe(future);
             return future.thenApply(v -> v == null ? defVal : (Number) v.get(column));
         }
     }
 
     @Override
-    public <N extends Number> Map<String, N> getNumberMap(Class entityClass, FilterNode node, FilterFuncColumn... columns) {
+    public <N extends Number> Map<String, N> getNumberMap(
+            Class entityClass, FilterNode node, FilterFuncColumn... columns) {
         return (Map) getNumberMapAsync(entityClass, node, columns).join();
     }
 
-    @Override  //等价SQL: SELECT FUNC1{column1}, FUNC2{column2}, ... FROM {table}
-    public <N extends Number> CompletableFuture<Map<String, N>> getNumberMapAsync(Class entityClass, FilterNode node, FilterFuncColumn... columns) {
+    @Override // 等价SQL: SELECT FUNC1{column1}, FUNC2{column2}, ... FROM {table}
+    public <N extends Number> CompletableFuture<Map<String, N>> getNumberMapAsync(
+            Class entityClass, FilterNode node, FilterFuncColumn... columns) {
         final EntityInfo info = loadEntityInfo(entityClass);
         final EntityCache cache = info.getCache();
         if (cache != null && (isOnlyCache(info) || cache.isFullLoaded())) {
@@ -897,36 +959,59 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <T, K extends Serializable, N extends Number> Map<K, N> queryColumnMap(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
-        return (Map) queryColumnMapAsync(entityClass, keyColumn, func, funcColumn, node).join();
+    public <T, K extends Serializable, N extends Number> Map<K, N> queryColumnMap(
+            Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
+        return (Map) queryColumnMapAsync(entityClass, keyColumn, func, funcColumn, node)
+                .join();
     }
 
     @Override
-    public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapAsync(Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
-        return (CompletableFuture) queryColumnMapCompose(entityClass, false, false, Utility.ofArray(ColumnNodes.func(func, funcColumn)), Utility.ofArray(keyColumn), node);
+    public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N>> queryColumnMapAsync(
+            Class<T> entityClass, String keyColumn, FilterFunc func, String funcColumn, FilterNode node) {
+        return (CompletableFuture) queryColumnMapCompose(
+                entityClass,
+                false,
+                false,
+                Utility.ofArray(ColumnNodes.func(func, funcColumn)),
+                Utility.ofArray(keyColumn),
+                node);
     }
 
     @Override
-    public <T, K extends Serializable, N extends Number> Map<K, N[]> queryColumnMap(Class<T> entityClass, ColumnNode[] funcNodes, String groupByColumn, FilterNode node) {
-        return (Map) queryColumnMapAsync(entityClass, funcNodes, groupByColumn, node).join();
+    public <T, K extends Serializable, N extends Number> Map<K, N[]> queryColumnMap(
+            Class<T> entityClass, ColumnNode[] funcNodes, String groupByColumn, FilterNode node) {
+        return (Map)
+                queryColumnMapAsync(entityClass, funcNodes, groupByColumn, node).join();
     }
 
     @Override
-    public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N[]>> queryColumnMapAsync(Class<T> entityClass, ColumnNode[] funcNodes, String groupByColumn, FilterNode node) {
-        return (CompletableFuture) queryColumnMapCompose(entityClass, false, true, funcNodes, Utility.ofArray(groupByColumn), node);
+    public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K, N[]>> queryColumnMapAsync(
+            Class<T> entityClass, ColumnNode[] funcNodes, String groupByColumn, FilterNode node) {
+        return (CompletableFuture)
+                queryColumnMapCompose(entityClass, false, true, funcNodes, Utility.ofArray(groupByColumn), node);
     }
 
     @Override
-    public <T, K extends Serializable, N extends Number> Map<K[], N[]> queryColumnMap(Class<T> entityClass, ColumnNode[] funcNodes, String[] groupByColumns, FilterNode node) {
-        return (Map) queryColumnMapAsync(entityClass, funcNodes, groupByColumns, node).join();
+    public <T, K extends Serializable, N extends Number> Map<K[], N[]> queryColumnMap(
+            Class<T> entityClass, ColumnNode[] funcNodes, String[] groupByColumns, FilterNode node) {
+        return (Map) queryColumnMapAsync(entityClass, funcNodes, groupByColumns, node)
+                .join();
     }
 
-    @Override  //等价SQL: SELECT col1, col2, FUNC{funcColumn1}, FUNC{funcColumn2} FROM {table} WHERE {filter node} GROUP BY {col1}, {col2} 
-    public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapAsync(Class<T> entityClass, ColumnNode[] funcNodes, String[] groupByColumns, FilterNode node) {
+    @Override // 等价SQL: SELECT col1, col2, FUNC{funcColumn1}, FUNC{funcColumn2} FROM {table} WHERE {filter node} GROUP
+    // BY {col1}, {col2}
+    public <T, K extends Serializable, N extends Number> CompletableFuture<Map<K[], N[]>> queryColumnMapAsync(
+            Class<T> entityClass, ColumnNode[] funcNodes, String[] groupByColumns, FilterNode node) {
         return (CompletableFuture) queryColumnMapCompose(entityClass, true, true, funcNodes, groupByColumns, node);
     }
 
-    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map> queryColumnMapCompose(Class<T> entityClass, boolean arrayKey, boolean arrayVal, ColumnNode[] funcNodes, String[] groupByColumns, FilterNode node) {
+    protected <T, K extends Serializable, N extends Number> CompletableFuture<Map> queryColumnMapCompose(
+            Class<T> entityClass,
+            boolean arrayKey,
+            boolean arrayVal,
+            ColumnNode[] funcNodes,
+            String[] groupByColumns,
+            FilterNode node) {
         final EntityInfo info = loadEntityInfo(entityClass);
         final EntityCache cache = info.getCache();
         if (cache != null && (isOnlyCache(info) || cache.isFullLoaded())) {
@@ -954,11 +1039,13 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             if (colNode instanceof ColumnFuncNode) {
                 ColumnFuncNode cfn = (ColumnFuncNode) colNode;
                 if (cfn.getValue() instanceof ColumnExpNode) {
-                    throw new UnsupportedOperationException(ColumnExpNode.class.getSimpleName() + " " + colNode + " not supported yet.");
+                    throw new UnsupportedOperationException(
+                            ColumnExpNode.class.getSimpleName() + " " + colNode + " not supported yet.");
                 }
                 fields[i] = createBsonField(cfn.getFunc(), colName, cfn.getValue());
             } else {
-                throw new UnsupportedOperationException(ColumnNode.class.getSimpleName() + " " + colNode + " not supported yet.");
+                throw new UnsupportedOperationException(
+                        ColumnNode.class.getSimpleName() + " " + colNode + " not supported yet.");
             }
         }
         items.add(Aggregates.group(group, fields));
@@ -969,7 +1056,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             for (Document doc : v) {
                 Document id = (Document) doc.get("_id");
                 Object keys, vals;
-                //key
+                // key
                 if (arrayKey) {
                     Object[] array = new Object[groupByColumns.length];
                     for (int i = 0; i < array.length; i++) {
@@ -979,7 +1066,7 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 } else {
                     keys = id.get(groupByColumns[0]);
                 }
-                //value
+                // value
                 if (arrayVal) {
                     Object[] array = new Object[funcols.length];
                     for (int i = 0; i < array.length; i++) {
@@ -1016,7 +1103,10 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         ReatorFuture<T> future = new ReatorFuture<>();
         FindPublisher<T> publisher = collection.find(Filters.eq(info.getPrimaryField(), pk));
         if (selects != null) {
-            publisher.projection(selects.isExcludable() ? Projections.exclude(selects.getColumns()) : Projections.include(selects.getColumns()));
+            publisher.projection(
+                    selects.isExcludable()
+                            ? Projections.exclude(selects.getColumns())
+                            : Projections.include(selects.getColumns()));
         }
         publisher.first().subscribe(future);
         return future;
@@ -1038,7 +1128,10 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             publisher.filter(filter);
         }
         if (selects != null) {
-            publisher.projection(selects.isExcludable() ? Projections.exclude(selects.getColumns()) : Projections.include(selects.getColumns()));
+            publisher.projection(
+                    selects.isExcludable()
+                            ? Projections.exclude(selects.getColumns())
+                            : Projections.include(selects.getColumns()));
         }
         publisher.first().subscribe(future);
         return future;
@@ -1056,21 +1149,22 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
             return CompletableFuture.completedFuture(info.getArrayer().apply(0));
         }
         final Attribute<T, Serializable> primary = info.getPrimary();
-        return queryListAsync(info.getType(), selects, null, FilterNodes.in(info.getPrimarySQLColumn(), pks)).thenApply(list -> {
-            T[] rs = info.getArrayer().apply(pks.length);
-            for (int i = 0; i < rs.length; i++) {
-                T t = null;
-                Serializable pk = pks[i];
-                for (T item : list) {
-                    if (pk.equals(primary.get(item))) {
-                        t = item;
-                        break;
+        return queryListAsync(info.getType(), selects, null, FilterNodes.in(info.getPrimarySQLColumn(), pks))
+                .thenApply(list -> {
+                    T[] rs = info.getArrayer().apply(pks.length);
+                    for (int i = 0; i < rs.length; i++) {
+                        T t = null;
+                        Serializable pk = pks[i];
+                        for (T item : list) {
+                            if (pk.equals(primary.get(item))) {
+                                t = item;
+                                break;
+                            }
+                        }
+                        rs[i] = t;
                     }
-                }
-                rs[i] = t;
-            }
-            return rs;
-        });
+                    return rs;
+                });
     }
 
     @Override
@@ -1079,7 +1173,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(final Class<T> clazz, final Stream<D> pks) {
+    public <D extends Serializable, T> CompletableFuture<List<T>> findsListAsync(
+            final Class<T> clazz, final Stream<D> pks) {
         final EntityInfo<T> info = loadEntityInfo(clazz);
         Serializable[] ids = pks.toArray(serialArrayFunc);
         return queryListAsync(info.getType(), null, null, FilterNodes.in(info.getPrimarySQLColumn(), ids));
@@ -1091,14 +1186,16 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <T> CompletableFuture<Serializable> findColumnAsync(Class<T> clazz, String column, Serializable defValue, Serializable pk) {
+    public <T> CompletableFuture<Serializable> findColumnAsync(
+            Class<T> clazz, String column, Serializable defValue, Serializable pk) {
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getReadMongoCollection(info);
         ReatorFuture<T> future = new ReatorFuture<>();
         FindPublisher<T> publisher = collection.find(Filters.eq(info.getPrimaryField(), pk));
         publisher.projection(Projections.include(column));
         publisher.first().subscribe(future);
-        return future.thenApply(v -> v == null ? defValue : info.getAttribute(column).get(v));
+        return future.thenApply(
+                v -> v == null ? defValue : info.getAttribute(column).get(v));
     }
 
     @Override
@@ -1107,14 +1204,16 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <T> CompletableFuture<Serializable> findColumnAsync(Class<T> clazz, String column, Serializable defValue, FilterNode node) {
+    public <T> CompletableFuture<Serializable> findColumnAsync(
+            Class<T> clazz, String column, Serializable defValue, FilterNode node) {
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getReadMongoCollection(info);
         ReatorFuture<T> future = new ReatorFuture<>();
         FindPublisher<T> publisher = collection.find(createFilterBson(info, node));
         publisher.projection(Projections.include(column));
         publisher.first().subscribe(future);
-        return future.thenApply(v -> v == null ? defValue : info.getAttribute(column).get(v));
+        return future.thenApply(
+                v -> v == null ? defValue : info.getAttribute(column).get(v));
     }
 
     @Override
@@ -1141,74 +1240,88 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         EntityInfo<T> info = loadEntityInfo(clazz);
         MongoCollection<T> collection = getReadMongoCollection(info);
         ReatorFuture<T> future = new ReatorFuture<>();
-        collection.find(createFilterElement(info, node)).projection(Projections.include(info.getPrimaryField())).first().subscribe(future);
+        collection
+                .find(createFilterElement(info, node))
+                .projection(Projections.include(info.getPrimaryField()))
+                .first()
+                .subscribe(future);
         return future.thenApply(v -> v != null);
     }
 
     @Override
-    public <T, V extends Serializable> Set<V> queryColumnSet(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
+    public <T, V extends Serializable> Set<V> queryColumnSet(
+            String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         return (Set) queryColumnSetAsync(selectedColumn, clazz, flipper, node).join();
     }
 
     @Override
-    public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
-        return querySetAsync(clazz, SelectColumn.includes(selectedColumn), flipper, node).thenApply((Set<T> list) -> {
-            final Set<V> rs = new LinkedHashSet<>();
-            if (list.isEmpty()) {
-                return rs;
-            }
-            final EntityInfo<T> info = loadEntityInfo(clazz);
-            final Attribute<T, V> selected = (Attribute<T, V>) info.getAttribute(selectedColumn);
-            for (T t : list) {
-                rs.add(selected.get(t));
-            }
-            return rs;
-        });
+    public <T, V extends Serializable> CompletableFuture<Set<V>> queryColumnSetAsync(
+            String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
+        return querySetAsync(clazz, SelectColumn.includes(selectedColumn), flipper, node)
+                .thenApply((Set<T> list) -> {
+                    final Set<V> rs = new LinkedHashSet<>();
+                    if (list.isEmpty()) {
+                        return rs;
+                    }
+                    final EntityInfo<T> info = loadEntityInfo(clazz);
+                    final Attribute<T, V> selected = (Attribute<T, V>) info.getAttribute(selectedColumn);
+                    for (T t : list) {
+                        rs.add(selected.get(t));
+                    }
+                    return rs;
+                });
     }
 
     @Override
-    public <T, V extends Serializable> List<V> queryColumnList(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
+    public <T, V extends Serializable> List<V> queryColumnList(
+            String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
         return (List) queryColumnListAsync(selectedColumn, clazz, flipper, node).join();
     }
 
     @Override
-    public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
-        return queryListAsync(clazz, SelectColumn.includes(selectedColumn), flipper, node).thenApply((List<T> list) -> {
-            final List<V> rs = new ArrayList<>();
-            if (list.isEmpty()) {
-                return rs;
-            }
-            final EntityInfo<T> info = loadEntityInfo(clazz);
-            final Attribute<T, V> selected = (Attribute<T, V>) info.getAttribute(selectedColumn);
-            for (T t : list) {
-                rs.add(selected.get(t));
-            }
-            return rs;
-        });
+    public <T, V extends Serializable> CompletableFuture<List<V>> queryColumnListAsync(
+            String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
+        return queryListAsync(clazz, SelectColumn.includes(selectedColumn), flipper, node)
+                .thenApply((List<T> list) -> {
+                    final List<V> rs = new ArrayList<>();
+                    if (list.isEmpty()) {
+                        return rs;
+                    }
+                    final EntityInfo<T> info = loadEntityInfo(clazz);
+                    final Attribute<T, V> selected = (Attribute<T, V>) info.getAttribute(selectedColumn);
+                    for (T t : list) {
+                        rs.add(selected.get(t));
+                    }
+                    return rs;
+                });
     }
 
     @Override
-    public <T, V extends Serializable> Sheet<V> queryColumnSheet(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
-        return (Sheet) queryColumnSheetAsync(selectedColumn, clazz, flipper, node).join();
+    public <T, V extends Serializable> Sheet<V> queryColumnSheet(
+            String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
+        return (Sheet)
+                queryColumnSheetAsync(selectedColumn, clazz, flipper, node).join();
     }
 
     @Override
-    public <T, V extends Serializable> CompletableFuture<Sheet<V>> queryColumnSheetAsync(String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
-        return querySheetAsync(clazz, SelectColumn.includes(selectedColumn), flipper, node).thenApply((Sheet<T> sheet) -> {
-            final Sheet<V> rs = new Sheet<>();
-            if (sheet.isEmpty()) {
-                return rs;
-            }
-            rs.setTotal(sheet.getTotal());
-            final EntityInfo<T> info = loadEntityInfo(clazz);
-            final Attribute<T, V> selected = (Attribute<T, V>) info.getAttribute(selectedColumn);
-            final List<V> list = new ArrayList<>();
-            for (T t : sheet.getRows()) {
-                list.add(selected.get(t));
-            }
-            rs.setRows(list);
-            return rs;
-        });
+    public <T, V extends Serializable> CompletableFuture<Sheet<V>> queryColumnSheetAsync(
+            String selectedColumn, Class<T> clazz, Flipper flipper, FilterNode node) {
+        return querySheetAsync(clazz, SelectColumn.includes(selectedColumn), flipper, node)
+                .thenApply((Sheet<T> sheet) -> {
+                    final Sheet<V> rs = new Sheet<>();
+                    if (sheet.isEmpty()) {
+                        return rs;
+                    }
+                    rs.setTotal(sheet.getTotal());
+                    final EntityInfo<T> info = loadEntityInfo(clazz);
+                    final Attribute<T, V> selected = (Attribute<T, V>) info.getAttribute(selectedColumn);
+                    final List<V> list = new ArrayList<>();
+                    for (T t : sheet.getRows()) {
+                        list.add(selected.get(t));
+                    }
+                    rs.setRows(list);
+                    return rs;
+                });
     }
 
     @Override
@@ -1217,7 +1330,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, SelectColumn selects, Stream<K> keyStream) {
+    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(
+            Class<T> clazz, SelectColumn selects, Stream<K> keyStream) {
         if (keyStream == null) {
             return CompletableFuture.completedFuture(new LinkedHashMap<>());
         }
@@ -1241,7 +1355,8 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(Class<T> clazz, SelectColumn selects, FilterNode node) {
+    public <K extends Serializable, T> CompletableFuture<Map<K, T>> queryMapAsync(
+            Class<T> clazz, SelectColumn selects, FilterNode node) {
         return queryListAsync(clazz, selects, node).thenApply((List<T> rs) -> {
             final EntityInfo<T> info = loadEntityInfo(clazz);
             final Attribute<T, Serializable> primary = info.getPrimary();
@@ -1257,42 +1372,63 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
     }
 
     @Override
-    public <T> Set<T> querySet(final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
-        return new LinkedHashSet<>(querySheetCompose(true, false, true, clazz, selects, flipper, node).join().list(true));
+    public <T> Set<T> querySet(
+            final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
+        return new LinkedHashSet<>(querySheetCompose(true, false, true, clazz, selects, flipper, node)
+                .join()
+                .list(true));
     }
 
     @Override
-    public <T> CompletableFuture<Set<T>> querySetAsync(final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
-        return querySheetCompose(true, false, true, clazz, selects, flipper, node).thenApply((rs) -> new LinkedHashSet<>(rs.list(true)));
+    public <T> CompletableFuture<Set<T>> querySetAsync(
+            final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
+        return querySheetCompose(true, false, true, clazz, selects, flipper, node)
+                .thenApply((rs) -> new LinkedHashSet<>(rs.list(true)));
     }
 
     @Override
-    public <T> List<T> queryList(final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
-        return querySheetCompose(true, false, false, clazz, selects, flipper, node).join().list(true);
+    public <T> List<T> queryList(
+            final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
+        return querySheetCompose(true, false, false, clazz, selects, flipper, node)
+                .join()
+                .list(true);
     }
 
     @Override
-    public <T> CompletableFuture<List<T>> queryListAsync(final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
-        return querySheetCompose(true, false, false, clazz, selects, flipper, node).thenApply((rs) -> rs.list(true));
+    public <T> CompletableFuture<List<T>> queryListAsync(
+            final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
+        return querySheetCompose(true, false, false, clazz, selects, flipper, node)
+                .thenApply((rs) -> rs.list(true));
     }
 
     @Override
-    public <T> Sheet<T> querySheet(final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
-        return querySheetCompose(true, true, false, clazz, selects, flipper, node).join();
+    public <T> Sheet<T> querySheet(
+            final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
+        return querySheetCompose(true, true, false, clazz, selects, flipper, node)
+                .join();
     }
 
     @Override
-    public <T> CompletableFuture<Sheet<T>> querySheetAsync(final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
+    public <T> CompletableFuture<Sheet<T>> querySheetAsync(
+            final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
         return querySheetCompose(true, true, false, clazz, selects, flipper, node);
     }
 
-    protected <T> CompletableFuture<Sheet<T>> querySheetCompose(final boolean readcache, final boolean needtotal, final boolean distinct, final Class<T> clazz, final SelectColumn selects, final Flipper flipper, final FilterNode node) {
+    protected <T> CompletableFuture<Sheet<T>> querySheetCompose(
+            final boolean readcache,
+            final boolean needtotal,
+            final boolean distinct,
+            final Class<T> clazz,
+            final SelectColumn selects,
+            final Flipper flipper,
+            final FilterNode node) {
         final EntityInfo<T> info = loadEntityInfo(clazz);
         final EntityCache<T> cache = info.getCache();
         if (readcache && cache != null && cache.isFullLoaded()) {
             if (node == null || isCacheUseable(node, this)) {
                 if (info.isLoggable(logger, Level.FINEST, " cache query predicate = ")) {
-                    logger.finest(clazz.getSimpleName() + " cache query predicate = " + (node == null ? null : createPredicate(node, cache)));
+                    logger.finest(clazz.getSimpleName() + " cache query predicate = "
+                            + (node == null ? null : createPredicate(node, cache)));
                 }
                 return CompletableFuture.completedFuture(cache.querySheet(needtotal, distinct, selects, flipper, node));
             }
@@ -1300,12 +1436,20 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         return querySheetCompose(info, readcache, needtotal, distinct, selects, flipper, node);
     }
 
-    protected <T> CompletableFuture<Sheet<T>> querySheetCompose(EntityInfo<T> info, final boolean readcache, boolean needtotal, final boolean distinct, SelectColumn selects, Flipper flipper, FilterNode node) {
+    protected <T> CompletableFuture<Sheet<T>> querySheetCompose(
+            EntityInfo<T> info,
+            final boolean readcache,
+            boolean needtotal,
+            final boolean distinct,
+            SelectColumn selects,
+            Flipper flipper,
+            FilterNode node) {
         MongoCollection<T> collection = getReadMongoCollection(info);
         final Bson filter = createFilterBson(info, node);
         CompletableFuture<Long> totalFuture;
         if (needtotal) {
-            Publisher<Long> publisher = filter == null ? collection.countDocuments() : collection.countDocuments(filter);
+            Publisher<Long> publisher =
+                    filter == null ? collection.countDocuments() : collection.countDocuments(filter);
             ReatorFuture<Long> future = new ReatorFuture<>();
             publisher.subscribe(future);
             totalFuture = future;
@@ -1318,7 +1462,10 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
                 publisher.filter(filter);
             }
             if (selects != null) {
-                publisher.projection(selects.isExcludable() ? Projections.exclude(selects.getColumns()) : Projections.include(selects.getColumns()));
+                publisher.projection(
+                        selects.isExcludable()
+                                ? Projections.exclude(selects.getColumns())
+                                : Projections.include(selects.getColumns()));
             }
             if (flipper != null) {
                 if (flipper.getOffset() > 0) {
@@ -1399,7 +1546,5 @@ public class MongodbDriverDataSource extends AbstractDataSource implements java.
         public void onComplete() {
             complete(rs == null ? new ArrayList<>() : rs);
         }
-
     }
-
 }

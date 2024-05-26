@@ -5,22 +5,20 @@
  */
 package org.redkalex.source.mongo;
 
+import static org.redkale.source.DataSources.*;
+
 import com.mongodb.reactivestreams.client.MongoClient;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MongodbDriverDataSourceTest {
 
-    //需要本地装MongoDB，故不用Junit
+    // 需要本地装MongoDB，故不用Junit
     public static void main(String[] args) throws Throwable {
         AnyValueWriter conf = AnyValueWriter.create();
         conf.addValue(DATA_SOURCE_URL, "mongodb://localhost/admin");
@@ -54,7 +52,8 @@ public class MongodbDriverDataSourceTest {
         entity3.setCreateTime(System.currentTimeMillis());
 
         if (source.exists(TestRecord.class, entity.getRecordid())) {
-            System.out.println("删除结果: " + source.delete(TestRecord.class, entity.getRecordid(), entity2.getRecordid() + "3"));
+            System.out.println(
+                    "删除结果: " + source.delete(TestRecord.class, entity.getRecordid(), entity2.getRecordid() + "3"));
         }
         if (source.exists(TestRecord.class, entity2.getRecordid())) {
             System.out.println("删除结果: " + source.delete(TestRecord.class, entity2.getRecordid()));
@@ -64,28 +63,61 @@ public class MongodbDriverDataSourceTest {
         }
         Assertions.assertFalse(source.exists(TestRecord.class, entity.getRecordid()));
         source.insert(entity, entity2, entity3);
-        int count = source.getNumberResult(TestRecord.class, FilterFunc.COUNT, 0, "score").intValue();
+        int count = source.getNumberResult(TestRecord.class, FilterFunc.COUNT, 0, "score")
+                .intValue();
         Assertions.assertEquals(3, count);
         System.out.println("全部个数: " + count);
-        System.out.println("去重个数: " + source.getNumberResult(TestRecord.class, FilterFunc.DISTINCTCOUNT, 0, "createTime"));
+        System.out.println(
+                "去重个数: " + source.getNumberResult(TestRecord.class, FilterFunc.DISTINCTCOUNT, 0, "createTime"));
         System.out.println("求平均值: " + source.getNumberResult(TestRecord.class, FilterFunc.AVG, 0, "score"));
         System.out.println("求最大值: " + source.getNumberResult(TestRecord.class, FilterFunc.MAX, 0, "score"));
         System.out.println("求最小值: " + source.getNumberResult(TestRecord.class, FilterFunc.MIN, 0, "score"));
         System.out.println("求总和值: " + source.getNumberResult(TestRecord.class, FilterFunc.SUM, 0, "score"));
         System.out.println("应该存在: " + source.exists(TestRecord.class, entity.getRecordid()));
         System.out.println("数据更新前内容: " + source.find(TestRecord.class, entity.getRecordid()));
-        source.updateColumn(TestRecord.class, entity.getRecordid(), ColumnValue.set("name", "mynewname1"), ColumnValue.inc("score", 11), ColumnValue.mul("status", 4), ColumnValue.and("createTime", 7));
+        source.updateColumn(
+                TestRecord.class,
+                entity.getRecordid(),
+                ColumnValue.set("name", "mynewname1"),
+                ColumnValue.inc("score", 11),
+                ColumnValue.mul("status", 4),
+                ColumnValue.and("createTime", 7));
         System.out.println("数据更新后内容: " + source.find(TestRecord.class, entity.getRecordid() + "3"));
-        //source.updateColumn(TestRecord.class, entity.getRecordid(), ColumnValue.div("status", 10), new ColumnValue("createTime", ColumnExpress.MOD, 3));
-        //System.out.println("数据更新后内容: " + source.find(TestRecord.class, entity.getRecordid()));
-        System.out.println("单个状态: " + source.findColumn(TestRecord.class, "status", FilterNodes.eq("createTime", entity.getCreateTime())));
+        // source.updateColumn(TestRecord.class, entity.getRecordid(), ColumnValue.div("status", 10), new
+        // ColumnValue("createTime", ColumnExpress.MOD, 3));
+        // System.out.println("数据更新后内容: " + source.find(TestRecord.class, entity.getRecordid()));
+        System.out.println("单个状态: "
+                + source.findColumn(TestRecord.class, "status", FilterNodes.eq("createTime", entity.getCreateTime())));
         System.out.println("单个状时间: " + source.findColumn(TestRecord.class, "createTime", entity.getRecordid()));
-        System.out.println("查询所有: " + source.querySheet(TestRecord.class, SelectColumn.includes("recordid", "score"), new Flipper(2, 1, "score ASC"), (FilterNode) null));
+        System.out.println("查询所有: "
+                + source.querySheet(
+                        TestRecord.class,
+                        SelectColumn.includes("recordid", "score"),
+                        new Flipper(2, 1, "score ASC"),
+                        (FilterNode) null));
 
         ColumnNode[] cns = Utility.ofArray(ColumnNodes.count("recordid"), ColumnNodes.sum("score"));
-        System.out.println("部分统计: " + JsonConvert.root().convertTo(source.queryColumnMap(TestRecord.class, cns, Utility.ofArray("createTime"), FilterNodes.gt("createTime", 1))));
-        System.out.println("部分统计: " + JsonConvert.root().convertTo(source.queryColumnMap(TestRecord.class, "createTime", FilterFunc.SUM, "score", FilterNodes.gt("createTime", 1))));
-        System.out.println("部分统计: " + JsonConvert.root().convertTo(source.getNumberMap(TestRecord.class, FilterFuncColumn.create(FilterFunc.COUNT, "recordid"), FilterFuncColumn.create(FilterFunc.SUM, "score"))));
+        System.out.println("部分统计: "
+                + JsonConvert.root()
+                        .convertTo(source.queryColumnMap(
+                                TestRecord.class,
+                                cns,
+                                Utility.ofArray("createTime"),
+                                FilterNodes.gt("createTime", 1))));
+        System.out.println("部分统计: "
+                + JsonConvert.root()
+                        .convertTo(source.queryColumnMap(
+                                TestRecord.class,
+                                "createTime",
+                                FilterFunc.SUM,
+                                "score",
+                                FilterNodes.gt("createTime", 1))));
+        System.out.println("部分统计: "
+                + JsonConvert.root()
+                        .convertTo(source.getNumberMap(
+                                TestRecord.class,
+                                FilterFuncColumn.create(FilterFunc.COUNT, "recordid"),
+                                FilterFuncColumn.create(FilterFunc.SUM, "score"))));
 
         entity.setScore(entity.getScore() + 1);
         entity.setCreateTime(entity.getCreateTime() + 1);
@@ -110,19 +142,20 @@ public class MongodbDriverDataSourceTest {
                         stc.countDown();
                         stc.await();
                         source.queryColumnList("score", TestRecord.class, (FilterNode) null);
-                        source.updateColumn(TestRecord.class, entity.getRecordid(), ColumnValue.set("name", "mynewname1" + a.incrementAndGet()));
+                        source.updateColumn(
+                                TestRecord.class,
+                                entity.getRecordid(),
+                                ColumnValue.set("name", "mynewname1" + a.incrementAndGet()));
                     } catch (Exception e) {
                         e.printStackTrace();
                     } finally {
                         cdl.countDown();
                     }
                 }
-
             }.start();
         }
         cdl.await();
         long e = System.currentTimeMillis() - s;
         System.out.println("批量请求:  耗时: " + e + " ms");
     }
-
 }

@@ -5,23 +5,21 @@
  */
 package org.redkalex.source.mongo;
 
+import static org.redkale.source.DataSources.*;
+
 import org.redkale.annotation.Priority;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.source.spi.DataSourceProvider;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-700)
 public class MongodbDriverDataSourceProvider implements DataSourceProvider {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
         try {
-            Object.class.isAssignableFrom(com.mongodb.reactivestreams.client.MongoClient.class); //试图加载MongoClient相关类
+            Object.class.isAssignableFrom(com.mongodb.reactivestreams.client.MongoClient.class); // 试图加载MongoClient相关类
             String dbtype = config.getValue("dbtype");
             if (dbtype == null) {
                 AnyValue read = config.getAnyValue("read");

@@ -8,12 +8,9 @@ import java.nio.ByteBuffer;
 import org.redkale.annotation.Nullable;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public interface PgColumnDecodeable {
 
-    //attr可能会为null
+    // attr可能会为null
     Serializable decode(ByteBuffer buffer, ByteArray array, @Nullable Attribute attr, int len);
 }

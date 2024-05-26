@@ -29,8 +29,8 @@ import org.redkale.util.RedkaleException;
 import org.redkale.util.Utility;
 
 /**
- * 配置项:
- * &#60;xxljob addresses="http://localhost:8080/xxl-job-admin" executorName="xxx" ip="127.0.0.1" port="5678" accessToken="default_token" /&#62;
+ * 配置项: &#60;xxljob addresses="http://localhost:8080/xxl-job-admin" executorName="xxx" ip="127.0.0.1" port="5678"
+ * accessToken="default_token" /&#62;
  *
  * @author zhangjx
  */
@@ -73,7 +73,10 @@ public class XxljobScheduleManager extends ScheduleManagerService {
                     String regUrl = xxljobConfig.getDomain() + "/api/registryRemove";
                     String paramBody = JsonConvert.root().convertTo(registryParam);
                     String regResult = Utility.postHttpContent(regUrl, xxljobConfig.getHeaders(), paramBody);
-                    logger.log(Level.INFO, XxljobScheduleManager.class.getSimpleName() + " registryRemove(" + regUrl + ") : " + regResult);
+                    logger.log(
+                            Level.INFO,
+                            XxljobScheduleManager.class.getSimpleName() + " registryRemove(" + regUrl + ") : "
+                                    + regResult);
                 }
                 server.shutdown();
             } catch (Exception ex) {
@@ -82,9 +85,7 @@ public class XxljobScheduleManager extends ScheduleManagerService {
         }
     }
 
-    /**
-     * 服务全部启动前被调用
-     */
+    /** 服务全部启动前被调用 */
     @Override
     public void onServersPreStart() {
         if (application.isCompileMode()) {
@@ -92,18 +93,18 @@ public class XxljobScheduleManager extends ScheduleManagerService {
         }
         XxljobConfig clientConf = this.xxljobConfig;
         AnyValueWriter httpConf = AnyValueWriter.create()
-            .addValue("name", "xxljob-httpserver")
-            .addValue("host", clientConf.getIp())
-            .addValue("port", clientConf.getPort());
+                .addValue("name", "xxljob-httpserver")
+                .addValue("host", clientConf.getIp())
+                .addValue("port", clientConf.getPort());
         try {
             HttpServer http = new HttpServer(application);
             http.init(httpConf);
             addHttpServlet(http);
             this.server = http;
             http.start();
-            //port可能配的是0，需要重新设置
+            // port可能配的是0，需要重新设置
             clientConf.setPort(http.getSocketAddress().getPort());
-            //注册
+            // 注册
             RegistryParam regParam = new RegistryParam();
             regParam.setRegistryGroup("EXECUTOR");
             regParam.setRegistryKey(clientConf.getExecutorName());
@@ -112,71 +113,92 @@ public class XxljobScheduleManager extends ScheduleManagerService {
             String regUrl = clientConf.getDomain() + "/api/registry";
             String regResult = Utility.postHttpContent(regUrl, clientConf.getHeaders(), paramBody);
             this.registryParam = regParam;
-            logger.log(Level.INFO, XxljobScheduleManager.class.getSimpleName() + " registry(" + regUrl + ")(" + paramBody + ") : " + regResult);
+            logger.log(
+                    Level.INFO,
+                    XxljobScheduleManager.class.getSimpleName() + " registry(" + regUrl + ")(" + paramBody + ") : "
+                            + regResult);
         } catch (Exception ex) {
-            throw new RedkaleException(XxljobScheduleManager.class.getSimpleName() + " connect " + clientConf.getDomain() + "/api/registry" + " error", ex);
+            throw new RedkaleException(
+                    XxljobScheduleManager.class.getSimpleName() + " connect " + clientConf.getDomain() + "/api/registry"
+                            + " error",
+                    ex);
         }
     }
 
     private void addHttpServlet(HttpServer http) {
         final JsonConvert convert = JsonConvert.root();
         http.addHttpServlet("/beat", (request, response) -> {
-            response.finishJson(ReturnT.SUCCESS);
-        }).addHttpServlet("/idleBeat", (request, response) -> {
-            IdleBeatParam param = convert.convertFrom(IdleBeatParam.class, request.getBody());
-            XxljobTask task = xxljobids.get(param.getJobId());
-            if (task == null || task.doing()) {
-                response.finishJson(new ReturnT<String>(ReturnT.FAIL_CODE, "job thread is running or has trigger queue."));
-            } else {
-                response.finishJson(ReturnT.SUCCESS);
-            }
-        }).addHttpServlet("/run", (request, response) -> {
-            TriggerParam param = convert.convertFrom(TriggerParam.class, request.getBody());
-            XxljobTask task = xxljobs.get(param.getExecutorHandler());
-            if (task == null) {
-                response.finishJson(new ReturnT<String>(ReturnT.FAIL_CODE, "job handler [" + param.getExecutorHandler() + "] not found."));
-            } else {
-                if (task.jobid == 0) {
-                    task.jobid = param.getJobId();
-                    xxljobids.put(task.jobid, task);
-                }
-                ReturnT rs = null;
-                task.lock.lock();
-                try {
-                    Map<String, Object> eventMap = task.eventMap();
-                    if (eventMap != null) {
-                        eventMap.clear();
-                        eventMap.put("param", param.getExecutorParams());
-                        eventMap.put("index", param.getBroadcastIndex());
-                        eventMap.put("total", param.getBroadcastTotal());
+                    response.finishJson(ReturnT.SUCCESS);
+                })
+                .addHttpServlet("/idleBeat", (request, response) -> {
+                    IdleBeatParam param = convert.convertFrom(IdleBeatParam.class, request.getBody());
+                    XxljobTask task = xxljobids.get(param.getJobId());
+                    if (task == null || task.doing()) {
+                        response.finishJson(
+                                new ReturnT<String>(ReturnT.FAIL_CODE, "job thread is running or has trigger queue."));
+                    } else {
+                        response.finishJson(ReturnT.SUCCESS);
                     }
-                    rs = task.run();
-                } finally {
-                    task.lock.unlock();
-                }
-                response.finishJson(rs);
-                HandleCallbackParam callbackParam = new HandleCallbackParam(param.getLogId(), param.getLogDateTime(), rs.getCode(), rs.getMsg());
-                String callbackUrl = xxljobConfig.getDomain() + "/api/callback";
-                String callbackBody = JsonConvert.root().convertTo(new HandleCallbackParam[]{callbackParam});
-                Utility.postHttpContentAsync(callbackUrl, xxljobConfig.getHeaders(), callbackBody);
-            }
-        }).addHttpServlet("/kill", (request, response) -> {
-            KillParam param = convert.convertFrom(KillParam.class, request.getBody());
-            XxljobTask task = xxljobids.get(param.getJobId());
-            if (task == null) {
-                response.finishJson(new ReturnT<String>(ReturnT.SUCCESS_CODE, "job thread already killed."));
-            } else {
-                task.stop();
-                response.finishJson(ReturnT.SUCCESS);
-            }
-        }).addHttpServlet("/log", (request, response) -> {
-            response.finishJson(ReturnT.SUCCESS);
-        });
+                })
+                .addHttpServlet("/run", (request, response) -> {
+                    TriggerParam param = convert.convertFrom(TriggerParam.class, request.getBody());
+                    XxljobTask task = xxljobs.get(param.getExecutorHandler());
+                    if (task == null) {
+                        response.finishJson(new ReturnT<String>(
+                                ReturnT.FAIL_CODE, "job handler [" + param.getExecutorHandler() + "] not found."));
+                    } else {
+                        if (task.jobid == 0) {
+                            task.jobid = param.getJobId();
+                            xxljobids.put(task.jobid, task);
+                        }
+                        ReturnT rs = null;
+                        task.lock.lock();
+                        try {
+                            Map<String, Object> eventMap = task.eventMap();
+                            if (eventMap != null) {
+                                eventMap.clear();
+                                eventMap.put("param", param.getExecutorParams());
+                                eventMap.put("index", param.getBroadcastIndex());
+                                eventMap.put("total", param.getBroadcastTotal());
+                            }
+                            rs = task.run();
+                        } finally {
+                            task.lock.unlock();
+                        }
+                        response.finishJson(rs);
+                        HandleCallbackParam callbackParam = new HandleCallbackParam(
+                                param.getLogId(), param.getLogDateTime(), rs.getCode(), rs.getMsg());
+                        String callbackUrl = xxljobConfig.getDomain() + "/api/callback";
+                        String callbackBody = JsonConvert.root().convertTo(new HandleCallbackParam[] {callbackParam});
+                        Utility.postHttpContentAsync(callbackUrl, xxljobConfig.getHeaders(), callbackBody);
+                    }
+                })
+                .addHttpServlet("/kill", (request, response) -> {
+                    KillParam param = convert.convertFrom(KillParam.class, request.getBody());
+                    XxljobTask task = xxljobids.get(param.getJobId());
+                    if (task == null) {
+                        response.finishJson(new ReturnT<String>(ReturnT.SUCCESS_CODE, "job thread already killed."));
+                    } else {
+                        task.stop();
+                        response.finishJson(ReturnT.SUCCESS);
+                    }
+                })
+                .addHttpServlet("/log", (request, response) -> {
+                    response.finishJson(ReturnT.SUCCESS);
+                });
     }
 
     @Override
-    protected ScheduledTask createdOnlyNameTask(WeakReference ref, Method method, String name,
-        String cron, String fixedDelay, String fixedRate, String initialDelay, String zone, TimeUnit timeUnit) {
+    protected ScheduledTask createdOnlyNameTask(
+            WeakReference ref,
+            Method method,
+            String name,
+            String cron,
+            String fixedDelay,
+            String fixedRate,
+            String initialDelay,
+            String zone,
+            TimeUnit timeUnit) {
         if (xxljobs.containsKey(name)) {
             throw new RedkaleException("@" + Scheduled.class.getSimpleName() + ".name (" + name + ") is repeat");
         }
@@ -220,12 +242,12 @@ public class XxljobScheduleManager extends ScheduleManagerService {
 
         @Override
         public void init() {
-            //do nothing
+            // do nothing
         }
 
         @Override
         public void start() {
-            //do nothing
+            // do nothing
         }
     }
 }

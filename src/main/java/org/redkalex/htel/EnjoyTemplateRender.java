@@ -32,14 +32,15 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
 
     @Override
     public void init(HttpContext context, AnyValue config) {
-        String engineName = "engine:" + context.getServerAddress().getHostString() + ":" + context.getServerAddress().getPort();
+        String engineName = "engine:" + context.getServerAddress().getHostString() + ":"
+                + context.getServerAddress().getPort();
         this.engine = com.jfinal.template.Engine.use(engineName);
         if (this.engine == null) this.engine = com.jfinal.template.Engine.create(engineName);
         this.engine.setDevMode(logger.isLoggable(Level.FINE));
         final com.jfinal.template.EngineConfig engineConfig = this.engine.getEngineConfig();
         String defroot = root == null ? new File(home, "templates").getPath() : root;
         String path = config == null ? defroot : config.getOrDefault("path", defroot);
-        if (path.isEmpty()) path = defroot;  //path可能会配置为""
+        if (path.isEmpty()) path = defroot; // path可能会配置为""
         engineConfig.setBaseTemplatePath(path);
         if (config != null) {
             for (AnyValue kit : config.getAnyValues("sharekit")) {
@@ -52,12 +53,12 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
                     continue;
                 }
                 if (engineConfig.getSharedObjectMap() != null
-                    && engineConfig.getSharedObjectMap().containsKey(name)) continue;
+                        && engineConfig.getSharedObjectMap().containsKey(name)) continue;
                 try {
                     Class clazz = Thread.currentThread().getContextClassLoader().loadClass(resvalue);
                     Object val = context.getResourceFactory().find(resname == null ? "" : resname, clazz);
                     RedkaleClassLoader.putReflectionPublicConstructors(clazz, clazz.getName());
-                    if (val == null) { //class可能不是Service，不会被自动注入
+                    if (val == null) { // class可能不是Service，不会被自动注入
                         val = clazz.getConstructor().newInstance();
                     }
                     engineConfig.addSharedObject(name, val);
@@ -99,7 +100,10 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
     public static class Size extends com.jfinal.template.Directive {
 
         @Override
-        public void exec(com.jfinal.template.Env env, com.jfinal.template.stat.Scope scope, com.jfinal.template.io.Writer writer) {
+        public void exec(
+                com.jfinal.template.Env env,
+                com.jfinal.template.stat.Scope scope,
+                com.jfinal.template.io.Writer writer) {
             try {
                 writer.write(size(exprList.eval(scope)));
             } catch (RuntimeException e) {
@@ -141,7 +145,10 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
     public static class BrEscape extends com.jfinal.template.Directive {
 
         @Override
-        public void exec(com.jfinal.template.Env env, com.jfinal.template.stat.Scope scope, com.jfinal.template.io.Writer writer) {
+        public void exec(
+                com.jfinal.template.Env env,
+                com.jfinal.template.stat.Scope scope,
+                com.jfinal.template.io.Writer writer) {
             try {
                 Object value = exprList.eval(scope);
                 if (value instanceof String) {
@@ -198,6 +205,5 @@ public class EnjoyTemplateRender implements org.redkale.net.http.HttpRender {
                 }
             }
         }
-
     }
 }

@@ -5,10 +5,7 @@
  */
 package org.redkalex.source.search;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class ActionResult extends BaseBean {
 
     public String _index;
@@ -28,5 +25,4 @@ public class ActionResult extends BaseBean {
     public int successCount() {
         return _shards == null ? 0 : _shards.successful;
     }
-
 }

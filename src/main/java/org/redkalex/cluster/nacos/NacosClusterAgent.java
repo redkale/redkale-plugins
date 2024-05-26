@@ -21,24 +21,31 @@ import org.redkale.service.Service;
 import org.redkale.util.*;
 
 /**
- * <blockquote><pre>
+ *
+ *
+ * <blockquote>
+ *
+ * <pre>
  *  &lt;cluster type="nacos" apiurl="http://localhost:8500/nacos/v1" ttls="5" namespaceid="dev"&gt;
  *  &lt;/cluster&gt;
- * </pre></blockquote>
+ * </pre>
+ *
+ * </blockquote>
  *
  * @author zhangjx
  */
 public class NacosClusterAgent extends ClusterAgent {
 
-    protected static final Map<String, Serializable> httpHeaders = (Map) Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
+    protected static final Map<String, Serializable> httpHeaders =
+            (Map) Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
 
-    protected HttpClient httpClient; //JDK11里面的HttpClient
+    protected HttpClient httpClient; // JDK11里面的HttpClient
 
-    protected String apiUrl; //不会以/结尾，且不以/nacos结尾，目前以/nacos/v1结尾
+    protected String apiUrl; // 不会以/结尾，且不以/nacos结尾，目前以/nacos/v1结尾
 
-    protected int ttls = 5; //定时检查的秒数
+    protected int ttls = 5; // 定时检查的秒数
 
-    protected String namespaceid; //命名空间
+    protected String namespaceid; // 命名空间
 
     protected ScheduledThreadPoolExecutor scheduler;
 
@@ -50,10 +57,10 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected ScheduledFuture taskFuture4;
 
-    //可能被HttpMessageClient用到的服务 key: serviceName
+    // 可能被HttpMessageClient用到的服务 key: serviceName
     protected final ConcurrentHashMap<String, Set<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
 
-    //可能被sncp用到的服务 key: serviceName
+    // 可能被sncp用到的服务 key: serviceName
     protected final ConcurrentHashMap<String, Set<InetSocketAddress>> sncpAddressMap = new ConcurrentHashMap<>();
 
     @Override
@@ -83,15 +90,27 @@ public class NacosClusterAgent extends ClusterAgent {
             if ("ttls".equals(event.name())) {
                 newTtls = Integer.parseInt(event.newValue().toString());
                 if (newTtls < 5) {
-                    sb.append(NacosClusterAgent.class.getSimpleName()).append(" cannot change '")
-                        .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                    sb.append(NacosClusterAgent.class.getSimpleName())
+                            .append(" cannot change '")
+                            .append(event.name())
+                            .append("' to '")
+                            .append(event.coverNewValue())
+                            .append("'\r\n");
                 } else {
-                    sb.append(NacosClusterAgent.class.getSimpleName()).append(" change '")
-                        .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                    sb.append(NacosClusterAgent.class.getSimpleName())
+                            .append(" change '")
+                            .append(event.name())
+                            .append("' to '")
+                            .append(event.coverNewValue())
+                            .append("'\r\n");
                 }
             } else {
-                sb.append(NacosClusterAgent.class.getSimpleName()).append(" skip change '")
-                    .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+                sb.append(NacosClusterAgent.class.getSimpleName())
+                        .append(" skip change '")
+                        .append(event.name())
+                        .append("' to '")
+                        .append(event.coverNewValue())
+                        .append("'\r\n");
             }
         }
         if (newTtls != this.ttls) {
@@ -110,7 +129,7 @@ public class NacosClusterAgent extends ClusterAgent {
         }
     }
 
-    @Override  //ServiceLoader时判断配置是否符合当前实现类
+    @Override // ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) {
             return false;
@@ -127,50 +146,75 @@ public class NacosClusterAgent extends ClusterAgent {
         if (this.scheduler == null) {
             AtomicInteger counter = new AtomicInteger();
             this.scheduler = new ScheduledThreadPoolExecutor(4, (Runnable r) -> {
-                final Thread t = new Thread(r, "Redkalex-" + NacosClusterAgent.class.getSimpleName() + "-Task-Thread-" + counter.incrementAndGet());
+                final Thread t = new Thread(
+                        r,
+                        "Redkalex-" + NacosClusterAgent.class.getSimpleName() + "-Task-Thread-"
+                                + counter.incrementAndGet());
                 t.setDaemon(true);
                 return t;
             });
         }
-        //delay为了错开请求
+        // delay为了错开请求
         if (this.taskFuture1 != null) {
             this.taskFuture1.cancel(true);
         }
-        this.taskFuture1 = this.scheduler.scheduleAtFixedRate(() -> {
-            beatApplicationHealth();
-            localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
-                beatLocalHealth(entry);
-            });
-        }, 18, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+        this.taskFuture1 = this.scheduler.scheduleAtFixedRate(
+                () -> {
+                    beatApplicationHealth();
+                    localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
+                        beatLocalHealth(entry);
+                    });
+                },
+                18,
+                Math.max(2000, ttls * 1000 - 168),
+                TimeUnit.MILLISECONDS);
 
         if (this.taskFuture2 != null) {
             this.taskFuture2.cancel(true);
         }
-        this.taskFuture2 = this.scheduler.scheduleAtFixedRate(() -> {
-            reloadSncpAddressHealth();
-        }, 68 * 2, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+        this.taskFuture2 = this.scheduler.scheduleAtFixedRate(
+                () -> {
+                    reloadSncpAddressHealth();
+                },
+                68 * 2,
+                Math.max(2000, ttls * 1000 - 168),
+                TimeUnit.MILLISECONDS);
 
         if (this.taskFuture3 != null) {
             this.taskFuture3.cancel(true);
         }
-        this.taskFuture3 = this.scheduler.scheduleAtFixedRate(() -> {
-            reloadHttpAddressHealth();
-        }, 128 * 3, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+        this.taskFuture3 = this.scheduler.scheduleAtFixedRate(
+                () -> {
+                    reloadHttpAddressHealth();
+                },
+                128 * 3,
+                Math.max(2000, ttls * 1000 - 168),
+                TimeUnit.MILLISECONDS);
 
         if (this.taskFuture4 != null) {
             this.taskFuture4.cancel(true);
         }
-        this.taskFuture4 = this.scheduler.scheduleAtFixedRate(() -> {
-            remoteEntrys.values().stream().filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol)).forEach(entry -> {
-                updateSncpAddress(entry);
-            });
-        }, 188 * 4, Math.max(2000, ttls * 1000 - 168), TimeUnit.MILLISECONDS);
+        this.taskFuture4 = this.scheduler.scheduleAtFixedRate(
+                () -> {
+                    remoteEntrys.values().stream()
+                            .filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol))
+                            .forEach(entry -> {
+                                updateSncpAddress(entry);
+                            });
+                },
+                188 * 4,
+                Math.max(2000, ttls * 1000 - 168),
+                TimeUnit.MILLISECONDS);
     }
 
     protected void reloadSncpAddressHealth() {
         try {
-            String content = Utility.remoteHttpContent(httpClient, "GET",
-                this.apiUrl + "/ns/service/list?pageNo=1&pageSize=99999&namespaceId=" + urlEncode(namespaceid), StandardCharsets.UTF_8, httpHeaders);
+            String content = Utility.remoteHttpContent(
+                    httpClient,
+                    "GET",
+                    this.apiUrl + "/ns/service/list?pageNo=1&pageSize=99999&namespaceId=" + urlEncode(namespaceid),
+                    StandardCharsets.UTF_8,
+                    httpHeaders);
             final ServiceList list = JsonConvert.root().convertFrom(ServiceList.class, content);
             Set<String> sncpkeys = new HashSet<>();
             if (list != null && list.doms != null) {
@@ -182,7 +226,8 @@ public class NacosClusterAgent extends ClusterAgent {
             }
             sncpkeys.forEach(serviceName -> {
                 try {
-                    this.sncpAddressMap.put(serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
+                    this.sncpAddressMap.put(
+                            serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "reloadSncpAddressHealth check " + serviceName + " error", e);
                 }
@@ -196,7 +241,8 @@ public class NacosClusterAgent extends ClusterAgent {
         try {
             this.httpAddressMap.keySet().stream().forEach(serviceName -> {
                 try {
-                    this.httpAddressMap.put(serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
+                    this.httpAddressMap.put(
+                            serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "reloadHttpAddressHealth check " + serviceName + " error", e);
                 }
@@ -206,7 +252,7 @@ public class NacosClusterAgent extends ClusterAgent {
         }
     }
 
-    @Override //获取SNCP远程服务的可用ip列表
+    @Override // 获取SNCP远程服务的可用ip列表
     public CompletableFuture<Set<InetSocketAddress>> querySncpAddress(String protocol, String module, String resname) {
         final String serviceName = generateSncpServiceName(protocol, module, resname);
         Set<InetSocketAddress> rs = sncpAddressMap.get(serviceName);
@@ -219,7 +265,7 @@ public class NacosClusterAgent extends ClusterAgent {
         });
     }
 
-    @Override //获取HTTP远程服务的可用ip列表
+    @Override // 获取HTTP远程服务的可用ip列表
     public CompletableFuture<Set<InetSocketAddress>> queryHttpAddress(String protocol, String module, String resname) {
         final String serviceName = generateHttpServiceName(protocol, module, resname);
         Set<InetSocketAddress> rs = httpAddressMap.get(serviceName);
@@ -238,15 +284,19 @@ public class NacosClusterAgent extends ClusterAgent {
     }
 
     private CompletableFuture<Set<InetSocketAddress>> queryAddress(final String serviceName) {
-        //return (httpClient != null) ? queryAddress11(serviceName) : queryAddress8(serviceName);
+        // return (httpClient != null) ? queryAddress11(serviceName) : queryAddress8(serviceName);
         return queryAddress11(serviceName);
     }
 
-    //JDK11+版本以上的纯异步方法
+    // JDK11+版本以上的纯异步方法
     private CompletableFuture<Set<InetSocketAddress>> queryAddress11(final String serviceName) {
         final HttpClient client = httpClient;
-        String url = this.apiUrl + "/ns/instance/list?serviceName=" + urlEncode(serviceName) + "&namespaceId=" + urlEncode(namespaceid);
-        HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url)).expectContinue(true).timeout(Duration.ofMillis(6000));
+        String url = this.apiUrl + "/ns/instance/list?serviceName=" + urlEncode(serviceName) + "&namespaceId="
+                + urlEncode(namespaceid);
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .expectContinue(true)
+                .timeout(Duration.ofMillis(6000));
         httpHeaders.forEach((n, v) -> {
             if (v instanceof Collection) {
                 for (Object val : (Collection) v) {
@@ -256,16 +306,17 @@ public class NacosClusterAgent extends ClusterAgent {
                 builder.header(n, v.toString());
             }
         });
-        return client.sendAsync(builder.GET().build(), BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(resp -> {
-            final ServiceEntry entry = JsonConvert.root().convertFrom(ServiceEntry.class, resp.body());
-            final Set<InetSocketAddress> set = new HashSet<>();
-            if (entry != null && entry.hosts != null) {
-                for (ServiceInstance instance : entry.hosts) {
-                    set.add(instance.createSocketAddress());
-                }
-            }
-            return set;
-        });
+        return client.sendAsync(builder.GET().build(), BodyHandlers.ofString(StandardCharsets.UTF_8))
+                .thenApply(resp -> {
+                    final ServiceEntry entry = JsonConvert.root().convertFrom(ServiceEntry.class, resp.body());
+                    final Set<InetSocketAddress> set = new HashSet<>();
+                    if (entry != null && entry.hosts != null) {
+                        for (ServiceInstance instance : entry.hosts) {
+                            set.add(instance.createSocketAddress());
+                        }
+                    }
+                    return set;
+                });
     }
 
     protected boolean isApplicationHealth() {
@@ -273,14 +324,15 @@ public class NacosClusterAgent extends ClusterAgent {
         String serviceType = generateApplicationServiceType();
         String host = generateApplicationHost();
         int port = generateApplicationPort();
-        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) 
-            + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthyOnly=true";
+        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName="
+                + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthyOnly=true";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "GET", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(
+                    httpClient, "GET", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (logger.isLoggable(Level.FINEST)) {
                 logger.log(Level.FINEST, "isApplicationHealth: " + querys + " --> " + rs);
             }
-            //caused: no service DEFAULT_GROUP@@application.platf.node.20100 found!;
+            // caused: no service DEFAULT_GROUP@@application.platf.node.20100 found!;
             if (!rs.startsWith("{")) {
                 return false;
             }
@@ -299,16 +351,20 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected void beatHealth(String serviceName, String serviceType, String host, int port) {
         String beat = "{\"ip\":\"" + host + "\",\"metadata\":{},\"port\":" + port
-            + ",\"scheduled\":true,\"groupName\":\"" + serviceType
-            + "\",\"namespaceId\":\"" + namespaceid
-            + "\",\"serviceName\":\"" + serviceName + "\"}";
+                + ",\"scheduled\":true,\"groupName\":\"" + serviceType
+                + "\",\"namespaceId\":\"" + namespaceid
+                + "\",\"serviceName\":\"" + serviceName + "\"}";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "PUT",
-                this.apiUrl + "/ns/instance/beat?serviceName=" + urlEncode(serviceName)
-                + "&groupName=" + serviceType
-                + "&namespaceId=" + urlEncode(namespaceid)
-                + "&beat=" + urlEncode(beat), StandardCharsets.UTF_8, httpHeaders);
-            //if (finest) logger.log(Level.FINEST, "checkLocalHealth: " + beat + " --> " + rs);
+            String rs = Utility.remoteHttpContent(
+                    httpClient,
+                    "PUT",
+                    this.apiUrl + "/ns/instance/beat?serviceName=" + urlEncode(serviceName)
+                            + "&groupName=" + serviceType
+                            + "&namespaceId=" + urlEncode(namespaceid)
+                            + "&beat=" + urlEncode(beat),
+                    StandardCharsets.UTF_8,
+                    httpHeaders);
+            // if (finest) logger.log(Level.FINEST, "checkLocalHealth: " + beat + " --> " + rs);
             if (!rs.startsWith("{")) {
                 logger.log(Level.SEVERE, serviceName + " check error: " + rs);
             }
@@ -318,11 +374,12 @@ public class NacosClusterAgent extends ClusterAgent {
     }
 
     protected void register(String serviceName, String serviceType, String host, int port) {
-        //https://nacos.io/zh-cn/docs/open-api.html#2.1
-        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) 
-            + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthy=true&enabled=true&ephemeral=false";
+        // https://nacos.io/zh-cn/docs/open-api.html#2.1
+        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName="
+                + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&healthy=true&enabled=true&ephemeral=false";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "POST", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(
+                    httpClient, "POST", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (logger.isLoggable(Level.FINEST)) {
                 logger.log(Level.FINEST, "register: " + querys + " --> " + rs);
             }
@@ -334,12 +391,19 @@ public class NacosClusterAgent extends ClusterAgent {
         }
     }
 
-    protected void deregister(String serviceName, String serviceType, String host, int port, ClusterEntry currEntry, boolean realCanceled) {
-        //https://nacos.io/zh-cn/docs/open-api.html#2.2
-        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) 
-            + "&groupName=" + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&ephemeral=false";
+    protected void deregister(
+            String serviceName,
+            String serviceType,
+            String host,
+            int port,
+            ClusterEntry currEntry,
+            boolean realCanceled) {
+        // https://nacos.io/zh-cn/docs/open-api.html#2.2
+        String querys = "ip=" + host + "&port=" + port + "&serviceName=" + urlEncode(serviceName) + "&groupName="
+                + serviceType + "&namespaceId=" + urlEncode(namespaceid) + "&ephemeral=false";
         try {
-            String rs = Utility.remoteHttpContent(httpClient, "DELETE", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
+            String rs = Utility.remoteHttpContent(
+                    httpClient, "DELETE", this.apiUrl + "/ns/instance?" + querys, StandardCharsets.UTF_8, httpHeaders);
             if (realCanceled && currEntry != null) {
                 currEntry.canceled = true;
             }
@@ -359,11 +423,16 @@ public class NacosClusterAgent extends ClusterAgent {
     }
 
     protected void beatApplicationHealth() {
-        beatHealth(generateApplicationServiceName(), generateApplicationServiceType(), generateApplicationHost(), generateApplicationPort());
+        beatHealth(
+                generateApplicationServiceName(),
+                generateApplicationServiceType(),
+                generateApplicationHost(),
+                generateApplicationPort());
     }
 
     protected void beatLocalHealth(final ClusterEntry cluster) {
-        beatHealth(cluster.serviceName, cluster.resourceType, cluster.address.getHostString(), cluster.address.getPort());
+        beatHealth(
+                cluster.serviceName, cluster.resourceType, cluster.address.getHostString(), cluster.address.getPort());
     }
 
     @Override
@@ -372,12 +441,22 @@ public class NacosClusterAgent extends ClusterAgent {
             throw new RedkaleException("application.nodeid=" + nodeid + " exists in cluster");
         }
         deregister(application);
-        register(generateApplicationServiceName(), generateApplicationServiceType(), generateApplicationHost(), generateApplicationPort());
+        register(
+                generateApplicationServiceName(),
+                generateApplicationServiceType(),
+                generateApplicationHost(),
+                generateApplicationPort());
     }
 
     @Override
     public void deregister(Application application) {
-        deregister(generateApplicationServiceName(), generateApplicationServiceType(), generateApplicationHost(), generateApplicationPort(), null, false);
+        deregister(
+                generateApplicationServiceName(),
+                generateApplicationServiceType(),
+                generateApplicationHost(),
+                generateApplicationPort(),
+                null,
+                false);
     }
 
     @Override
@@ -395,12 +474,24 @@ public class NacosClusterAgent extends ClusterAgent {
 
     protected void deregister(NodeServer ns, String protocol, Service service, boolean realCanceled) {
         String serviceid = generateServiceId(ns, protocol, service);
-        ClusterEntry currEntry = localEntrys.values().stream().filter(x -> serviceid.equals(x.serviceid)).findAny().orElse(null);
+        ClusterEntry currEntry = localEntrys.values().stream()
+                .filter(x -> serviceid.equals(x.serviceid))
+                .findAny()
+                .orElse(null);
         if (currEntry == null) {
-            currEntry = remoteEntrys.values().stream().filter(x -> serviceid.equals(x.serviceid)).findAny().orElse(null);
+            currEntry = remoteEntrys.values().stream()
+                    .filter(x -> serviceid.equals(x.serviceid))
+                    .findAny()
+                    .orElse(null);
         }
         ClusterEntry cluster = currEntry == null ? new ClusterEntry(ns, protocol, service) : currEntry;
-        deregister(cluster.serviceName, cluster.resourceType, cluster.address.getHostString(), cluster.address.getPort(), currEntry, realCanceled);
+        deregister(
+                cluster.serviceName,
+                cluster.resourceType,
+                cluster.address.getHostString(),
+                cluster.address.getPort(),
+                currEntry,
+                realCanceled);
     }
 
     public static final class ServiceList {

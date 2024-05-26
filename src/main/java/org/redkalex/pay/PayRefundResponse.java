@@ -9,7 +9,6 @@ import java.util.Map;
 import org.redkale.convert.ConvertDisabled;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
@@ -56,5 +55,4 @@ public class PayRefundResponse extends PayResponse {
     public void setRefundedmoney(long refundedMoney) {
         this.refundedMoney = refundedMoney;
     }
-
 }

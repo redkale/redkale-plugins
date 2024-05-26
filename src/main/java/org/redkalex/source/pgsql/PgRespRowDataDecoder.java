@@ -5,32 +5,37 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import org.redkale.util.*;
 import static org.redkalex.source.pgsql.PgClientCodec.*;
 import static org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode.*;
 
-/**
- *
- * @author zhangjx
- */
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import org.redkale.util.*;
+
+/** @author zhangjx */
 public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
 
     public static final PgRespRowDataDecoder instance = new PgRespRowDataDecoder();
 
-    private PgRespRowDataDecoder() {
-    }
+    private PgRespRowDataDecoder() {}
 
     @Override
     public byte messageid() {
         return MESSAGE_TYPE_DATA_ROW; // 'D'
     }
 
-    @Override  //RowData 一行数据
-    public PgRowData read(PgClientConnection conn, ByteBuffer buffer, final int length, ByteArray array, PgClientRequest request, PgResultSet dataset) {
-        PgPrepareDesc prepareDesc = request.getType() == PgClientRequest.REQ_TYPE_EXTEND_QUERY ? conn.getPgPrepareDesc(((PgReqExtended) request).sql) : null;
-        if (prepareDesc == null) { //text
+    @Override // RowData 一行数据
+    public PgRowData read(
+            PgClientConnection conn,
+            ByteBuffer buffer,
+            final int length,
+            ByteArray array,
+            PgClientRequest request,
+            PgResultSet dataset) {
+        PgPrepareDesc prepareDesc = request.getType() == PgClientRequest.REQ_TYPE_EXTEND_QUERY
+                ? conn.getPgPrepareDesc(((PgReqExtended) request).sql)
+                : null;
+        if (prepareDesc == null) { // text
             byte[][] byteValues = new byte[buffer.getShort()][];
             for (int i = 0; i < byteValues.length; i++) {
                 byteValues[i] = (byte[]) PgsqlFormatter.decodeRowColumnValue(buffer, array, null, buffer.getInt());
@@ -38,7 +43,7 @@ public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
             return new PgRowData(byteValues, null);
         }
         PgPrepareDesc.PgExtendMode mode = prepareDesc.mode();
-        //binary
+        // binary
         PgColumnFormat[] formats = prepareDesc.resultFormats();
         Attribute[] attrs = prepareDesc.resultAttrs();
         Serializable[] realValues = new Serializable[buffer.getShort()];
@@ -60,5 +65,4 @@ public class PgRespRowDataDecoder extends PgRespDecoder<PgRowData> {
             return new PgRowData(null, realValues);
         }
     }
-
 }

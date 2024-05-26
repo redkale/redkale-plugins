@@ -13,10 +13,7 @@ import org.redkale.net.client.*;
 import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
 
     public static final byte MESSAGE_TYPE_BACKEND_KEY_DATA = 'K';
@@ -87,7 +84,7 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
     }
 
     protected void offerResultSet(PgResultSet rs) {
-        //do nothing
+        // do nothing
     }
 
     protected ByteArray pollArray() {
@@ -106,12 +103,14 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
             return;
         }
         ByteBuffer buffer = realBuf;
-        //logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", realbuf读到的长度: " + realBuf.remaining() + ", halfFrameBytes=" + (halfFrameBytes == null ? -1 : halfFrameBytes.length()));
-        if (halfFrameBytes != null) {  //存在半包
+        // logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn +
+        // ", realbuf读到的长度: " + realBuf.remaining() + ", halfFrameBytes=" + (halfFrameBytes == null ? -1 :
+        // halfFrameBytes.length()));
+        if (halfFrameBytes != null) { // 存在半包
             int remain = realBuf.remaining();
             if (halfFrameCmd == 0) {
                 int cha = 5 - halfFrameBytes.length();
-                if (remain < cha) { //还是不够5字节
+                if (remain < cha) { // 还是不够5字节
                     halfFrameBytes.put(realBuf);
                     return;
                 }
@@ -119,24 +118,24 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                 halfFrameCmd = (char) halfFrameBytes.get(0);
                 halfFrameLength = halfFrameBytes.getInt(1);
             }
-            //此时必然有halfFrameCmd、halfFrameLength
-            int bulen = halfFrameLength + 1 - halfFrameBytes.length(); //还差多少字节
-            if (bulen > remain) { //不够，继续读取
+            // 此时必然有halfFrameCmd、halfFrameLength
+            int bulen = halfFrameLength + 1 - halfFrameBytes.length(); // 还差多少字节
+            if (bulen > remain) { // 不够，继续读取
                 halfFrameBytes.put(realBuf);
                 return;
             }
             halfFrameBytes.put(realBuf, bulen);
-            //此时halfFrameBytes是完整的frame数据            
+            // 此时halfFrameBytes是完整的frame数据
             buffer = ByteBuffer.wrap(halfFrameBytes.content(), 0, halfFrameBytes.length());
             halfFrameBytes = null;
             halfFrameCmd = 0;
             halfFrameLength = 0;
-        } else if (realBuf.remaining() < 5) { //第一次就只有几个字节buffer
+        } else if (realBuf.remaining() < 5) { // 第一次就只有几个字节buffer
             halfFrameBytes = pollArray();
             halfFrameBytes.put(realBuf);
             return;
         }
-        //buffer必然包含一个完整的frame数据
+        // buffer必然包含一个完整的frame数据
         PgClientRequest request = null;
         boolean update1To2 = false;
         while (buffer.hasRemaining()) {
@@ -154,14 +153,22 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     halfFrameBytes.putByte(cmd);
                     halfFrameBytes.put(buffer);
                     if (PgsqlDataSource.debug) {
-                        logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", half data continue read.");
+                        logger.log(
+                                Level.FINEST,
+                                "[" + Times.nowMillis() + "] ["
+                                        + Thread.currentThread().getName() + "]: " + conn
+                                        + ", half data continue read.");
                     }
                     return;
                 }
                 final int bufpos = buffer.position();
                 final int length = buffer.getInt();
                 if (PgsqlDataSource.debug && conn.isAuthenticated()) {
-                    logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", cmd=" + cmd + ", length=" + ((length - 4) > 9 ? "" : " ") + (length - 4) + ", remains=" + buffer.remaining());
+                    logger.log(
+                            Level.FINEST,
+                            "[" + Times.nowMillis() + "] ["
+                                    + Thread.currentThread().getName() + "]: " + conn + ", cmd=" + cmd + ", length="
+                                    + ((length - 4) > 9 ? "" : " ") + (length - 4) + ", remains=" + buffer.remaining());
                 }
                 if (buffer.remaining() < length - 4) {
                     if (halfFrameBytes == null) {
@@ -175,39 +182,45 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     halfFrameBytes.putInt(length);
                     halfFrameBytes.put(buffer);
                     if (PgsqlDataSource.debug) {
-                        logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", half data continue read.");
+                        logger.log(
+                                Level.FINEST,
+                                "[" + Times.nowMillis() + "] ["
+                                        + Thread.currentThread().getName() + "]: " + conn
+                                        + ", half data continue read.");
                     }
                     return;
                 }
-                if (cmd == MESSAGE_TYPE_AUTHENTICATION) {  // 'R' 登录鉴权
+                if (cmd == MESSAGE_TYPE_AUTHENTICATION) { // 'R' 登录鉴权
                     int type = buffer.getInt();
                     byte[] salt = null;
                     boolean authOK = false;
                     List<String> mechanisms = null;
                     PgReqAuthScramSaslContinueResult saslResult = null;
                     if (type == 0) {
-                        //认证通过     
+                        // 认证通过
                         authOK = true;
-                    } else if (type == 3 || type == 5) {//3:需要密码; 5:需要salt密码
+                    } else if (type == 3 || type == 5) { // 3:需要密码; 5:需要salt密码
                         if (type == 5) {
                             salt = new byte[4];
                             buffer.get(salt);
                         }
-                    } else if (type == 10) { //sasl
+                    } else if (type == 10) { // sasl
                         mechanisms = new ArrayList<>();
                         do {
                             mechanisms.add(readUTF8String(buffer, array));
                         } while (buffer.get() != 0);
                         if (!mechanisms.contains("SCRAM-SHA-256")) {
-                            throw new UnsupportedOperationException("SASL Authentication : only SCRAM-SHA-256 is currently supported, server wants " + mechanisms);
+                            throw new UnsupportedOperationException(
+                                    "SASL Authentication : only SCRAM-SHA-256 is currently supported, server wants "
+                                            + mechanisms);
                         }
-                    } else if (type == 11) { //sasl-continue
+                    } else if (type == 11) { // sasl-continue
                         String saslmsg = readUTF8String(buffer, array);
                         saslResult = new PgReqAuthScramSaslContinueResult((PgReqAuthScramPassword) request, saslmsg);
-                    } else if (type == 12) { //sasl-final
+                    } else if (type == 12) { // sasl-final
                         String saslmsg = readUTF8Base64String(buffer, array);
                         ((PgReqAuthScramSaslFinal) request).checkFinal(saslmsg, buffer);
-                        //while (buffer.hasRemaining()) buffer.get();
+                        // while (buffer.hasRemaining()) buffer.get();
                         authOK = true;
                     } else {
                         throw new UnsupportedOperationException("illegal type: " + type);
@@ -221,7 +234,11 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     result.setAuthMechanisms(mechanisms);
                     result.setAuthSaslContinueResult(saslResult);
                     if (buffer.position() != bufpos + length) {
-                        logger.log(Level.SEVERE, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", R buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                        logger.log(
+                                Level.SEVERE,
+                                "[" + Times.nowMillis() + "] ["
+                                        + Thread.currentThread().getName() + "]: " + conn + ", R buffer-currpos : "
+                                        + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
                     }
                     if (!buffer.hasRemaining()) {
                         halfFrameBytes = null;
@@ -238,13 +255,19 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     if (lastResult == null) {
                         lastResult = pollResultSet(request);
                     }
-                    if (request != null && request.isExtendType() && (((PgReqExtended) request).mode == PgExtendMode.FIND_ENTITY
-                        || ((PgReqExtended) request).mode == PgExtendMode.LISTALL_ENTITY)) {
+                    if (request != null
+                            && request.isExtendType()
+                            && (((PgReqExtended) request).mode == PgExtendMode.FIND_ENTITY
+                                    || ((PgReqExtended) request).mode == PgExtendMode.LISTALL_ENTITY)) {
                         buffer.position(bufpos + length);
                     } else if (request != null && (request.getType() != PgClientRequest.REQ_TYPE_QUERY)) {
                         int count = PgRespCountDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         if (PgsqlDataSource.debug) {
-                            logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", count=" + array.toString());
+                            logger.log(
+                                    Level.FINEST,
+                                    "[" + Times.nowMillis() + "] ["
+                                            + Thread.currentThread().getName() + "]: " + conn + ", count="
+                                            + array.toString());
                         }
                         if (count > -1) {
                             if (request.getType() == PgClientRequest.REQ_TYPE_BATCH) {
@@ -261,24 +284,35 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                             }
                         }
                         if (buffer.position() != bufpos + length) {
-                            logger.log(Level.SEVERE, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", C buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                            logger.log(
+                                    Level.SEVERE,
+                                    "[" + Times.nowMillis() + "] ["
+                                            + Thread.currentThread().getName() + "]: " + conn + ", C buffer-currpos : "
+                                            + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
                             buffer.position(bufpos + length);
                         }
                     } else {
                         buffer.position(bufpos + length);
                     }
-                } else if (cmd == MESSAGE_TYPE_PARAMETER_DESCRIPTION) {  // 't' ParamDesc
+                } else if (cmd == MESSAGE_TYPE_PARAMETER_DESCRIPTION) { // 't' ParamDesc
                     if (request != null) {
                         if (lastResult == null) {
                             lastResult = pollResultSet(request);
                         }
-                        PgPrepareDesc prepareDesc = request.isExtendType() ? conn.getPgPrepareDesc(((PgReqExtended) request).sql) : null;
+                        PgPrepareDesc prepareDesc =
+                                request.isExtendType() ? conn.getPgPrepareDesc(((PgReqExtended) request).sql) : null;
                         PgColumnFormat[] oldParamFormats = prepareDesc == null ? null : prepareDesc.paramFormats();
                         if (prepareDesc != null && oldParamFormats == null) {
-                            PgColumnFormat[] paramFormats = PgRespParamDescDecoder.instance.read(conn, buffer, length, array, request, lastResult);
+                            PgColumnFormat[] paramFormats = PgRespParamDescDecoder.instance.read(
+                                    conn, buffer, length, array, request, lastResult);
                             prepareDesc.updateParamFormats(paramFormats);
                             if (buffer.position() != bufpos + length) {
-                                logger.log(Level.SEVERE, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", t buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                                logger.log(
+                                        Level.SEVERE,
+                                        "[" + Times.nowMillis() + "] ["
+                                                + Thread.currentThread().getName() + "]: " + conn
+                                                + ", t buffer-currpos : " + buffer.position() + ", startpos=" + bufpos
+                                                + ", length=" + length);
                                 buffer.position(bufpos + length);
                             }
                         } else {
@@ -287,21 +321,28 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     } else {
                         buffer.position(bufpos + length);
                     }
-                } else if (cmd == MESSAGE_TYPE_ROW_DESCRIPTION) {  // 'T' RowDesc
+                } else if (cmd == MESSAGE_TYPE_ROW_DESCRIPTION) { // 'T' RowDesc
                     if (request != null) {
                         if (lastResult == null) {
                             lastResult = pollResultSet(request);
                         }
-                        PgPrepareDesc prepareDesc = request.isExtendType() ? conn.getPgPrepareDesc(((PgReqExtended) request).sql) : null;
+                        PgPrepareDesc prepareDesc =
+                                request.isExtendType() ? conn.getPgPrepareDesc(((PgReqExtended) request).sql) : null;
                         PgRowDesc oldrowDesc = prepareDesc == null ? null : prepareDesc.getRowDesc();
                         if (oldrowDesc == null) {
-                            PgRowDesc rowDesc = PgRespRowDescDecoder.instance.read(conn, buffer, length, array, request, lastResult);
+                            PgRowDesc rowDesc = PgRespRowDescDecoder.instance.read(
+                                    conn, buffer, length, array, request, lastResult);
                             lastResult.setRowDesc(rowDesc);
                             if (prepareDesc != null) {
                                 prepareDesc.updateRowDesc(rowDesc);
                             }
                             if (buffer.position() != bufpos + length) {
-                                logger.log(Level.SEVERE, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", T buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                                logger.log(
+                                        Level.SEVERE,
+                                        "[" + Times.nowMillis() + "] ["
+                                                + Thread.currentThread().getName() + "]: " + conn
+                                                + ", T buffer-currpos : " + buffer.position() + ", startpos=" + bufpos
+                                                + ", length=" + length);
                                 buffer.position(bufpos + length);
                             }
                         } else {
@@ -316,12 +357,17 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         if (lastResult == null) {
                             lastResult = pollResultSet(request);
                         }
-                        PgRowData rowData = PgRespRowDataDecoder.instance.read(conn, buffer, length, array, request, lastResult);
+                        PgRowData rowData =
+                                PgRespRowDataDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         if (rowData != PgRowData.NIL) {
                             lastResult.addRowData(rowData);
                         }
                         if (buffer.position() != bufpos + length) {
-                            logger.log(Level.SEVERE, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", D buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                            logger.log(
+                                    Level.SEVERE,
+                                    "[" + Times.nowMillis() + "] ["
+                                            + Thread.currentThread().getName() + "]: " + conn + ", D buffer-currpos : "
+                                            + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
                             buffer.position(bufpos + length);
                         }
                     } else {
@@ -329,22 +375,32 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                 } else if (cmd == MESSAGE_TYPE_ERROR_RESPONSE) { // 'E' Error
                     if (request != null) {
-                        Exception exc = PgRespErrorDecoder.instance.read(conn, buffer, length, array, request, lastResult);
+                        Exception exc =
+                                PgRespErrorDecoder.instance.read(conn, buffer, length, array, request, lastResult);
                         if (lastExc == null) {
-                            lastExc = exc; //以第一个异常为准，例如insert多个，当表不存在prepare异常时，bind的异常不是表不存在异常。
+                            lastExc = exc; // 以第一个异常为准，例如insert多个，当表不存在prepare异常时，bind的异常不是表不存在异常。
                         }
                         if (buffer.position() != bufpos + length) {
-                            logger.log(Level.SEVERE, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", E buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                            logger.log(
+                                    Level.SEVERE,
+                                    "[" + Times.nowMillis() + "] ["
+                                            + Thread.currentThread().getName() + "]: " + conn + ", E buffer-currpos : "
+                                            + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
                         }
                         if (request.isExtendType() && ((PgReqExtended) request).sendPrepare) {
                             conn.getPgPrepareDesc(((PgReqExtended) request).sql).uncomplete();
                         }
                         if (PgsqlDataSource.debug) {
-                            logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", error=" + exc + ", request=" + request, exc);
+                            logger.log(
+                                    Level.FINEST,
+                                    "[" + Times.nowMillis() + "] ["
+                                            + Thread.currentThread().getName() + "]: " + conn + ", error=" + exc
+                                            + ", request=" + request,
+                                    exc);
                         }
                     }
                     buffer.position(bufpos + length);
-                    if (!conn.isAuthenticated()) { //登录失败的异常不会有ReadyForQuery消息体
+                    if (!conn.isAuthenticated()) { // 登录失败的异常不会有ReadyForQuery消息体
                         halfFrameBytes = null;
                         halfFrameCmd = 0;
                         halfFrameLength = 0;
@@ -357,10 +413,12 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     }
                 } else if (cmd == MESSAGE_TYPE_READY_FOR_QUERY) { // 'Z' ReadyForQuery
                     lastCount++;
-                    buffer.get(); //'I' TransactionState.IDLE、'T' TransactionState.OPEN、'E' TransactionState.FAILED
-                    //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
+                    buffer.get(); // 'I' TransactionState.IDLE、'T' TransactionState.OPEN、'E' TransactionState.FAILED
+                    // if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" +
+                    // Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request +
+                    // "----------------------cmd:" + cmd);
                     if (lastResult != null) {
-                        if (request.isExtendType()) { //PgReqExtended
+                        if (request.isExtendType()) { // PgReqExtended
                             PgReqExtended reqext = (PgReqExtended) request;
                             if (lastResult.rowDesc == null) {
                                 PgPrepareDesc prepareDesc = conn.getPgPrepareDesc(reqext.sql);
@@ -372,13 +430,22 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                         lastResult.effectRespCount++;
                     }
                     if (buffer.position() != bufpos + length) {
-                        logger.log(Level.SEVERE, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", Z buffer-currpos : " + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
+                        logger.log(
+                                Level.SEVERE,
+                                "[" + Times.nowMillis() + "] ["
+                                        + Thread.currentThread().getName() + "]: " + conn + ", Z buffer-currpos : "
+                                        + buffer.position() + ", startpos=" + bufpos + ", length=" + length);
                     }
                     buffer.position(bufpos + length);
 
                     if (request != null && lastCount < request.getSyncCount()) {
                         if (PgsqlDataSource.debug) {
-                            logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + ", continue parse, lastCount=" + lastCount + ", syncCount=" + request.getSyncCount());
+                            logger.log(
+                                    Level.FINEST,
+                                    "[" + Times.nowMillis() + "] ["
+                                            + Thread.currentThread().getName() + "]: " + conn
+                                            + ", continue parse, lastCount=" + lastCount + ", syncCount="
+                                            + request.getSyncCount());
                         }
                         continue;
                     }
@@ -400,16 +467,24 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
                     request = null;
                     update1To2 = false;
                     break;
-                } else if (cmd == MESSAGE_TYPE_PARSE_COMPLETE) { // '1' UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,  也可能是1、t、T、Z再发2、D...C/E、Z
-                    //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
+                } else if (cmd == MESSAGE_TYPE_PARSE_COMPLETE) { // '1' UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,
+                    // 也可能是1、t、T、Z再发2、D...C/E、Z
+                    // if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" +
+                    // Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request +
+                    // "----------------------cmd:" + cmd);
                     update1To2 = true;
                     buffer.position(bufpos + length);
-                } else if (cmd == MESSAGE_TYPE_BIND_COMPLETE) { // '2' UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,  也可能是1、t、T、Z再发2、D...C/E、Z
-                    //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
+                } else if (cmd == MESSAGE_TYPE_BIND_COMPLETE) { // '2' UPDATE命令会先发个1、t、n、Z再发2、C、Z,  也可能是1、t、n再发2、E、Z,
+                    // 也可能是1、t、T、Z再发2、D...C/E、Z
+                    // if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" +
+                    // Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request +
+                    // "----------------------cmd:" + cmd);
                     update1To2 = false;
                     buffer.position(bufpos + length);
                 } else {
-                    //if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" + Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request + "----------------------cmd:" + cmd);
+                    // if (request.getType() == PgClientRequest.REQ_TYPE_EXTEND_UPDATE) logger.log(Level.FINEST, "[" +
+                    // Times.nowMillis() + "] [" + Thread.currentThread().getName() + "]: " + conn + " , " + request +
+                    // "----------------------cmd:" + cmd);
                     buffer.position(bufpos + length);
                 }
             }
@@ -441,5 +516,4 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         }
         return array.toString(StandardCharsets.UTF_8);
     }
-
 }

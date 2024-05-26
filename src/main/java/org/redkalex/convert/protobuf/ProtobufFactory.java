@@ -15,19 +15,22 @@ import org.redkale.util.AnyValue;
 import org.redkale.util.AnyValueWriter;
 
 /**
- *
  * @deprecated
  * @see org.redkale.convert.proto.ProtobufFactory
- *
  * @author zhangjx
  */
 @Deprecated(since = "2.8.0")
 public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWriter> {
 
-    private static final ProtobufFactory instance = new ProtobufFactory(null,
-        getSystemPropertyInt("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true, Convert.FEATURE_TINY)
-        | getSystemPropertyInt("redkale.convert.protobuf.nullable", "redkale.convert.nullable", false, Convert.FEATURE_NULLABLE),
-        Boolean.parseBoolean(System.getProperty("redkale.convert.protobuf.enumtostring", "true")));
+    private static final ProtobufFactory instance = new ProtobufFactory(
+            null,
+            getSystemPropertyInt("redkale.convert.protobuf.tiny", "redkale.convert.tiny", true, Convert.FEATURE_TINY)
+                    | getSystemPropertyInt(
+                            "redkale.convert.protobuf.nullable",
+                            "redkale.convert.nullable",
+                            false,
+                            Convert.FEATURE_NULLABLE),
+            Boolean.parseBoolean(System.getProperty("redkale.convert.protobuf.enumtostring", "true")));
 
     static final Decodeable objectDecoder = instance.loadDecoder(Object.class);
 
@@ -49,7 +52,7 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
     private ProtobufFactory(ProtobufFactory parent, int features, boolean enumtostring) {
         super(parent, features);
         this.enumtostring = enumtostring;
-        if (parent == null) { //root
+        if (parent == null) { // root
             this.register(String[].class, this.createArrayDecoder(String[].class));
             this.register(String[].class, this.createArrayEncoder(String[].class));
         }
@@ -181,7 +184,8 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
         return true;
     }
 
-    protected static Reader getItemReader(boolean string, boolean simple, Reader in, DeMember member, boolean enumtostring, boolean first) {
+    protected static Reader getItemReader(
+            boolean string, boolean simple, Reader in, DeMember member, boolean enumtostring, boolean first) {
         if (string) {
             if (member == null || first) {
                 return in;
@@ -323,18 +327,19 @@ public class ProtobufFactory extends ConvertFactory<ProtobufReader, ProtobufWrit
                 return "string";
             }
             return javaClazz == Object.class ? "Any" : javaClazz.getSimpleName();
-        } else if (javaType instanceof ParameterizedType) { //Collection、Stream、Map 必须是泛型
+        } else if (javaType instanceof ParameterizedType) { // Collection、Stream、Map 必须是泛型
             final ParameterizedType pt = (ParameterizedType) javaType;
             final Class rawType = (Class) pt.getRawType();
             if (Map.class.isAssignableFrom(rawType)) {
                 Type keyType = pt.getActualTypeArguments()[0];
                 Type valueType = pt.getActualTypeArguments()[1];
-                return "map<" + wireTypeString(keyType, enumtostring) + "," + wireTypeString(valueType, enumtostring) + ">";
+                return "map<" + wireTypeString(keyType, enumtostring) + "," + wireTypeString(valueType, enumtostring)
+                        + ">";
             } else if (Collection.class.isAssignableFrom(rawType)
-                || Stream.class.isAssignableFrom(rawType) || rawType.isArray()) {
+                    || Stream.class.isAssignableFrom(rawType)
+                    || rawType.isArray()) {
                 return "repeated " + wireTypeString(pt.getActualTypeArguments()[0], enumtostring);
-            } else if (pt.getActualTypeArguments().length == 1
-                && (pt.getActualTypeArguments()[0] instanceof Class)) {
+            } else if (pt.getActualTypeArguments().length == 1 && (pt.getActualTypeArguments()[0] instanceof Class)) {
                 return rawType.getSimpleName() + "_" + ((Class) pt.getActualTypeArguments()[0]).getSimpleName();
             }
         } else if (javaType instanceof GenericArrayType) {

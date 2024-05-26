@@ -10,13 +10,12 @@ import java.util.*;
 import org.redkale.convert.json.JsonConvert;
 
 /**
- *
  * @author zhangjx
  * @param <T> T
  */
 public class SearchResult<T> extends BaseBean {
 
-    public int took; //操作耗时
+    public int took; // 操作耗时
 
     public boolean timed_out;
 
@@ -34,7 +33,7 @@ public class SearchResult<T> extends BaseBean {
 
         public BucketItem[] buckets;
 
-        public double value; //等同func_count.value  简化方式
+        public double value; // 等同func_count.value  简化方式
 
         public <T extends Collection> T forEachCount(JsonConvert convert, Type itemType, T c) {
             if (buckets == null) return c;

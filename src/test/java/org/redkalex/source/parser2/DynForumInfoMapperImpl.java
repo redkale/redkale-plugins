@@ -11,10 +11,7 @@ import org.redkale.source.Flipper;
 import org.redkale.util.Sheet;
 import org.redkale.util.Utility;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class DynForumInfoMapperImpl implements ForumInfoMapper {
 
     private DataSqlSource _source;
@@ -23,30 +20,38 @@ public class DynForumInfoMapperImpl implements ForumInfoMapper {
 
     @Override
     public ForumResult findForumResultOne(ForumBean bean) {
-        return dataSource().nativeQueryOne(ForumResult.class,
-            "SELECT f.forum_groupid, s.forum_section_color FROM forum_info f, forum_section s WHERE f.forumid = s.forumid",
-            (Map) Utility.ofMap("bean", bean));
+        return dataSource()
+                .nativeQueryOne(
+                        ForumResult.class,
+                        "SELECT f.forum_groupid, s.forum_section_color FROM forum_info f, forum_section s WHERE f.forumid = s.forumid",
+                        (Map) Utility.ofMap("bean", bean));
     }
 
     @Override
     public CompletableFuture<ForumResult> findForumResultOneAsync(ForumBean bean) {
-        return dataSource().nativeQueryOneAsync(ForumResult.class,
-            "SELECT f.forum_groupid, s.forum_section_color FROM forum_info f, forum_section s WHERE f.forumid = s.forumid",
-            (Map) Utility.ofMap("bean", bean));
+        return dataSource()
+                .nativeQueryOneAsync(
+                        ForumResult.class,
+                        "SELECT f.forum_groupid, s.forum_section_color FROM forum_info f, forum_section s WHERE f.forumid = s.forumid",
+                        (Map) Utility.ofMap("bean", bean));
     }
 
     @Override
     public List<ForumResult> queryForumResultList(ForumBean bean) {
-        return dataSource().nativeQueryList(ForumResult.class,
-            "SELECT f.forum_groupid, s.forum_section_color FROM forum_info f, forum_section s WHERE f.forumid = s.forumid",
-            (Map) Utility.ofMap("bean", bean));
+        return dataSource()
+                .nativeQueryList(
+                        ForumResult.class,
+                        "SELECT f.forum_groupid, s.forum_section_color FROM forum_info f, forum_section s WHERE f.forumid = s.forumid",
+                        (Map) Utility.ofMap("bean", bean));
     }
 
     @Override
     public CompletableFuture<List<ForumResult>> queryForumResultListAsync(ForumBean bean) {
-        return dataSource().nativeQueryListAsync(ForumResult.class,
-            "SELECT f.forum_groupid, s.forum_section_color FROM forum_info f, forum_section s WHERE f.forumid = s.forumid",
-            (Map) Utility.ofMap("bean", bean));
+        return dataSource()
+                .nativeQueryListAsync(
+                        ForumResult.class,
+                        "SELECT f.forum_groupid, s.forum_section_color FROM forum_info f, forum_section s WHERE f.forumid = s.forumid",
+                        (Map) Utility.ofMap("bean", bean));
     }
 
     @Override
@@ -93,5 +98,4 @@ public class DynForumInfoMapperImpl implements ForumInfoMapper {
     public Class<ForumInfo> entityType() {
         return _type;
     }
-
 }

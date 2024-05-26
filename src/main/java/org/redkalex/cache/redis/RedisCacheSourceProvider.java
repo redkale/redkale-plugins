@@ -10,10 +10,7 @@ import org.redkale.source.*;
 import org.redkale.source.spi.CacheSourceProvider;
 import org.redkale.util.AnyValue;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-900)
 public class RedisCacheSourceProvider implements CacheSourceProvider {
 
@@ -26,5 +23,4 @@ public class RedisCacheSourceProvider implements CacheSourceProvider {
     public CacheSource createInstance() {
         return new RedisCacheSource();
     }
-
 }

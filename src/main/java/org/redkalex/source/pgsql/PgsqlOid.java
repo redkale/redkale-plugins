@@ -124,24 +124,23 @@ public interface PgsqlOid {
 
     int BOX = 603;
 
-    int JSON = 114;  // Added
+    int JSON = 114; // Added
 
     int JSONB = 3802;
 
     int HSTORE = 33670;
 
-    int NUMERIC = 1700; //false  Number
+    int NUMERIC = 1700; // false  Number
 
-    int NUMERIC_ARRAY = 1231; //false  Number
+    int NUMERIC_ARRAY = 1231; // false  Number
 
-    int UNKNOWN = 705;  //false String
+    int UNKNOWN = 705; // false String
 
-    int TS_VECTOR = 3614;  //false String
+    int TS_VECTOR = 3614; // false String
 
-    int TS_VECTOR_ARRAY = 3643;  //false String
+    int TS_VECTOR_ARRAY = 3643; // false String
 
-    int TS_QUERY = 3615;  //false String
+    int TS_QUERY = 3615; // false String
 
-    int TS_QUERY_ARRAY = 3645;  //false String
-
+    int TS_QUERY_ARRAY = 3645; // false String
 }

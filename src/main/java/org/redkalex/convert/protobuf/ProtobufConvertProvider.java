@@ -9,10 +9,7 @@ import org.redkale.annotation.Priority;
 import org.redkale.convert.*;
 import org.redkale.convert.spi.ConvertProvider;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-900)
 public class ProtobufConvertProvider implements ConvertProvider {
 
@@ -25,5 +22,4 @@ public class ProtobufConvertProvider implements ConvertProvider {
     public Convert convert() {
         return ProtobufConvert.root();
     }
-
 }

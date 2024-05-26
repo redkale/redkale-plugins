@@ -9,17 +9,14 @@ import org.redkale.source.*;
 import org.redkale.source.spi.DataNativeSqlParserProvider;
 import org.redkale.util.AnyValue;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-800)
 public class DataNativeJsqlParserProvider implements DataNativeSqlParserProvider {
 
     @Override
     public boolean acceptsConf(AnyValue config) {
         try {
-            //加载jsqlparser类
+            // 加载jsqlparser类
             AbstractJSqlParser.class.isAssignableFrom(CCJSqlParser.class);
             return true;
         } catch (Throwable t) {
@@ -31,5 +28,4 @@ public class DataNativeJsqlParserProvider implements DataNativeSqlParserProvider
     public DataNativeSqlParser createInstance() {
         return new DataNativeJsqlParser();
     }
-
 }

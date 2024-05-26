@@ -7,17 +7,14 @@ import java.nio.charset.StandardCharsets;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class RedisCacheReqClientName extends RedisCacheRequest {
 
     private final String clientName;
 
     public RedisCacheReqClientName(String appName, String resourceName) {
         this.clientName = "redkalex" + (Utility.isEmpty(appName) ? "" : ("-" + appName))
-            + (Utility.isEmpty(resourceName) ? "" : (":" + resourceName));
+                + (Utility.isEmpty(resourceName) ? "" : (":" + resourceName));
     }
 
     @Override

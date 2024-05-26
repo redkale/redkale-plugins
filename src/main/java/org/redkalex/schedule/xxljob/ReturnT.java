@@ -27,8 +27,7 @@ public class ReturnT<T> implements Serializable {
 
     private T content;
 
-    public ReturnT() {
-    }
+    public ReturnT() {}
 
     public ReturnT(int code, String msg) {
         this.code = code;
@@ -68,5 +67,4 @@ public class ReturnT<T> implements Serializable {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

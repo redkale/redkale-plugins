@@ -7,10 +7,7 @@ import org.redkale.cluster.spi.ClusterAgent;
 import org.redkale.cluster.spi.ClusterAgentProvider;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 @Priority(-800)
 public class NacosClusterAgentProvider implements ClusterAgentProvider {
 
@@ -23,5 +20,4 @@ public class NacosClusterAgentProvider implements ClusterAgentProvider {
     public ClusterAgent createInstance() {
         return new NacosClusterAgent();
     }
-
 }

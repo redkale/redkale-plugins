@@ -11,17 +11,15 @@ import java.util.concurrent.CompletableFuture;
 import org.redkale.service.*;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
 public abstract class PayRetCodes {
 
-    protected PayRetCodes() {
-    }
+    protected PayRetCodes() {}
 
-    //--------------------------------------------- 支付模块结果码 ----------------------------------------------
+    // --------------------------------------------- 支付模块结果码 ----------------------------------------------
     @RetLabel("支付失败")
     public static final int RETPAY_PAY_ERROR = 20010001;
 
@@ -61,7 +59,7 @@ public abstract class PayRetCodes {
     @RetLabel("用户标识缺失")
     public static final int RETPAY_PARAM_ERROR = 20010021;
 
-    //-----------------------------------------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------------------------
     protected static final Map<String, Map<Integer, String>> rets = RetLabel.RetLoader.loadMap(PayRetCodes.class);
 
     protected static final Map<Integer, String> defret = rets.get("");

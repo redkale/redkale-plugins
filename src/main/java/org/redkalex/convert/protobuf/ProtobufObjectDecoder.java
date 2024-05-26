@@ -10,7 +10,6 @@ import org.redkale.convert.*;
 import org.redkale.util.Attribute;
 
 /**
- *
  * @author zhangjx
  * @param <T> T
  */
@@ -23,7 +22,13 @@ public class ProtobufObjectDecoder<T> extends ObjectDecoder<ProtobufReader, T> {
     @Override
     protected void initForEachDeMember(ConvertFactory factory, DeMember member) {
         Attribute attr = member.getAttribute();
-        setTag(member, ProtobufFactory.getTag(attr.field(), attr.genericType(), member.getPosition(), ((ProtobufFactory) factory).enumtostring));
+        setTag(
+                member,
+                ProtobufFactory.getTag(
+                        attr.field(),
+                        attr.genericType(),
+                        member.getPosition(),
+                        ((ProtobufFactory) factory).enumtostring));
     }
 
     @Override

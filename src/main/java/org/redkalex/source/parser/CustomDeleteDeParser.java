@@ -11,8 +11,9 @@
  */
 package org.redkalex.source.parser;
 
-import java.util.Iterator;
 import static java.util.stream.Collectors.joining;
+
+import java.util.Iterator;
 import net.sf.jsqlparser.expression.ExpressionVisitor;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.delete.Delete;
@@ -44,7 +45,7 @@ public class CustomDeleteDeParser extends DeleteDeParser {
         ExpressionVisitor expressionVisitor = getExpressionVisitor();
         if (delete.getWithItemsList() != null && !delete.getWithItemsList().isEmpty()) {
             buffer.append("WITH ");
-            for (Iterator<WithItem> iter = delete.getWithItemsList().iterator(); iter.hasNext();) {
+            for (Iterator<WithItem> iter = delete.getWithItemsList().iterator(); iter.hasNext(); ) {
                 WithItem withItem = iter.next();
                 buffer.append(withItem);
                 if (iter.hasNext()) {
@@ -67,8 +68,8 @@ public class CustomDeleteDeParser extends DeleteDeParser {
             buffer.append(" IGNORE");
         }
         if (delete.getTables() != null && !delete.getTables().isEmpty()) {
-            buffer.append(
-                delete.getTables().stream().map(Table::getFullyQualifiedName)
+            buffer.append(delete.getTables().stream()
+                    .map(Table::getFullyQualifiedName)
                     .collect(joining(", ", " ", "")));
         }
 
@@ -82,9 +83,8 @@ public class CustomDeleteDeParser extends DeleteDeParser {
         buffer.append(" ").append(delete.getTable().toString());
 
         if (delete.getUsingList() != null && !delete.getUsingList().isEmpty()) {
-            buffer.append(" USING").append(
-                delete.getUsingList().stream().map(Table::toString)
-                    .collect(joining(", ", " ", "")));
+            buffer.append(" USING")
+                    .append(delete.getUsingList().stream().map(Table::toString).collect(joining(", ", " ", "")));
         }
         if (delete.getJoins() != null) {
             for (Join join : delete.getJoins()) {
@@ -108,6 +108,5 @@ public class CustomDeleteDeParser extends DeleteDeParser {
         if (delete.getReturningClause() != null) {
             delete.getReturningClause().appendTo(buffer);
         }
-
     }
 }

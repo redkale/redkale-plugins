@@ -3,9 +3,7 @@ package org.redkalex.schedule.xxljob;
 import java.io.Serializable;
 import org.redkale.convert.json.JsonConvert;
 
-/**
- * Created by xuxueli on 16/7/22.
- */
+/** Created by xuxueli on 16/7/22. */
 public class TriggerParam implements Serializable {
 
     private static final long serialVersionUID = 42L;
@@ -134,5 +132,4 @@ public class TriggerParam implements Serializable {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
 }

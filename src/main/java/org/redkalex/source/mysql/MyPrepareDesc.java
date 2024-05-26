@@ -5,13 +5,10 @@
  */
 package org.redkalex.source.mysql;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyPrepareDesc {
 
-    public final int numberOfParameters;  //先param后column
+    public final int numberOfParameters; // 先param后column
 
     public final int numberOfColumns;
 

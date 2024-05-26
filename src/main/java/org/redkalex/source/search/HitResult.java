@@ -9,7 +9,6 @@ import java.util.*;
 import org.redkale.util.Attribute;
 
 /**
- *
  * @author zhangjx
  * @param <T> T
  */
@@ -17,7 +16,7 @@ public class HitResult<T> extends BaseBean {
 
     public HitTotal total;
 
-    public Float max_score;  //返回值会有null
+    public Float max_score; // 返回值会有null
 
     public HitEntity<T>[] hits;
 
@@ -46,6 +45,5 @@ public class HitResult<T> extends BaseBean {
         public int value;
 
         public String relation;
-
     }
 }

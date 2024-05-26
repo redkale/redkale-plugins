@@ -3,9 +3,7 @@ package org.redkalex.schedule.xxljob;
 import java.io.Serializable;
 import org.redkale.convert.json.JsonConvert;
 
-/**
- * Created by xuxueli on 17/3/23.
- */
+/** Created by xuxueli on 17/3/23. */
 public class LogResult implements Serializable {
 
     private static final long serialVersionUID = 42L;
@@ -18,8 +16,7 @@ public class LogResult implements Serializable {
 
     private boolean isEnd;
 
-    public LogResult() {
-    }
+    public LogResult() {}
 
     public LogResult(int fromLineNum, int toLineNum, String logContent, boolean isEnd) {
         this.fromLineNum = fromLineNum;

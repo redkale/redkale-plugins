@@ -15,10 +15,7 @@ import org.redkale.net.client.*;
 import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 import org.redkale.util.Utility;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgClientTest {
 
     public static void main(String[] args) throws Throwable {
@@ -31,10 +28,12 @@ public class PgClientTest {
         SocketAddress address = new InetSocketAddress("127.0.0.1", 5432);
         Properties prop = new Properties();
         prop.put("preparecache", "true");
-        final PgClient client = new PgClient("test", asyncGroup, "rw", new ClientAddress(address), 2, 16, false, prop, info);
+        final PgClient client =
+                new PgClient("test", asyncGroup, "rw", new ClientAddress(address), 2, 16, false, prop, info);
         PgReqQuery showReqQuery = new PgReqQuery();
         showReqQuery.prepare("show all");
-        CompletableFuture.allOf(client.sendAsync(showReqQuery), client.sendAsync(showReqQuery)).join();
+        CompletableFuture.allOf(client.sendAsync(showReqQuery), client.sendAsync(showReqQuery))
+                .join();
         Field connArrayField = Client.class.getDeclaredField("connArray");
         connArrayField.setAccessible(true);
         ClientConnection[] connArray = (ClientConnection[]) connArrayField.get(client);
@@ -43,7 +42,8 @@ public class PgClientTest {
             //    conn.readCounter.set(0);
         }
         Utility.sleep(800);
-        System.out.println("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n==================================开始==================================");
+        System.out.println(
+                "\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n==================================开始==================================");
         final int count = 200;
         CountDownLatch cdl2 = new CountDownLatch(count);
         CountDownLatch cdl = new CountDownLatch(count);
@@ -61,8 +61,8 @@ public class PgClientTest {
                         req.prepare("show all");
                         for (int j = 0; j < 10; j++) {
                             PgResultSet reset = client.sendAsync(req).join();
-                            //System.out.println(client.conns[0]);
-                            //System.out.println(client.connflags[0]);
+                            // System.out.println(client.conns[0]);
+                            // System.out.println(client.connflags[0]);
                             boolean empty = true;
                             if (s.get() > 0 && show.compareAndSet(false, true)) {
                                 while (reset.next()) {
@@ -92,5 +92,4 @@ public class PgClientTest {
         cdl2.await();
         System.out.println("耗时: " + (System.currentTimeMillis() - s.get()) + " ms");
     }
-
 }

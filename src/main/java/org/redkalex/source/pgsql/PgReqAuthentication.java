@@ -10,10 +10,7 @@ import org.redkale.net.client.ClientConnection;
 import org.redkale.source.AbstractDataSource.SourceUrlInfo;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgReqAuthentication extends PgClientRequest {
 
     protected final SourceUrlInfo urlInfo;
@@ -29,7 +26,8 @@ public class PgReqAuthentication extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqAuthentication_" + Objects.hashCode(this) + "{username=" + urlInfo.username + ", password=" + urlInfo.password + ", database=" + urlInfo.database + "}";
+        return "PgReqAuthentication_" + Objects.hashCode(this) + "{username=" + urlInfo.username + ", password="
+                + urlInfo.password + ", database=" + urlInfo.database + "}";
     }
 
     @Override
@@ -46,5 +44,4 @@ public class PgReqAuthentication extends PgClientRequest {
         array.putByte(0);
         array.putInt(start, array.length() - start);
     }
-
 }

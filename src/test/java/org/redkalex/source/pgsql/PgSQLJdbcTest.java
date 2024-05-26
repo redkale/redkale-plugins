@@ -9,10 +9,7 @@ import org.redkale.source.DataJdbcSource;
 import org.redkale.util.*;
 import org.redkalex.source.base.IncreWorld;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgSQLJdbcTest {
 
     private static final String url = "jdbc:postgresql://127.0.0.1:5432/hello_world";
@@ -31,7 +28,10 @@ public class PgSQLJdbcTest {
         ResourceFactory factory = ResourceFactory.create();
         DataJdbcSource source = new DataJdbcSource();
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
+        source.init(AnyValue.loadFromProperties(prop)
+                .getAnyValue("redkale")
+                .getAnyValue("datasource")
+                .getAnyValue("default"));
         System.out.println("---------");
 
         source.dropTable(IncreWorld.class);

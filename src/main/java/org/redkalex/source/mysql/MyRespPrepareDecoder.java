@@ -8,16 +8,20 @@ package org.redkalex.source.mysql;
 import java.nio.ByteBuffer;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyRespPrepareDecoder extends MyRespDecoder<MyRespPrepare> {
 
     public static final MyRespPrepareDecoder instance = new MyRespPrepareDecoder();
 
     @Override
-    public MyRespPrepare read(MyClientConnection conn, ByteBuffer buffer, int length, byte index, ByteArray array, MyClientRequest request, MyResultSet dataset) {
+    public MyRespPrepare read(
+            MyClientConnection conn,
+            ByteBuffer buffer,
+            int length,
+            byte index,
+            ByteArray array,
+            MyClientRequest request,
+            MyResultSet dataset) {
         MyRespPrepare rs = new MyRespPrepare();
         rs.statementId = Mysqls.readUB4(buffer);
         rs.numberOfColumns = Mysqls.readUB2(buffer);

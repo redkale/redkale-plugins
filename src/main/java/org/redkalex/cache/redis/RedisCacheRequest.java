@@ -11,21 +11,18 @@ import org.redkale.net.client.*;
 import org.redkale.util.ByteArray;
 import org.redkale.util.Traces;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class RedisCacheRequest extends ClientRequest {
 
-    static final byte[] BYTES_TRUE = new byte[]{'t'};
+    static final byte[] BYTES_TRUE = new byte[] {'t'};
 
-    static final byte[] BYTES_FALSE = new byte[]{'f'};
+    static final byte[] BYTES_FALSE = new byte[] {'f'};
 
     static final byte[] BYTES_MATCH = "MATCH".getBytes(StandardCharsets.UTF_8);
 
     static final byte[] BYTES_COUNT = "COUNT".getBytes(StandardCharsets.UTF_8);
 
-    protected static final byte[] CRLF = new byte[]{'\r', '\n'};
+    protected static final byte[] CRLF = new byte[] {'\r', '\n'};
 
     private static final byte[][] starLengthBytes;
 
@@ -47,13 +44,17 @@ public class RedisCacheRequest extends ClientRequest {
     protected byte[][] args;
 
     public static RedisCacheRequest create(RedisCommand command, String key, String... args) {
-        return new RedisCacheRequest().prepare(command, key, RedisCacheSource.keysArgs(key, args))
-            .workThread(WorkThread.currentWorkThread()).traceid(Traces.currentTraceid());
+        return new RedisCacheRequest()
+                .prepare(command, key, RedisCacheSource.keysArgs(key, args))
+                .workThread(WorkThread.currentWorkThread())
+                .traceid(Traces.currentTraceid());
     }
 
     public static RedisCacheRequest create(RedisCommand command, String key, byte[]... args) {
-        return new RedisCacheRequest().prepare(command, key, args)
-            .workThread(WorkThread.currentWorkThread()).traceid(Traces.currentTraceid());
+        return new RedisCacheRequest()
+                .prepare(command, key, args)
+                .workThread(WorkThread.currentWorkThread())
+                .traceid(Traces.currentTraceid());
     }
 
     public RedisCacheRequest prepare(RedisCommand command, String key, byte[]... args) {

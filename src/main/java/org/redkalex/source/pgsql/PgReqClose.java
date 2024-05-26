@@ -5,19 +5,16 @@
  */
 package org.redkalex.source.pgsql;
 
+import static org.redkalex.source.pgsql.PgClientRequest.REQ_TYPE_UPDATE;
+
 import java.util.Objects;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
-import static org.redkalex.source.pgsql.PgClientRequest.REQ_TYPE_UPDATE;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgReqClose extends PgClientRequest {
 
-    public PgReqClose() {
-    }
+    public PgReqClose() {}
 
     @Override
     public int getType() {
@@ -39,5 +36,4 @@ public class PgReqClose extends PgClientRequest {
         array.putByte('X');
         array.putInt(4);
     }
-
 }

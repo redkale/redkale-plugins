@@ -16,8 +16,8 @@ import org.redkale.annotation.ConstructorParameters;
 import org.redkale.annotation.LogExcludeLevel;
 import org.redkale.annotation.LogLevel;
 import org.redkale.convert.json.*;
-import org.redkale.persistence.SearchColumn;
 import org.redkale.persistence.*;
+import org.redkale.persistence.SearchColumn;
 import org.redkale.persistence.VirtualEntity;
 import org.redkale.source.*;
 import org.redkale.util.*;
@@ -25,101 +25,99 @@ import org.redkale.util.*;
 /**
  * Search Entity操作类
  *
- * <p>
- * 详情见: https://redkale.org
+ * <p>详情见: https://redkale.org
  *
  * @since 2.4.0
- *
  * @author zhangjx
  * @param <T> Search Entity类的泛型
  */
 @SuppressWarnings("unchecked")
 public final class SearchInfo<T> {
 
-    //全局静态资源
+    // 全局静态资源
     private static final ConcurrentHashMap<Class, SearchInfo> entityInfos = new ConcurrentHashMap<>();
 
     private static final ReentrantLock infosLock = new ReentrantLock();
 
-    //日志
+    // 日志
     private static final Logger logger = Logger.getLogger(SearchInfo.class.getSimpleName());
 
-    //Entity类名
+    // Entity类名
     private final Class<T> type;
 
-    //类对应的数据表名, 如果是VirtualEntity 类， 则该字段为null
+    // 类对应的数据表名, 如果是VirtualEntity 类， 则该字段为null
     private final String table;
 
-    //JsonConvert
+    // JsonConvert
     private final JsonConvert jsonConvert;
 
-    //Entity构建器
+    // Entity构建器
     private final Creator<T> creator;
 
-    //Entity数值构建器
+    // Entity数值构建器
     private final IntFunction<T[]> arrayer;
 
-    //Entity构建器参数
+    // Entity构建器参数
     private final String[] constructorParameters;
 
-    //Entity构建器参数Attribute
+    // Entity构建器参数Attribute
     private final Attribute<T, Serializable>[] constructorAttributes;
 
-    //Entity构建器参数Attribute
+    // Entity构建器参数Attribute
     private final Attribute<T, Serializable>[] unconstructorAttributes;
 
-    //主键
+    // 主键
     private final Attribute<T, Serializable> primary;
 
-    //用于存储绑定在EntityInfo上的对象
+    // 用于存储绑定在EntityInfo上的对象
     private final ConcurrentHashMap<String, Object> subobjectMap = new ConcurrentHashMap<>();
 
-    //key是field的name， 不是sql字段。
-    //存放所有与数据库对应的字段， 包括主键
+    // key是field的name， 不是sql字段。
+    // 存放所有与数据库对应的字段， 包括主键
     private final HashMap<String, Attribute<T, Serializable>> attributeMap = new HashMap<>();
 
-    //存放所有与数据库对应的字段， 包括主键
+    // 存放所有与数据库对应的字段， 包括主键
     private final Attribute<T, Serializable>[] attributes;
 
-    //key是field的name， value是Column的别名，即数据库表的字段名
-    //只有field.name 与 Column.name不同才存放在aliasmap里.
+    // key是field的name， value是Column的别名，即数据库表的字段名
+    // 只有field.name 与 Column.name不同才存放在aliasmap里.
     private final Map<String, String> aliasmap;
 
-    //所有可更新字段，即排除了主键字段和标记为&#064;Column(updatable=false)的字段
+    // 所有可更新字段，即排除了主键字段和标记为&#064;Column(updatable=false)的字段
     private final Map<String, Attribute<T, Serializable>> updateAttributeMap = new HashMap<>();
 
-    //分表 策略
+    // 分表 策略
     private final DistributeTableStrategy<T> tableStrategy;
 
-    //数据库中所有字段
+    // 数据库中所有字段
     private final Attribute<T, Serializable>[] queryAttributes;
 
-    //数据库中所有可新增字段
+    // 数据库中所有可新增字段
     private final Attribute<T, Serializable>[] insertAttributes;
 
-    //数据库中所有可更新字段
+    // 数据库中所有可更新字段
     private final Attribute<T, Serializable>[] updateAttributes;
 
-    //存放highlight虚拟主键字段
+    // 存放highlight虚拟主键字段
     private final Attribute<T, String> highlightAttributeId;
 
-    //存放highlight虚拟索引字段
+    // 存放highlight虚拟索引字段
     private final Attribute<T, String> highlightAttributeIndex;
 
-    //存放highlight虚拟字段
+    // 存放highlight虚拟字段
     private final HashMap<String, Attribute<T, String>> highlightAttributeMap = new HashMap<>();
 
-    //存放html定制的analyzer
+    // 存放html定制的analyzer
     private final HashMap<String, Map> customAnalyzerMap = new HashMap<>();
 
     private final Map<String, Map> mappingTypes;
 
-    //日志级别，从LogLevel获取
+    // 日志级别，从LogLevel获取
     private final int logLevel;
 
     private final boolean virtual;
 
-    //日志控制
+    // 日志控制
     private final Map<Integer, String[]> excludeLogLevels;
 
     private final Type findResultType;
@@ -152,8 +150,8 @@ public final class SearchInfo<T> {
      * 给PrepareCompiler使用，用于预动态生成Attribute
      *
      * @since 2.5.0
-     * @param <T>    泛型
-     * @param clazz  Entity 实体类
+     * @param <T> 泛型
+     * @param clazz Entity 实体类
      * @param source 数据源
      */
     public static <T> void compile(Class<T> clazz, SearchSource source) {
@@ -171,7 +169,7 @@ public final class SearchInfo<T> {
         this.virtual = type.getAnnotation(VirtualEntity.class) != null;
         this.findResultType = TypeToken.createParameterizedType(null, FindResult.class, type);
         this.searchResultType = TypeToken.createParameterizedType(null, SearchResult.class, type);
-        //---------------------------------------------
+        // ---------------------------------------------
         LogLevel ll = type.getAnnotation(LogLevel.class);
         this.logLevel = ll == null ? Integer.MIN_VALUE : Level.parse(ll.value()).intValue();
         Map<Integer, HashSet<String>> logmap = new HashMap<>();
@@ -194,7 +192,7 @@ public final class SearchInfo<T> {
             this.excludeLogLevels = new HashMap<>();
             logmap.forEach((l, set) -> excludeLogLevels.put(l, set.toArray(new String[set.size()])));
         }
-        //---------------------------------------------
+        // ---------------------------------------------
         Table t = type.getAnnotation(Table.class);
         this.table = (t == null || t.name().isEmpty()) ? type.getSimpleName().toLowerCase() : t.name();
 
@@ -203,7 +201,8 @@ public final class SearchInfo<T> {
         try {
             dts = (dt == null) ? null : dt.strategy().getDeclaredConstructor().newInstance();
             if (dts != null) {
-                RedkaleClassLoader.putReflectionDeclaredConstructors(dt.strategy(), dt.strategy().getName());
+                RedkaleClassLoader.putReflectionDeclaredConstructors(
+                        dt.strategy(), dt.strategy().getName());
             }
         } catch (Exception e) {
             logger.log(Level.SEVERE, type + " init DistributeTableStrategy error", e);
@@ -267,7 +266,9 @@ public final class SearchInfo<T> {
                 if (sc != null) {
                     if (!sc.highlight().isEmpty()) {
                         if (!sc.ignore()) {
-                            throw new SourceException("@SearchColumn.ignore must be true when highlight is not empty on field(" + field + ")");
+                            throw new SourceException(
+                                    "@SearchColumn.ignore must be true when highlight is not empty on field(" + field
+                                            + ")");
                         }
                         if (field.getType() != String.class) {
                             throw new SourceException("@SearchColumn.ignore must be on String field(" + field + ")");
@@ -311,7 +312,9 @@ public final class SearchInfo<T> {
                 } else if (attr.type() == double.class || attr.type() == Double.class) {
                     mappings.put(attr.field(), Utility.ofMap("type", "double", "index", false));
                 } else if (attr.type().isPrimitive() || Number.class.isAssignableFrom(attr.type())) {
-                    mappings.put(attr.field(), Utility.ofMap("type", sc != null && sc.date() ? "date" : "long", "index", false));
+                    mappings.put(
+                            attr.field(),
+                            Utility.ofMap("type", sc != null && sc.date() ? "date" : "long", "index", false));
                 } else if (CharSequence.class.isAssignableFrom(attr.type())) {
                     Map<String, Object> m = new LinkedHashMap<>();
                     if (sc != null && !sc.options().isEmpty()) {
@@ -327,9 +330,15 @@ public final class SearchInfo<T> {
                             analyzer = "html_standard";
                         }
                         if (analyzer.startsWith("html_")) {
-                            customAnalyzerMap.put(analyzer, Utility.ofMap("type", "custom",
-                                "tokenizer", analyzer.replace("html_", ""),
-                                "char_filter", new String[]{"html_strip"}));
+                            customAnalyzerMap.put(
+                                    analyzer,
+                                    Utility.ofMap(
+                                            "type",
+                                            "custom",
+                                            "tokenizer",
+                                            analyzer.replace("html_", ""),
+                                            "char_filter",
+                                            new String[] {"html_strip"}));
                         }
                         m.put("analyzer", analyzer);
                     }
@@ -339,9 +348,15 @@ public final class SearchInfo<T> {
                             searchAnalyzer = "html_standard";
                         }
                         if (searchAnalyzer.startsWith("html_")) {
-                            customAnalyzerMap.put(searchAnalyzer, Utility.ofMap("type", "custom",
-                                "tokenizer", searchAnalyzer.replace("html_", ""),
-                                "char_filter", new String[]{"html_strip"}));
+                            customAnalyzerMap.put(
+                                    searchAnalyzer,
+                                    Utility.ofMap(
+                                            "type",
+                                            "custom",
+                                            "tokenizer",
+                                            searchAnalyzer.replace("html_", ""),
+                                            "char_filter",
+                                            new String[] {"html_strip"}));
                         }
                         m.put("search_analyzer", searchAnalyzer);
                     }
@@ -418,7 +433,6 @@ public final class SearchInfo<T> {
      * 根据主键值获取Entity的表名
      *
      * @param primary Entity主键值
-     *
      * @return String
      */
     public String getTable(Serializable primary) {
@@ -436,7 +450,6 @@ public final class SearchInfo<T> {
      * 根据过滤条件获取Entity的表名，多表用逗号隔开
      *
      * @param node 过滤条件
-     *
      * @return String
      */
     public String getTable(FilterNode node) {
@@ -457,7 +470,6 @@ public final class SearchInfo<T> {
      * 根据Entity对象获取Entity的表名
      *
      * @param bean Entity对象
-     *
      * @return String
      */
     public String getTable(T bean) {
@@ -493,7 +505,6 @@ public final class SearchInfo<T> {
      * 根据Entity字段名获取字段的Attribute
      *
      * @param fieldname Class字段名
-     *
      * @return Attribute
      */
     public Attribute<T, Serializable> getAttribute(String fieldname) {
@@ -507,7 +518,6 @@ public final class SearchInfo<T> {
      * 根据Entity字段名获取可更新字段的Attribute
      *
      * @param fieldname Class字段名
-     *
      * @return Attribute
      */
     public Attribute<T, Serializable> getUpdateAttribute(String fieldname) {
@@ -563,7 +573,6 @@ public final class SearchInfo<T> {
      * 根据field字段名获取数据库对应的字段名
      *
      * @param fieldname 字段名
-     *
      * @return String
      */
     public String getSQLColumn(String fieldname) {
@@ -585,5 +594,4 @@ public final class SearchInfo<T> {
     public boolean isVirtual() {
         return virtual;
     }
-
 }

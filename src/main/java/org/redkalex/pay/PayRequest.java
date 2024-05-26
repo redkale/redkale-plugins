@@ -10,25 +10,23 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.util.RedkaleException;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
 public class PayRequest {
 
-    protected String appid = ""; //APP账号ID
+    protected String appid = ""; // APP账号ID
 
-    protected short payType; //支付类型; 
+    protected short payType; // 支付类型;
 
-    protected short payWay; //支付渠道; 
+    protected short payWay; // 支付渠道;
 
-    protected short subPayType; //子支付类型; 
+    protected short subPayType; // 子支付类型;
 
-    protected String payno = ""; //自己的订单号
+    protected String payno = ""; // 自己的订单号
 
-    public PayRequest() {
-    }
+    public PayRequest() {}
 
     public PayRequest(String appid, short payType, short payWay, String payno) {
         this.appid = appid;
@@ -44,8 +42,9 @@ public class PayRequest {
         if (this.payWay < 1) {
             throw new RedkaleException("payWay is illegal");
         }
-        //只有一个支付配置时无需提供appid
-        //if (this.payType != Pays.PAYTYPE_UNION && (this.appid == null || this.appid.isEmpty())) throw new RedkaleException("appid is illegal");
+        // 只有一个支付配置时无需提供appid
+        // if (this.payType != Pays.PAYTYPE_UNION && (this.appid == null || this.appid.isEmpty())) throw new
+        // RedkaleException("appid is illegal");
         if (this.payno == null || this.payno.isEmpty()) {
             throw new RedkaleException("payno is illegal");
         }
@@ -121,5 +120,4 @@ public class PayRequest {
             this.payno = payno.trim();
         }
     }
-
 }

@@ -15,7 +15,6 @@ import org.redkale.source.DataNativeSqlStatement;
 /**
  * 基于jsqlparser的DataNativeSqlParser实现类
  *
- *
  * @author zhangjx
  */
 @ResourceType(DataNativeSqlParser.class)
@@ -31,21 +30,25 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
     }
 
     @Override
-    public DataNativeSqlStatement parse(IntFunction<String> signFunc, String dbType, String rawSql, boolean countable, Map<String, Object> params) {
+    public DataNativeSqlStatement parse(
+            IntFunction<String> signFunc, String dbType, String rawSql, boolean countable, Map<String, Object> params) {
         NativeParserInfo info = parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql, dbType, signFunc));
         NativeSqlTemplet templet = info.createTemplet(params);
         if (logger.isLoggable(Level.FINER)) {
-            logger.log(Level.FINER, DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql
-                + ", dynamic: " + info.isDynamic() + ", templetSql: " + templet.getJdbcSql());
+            logger.log(
+                    Level.FINER,
+                    DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql + ", dynamic: "
+                            + info.isDynamic() + ", templetSql: " + templet.getJdbcSql());
         }
         NativeParserNode node = info.loadParserNode(templet.getJdbcSql(), countable);
         DataNativeSqlStatement statement = node.loadStatement(templet.getTempletParams());
         if (logger.isLoggable(Level.FINE)) {
             String countSql = countable ? (", nativeCountSql: " + statement.getNativeCountSql()) : "";
-            logger.log(Level.FINE, DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql + ", nativeSql: " + statement.getNativeSql()
-                + countSql + ", paramNames: " + statement.getParamNames());
+            logger.log(
+                    Level.FINE,
+                    DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql + ", nativeSql: "
+                            + statement.getNativeSql() + countSql + ", paramNames: " + statement.getParamNames());
         }
         return statement;
     }
-
 }

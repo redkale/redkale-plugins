@@ -13,10 +13,7 @@ import org.redkale.source.EntityInfo.EntityColumn;
 import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgClientConnection extends ClientConnection<PgClientRequest, PgResultSet> {
 
     private PgPrepareDesc lastPrepareDesc;
@@ -108,7 +105,8 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         } else {
             throw new SourceException("PgExtendMode (" + mode + ") is illegal");
         }
-        PgPrepareDesc prepareDesc = new PgPrepareDesc(type, mode, sql, nextSequence(), paramAttrs, paramCols, resultAttrs, resultCols);
+        PgPrepareDesc prepareDesc =
+                new PgPrepareDesc(type, mode, sql, nextSequence(), paramAttrs, paramCols, resultAttrs, resultCols);
         cachePreparedDescs.put(sql, prepareDesc);
         return prepareDesc;
     }
@@ -149,9 +147,9 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
 
     private byte[] nextSequence() {
         int len = 3 // 3 leading zeroes
-            + (64 - Long.numberOfLeadingZeros(sequence) + 3) / 4 // hex characters
-            + 1;  // tailing null byte
-        len = Math.max(8, len);  // at least 7 hex digits plus null byte
+                + (64 - Long.numberOfLeadingZeros(sequence) + 3) / 4 // hex characters
+                + 1; // tailing null byte
+        len = Math.max(8, len); // at least 7 hex digits plus null byte
         byte[] hex = new byte[len];
         int pos = len - 1;
         hex[pos--] = '\0';

@@ -5,20 +5,17 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.nio.ByteBuffer;
-import org.redkale.util.ByteArray;
 import static org.redkalex.source.pgsql.PgClientCodec.*;
 
-/**
- *
- * @author zhangjx
- */
+import java.nio.ByteBuffer;
+import org.redkale.util.ByteArray;
+
+/** @author zhangjx */
 public class PgRespReadyDecoder extends PgRespDecoder<Boolean> {
 
     public static final PgRespReadyDecoder instance = new PgRespReadyDecoder();
 
-    private PgRespReadyDecoder() {
-    }
+    private PgRespReadyDecoder() {}
 
     @Override
     public byte messageid() {
@@ -26,11 +23,16 @@ public class PgRespReadyDecoder extends PgRespDecoder<Boolean> {
     }
 
     @Override
-    public Boolean read(PgClientConnection conn, ByteBuffer buffer, int length, ByteArray array, PgClientRequest request, PgResultSet dataset) {
+    public Boolean read(
+            PgClientConnection conn,
+            ByteBuffer buffer,
+            int length,
+            ByteArray array,
+            PgClientRequest request,
+            PgResultSet dataset) {
         if (length > 4) {
             buffer.position(buffer.position() + length - 4);
         }
         return true;
     }
-
 }

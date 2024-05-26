@@ -3,9 +3,7 @@ package org.redkalex.schedule.xxljob;
 import java.io.Serializable;
 import org.redkale.convert.json.JsonConvert;
 
-/**
- * Created by xuxueli on 2017-05-10 20:22:42
- */
+/** Created by xuxueli on 2017-05-10 20:22:42 */
 public class RegistryParam implements Serializable {
 
     private static final long serialVersionUID = 42L;
@@ -16,8 +14,7 @@ public class RegistryParam implements Serializable {
 
     private String registryValue;
 
-    public RegistryParam() {
-    }
+    public RegistryParam() {}
 
     public RegistryParam(String registryGroup, String registryKey, String registryValue) {
         this.registryGroup = registryGroup;

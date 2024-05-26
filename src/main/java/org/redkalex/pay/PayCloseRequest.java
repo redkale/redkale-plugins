@@ -10,20 +10,19 @@ import org.redkale.convert.ConvertDisabled;
 import org.redkale.util.RedkaleException;
 
 /**
- *
  * 详情见: https://redkale.org
  *
  * @author zhangjx
  */
 public class PayCloseRequest extends PayRequest {
 
-    protected String thirdPayno = ""; //第三方的支付流水号
+    protected String thirdPayno = ""; // 第三方的支付流水号
 
-    protected long payMoney; //  支付金额。 单位:分 
+    protected long payMoney; //  支付金额。 单位:分
 
     protected String payCurrency; //  币种,一般币值*100
 
-    protected Map<String, String> attach; //扩展信息
+    protected Map<String, String> attach; // 扩展信息
 
     @Override
     public void checkVaild() {

@@ -11,10 +11,7 @@ import java.util.*;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgReqAuthScramPassword extends PgClientRequest {
 
     public static final int DEFAULT_NONCE_LENGTH = 24;
@@ -54,7 +51,8 @@ public class PgReqAuthScramPassword extends PgClientRequest {
 
     @Override
     public String toString() {
-        return "PgReqAuthScramPassword_" + Objects.hashCode(this)+"{username=" + username + ", password=" + password + ", mechanisms=" + mechanisms + ", clientNonce=" + clientNonce + ", reqMessage=" + reqMessage + "}";
+        return "PgReqAuthScramPassword_" + Objects.hashCode(this) + "{username=" + username + ", password=" + password
+                + ", mechanisms=" + mechanisms + ", clientNonce=" + clientNonce + ", reqMessage=" + reqMessage + "}";
     }
 
     @Override
@@ -73,7 +71,7 @@ public class PgReqAuthScramPassword extends PgClientRequest {
     protected static String createNonce(int size, SecureRandom random) {
         char[] chars = new char[size];
         int r;
-        for (int i = 0; i < size;) {
+        for (int i = 0; i < size; ) {
             r = random.nextInt(MAX_ASCII_PRINTABLE_RANGE - MIN_ASCII_PRINTABLE_RANGE + 1) + MIN_ASCII_PRINTABLE_RANGE;
             if (r != EXCLUDED_CHAR) {
                 chars[i++] = (char) r;
@@ -134,8 +132,7 @@ public class PgReqAuthScramPassword extends PgClientRequest {
                 }
                 if (!(orig[i + 1] == '2' && orig[i + 2] == 'C' || orig[i + 1] == '3' && orig[i + 2] == 'D')) {
                     throw new IllegalArgumentException(
-                        "Invalid char '=" + orig[i + 1] + orig[i + 2] + "' found in saslName"
-                    );
+                            "Invalid char '=" + orig[i + 1] + orig[i + 2] + "' found in saslName");
                 }
             }
         }
@@ -159,5 +156,4 @@ public class PgReqAuthScramPassword extends PgClientRequest {
         }
         return new String(replaced);
     }
-
 }

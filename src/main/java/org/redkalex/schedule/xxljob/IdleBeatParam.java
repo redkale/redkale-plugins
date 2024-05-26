@@ -3,17 +3,14 @@ package org.redkalex.schedule.xxljob;
 import java.io.Serializable;
 import org.redkale.convert.json.JsonConvert;
 
-/**
- * @author xuxueli 2020-04-11 22:27
- */
+/** @author xuxueli 2020-04-11 22:27 */
 public class IdleBeatParam implements Serializable {
 
     private static final long serialVersionUID = 42L;
 
     private int jobId;
 
-    public IdleBeatParam() {
-    }
+    public IdleBeatParam() {}
 
     public IdleBeatParam(int jobId) {
         this.jobId = jobId;

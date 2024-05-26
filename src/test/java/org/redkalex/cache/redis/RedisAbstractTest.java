@@ -5,6 +5,10 @@
  */
 package org.redkalex.cache.redis;
 
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
+import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODES;
+
 import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -12,19 +16,13 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.*;
 import org.junit.jupiter.api.Assertions;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.json.*;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.source.*;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODES;
 import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public abstract class RedisAbstractTest {
 
     protected static void run(CacheSource source, boolean press) throws Exception {
@@ -78,7 +76,8 @@ public abstract class RedisAbstractTest {
 
         Map<String, Flipper> flippermap = source.mgets(Flipper.class, "objitem1", "objitem2");
         System.out.println("[有值] MGET : " + flippermap);
-        Assertions.assertTrue(Utility.equalsElement(Utility.ofMap("objitem1", new Flipper(10), "objitem2", new Flipper(20)), flippermap));
+        Assertions.assertTrue(Utility.equalsElement(
+                Utility.ofMap("objitem1", new Flipper(10), "objitem2", new Flipper(20)), flippermap));
 
         source.del("key1", "key2", "300");
         source.setex("key1", 1000, String.class, "value1");
@@ -171,7 +170,8 @@ public abstract class RedisAbstractTest {
         source.sadd("stringmap", JsonConvert.TYPE_MAP_STRING_STRING, Utility.ofMap("c", "cc", "d", "dd"));
         col = source.smembers("stringmap", JsonConvert.TYPE_MAP_STRING_STRING);
         System.out.println("[两值] stringmap VALUES : " + col);
-        Assertions.assertTrue(Utility.equalsElement(List.of(Utility.ofMap("c", "cc", "d", "dd"), Utility.ofMap("a", "aa", "b", "bb")), col));
+        Assertions.assertTrue(Utility.equalsElement(
+                List.of(Utility.ofMap("c", "cc", "d", "dd"), Utility.ofMap("a", "aa", "b", "bb")), col));
 
         source.del("sets3");
         source.del("sets4");
@@ -239,7 +239,10 @@ public abstract class RedisAbstractTest {
             }
         });
         mapcol.putAll(news);
-        Assertions.assertEquals(Utility.ofMap("sets3", List.of("setvals2"), "sets4", List.of("setvals1", "setvals2")).toString(), mapcol.toString());
+        Assertions.assertEquals(
+                Utility.ofMap("sets3", List.of("setvals2"), "sets4", List.of("setvals1", "setvals2"))
+                        .toString(),
+                mapcol.toString());
 
         source.del("sets3");
         source.del("sets4");
@@ -274,7 +277,8 @@ public abstract class RedisAbstractTest {
         Assertions.assertIterableEquals(interanswer, interset);
 
         source.del("sets6");
-        Set<String> unionanswer = new TreeSet<>(Set.of("setvals1", "setvals2", "setvals3", "setvals4", "setvals5", "setvals6", "setvals7", "setvals8"));
+        Set<String> unionanswer = new TreeSet<>(
+                Set.of("setvals1", "setvals2", "setvals3", "setvals4", "setvals5", "setvals6", "setvals7", "setvals8"));
         Set<String> unionset = new TreeSet<>(source.sunionString("sets3", "sets4", "sets5"));
         System.out.println("sunion: " + unionset);
         Assertions.assertIterableEquals(unionanswer, unionset);
@@ -341,12 +345,14 @@ public abstract class RedisAbstractTest {
             }
         });
         mapcol.putAll(news2);
-        Assertions.assertEquals(Utility.ofMap("myaddrs", List.of(addr99), "myaddrs2", List.of(addr88, addr99)).toString(), mapcol.toString());
+        Assertions.assertEquals(
+                Utility.ofMap("myaddrs", List.of(addr99), "myaddrs2", List.of(addr88, addr99))
+                        .toString(),
+                mapcol.toString());
 
         System.out.println("------------------------------------");
         source.del("myaddrs");
-        Type mapType = new TypeToken<Map<String, Integer>>() {
-        }.getType();
+        Type mapType = new TypeToken<Map<String, Integer>>() {}.getType();
         Map<String, Integer> paramap = new HashMap<>();
         paramap.put("a", 1);
         paramap.put("b", 2);
@@ -361,17 +367,29 @@ public abstract class RedisAbstractTest {
         Assertions.assertIterableEquals(List.of("111", "222"), source.hvals("hmapall", String.class));
         Assertions.assertIterableEquals(List.of("111", "222"), source.hvalsString("hmapall"));
         Assertions.assertIterableEquals(List.of(111L, 222L), source.hvalsLong("hmapall"));
-        Assertions.assertIterableEquals(List.of("111", "222"), source.hvalsAsync("hmapall", String.class).join());
-        Assertions.assertIterableEquals(List.of("111", "222"), source.hvalsStringAsync("hmapall").join());
-        Assertions.assertIterableEquals(List.of(111L, 222L), source.hvalsLongAsync("hmapall").join());
+        Assertions.assertIterableEquals(
+                List.of("111", "222"),
+                source.hvalsAsync("hmapall", String.class).join());
+        Assertions.assertIterableEquals(
+                List.of("111", "222"), source.hvalsStringAsync("hmapall").join());
+        Assertions.assertIterableEquals(
+                List.of(111L, 222L), source.hvalsLongAsync("hmapall").join());
         Assertions.assertEquals(Utility.ofMap("k1", "111", "k2", "222"), source.hgetall("hmapall", String.class));
         Assertions.assertEquals(Utility.ofMap("k1", "111", "k2", "222"), source.hgetallString("hmapall"));
-        Assertions.assertEquals(convert.convertTo(Utility.ofMap("k1", 111L, "k2", 222L)), convert.convertTo(source.hgetallLong("hmapall")));
-        Assertions.assertEquals(convert.convertTo(Utility.ofMap("k1", "111", "k2", "222")), convert.convertTo(source.hgetallAsync("hmapall", String.class).join()));
-        Assertions.assertEquals(convert.convertTo(Utility.ofMap("k1", "111", "k2", "222")), convert.convertTo(source.hgetallStringAsync("hmapall").join()));
-        Assertions.assertEquals(convert.convertTo(Utility.ofMap("k1", 111L, "k2", 222L)), convert.convertTo(source.hgetallLongAsync("hmapall").join()));
+        Assertions.assertEquals(
+                convert.convertTo(Utility.ofMap("k1", 111L, "k2", 222L)),
+                convert.convertTo(source.hgetallLong("hmapall")));
+        Assertions.assertEquals(
+                convert.convertTo(Utility.ofMap("k1", "111", "k2", "222")),
+                convert.convertTo(source.hgetallAsync("hmapall", String.class).join()));
+        Assertions.assertEquals(
+                convert.convertTo(Utility.ofMap("k1", "111", "k2", "222")),
+                convert.convertTo(source.hgetallStringAsync("hmapall").join()));
+        Assertions.assertEquals(
+                convert.convertTo(Utility.ofMap("k1", 111L, "k2", 222L)),
+                convert.convertTo(source.hgetallLongAsync("hmapall").join()));
 
-        //h
+        // h
         source.del("hmap");
         source.hincr("hmap", "key1");
         num = source.hgetLong("hmap", "key1", -1);
@@ -441,7 +459,7 @@ public abstract class RedisAbstractTest {
         cursor = new AtomicLong();
         Map<String, String> smap = source.hscan("hmap", String.class, cursor, 5);
         System.out.println("hmap.hscan 长度 : " + smap.size() + ", cursor: " + cursor + ", 内容: " + smap);
-        //smap.size 是不确定的，可能是全量，也可能比5多，也可能比5少
+        // smap.size 是不确定的，可能是全量，也可能比5多，也可能比5少
         Assertions.assertFalse(smap.isEmpty());
         if (smap.size() == ccc) {
             Assertions.assertTrue(cursor.get() == 0);
@@ -469,12 +487,14 @@ public abstract class RedisAbstractTest {
         Assertions.assertEquals(1L, source.zrevrank("sortset", "key400"));
         Assertions.assertEquals(List.of("key100", "key200", "key300"), source.zrange("sortset", 0, 2));
         cursor = new AtomicLong();
-        Assertions.assertEquals(List.of(CacheScoredValue.create(100, "key100"),
-            CacheScoredValue.create(200, "key200"),
-            CacheScoredValue.create(300, "key300"),
-            CacheScoredValue.create(400, "key400"),
-            CacheScoredValue.create(500, "key500")
-        ), source.zscanInteger("sortset", cursor, -1));
+        Assertions.assertEquals(
+                List.of(
+                        CacheScoredValue.create(100, "key100"),
+                        CacheScoredValue.create(200, "key200"),
+                        CacheScoredValue.create(300, "key300"),
+                        CacheScoredValue.create(400, "key400"),
+                        CacheScoredValue.create(500, "key500")),
+                source.zscanInteger("sortset", cursor, -1));
 
         size = source.zcard("sortset");
         Assertions.assertEquals(5, size);
@@ -503,7 +523,7 @@ public abstract class RedisAbstractTest {
         cursor = new AtomicLong();
         Set<String> sset = source.sscan("popset", String.class, cursor, 3);
         System.out.println("popset.sscan 长度 : " + sset.size() + ", cursor: " + cursor + ", 内容: " + sset);
-        //smap.size 是不确定的，可能是全量，也可能比5多，也可能比5少
+        // smap.size 是不确定的，可能是全量，也可能比5多，也可能比5少
         Assertions.assertFalse(sset.isEmpty());
         if (sset.size() == 5) {
             Assertions.assertTrue(cursor.get() == 0);
@@ -558,7 +578,7 @@ public abstract class RedisAbstractTest {
         Assertions.assertTrue(remainMillis <= 5000 && remainMillis > 4500);
         Assertions.assertTrue(remainSeconds <= 5 && remainSeconds >= 4);
 
-        //rate-limiter
+        // rate-limiter
         long tokensLeft = source.rateLimit("/pipes/user/update", 2, 2, 1);
         System.out.println("tokensLeft：" + tokensLeft);
         Assertions.assertTrue(tokensLeft >= 0);
@@ -575,7 +595,8 @@ public abstract class RedisAbstractTest {
         //
         cursor = new AtomicLong();
         List<String> keys = source.scan(cursor, 5);
-        System.out.println("scan 长度 : " + keys.size() + ", dbsize: " + source.dbsize() + ", cursor: " + cursor + ", 内容: " + keys);
+        System.out.println(
+                "scan 长度 : " + keys.size() + ", dbsize: " + source.dbsize() + ", cursor: " + cursor + ", 内容: " + keys);
         Assertions.assertFalse(keys.isEmpty());
         if (keys.size() == source.dbsize()) {
             Assertions.assertTrue(cursor.get() == 0);
@@ -606,11 +627,13 @@ public abstract class RedisAbstractTest {
             Utility.sleep(110);
             Assertions.assertTrue(source.setnxpx("nxexkey1", 100, InetSocketAddress.class, addr88));
             Assertions.assertTrue(!source.setnxpx("nxexkey1", 100, InetSocketAddress.class, addr99));
-            Assertions.assertEquals(addr88.toString(), source.get("nxexkey1", InetSocketAddress.class).toString());
+            Assertions.assertEquals(
+                    addr88.toString(),
+                    source.get("nxexkey1", InetSocketAddress.class).toString());
         }
         long dbsize = source.dbsize();
         System.out.println("keys总数量 : " + dbsize);
-        //清除
+        // 清除
         long rs = source.del("stritem1");
         System.out.println("删除stritem1个数: " + rs);
         source.del("exp1");
@@ -641,22 +664,22 @@ public abstract class RedisAbstractTest {
         source.del("byteskey");
         source.del("nxexkey1");
         System.out.println("--------###------- 接口测试结束 --------###-------");
-//        System.out.println("--------------测试大文本---------------");
-//        HashMap<String, String> bigmap = new HashMap<>();
-//        StringBuilder sb = new StringBuilder();
-//        sb.append("起始");
-//        for (int i = 0; i < 1024 * 1024; i++) {
-//            sb.append("abcde");
-//        }
-//        sb.append("结束");
-//        bigmap.put("val", sb.toString());
-//        System.out.println("文本长度: " + sb.length());
-//        source.setex("bigmap", JsonConvert.TYPE_MAP_STRING_STRING, bigmap);
-//        System.out.println("写入完成");
-//        for (int i = 0; i < 1; i++) {
-//            HashMap<String, String> fs = (HashMap) source.get("bigmap", JsonConvert.TYPE_MAP_STRING_STRING);
-//            System.out.println("内容长度: " + fs.get("val").length());
-//        }
+        //        System.out.println("--------------测试大文本---------------");
+        //        HashMap<String, String> bigmap = new HashMap<>();
+        //        StringBuilder sb = new StringBuilder();
+        //        sb.append("起始");
+        //        for (int i = 0; i < 1024 * 1024; i++) {
+        //            sb.append("abcde");
+        //        }
+        //        sb.append("结束");
+        //        bigmap.put("val", sb.toString());
+        //        System.out.println("文本长度: " + sb.length());
+        //        source.setex("bigmap", JsonConvert.TYPE_MAP_STRING_STRING, bigmap);
+        //        System.out.println("写入完成");
+        //        for (int i = 0; i < 1; i++) {
+        //            HashMap<String, String> fs = (HashMap) source.get("bigmap", JsonConvert.TYPE_MAP_STRING_STRING);
+        //            System.out.println("内容长度: " + fs.get("val").length());
+        //        }
         source.del("bigmap");
         if (press) {
             int count = 300;
@@ -679,23 +702,26 @@ public abstract class RedisAbstractTest {
             long s = System.currentTimeMillis();
             for (int i = 0; i < count; i++) {
                 new Thread(() -> {
-                    start.countDown();
-                    if (ai.decrementAndGet() == 0) {
-                        System.out.println("开始了 ");
-                    }
-                    source.incr("testnumber");
-                    over.countDown();
-                }).start();
+                            start.countDown();
+                            if (ai.decrementAndGet() == 0) {
+                                System.out.println("开始了 ");
+                            }
+                            source.incr("testnumber");
+                            over.countDown();
+                        })
+                        .start();
                 new Thread(() -> {
-                    start.countDown();
-                    source.hincr("hmap", "key1");
-                    over.countDown();
-                }).start();
+                            start.countDown();
+                            source.hincr("hmap", "key1");
+                            over.countDown();
+                        })
+                        .start();
                 new Thread(() -> {
-                    start.countDown();
-                    source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING);
-                    over.countDown();
-                }).start();
+                            start.countDown();
+                            source.hget("hmap", "sm", JsonConvert.TYPE_MAP_STRING_STRING);
+                            over.countDown();
+                        })
+                        .start();
             }
             over.await();
             long e = System.currentTimeMillis() - s;
@@ -721,7 +747,7 @@ public abstract class RedisAbstractTest {
         System.out.println("订阅结束");
         source.publish(channel, content);
         System.out.println("发布结束");
-        if (!source.getClass().getName().contains("Redisson")) { //Redisson不支持
+        if (!source.getClass().getName().contains("Redisson")) { // Redisson不支持
             List<String> channels = source.pubsubChannels(null);
             Assertions.assertEquals(List.of(channel), channels);
         }
@@ -740,8 +766,8 @@ public abstract class RedisAbstractTest {
 
     public static void main(String[] args) throws Exception {
         AnyValueWriter conf = new AnyValueWriter()
-            .addValue(CACHE_SOURCE_MAXCONNS, "1")
-            .addValue(CACHE_SOURCE_NODES, "redis://127.0.0.1:6363");
+                .addValue(CACHE_SOURCE_MAXCONNS, "1")
+                .addValue(CACHE_SOURCE_NODES, "redis://127.0.0.1:6363");
         final ResourceFactory factory = ResourceFactory.create();
         boolean press = false;
         {

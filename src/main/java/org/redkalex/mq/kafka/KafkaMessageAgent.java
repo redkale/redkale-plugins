@@ -5,9 +5,6 @@
  */
 package org.redkalex.mq.kafka;
 
-import org.redkale.mq.spi.MessageAgent;
-import org.redkale.mq.spi.MessageClientProducer;
-import org.redkale.mq.spi.MessageClientConsumer;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
@@ -15,14 +12,14 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.redkale.inject.ResourceEvent;
-import org.redkale.util.*;
 import org.redkale.annotation.ResourceChanged;
+import org.redkale.inject.ResourceEvent;
+import org.redkale.mq.spi.MessageAgent;
+import org.redkale.mq.spi.MessageClientConsumer;
+import org.redkale.mq.spi.MessageClientProducer;
+import org.redkale.util.*;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class KafkaMessageAgent extends MessageAgent {
 
     protected String servers;
@@ -78,8 +75,12 @@ public class KafkaMessageAgent extends MessageAgent {
     public void onResourceChange(ResourceEvent[] events) {
         StringBuilder sb = new StringBuilder();
         for (ResourceEvent event : events) {
-            sb.append(KafkaMessageAgent.class.getSimpleName()).append(" skip change '")
-                .append(event.name()).append("' to '").append(event.coverNewValue()).append("'\r\n");
+            sb.append(KafkaMessageAgent.class.getSimpleName())
+                    .append(" skip change '")
+                    .append(event.name())
+                    .append("' to '")
+                    .append(event.coverNewValue())
+                    .append("'\r\n");
         }
         if (sb.length() > 0) {
             logger.log(Level.INFO, sb.toString());
@@ -99,7 +100,9 @@ public class KafkaMessageAgent extends MessageAgent {
         if (group != null) {
             props.put(ConsumerConfig.GROUP_ID_CONFIG, group);
         }
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");// 当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
+        props.put(
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+                "latest"); // 当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
         props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, "1000");
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
@@ -114,7 +117,7 @@ public class KafkaMessageAgent extends MessageAgent {
         props.put(ProducerConfig.BATCH_SIZE_CONFIG, 1024);
         props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
         props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
-        props.put(ProducerConfig.ACKS_CONFIG, "1");//all:所有follower都响应了才认为消息提交成功，即"committed"
+        props.put(ProducerConfig.ACKS_CONFIG, "1"); // all:所有follower都响应了才认为消息提交成功，即"committed"
         props.putAll(producerConfig);
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         return props;
@@ -128,7 +131,7 @@ public class KafkaMessageAgent extends MessageAgent {
         return timeoutExecutor;
     }
 
-    @Override //ServiceLoader时判断配置是否符合当前实现类
+    @Override // ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) {
             return false;
@@ -156,7 +159,10 @@ public class KafkaMessageAgent extends MessageAgent {
             for (String t : topics) {
                 newTopics.add(new NewTopic(t, Optional.empty(), Optional.empty()));
             }
-            adminClient.createTopics(newTopics, new CreateTopicsOptions().timeoutMs(3000)).all().get(3, TimeUnit.SECONDS);
+            adminClient
+                    .createTopics(newTopics, new CreateTopicsOptions().timeoutMs(3000))
+                    .all()
+                    .get(3, TimeUnit.SECONDS);
             return true;
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "createTopic error: " + Arrays.toString(topics), ex);
@@ -170,7 +176,10 @@ public class KafkaMessageAgent extends MessageAgent {
             return true;
         }
         try {
-            adminClient.deleteTopics(Utility.ofList(topics), new DeleteTopicsOptions().timeoutMs(3000)).all().get(3, TimeUnit.SECONDS);
+            adminClient
+                    .deleteTopics(Utility.ofList(topics), new DeleteTopicsOptions().timeoutMs(3000))
+                    .all()
+                    .get(3, TimeUnit.SECONDS);
             return true;
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "deleteTopic error: " + Arrays.toString(topics), ex);
@@ -181,7 +190,10 @@ public class KafkaMessageAgent extends MessageAgent {
     @Override
     public List<String> queryTopic() {
         try {
-            Collection<TopicListing> list = adminClient.listTopics(new ListTopicsOptions().timeoutMs(3000)).listings().get(3, TimeUnit.SECONDS);
+            Collection<TopicListing> list = adminClient
+                    .listTopics(new ListTopicsOptions().timeoutMs(3000))
+                    .listings()
+                    .get(3, TimeUnit.SECONDS);
             List<String> result = new ArrayList<>(list.size());
             for (TopicListing t : list) {
                 if (!t.isInternal()) {
@@ -217,7 +229,7 @@ public class KafkaMessageAgent extends MessageAgent {
         }
     }
 
-    @Override //创建指定topic的生产处理器
+    @Override // 创建指定topic的生产处理器
     protected MessageClientProducer startMessageClientProducer() {
         return new KafkaMessageClientProducer(this, "redkale-message", this.partitions);
     }

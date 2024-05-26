@@ -2,18 +2,16 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.util.Properties;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+
+import java.util.Properties;
 import org.redkale.boot.LoggingFileHandler;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.util.*;
 import org.redkalex.source.base.SourceTest;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PgSourceTest {
 
     public static void main(String[] args) throws Throwable {
@@ -32,7 +30,10 @@ public class PgSourceTest {
 
         PgsqlDataSource source = new PgsqlDataSource();
         factory.inject(source);
-        source.init(AnyValue.loadFromProperties(prop).getAnyValue("redkale").getAnyValue("datasource").getAnyValue("default"));
+        source.init(AnyValue.loadFromProperties(prop)
+                .getAnyValue("redkale")
+                .getAnyValue("datasource")
+                .getAnyValue("default"));
         System.out.println("---------");
         SourceTest.run(source);
         source.close();

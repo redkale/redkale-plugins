@@ -5,19 +5,16 @@
  */
 package org.redkalex.source.mysql;
 
+import static org.redkalex.source.mysql.MyClientRequest.REQ_TYPE_UPDATE;
+
 import java.util.Objects;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
-import static org.redkalex.source.mysql.MyClientRequest.REQ_TYPE_UPDATE;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MyReqClose extends MyClientRequest {
 
-    public MyReqClose() {
-    }
+    public MyReqClose() {}
 
     @Override
     public int getType() {
@@ -40,5 +37,4 @@ public class MyReqClose extends MyClientRequest {
         array.put(packetIndex);
         array.put(Mysqls.COM_QUIT);
     }
-
 }

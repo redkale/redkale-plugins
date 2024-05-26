@@ -14,10 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.util.Utility;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class JsqlJdbcParserTest {
 
     private static final IntFunction<String> signFunc = index -> "?";
@@ -39,12 +36,12 @@ public class JsqlJdbcParserTest {
     @Test
     public void run1() throws Exception {
         String sql = "SELECT DISTINCT col1 AS a, col2 AS b, col3 AS c FROM table T "
-            + "WHERE col1 = 10 AND (col2 = :c2 OR col3 = MAX(:c3)) AND name LIKE '%'"
-            + " AND seqid IS NULL AND (gameid IN :gameids OR gameName IN ('%', 'zzz'))"
-            + " AND time BETWEEN :min AND :range_max AND col2 >= :c2"
-            + " AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";
+                + "WHERE col1 = 10 AND (col2 = :c2 OR col3 = MAX(:c3)) AND name LIKE '%'"
+                + " AND seqid IS NULL AND (gameid IN :gameids OR gameName IN ('%', 'zzz'))"
+                + " AND time BETWEEN :min AND :range_max AND col2 >= :c2"
+                + " AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";
         Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
-        
+
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, params);
         System.out.println("新sql = " + statement.getNativeSql());
@@ -80,7 +77,7 @@ public class JsqlJdbcParserTest {
     @Test
     public void run4() throws Exception {
         String sql = "INSERT INTO dayrecord (recordid, content, createTime) SELECT recordid, content, NOW() "
-            + "FROM hourrecord WHERE createTime BETWEEN :startTime AND :endTime AND id > 0";
+                + "FROM hourrecord WHERE createTime BETWEEN :startTime AND :endTime AND id > 0";
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
@@ -93,8 +90,9 @@ public class JsqlJdbcParserTest {
     @Test
     public void run5() throws Exception {
         String sql = "UPDATE dayrecord SET id = MAX(:id), remark = :remark, name = CASE WHEN type = 1 THEN :v1 "
-            + "WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
-        Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "ids", List.of(2, 3));
+                + "WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
+        Map<String, Object> params = Utility.ofMap(
+                "id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "ids", List.of(2, 3));
 
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
         System.out.println(sqlParser.Statement());
@@ -109,8 +107,22 @@ public class JsqlJdbcParserTest {
     @Test
     public void run6() throws Exception {
         String sql = "UPDATE dayrecord SET id = MAX(:id), remark = :remark, name = CASE WHEN type = 1 THEN :v1 "
-            + "WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
-        Map<String, Object> params = Utility.ofMap("id", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark", "startTime", 1, "ids", new ArrayList<>());
+                + "WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN :ids";
+        Map<String, Object> params = Utility.ofMap(
+                "id",
+                100,
+                "v1",
+                1,
+                "v2",
+                2,
+                "v3",
+                3,
+                "remark",
+                "this is remark",
+                "startTime",
+                1,
+                "ids",
+                new ArrayList<>());
 
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
         System.out.println(sqlParser.Statement());
@@ -125,9 +137,24 @@ public class JsqlJdbcParserTest {
     @Test
     public void run7() throws Exception {
         String sql = "UPDATE dayrecord SET id = :idx, remark = :remark, name = CASE WHEN type = 1 THEN :v1 "
-            + "WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN (1,2,:ids)";
-        Map<String, Object> params = Utility.ofMap("idx", 100, "v1", 1, "v2", 2, "v3", 3, "remark", "this is remark",
-            "startTime", 1, "sts", List.of(2, 3), "ids", List.of(3, 4));
+                + "WHEN type = 2 THEN :v2 ELSE :v3 END WHERE createTime BETWEEN :startTime AND :endTime AND id IN (1,2,:ids)";
+        Map<String, Object> params = Utility.ofMap(
+                "idx",
+                100,
+                "v1",
+                1,
+                "v2",
+                2,
+                "v3",
+                3,
+                "remark",
+                "this is remark",
+                "startTime",
+                1,
+                "sts",
+                List.of(2, 3),
+                "ids",
+                List.of(3, 4));
 
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
         System.out.println(sqlParser.Statement());
@@ -141,7 +168,8 @@ public class JsqlJdbcParserTest {
 
     @Test
     public void run8() throws Exception {
-        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = :idx ORDER BY u.createTime DESC";
+        String sql =
+                "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid WHERE u.id = :idx ORDER BY u.createTime DESC";
         Map<String, Object> params = Utility.ofMap("idx", 100);
 
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
@@ -159,11 +187,13 @@ public class JsqlJdbcParserTest {
     @Test
     public void run9() throws Exception {
         String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
-            + "WHERE u.id = :idx AND u.name IN (SELECT name FROM orderdetail WHERE status = :status UNION SELECT name FROM orderdetail_his) "
-            + "ORDER BY u.createTime DESC";
+                + "WHERE u.id = :idx AND u.name IN (SELECT name FROM orderdetail WHERE status = :status UNION SELECT name FROM orderdetail_his) "
+                + "ORDER BY u.createTime DESC";
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
         PlainSelect stmt = (PlainSelect) sqlParser.Statement();
-        System.out.println(((InExpression) ((BinaryExpression) stmt.getWhere()).getRightExpression()).getRightExpression().getClass());
+        System.out.println(((InExpression) ((BinaryExpression) stmt.getWhere()).getRightExpression())
+                .getRightExpression()
+                .getClass());
 
         Map<String, Object> params = Utility.ofMap("idx", 100);
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
@@ -177,7 +207,7 @@ public class JsqlJdbcParserTest {
     @Test
     public void run10() throws Exception {
         String sql = "SELECT * FROM (SELECT * FROM pooldatarecord_20220114 WHERE name LIKE :name AND status = 1"
-            + " UNION SELECT * FROM pooldatarecord_20220119 WHERE userid = :idx) a";
+                + " UNION SELECT * FROM pooldatarecord_20220119 WHERE userid = :idx) a";
         Map<String, Object> params = Utility.ofMap("idx", 100);
 
         CCJSqlParser sqlParser = new CCJSqlParser(sql).withAllowComplexParsing(true);
@@ -196,5 +226,4 @@ public class JsqlJdbcParserTest {
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================10=======================================");
     }
-
 }

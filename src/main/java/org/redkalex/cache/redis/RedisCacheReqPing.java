@@ -9,21 +9,19 @@ import java.nio.charset.StandardCharsets;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.ByteArray;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class RedisCacheReqPing extends RedisCacheRequest {
 
     private static final byte[] BYTES = new ByteArray()
-        .put((byte) '*')
-        .put((byte) '1')
-        .put((byte) '\r', (byte) '\n')
-        .put((byte) '$')
-        .put((byte) '4')
-        .put((byte) '\r', (byte) '\n')
-        .put("PING".getBytes(StandardCharsets.UTF_8))
-        .put((byte) '\r', (byte) '\n').getBytes();
+            .put((byte) '*')
+            .put((byte) '1')
+            .put((byte) '\r', (byte) '\n')
+            .put((byte) '$')
+            .put((byte) '4')
+            .put((byte) '\r', (byte) '\n')
+            .put("PING".getBytes(StandardCharsets.UTF_8))
+            .put((byte) '\r', (byte) '\n')
+            .getBytes();
 
     @Override
     public void writeTo(ClientConnection conn, ByteArray writer) {

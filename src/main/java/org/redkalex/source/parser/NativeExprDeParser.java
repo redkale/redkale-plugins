@@ -15,30 +15,27 @@ import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.util.deparser.*;
 import org.redkale.source.SourceException;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class NativeExprDeParser extends ExpressionDeParser {
 
     private static final Package relationalPkg = Between.class.getPackage();
 
     private static final Package conditionalPkg = AndExpression.class.getPackage();
 
-    //只存AndExpression、OrExpression、XorExpression
+    // 只存AndExpression、OrExpression、XorExpression
     private final Deque<BinaryExpression> conditions = new ArrayDeque<>();
 
     private final Deque<Expression> relations = new ArrayDeque<>();
 
     private final IntFunction<String> signFunc;
 
-    //需要预编译的jdbc参数名:argxxx, 数量与sql中的?数量一致
+    // 需要预编译的jdbc参数名:argxxx, 数量与sql中的?数量一致
     private final List<String> jdbcNames = new ArrayList<>();
 
-    //参数
+    // 参数
     private final Map<String, Object> paramValues;
 
-    //当前BinaryExpression缺失参数
+    // 当前BinaryExpression缺失参数
     private boolean paramLosing;
 
     public NativeExprDeParser(IntFunction<String> signFunc, Map<String, Object> params) {
@@ -76,12 +73,12 @@ public class NativeExprDeParser extends ExpressionDeParser {
     @Override
     public void visit(JdbcNamedParameter expr) {
         Object val = paramValues.get(expr.getName());
-        if (val == null) { //没有参数值            
+        if (val == null) { // 没有参数值
             paramLosing = true;
             return;
         }
         jdbcNames.add(expr.getName());
-        //使用JdbcParameter代替JdbcNamedParameter
+        // 使用JdbcParameter代替JdbcNamedParameter
         buffer.append(signFunc.apply(jdbcNames.size()));
     }
 
@@ -112,9 +109,9 @@ public class NativeExprDeParser extends ExpressionDeParser {
         expr.getRightExpression().accept(this);
         int end2 = buffer.length();
         size2 = jdbcNames.size();
-        if (paramLosing) { //没有right
+        if (paramLosing) { // 没有right
             buffer.delete(start1, end2);
-            //多个paramNames里中一个不存在，需要删除另外几个
+            // 多个paramNames里中一个不存在，需要删除另外几个
             trimJdbcNames(size1, size2);
         } else {
             if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_LEFT) {
@@ -147,7 +144,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
             expr.getRightExpression().accept(this);
             final int end2 = buffer.length();
             size2 = jdbcNames.size();
-            if (end2 == start2) { //没有right
+            if (end2 == start2) { // 没有right
                 buffer.delete(end1, end2);
                 trimJdbcNames(size1, size2);
             }
@@ -166,7 +163,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
                 expr.getRightExpression().accept(this);
                 final int end1 = buffer.length();
-                if (paramLosing) { //没有right
+                if (paramLosing) { // 没有right
                     buffer.delete(start1, end1);
                     trimJdbcNames(size1, jdbcNames.size());
                 }
@@ -179,7 +176,6 @@ public class NativeExprDeParser extends ExpressionDeParser {
         } else {
             throw new SourceException("Not support expression (" + expr + ") ");
         }
-
     }
 
     @Override
@@ -210,7 +206,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
         }
     }
 
-    //--------------------------------------------------
+    // --------------------------------------------------
     @Override
     public void visit(Between expr) {
         paramLosing = false;
@@ -285,8 +281,8 @@ public class NativeExprDeParser extends ExpressionDeParser {
                     new ParenthesedExpressionList(itemList).accept(this);
                 }
             } else {
-                throw new SourceException("Not support expression (" + rightExpr
-                    + "), type: " + (rightExpr == null ? null : rightExpr.getClass().getName()));
+                throw new SourceException("Not support expression (" + rightExpr + "), type: "
+                        + (rightExpr == null ? null : rightExpr.getClass().getName()));
             }
         } else {
             buffer.delete(start, end);
@@ -353,18 +349,18 @@ public class NativeExprDeParser extends ExpressionDeParser {
     private List<Expression> createInParamItemList(JdbcNamedParameter namedParam) {
         String name = namedParam.getName();
         Object val = paramValues.get(name);
-        if (val == null) { //没有参数值            
+        if (val == null) { // 没有参数值
             throw new SourceException("Not found parameter (name=" + name + ") ");
         }
         if (val instanceof Collection) {
             if (((Collection) val).isEmpty()) {
-                //throw new SourceException("Parameter (name=" + name + ") is empty");
+                // throw new SourceException("Parameter (name=" + name + ") is empty");
                 return null;
             }
         } else if (val.getClass().isArray()) {
             int len = Array.getLength(val);
             if (len < 1) {
-                //throw new SourceException("Parameter (name=" + name + ") is empty");
+                // throw new SourceException("Parameter (name=" + name + ") is empty");
                 return null;
             }
             Collection list = new ArrayList();
@@ -400,7 +396,8 @@ public class NativeExprDeParser extends ExpressionDeParser {
             } else if (item instanceof java.time.LocalTime) {
                 itemList.add(new TimeValue().withValue(java.sql.Time.valueOf((java.time.LocalTime) item)));
             } else if (item instanceof java.time.LocalDateTime) {
-                itemList.add(new TimestampValue().withValue(java.sql.Timestamp.valueOf((java.time.LocalDateTime) item)));
+                itemList.add(
+                        new TimestampValue().withValue(java.sql.Timestamp.valueOf((java.time.LocalDateTime) item)));
             } else {
                 throw new SourceException("Not support parameter: " + val);
             }
