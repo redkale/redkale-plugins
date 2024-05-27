@@ -6,59 +6,59 @@ import org.redkale.convert.json.JsonConvert;
 /** Created by xuxueli on 17/3/2. */
 public class HandleCallbackParam implements Serializable {
 
-	private static final long serialVersionUID = 42L;
+    private static final long serialVersionUID = 42L;
 
-	private long logId;
+    private long logId;
 
-	private long logDateTim;
+    private long logDateTim;
 
-	private int handleCode;
+    private int handleCode;
 
-	private String handleMsg;
+    private String handleMsg;
 
-	public HandleCallbackParam() {}
+    public HandleCallbackParam() {}
 
-	public HandleCallbackParam(long logId, long logDateTim, int handleCode, String handleMsg) {
-		this.logId = logId;
-		this.logDateTim = logDateTim;
-		this.handleCode = handleCode;
-		this.handleMsg = handleMsg;
-	}
+    public HandleCallbackParam(long logId, long logDateTim, int handleCode, String handleMsg) {
+        this.logId = logId;
+        this.logDateTim = logDateTim;
+        this.handleCode = handleCode;
+        this.handleMsg = handleMsg;
+    }
 
-	public long getLogId() {
-		return logId;
-	}
+    public long getLogId() {
+        return logId;
+    }
 
-	public void setLogId(long logId) {
-		this.logId = logId;
-	}
+    public void setLogId(long logId) {
+        this.logId = logId;
+    }
 
-	public long getLogDateTim() {
-		return logDateTim;
-	}
+    public long getLogDateTim() {
+        return logDateTim;
+    }
 
-	public void setLogDateTim(long logDateTim) {
-		this.logDateTim = logDateTim;
-	}
+    public void setLogDateTim(long logDateTim) {
+        this.logDateTim = logDateTim;
+    }
 
-	public int getHandleCode() {
-		return handleCode;
-	}
+    public int getHandleCode() {
+        return handleCode;
+    }
 
-	public void setHandleCode(int handleCode) {
-		this.handleCode = handleCode;
-	}
+    public void setHandleCode(int handleCode) {
+        this.handleCode = handleCode;
+    }
 
-	public String getHandleMsg() {
-		return handleMsg;
-	}
+    public String getHandleMsg() {
+        return handleMsg;
+    }
 
-	public void setHandleMsg(String handleMsg) {
-		this.handleMsg = handleMsg;
-	}
+    public void setHandleMsg(String handleMsg) {
+        this.handleMsg = handleMsg;
+    }
 
-	@Override
-	public String toString() {
-		return JsonConvert.root().convertTo(this);
-	}
+    @Override
+    public String toString() {
+        return JsonConvert.root().convertTo(this);
+    }
 }

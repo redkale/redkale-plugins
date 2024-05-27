@@ -12,39 +12,39 @@ import org.redkale.persistence.*;
 @Entity
 public class World implements Comparable<World> {
 
-	@Id
-	protected int id;
+    @Id
+    protected int id;
 
-	protected int randomNumber;
+    protected int randomNumber;
 
-	public World randomNumber(int randomNumber) {
-		this.randomNumber = randomNumber;
-		return this;
-	}
+    public World randomNumber(int randomNumber) {
+        this.randomNumber = randomNumber;
+        return this;
+    }
 
-	public int getId() {
-		return id;
-	}
+    public int getId() {
+        return id;
+    }
 
-	public void setId(int id) {
-		this.id = id;
-	}
+    public void setId(int id) {
+        this.id = id;
+    }
 
-	public int getRandomNumber() {
-		return randomNumber;
-	}
+    public int getRandomNumber() {
+        return randomNumber;
+    }
 
-	public void setRandomNumber(int randomNumber) {
-		this.randomNumber = randomNumber;
-	}
+    public void setRandomNumber(int randomNumber) {
+        this.randomNumber = randomNumber;
+    }
 
-	@Override
-	public int compareTo(World o) {
-		return Integer.compare(id, o.id);
-	}
+    @Override
+    public int compareTo(World o) {
+        return Integer.compare(id, o.id);
+    }
 
-	@Override
-	public String toString() {
-		return JsonConvert.root().convertTo(this);
-	}
+    @Override
+    public String toString() {
+        return JsonConvert.root().convertTo(this);
+    }
 }

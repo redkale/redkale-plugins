@@ -8,7 +8,7 @@ package org.redkalex.source.mysql;
 /** @author zhangjx */
 public class MyRespAuthResultSet extends MyResultSet {
 
-	protected boolean authOK;
+    protected boolean authOK;
 
-	protected MyReqAuthentication.MyReqAuthSwitch authSwitch;
+    protected MyReqAuthentication.MyReqAuthSwitch authSwitch;
 }

@@ -14,26 +14,26 @@ import org.redkale.util.ByteArray;
 /** @author zhangjx */
 public class PgReqClose extends PgClientRequest {
 
-	public PgReqClose() {}
+    public PgReqClose() {}
 
-	@Override
-	public int getType() {
-		return REQ_TYPE_UPDATE;
-	}
+    @Override
+    public int getType() {
+        return REQ_TYPE_UPDATE;
+    }
 
-	@Override
-	public final boolean isCloseType() {
-		return true;
-	}
+    @Override
+    public final boolean isCloseType() {
+        return true;
+    }
 
-	@Override
-	public String toString() {
-		return "PgReqClose_" + Objects.hashCode(this) + "{type=" + getType() + "}";
-	}
+    @Override
+    public String toString() {
+        return "PgReqClose_" + Objects.hashCode(this) + "{type=" + getType() + "}";
+    }
 
-	@Override
-	public void writeTo(ClientConnection conn, ByteArray array) {
-		array.putByte('X');
-		array.putInt(4);
-	}
+    @Override
+    public void writeTo(ClientConnection conn, ByteArray array) {
+        array.putByte('X');
+        array.putInt(4);
+    }
 }

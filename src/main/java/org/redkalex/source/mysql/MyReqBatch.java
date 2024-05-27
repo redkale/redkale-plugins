@@ -15,32 +15,32 @@ import org.redkale.util.ByteArray;
 /** @author zhangjx */
 public class MyReqBatch extends MyClientRequest {
 
-	protected String[] sqls;
+    protected String[] sqls;
 
-	@Override
-	public int getType() {
-		return REQ_TYPE_BATCH;
-	}
+    @Override
+    public int getType() {
+        return REQ_TYPE_BATCH;
+    }
 
-	public <T> MyReqBatch prepare(String... sqls) {
-		super.prepare();
-		this.sqls = sqls;
-		return this;
-	}
+    public <T> MyReqBatch prepare(String... sqls) {
+        super.prepare();
+        this.sqls = sqls;
+        return this;
+    }
 
-	@Override
-	public String toString() {
-		return "MyReqBatch_" + Objects.hashCode(this) + "{sqls=" + Arrays.toString(sqls) + "}";
-	}
+    @Override
+    public String toString() {
+        return "MyReqBatch_" + Objects.hashCode(this) + "{sqls=" + Arrays.toString(sqls) + "}";
+    }
 
-	@Override
-	public void writeTo(ClientConnection conn, ByteArray array) {
-		for (String sql : sqls) {
-			byte[] sqlbytes = sql.getBytes(StandardCharsets.UTF_8);
-			Mysqls.writeUB3(array, 1 + sqlbytes.length);
-			array.put(packetIndex);
-			array.put(COM_QUERY);
-			array.put(sqlbytes);
-		}
-	}
+    @Override
+    public void writeTo(ClientConnection conn, ByteArray array) {
+        for (String sql : sqls) {
+            byte[] sqlbytes = sql.getBytes(StandardCharsets.UTF_8);
+            Mysqls.writeUB3(array, 1 + sqlbytes.length);
+            array.put(packetIndex);
+            array.put(COM_QUERY);
+            array.put(sqlbytes);
+        }
+    }
 }

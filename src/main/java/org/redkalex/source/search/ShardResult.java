@@ -8,11 +8,11 @@ package org.redkalex.source.search;
 /** @author zhangjx */
 public class ShardResult extends BaseBean {
 
-	public int totoal;
+    public int totoal;
 
-	public int successful;
+    public int successful;
 
-	public int failed;
+    public int failed;
 
-	public int skipped;
+    public int skipped;
 }

@@ -20,14 +20,14 @@ import org.redkale.util.AnyValue;
  */
 public class HttpTemplateRender implements org.redkale.net.http.HttpRender {
 
-	@Resource(name = "APP_HOME")
-	protected File home;
+    @Resource(name = "APP_HOME")
+    protected File home;
 
-	@Override
-	public void init(HttpContext context, AnyValue config) {}
+    @Override
+    public void init(HttpContext context, AnyValue config) {}
 
-	@Override
-	public void renderTo(HttpRequest request, HttpResponse response, Convert convert, HttpScope scope) {
-		throw new UnsupportedOperationException("Not supported yet.");
-	}
+    @Override
+    public void renderTo(HttpRequest request, HttpResponse response, Convert convert, HttpScope scope) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

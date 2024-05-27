@@ -12,59 +12,59 @@ import org.redkale.persistence.*;
 @Entity
 public class TestRecord {
 
-	@Id
-	private String recordid;
+    @Id
+    private String recordid;
 
-	private String name;
+    private String name;
 
-	private short status;
+    private short status;
 
-	private int score;
+    private int score;
 
-	private long createTime;
+    private long createTime;
 
-	public String getRecordid() {
-		return recordid;
-	}
+    public String getRecordid() {
+        return recordid;
+    }
 
-	public void setRecordid(String recordid) {
-		this.recordid = recordid;
-	}
+    public void setRecordid(String recordid) {
+        this.recordid = recordid;
+    }
 
-	public String getName() {
-		return name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	public short getStatus() {
-		return status;
-	}
+    public short getStatus() {
+        return status;
+    }
 
-	public void setStatus(short status) {
-		this.status = status;
-	}
+    public void setStatus(short status) {
+        this.status = status;
+    }
 
-	public int getScore() {
-		return score;
-	}
+    public int getScore() {
+        return score;
+    }
 
-	public void setScore(int score) {
-		this.score = score;
-	}
+    public void setScore(int score) {
+        this.score = score;
+    }
 
-	public long getCreateTime() {
-		return createTime;
-	}
+    public long getCreateTime() {
+        return createTime;
+    }
 
-	public void setCreateTime(long createTime) {
-		this.createTime = createTime;
-	}
+    public void setCreateTime(long createTime) {
+        this.createTime = createTime;
+    }
 
-	@Override
-	public String toString() {
-		return JsonConvert.root().convertTo(this);
-	}
+    @Override
+    public String toString() {
+        return JsonConvert.root().convertTo(this);
+    }
 }

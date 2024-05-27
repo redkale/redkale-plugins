@@ -16,55 +16,55 @@ import org.redkale.util.Copier;
  */
 public class PayCreatResponse extends PayResponse {
 
-	private static final Copier<PayPreResponse, PayCreatResponse> copier =
-			Copier.create(PayPreResponse.class, PayCreatResponse.class);
+    private static final Copier<PayPreResponse, PayCreatResponse> copier =
+            Copier.create(PayPreResponse.class, PayCreatResponse.class);
 
-	private String thirdPayno = ""; // 第三方的支付流水号
+    private String thirdPayno = ""; // 第三方的支付流水号
 
-	public PayCreatResponse() {}
+    public PayCreatResponse() {}
 
-	public PayCreatResponse(PayPreResponse resp) {
-		copier.apply(resp, this);
-	}
+    public PayCreatResponse(PayPreResponse resp) {
+        copier.apply(resp, this);
+    }
 
-	@Override
-	public PayCreatResponse retcode(int retcode) {
-		this.retcode = retcode;
-		this.retinfo = PayRetCodes.retInfo(retcode);
-		return this;
-	}
+    @Override
+    public PayCreatResponse retcode(int retcode) {
+        this.retcode = retcode;
+        this.retinfo = PayRetCodes.retInfo(retcode);
+        return this;
+    }
 
-	@Override
-	public PayCreatResponse retinfo(String retinfo) {
-		if (retinfo != null) {
-			this.retinfo = retinfo;
-		}
-		return this;
-	}
+    @Override
+    public PayCreatResponse retinfo(String retinfo) {
+        if (retinfo != null) {
+            this.retinfo = retinfo;
+        }
+        return this;
+    }
 
-	@Override
-	public PayCreatResponse result(Map<String, String> result) {
-		this.setResult(result);
-		return this;
-	}
+    @Override
+    public PayCreatResponse result(Map<String, String> result) {
+        this.setResult(result);
+        return this;
+    }
 
-	public String getThirdPayno() {
-		return thirdPayno;
-	}
+    public String getThirdPayno() {
+        return thirdPayno;
+    }
 
-	public void setThirdPayno(String thirdPayno) {
-		this.thirdPayno = thirdPayno;
-	}
+    public void setThirdPayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
+    }
 
-	@Deprecated
-	@ConvertDisabled
-	public String getThirdpayno() {
-		return thirdPayno;
-	}
+    @Deprecated
+    @ConvertDisabled
+    public String getThirdpayno() {
+        return thirdPayno;
+    }
 
-	@Deprecated
-	@ConvertDisabled
-	public void setThirdpayno(String thirdPayno) {
-		this.thirdPayno = thirdPayno;
-	}
+    @Deprecated
+    @ConvertDisabled
+    public void setThirdpayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
+    }
 }

@@ -10,13 +10,13 @@ import java.util.Objects;
 /** @author zhangjx */
 public class PgReqPing extends PgReqQuery {
 
-	@SuppressWarnings("OverridableMethodCallInConstructor")
-	public PgReqPing() {
-		prepare("SELECT 1");
-	}
+    @SuppressWarnings("OverridableMethodCallInConstructor")
+    public PgReqPing() {
+        prepare("SELECT 1");
+    }
 
-	@Override
-	public String toString() {
-		return "PgReqPing_" + Objects.hashCode(this) + "{sql=" + sql + "}";
-	}
+    @Override
+    public String toString() {
+        return "PgReqPing_" + Objects.hashCode(this) + "{sql=" + sql + "}";
+    }
 }

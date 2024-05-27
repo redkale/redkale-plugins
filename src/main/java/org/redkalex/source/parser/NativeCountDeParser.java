@@ -20,36 +20,36 @@ import net.sf.jsqlparser.statement.select.SelectItem;
 
 public class NativeCountDeParser extends CustomSelectDeParser {
 
-	private PlainSelect countSelect;
+    private PlainSelect countSelect;
 
-	private List<SelectItem<?>> countRootSelectItems;
+    private List<SelectItem<?>> countRootSelectItems;
 
-	public NativeCountDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
-		super(expressionVisitor, buffer);
-	}
+    public NativeCountDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
+        super(expressionVisitor, buffer);
+    }
 
-	public void initCountSelect(PlainSelect countSelect, List<SelectItem<?>> countSelectItems) {
-		this.countSelect = countSelect;
-		this.countRootSelectItems = countSelectItems;
-	}
+    public void initCountSelect(PlainSelect countSelect, List<SelectItem<?>> countSelectItems) {
+        this.countSelect = countSelect;
+        this.countRootSelectItems = countSelectItems;
+    }
 
-	protected void deparseDistinctClause(PlainSelect plainSelect, Distinct distinct) {
-		if (this.countSelect != plainSelect) {
-			super.deparseDistinctClause(plainSelect, distinct);
-		}
-	}
+    protected void deparseDistinctClause(PlainSelect plainSelect, Distinct distinct) {
+        if (this.countSelect != plainSelect) {
+            super.deparseDistinctClause(plainSelect, distinct);
+        }
+    }
 
-	protected void deparseSelectItemsClause(PlainSelect plainSelect, List<SelectItem<?>> selectItems) {
-		if (this.countSelect != plainSelect) {
-			super.deparseSelectItemsClause(plainSelect, selectItems);
-		} else {
-			super.deparseSelectItemsClause(plainSelect, this.countRootSelectItems);
-		}
-	}
+    protected void deparseSelectItemsClause(PlainSelect plainSelect, List<SelectItem<?>> selectItems) {
+        if (this.countSelect != plainSelect) {
+            super.deparseSelectItemsClause(plainSelect, selectItems);
+        } else {
+            super.deparseSelectItemsClause(plainSelect, this.countRootSelectItems);
+        }
+    }
 
-	protected void deparseOrderByElementsClause(PlainSelect plainSelect, List<OrderByElement> orderByElements) {
-		if (this.countSelect != plainSelect) {
-			super.deparseOrderByElementsClause(plainSelect, orderByElements);
-		}
-	}
+    protected void deparseOrderByElementsClause(PlainSelect plainSelect, List<OrderByElement> orderByElements) {
+        if (this.countSelect != plainSelect) {
+            super.deparseOrderByElementsClause(plainSelect, orderByElements);
+        }
+    }
 }

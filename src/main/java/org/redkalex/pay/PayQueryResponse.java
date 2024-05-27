@@ -15,76 +15,76 @@ import org.redkale.convert.ConvertDisabled;
  */
 public class PayQueryResponse extends PayResponse {
 
-	protected short payStatus;
+    protected short payStatus;
 
-	protected long payedMoney;
+    protected long payedMoney;
 
-	protected String thirdPayno = ""; // 第三方的支付流水号
+    protected String thirdPayno = ""; // 第三方的支付流水号
 
-	@Override
-	public PayQueryResponse retcode(int retcode) {
-		this.retcode = retcode;
-		this.retinfo = PayRetCodes.retInfo(retcode);
-		return this;
-	}
+    @Override
+    public PayQueryResponse retcode(int retcode) {
+        this.retcode = retcode;
+        this.retinfo = PayRetCodes.retInfo(retcode);
+        return this;
+    }
 
-	@Override
-	public PayQueryResponse retinfo(String retinfo) {
-		if (retinfo != null) this.retinfo = retinfo;
-		return this;
-	}
+    @Override
+    public PayQueryResponse retinfo(String retinfo) {
+        if (retinfo != null) this.retinfo = retinfo;
+        return this;
+    }
 
-	@Override
-	public PayQueryResponse result(Map<String, String> result) {
-		this.setResult(result);
-		return this;
-	}
+    @Override
+    public PayQueryResponse result(Map<String, String> result) {
+        this.setResult(result);
+        return this;
+    }
 
-	public long getPayedMoney() {
-		return payedMoney;
-	}
+    public long getPayedMoney() {
+        return payedMoney;
+    }
 
-	public void setPayedMoney(long payedMoney) {
-		this.payedMoney = payedMoney;
-	}
+    public void setPayedMoney(long payedMoney) {
+        this.payedMoney = payedMoney;
+    }
 
-	public short getPayStatus() {
-		return payStatus;
-	}
+    public short getPayStatus() {
+        return payStatus;
+    }
 
-	public void setPayStatus(short payStatus) {
-		this.payStatus = payStatus;
-	}
+    public void setPayStatus(short payStatus) {
+        this.payStatus = payStatus;
+    }
 
-	public String getThirdPayno() {
-		return thirdPayno;
-	}
+    public String getThirdPayno() {
+        return thirdPayno;
+    }
 
-	public void setThirdPayno(String thirdPayno) {
-		this.thirdPayno = thirdPayno;
-	}
+    public void setThirdPayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
+    }
 
-	@Deprecated
-	@ConvertDisabled
-	public short getPaystatus() {
-		return payStatus;
-	}
+    @Deprecated
+    @ConvertDisabled
+    public short getPaystatus() {
+        return payStatus;
+    }
 
-	@Deprecated
-	@ConvertDisabled
-	public void setPaystatus(short payStatus) {
-		this.payStatus = payStatus;
-	}
+    @Deprecated
+    @ConvertDisabled
+    public void setPaystatus(short payStatus) {
+        this.payStatus = payStatus;
+    }
 
-	@Deprecated
-	@ConvertDisabled
-	public String getThirdpayno() {
-		return thirdPayno;
-	}
+    @Deprecated
+    @ConvertDisabled
+    public String getThirdpayno() {
+        return thirdPayno;
+    }
 
-	@Deprecated
-	@ConvertDisabled
-	public void setThirdpayno(String thirdPayno) {
-		this.thirdPayno = thirdPayno;
-	}
+    @Deprecated
+    @ConvertDisabled
+    public void setThirdpayno(String thirdPayno) {
+        this.thirdPayno = thirdPayno;
+    }
 }

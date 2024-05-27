@@ -8,38 +8,38 @@ package org.redkalex.source.search;
 /** @author zhangjx */
 public class BulkResult extends BaseBean {
 
-	public long took;
+    public long took;
 
-	public boolean errors;
+    public boolean errors;
 
-	public BulkItem[] items;
+    public BulkItem[] items;
 
-	public int successCount() {
-		int count = 0;
-		if (items == null) return count;
-		for (BulkItem item : items) {
-			ActionResult ar = item.action();
-			if (ar == null) continue;
-			count += ar.successCount();
-		}
-		return count;
-	}
+    public int successCount() {
+        int count = 0;
+        if (items == null) return count;
+        for (BulkItem item : items) {
+            ActionResult ar = item.action();
+            if (ar == null) continue;
+            count += ar.successCount();
+        }
+        return count;
+    }
 
-	public static class BulkItem extends BaseBean {
+    public static class BulkItem extends BaseBean {
 
-		public ActionResult index;
+        public ActionResult index;
 
-		public ActionResult create;
+        public ActionResult create;
 
-		public ActionResult update;
+        public ActionResult update;
 
-		public ActionResult delete;
+        public ActionResult delete;
 
-		public ActionResult action() {
-			if (create != null) return create;
-			if (update != null) return update;
-			if (delete != null) return delete;
-			return index;
-		}
-	}
+        public ActionResult action() {
+            if (create != null) return create;
+            if (update != null) return update;
+            if (delete != null) return delete;
+            return index;
+        }
+    }
 }

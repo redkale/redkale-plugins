@@ -18,75 +18,75 @@ import org.redkale.service.RetResult;
  */
 public class PayResponse extends RetResult<Map<String, String>> {
 
-	@ConvertColumn(ignore = true, type = ConvertType.JSON)
-	protected String responseText = ""; // 第三方支付返回的原始结果字符串
+    @ConvertColumn(ignore = true, type = ConvertType.JSON)
+    protected String responseText = ""; // 第三方支付返回的原始结果字符串
 
-	public PayResponse() {}
+    public PayResponse() {}
 
-	public PayResponse(Map<String, String> result) {
-		super(result);
-	}
+    public PayResponse(Map<String, String> result) {
+        super(result);
+    }
 
-	public PayResponse(int retcode) {
-		super(retcode);
-	}
+    public PayResponse(int retcode) {
+        super(retcode);
+    }
 
-	public PayResponse(int retcode, String retinfo) {
-		super(retcode, retinfo);
-	}
+    public PayResponse(int retcode, String retinfo) {
+        super(retcode, retinfo);
+    }
 
-	public PayResponse(int retcode, String retinfo, Map<String, String> result) {
-		super(retcode, retinfo, result);
-	}
+    public PayResponse(int retcode, String retinfo, Map<String, String> result) {
+        super(retcode, retinfo, result);
+    }
 
-	@Override
-	public CompletableFuture toFuture() {
-		return CompletableFuture.completedFuture(this);
-	}
+    @Override
+    public CompletableFuture toFuture() {
+        return CompletableFuture.completedFuture(this);
+    }
 
-	@Override
-	public PayResponse retcode(int retcode) {
-		this.retcode = retcode;
-		this.retinfo = PayRetCodes.retInfo(retcode);
-		return this;
-	}
+    @Override
+    public PayResponse retcode(int retcode) {
+        this.retcode = retcode;
+        this.retinfo = PayRetCodes.retInfo(retcode);
+        return this;
+    }
 
-	@Override
-	public PayResponse retinfo(String retinfo) {
-		if (retinfo != null) this.retinfo = retinfo;
-		return this;
-	}
+    @Override
+    public PayResponse retinfo(String retinfo) {
+        if (retinfo != null) this.retinfo = retinfo;
+        return this;
+    }
 
-	@Override
-	public PayResponse result(Map<String, String> result) {
-		this.setResult(result);
-		return this;
-	}
+    @Override
+    public PayResponse result(Map<String, String> result) {
+        this.setResult(result);
+        return this;
+    }
 
-	public String getResponseText() {
-		return responseText;
-	}
+    public String getResponseText() {
+        return responseText;
+    }
 
-	public void setResponseText(String responseText) {
-		this.responseText = responseText;
-	}
+    public void setResponseText(String responseText) {
+        this.responseText = responseText;
+    }
 
-	@Override
-	public String toString() {
-		return jf.getConvert().convertTo(this);
-	}
+    @Override
+    public String toString() {
+        return jf.getConvert().convertTo(this);
+    }
 
-	private static final JsonFactory jf = JsonFactory.create().skipAllIgnore(true);
+    private static final JsonFactory jf = JsonFactory.create().skipAllIgnore(true);
 
-	@Deprecated
-	@ConvertDisabled
-	public String getResponsetext() {
-		return responseText;
-	}
+    @Deprecated
+    @ConvertDisabled
+    public String getResponsetext() {
+        return responseText;
+    }
 
-	@Deprecated
-	@ConvertDisabled
-	public void setResponsetext(String responseText) {
-		this.responseText = responseText;
-	}
+    @Deprecated
+    @ConvertDisabled
+    public void setResponsetext(String responseText) {
+        this.responseText = responseText;
+    }
 }

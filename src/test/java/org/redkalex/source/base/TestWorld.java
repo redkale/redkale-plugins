@@ -9,52 +9,52 @@ import org.redkale.persistence.*;
 @Entity
 public class TestWorld implements Comparable<TestWorld> {
 
-	@Id
-	protected int id;
+    @Id
+    protected int id;
 
-	protected int randomNumber;
+    protected int randomNumber;
 
-	@Column(nullable = false)
-	protected int[] citys;
+    @Column(nullable = false)
+    protected int[] citys;
 
-	public TestWorld() {}
+    public TestWorld() {}
 
-	public TestWorld(int id, int randomNumber) {
-		this.id = id;
-		this.randomNumber = randomNumber;
-	}
+    public TestWorld(int id, int randomNumber) {
+        this.id = id;
+        this.randomNumber = randomNumber;
+    }
 
-	public int getId() {
-		return id;
-	}
+    public int getId() {
+        return id;
+    }
 
-	public void setId(int id) {
-		this.id = id;
-	}
+    public void setId(int id) {
+        this.id = id;
+    }
 
-	public int getRandomNumber() {
-		return randomNumber;
-	}
+    public int getRandomNumber() {
+        return randomNumber;
+    }
 
-	public void setRandomNumber(int randomNumber) {
-		this.randomNumber = randomNumber;
-	}
+    public void setRandomNumber(int randomNumber) {
+        this.randomNumber = randomNumber;
+    }
 
-	@Override
-	public int compareTo(TestWorld o) {
-		return Integer.compare(id, o.id);
-	}
+    @Override
+    public int compareTo(TestWorld o) {
+        return Integer.compare(id, o.id);
+    }
 
-	public int[] getCitys() {
-		return citys;
-	}
+    public int[] getCitys() {
+        return citys;
+    }
 
-	public void setCitys(int[] citys) {
-		this.citys = citys;
-	}
+    public void setCitys(int[] citys) {
+        this.citys = citys;
+    }
 
-	@Override
-	public String toString() {
-		return JsonConvert.root().convertTo(this);
-	}
+    @Override
+    public String toString() {
+        return JsonConvert.root().convertTo(this);
+    }
 }

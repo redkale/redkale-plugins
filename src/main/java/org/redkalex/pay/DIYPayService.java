@@ -23,10 +23,10 @@ import java.lang.annotation.*;
 @Retention(RUNTIME)
 public @interface DIYPayService {
 
-	/**
-	 * 支付类型， 必须大于50
-	 *
-	 * @return short
-	 */
-	short payType();
+    /**
+     * 支付类型， 必须大于50
+     *
+     * @return short
+     */
+    short payType();
 }

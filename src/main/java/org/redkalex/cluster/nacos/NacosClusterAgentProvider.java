@@ -11,13 +11,13 @@ import org.redkale.util.*;
 @Priority(-800)
 public class NacosClusterAgentProvider implements ClusterAgentProvider {
 
-	@Override
-	public boolean acceptsConf(AnyValue config) {
-		return new NacosClusterAgent().acceptsConf(config);
-	}
+    @Override
+    public boolean acceptsConf(AnyValue config) {
+        return new NacosClusterAgent().acceptsConf(config);
+    }
 
-	@Override
-	public ClusterAgent createInstance() {
-		return new NacosClusterAgent();
-	}
+    @Override
+    public ClusterAgent createInstance() {
+        return new NacosClusterAgent();
+    }
 }

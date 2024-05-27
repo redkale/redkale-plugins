@@ -10,26 +10,26 @@ import org.redkale.convert.json.JsonConvert;
 /** @author zhangjx */
 public class MyRespHandshakeResultSet extends MyResultSet {
 
-	public int protocolVersion;
+    public int protocolVersion;
 
-	public String serverVersion;
+    public String serverVersion;
 
-	public String authPluginName;
+    public String authPluginName;
 
-	public long threadId;
+    public long threadId;
 
-	public byte[] seed;
+    public byte[] seed;
 
-	public int serverCapabilities;
+    public int serverCapabilities;
 
-	public int serverCharsetIndex;
+    public int serverCharsetIndex;
 
-	public int serverStatus;
+    public int serverStatus;
 
-	public byte[] seed2;
+    public byte[] seed2;
 
-	@Override
-	public String toString() {
-		return JsonConvert.root().convertTo(this);
-	}
+    @Override
+    public String toString() {
+        return JsonConvert.root().convertTo(this);
+    }
 }

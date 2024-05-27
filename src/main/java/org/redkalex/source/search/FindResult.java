@@ -11,9 +11,9 @@ package org.redkalex.source.search;
  */
 public class FindResult<T> extends BaseBean {
 
-	public boolean found;
+    public boolean found;
 
-	public int _version;
+    public int _version;
 
-	public T _source;
+    public T _source;
 }

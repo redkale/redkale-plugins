@@ -11,6 +11,6 @@ import org.redkale.util.*;
 /** @author zhangjx */
 public interface PgColumnDecodeable {
 
-	// attr可能会为null
-	Serializable decode(ByteBuffer buffer, ByteArray array, @Nullable Attribute attr, int len);
+    // attr可能会为null
+    Serializable decode(ByteBuffer buffer, ByteArray array, @Nullable Attribute attr, int len);
 }

@@ -13,13 +13,13 @@ import org.redkale.convert.spi.ConvertProvider;
 @Priority(-900)
 public class ProtobufConvertProvider implements ConvertProvider {
 
-	@Override
-	public ConvertType type() {
-		return ConvertType.PROTOBUF;
-	}
+    @Override
+    public ConvertType type() {
+        return ConvertType.PROTOBUF;
+    }
 
-	@Override
-	public Convert convert() {
-		return ProtobufConvert.root();
-	}
+    @Override
+    public Convert convert() {
+        return ProtobufConvert.root();
+    }
 }

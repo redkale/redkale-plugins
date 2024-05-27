@@ -12,36 +12,36 @@ import org.redkale.util.TypeToken;
 /** @author zhangjx */
 public class SearchMapping extends BaseBean {
 
-	public static final Type MAPPING_MAP_TYPE = new TypeToken<Map<String, SearchMapping>>() {}.getType();
+    public static final Type MAPPING_MAP_TYPE = new TypeToken<Map<String, SearchMapping>>() {}.getType();
 
-	public SearchProperties mappings;
+    public SearchProperties mappings;
 
-	public static class SearchProperties extends BaseBean {
+    public static class SearchProperties extends BaseBean {
 
-		public Map<String, MappingItem> properties;
+        public Map<String, MappingItem> properties;
 
-		public boolean equal(Map<String, Map> ms) {
-			if (properties == null) return false;
-			if (ms == null) return false;
-			if (properties.size() != ms.size()) return false;
-			for (Map.Entry<String, MappingItem> en : properties.entrySet()) {
-				Map infomap = ms.get(en.getKey());
-				if (infomap == null) return false;
-				Object infoanalyzer = infomap.get("analyzer");
-				if (en.getValue().analyzer == null && infoanalyzer != null) return false;
-				if (en.getValue().analyzer != null && infoanalyzer == null) return false;
-				if (en.getValue().analyzer != null && !en.getValue().analyzer.equals(infoanalyzer)) return false;
-			}
-			return true;
-		}
-	}
+        public boolean equal(Map<String, Map> ms) {
+            if (properties == null) return false;
+            if (ms == null) return false;
+            if (properties.size() != ms.size()) return false;
+            for (Map.Entry<String, MappingItem> en : properties.entrySet()) {
+                Map infomap = ms.get(en.getKey());
+                if (infomap == null) return false;
+                Object infoanalyzer = infomap.get("analyzer");
+                if (en.getValue().analyzer == null && infoanalyzer != null) return false;
+                if (en.getValue().analyzer != null && infoanalyzer == null) return false;
+                if (en.getValue().analyzer != null && !en.getValue().analyzer.equals(infoanalyzer)) return false;
+            }
+            return true;
+        }
+    }
 
-	public static class MappingItem extends BaseBean {
+    public static class MappingItem extends BaseBean {
 
-		public String type;
+        public String type;
 
-		public String analyzer;
+        public String analyzer;
 
-		public Integer ignore_above;
-	}
+        public Integer ignore_above;
+    }
 }

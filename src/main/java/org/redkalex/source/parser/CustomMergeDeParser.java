@@ -21,91 +21,91 @@ import net.sf.jsqlparser.util.deparser.SelectDeParser;
 
 public class CustomMergeDeParser extends MergeDeParser {
 
-	protected final ExpressionDeParser expressionDeParser;
+    protected final ExpressionDeParser expressionDeParser;
 
-	protected final SelectDeParser selectDeParser;
+    protected final SelectDeParser selectDeParser;
 
-	public CustomMergeDeParser(
-			ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder buffer) {
-		super(expressionDeParser, selectDeParser, buffer);
-		this.expressionDeParser = expressionDeParser;
-		this.selectDeParser = selectDeParser;
-	}
+    public CustomMergeDeParser(
+            ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder buffer) {
+        super(expressionDeParser, selectDeParser, buffer);
+        this.expressionDeParser = expressionDeParser;
+        this.selectDeParser = selectDeParser;
+    }
 
-	public void deParse(Merge merge) {
-		List<WithItem> withItemsList = merge.getWithItemsList();
-		if (withItemsList != null && !withItemsList.isEmpty()) {
-			buffer.append("WITH ");
-			for (Iterator<WithItem> iter = withItemsList.iterator(); iter.hasNext(); ) {
-				iter.next().accept(expressionDeParser);
-				if (iter.hasNext()) {
-					buffer.append(",");
-				}
-				buffer.append(" ");
-			}
-		}
+    public void deParse(Merge merge) {
+        List<WithItem> withItemsList = merge.getWithItemsList();
+        if (withItemsList != null && !withItemsList.isEmpty()) {
+            buffer.append("WITH ");
+            for (Iterator<WithItem> iter = withItemsList.iterator(); iter.hasNext(); ) {
+                iter.next().accept(expressionDeParser);
+                if (iter.hasNext()) {
+                    buffer.append(",");
+                }
+                buffer.append(" ");
+            }
+        }
 
-		buffer.append("MERGE ");
-		if (merge.getOracleHint() != null) {
-			buffer.append(merge.getOracleHint()).append(" ");
-		}
-		buffer.append("INTO ");
-		merge.getTable().accept(selectDeParser);
+        buffer.append("MERGE ");
+        if (merge.getOracleHint() != null) {
+            buffer.append(merge.getOracleHint()).append(" ");
+        }
+        buffer.append("INTO ");
+        merge.getTable().accept(selectDeParser);
 
-		buffer.append(" USING ");
-		merge.getFromItem().accept(selectDeParser);
+        buffer.append(" USING ");
+        merge.getFromItem().accept(selectDeParser);
 
-		buffer.append(" ON ");
-		merge.getOnCondition().accept(expressionDeParser);
+        buffer.append(" ON ");
+        merge.getOnCondition().accept(expressionDeParser);
 
-		List<MergeOperation> operations = merge.getOperations();
-		if (operations != null && !operations.isEmpty()) {
-			operations.forEach(operation -> operation.accept(this));
-		}
+        List<MergeOperation> operations = merge.getOperations();
+        if (operations != null && !operations.isEmpty()) {
+            operations.forEach(operation -> operation.accept(this));
+        }
 
-		if (merge.getOutputClause() != null) {
-			merge.getOutputClause().appendTo(buffer);
-		}
-	}
+        if (merge.getOutputClause() != null) {
+            merge.getOutputClause().appendTo(buffer);
+        }
+    }
 
-	@Override
-	public void visit(MergeUpdate mergeUpdate) {
-		buffer.append(" WHEN MATCHED");
-		if (mergeUpdate.getAndPredicate() != null) {
-			buffer.append(" AND ");
-			mergeUpdate.getAndPredicate().accept(expressionDeParser);
-		}
-		buffer.append(" THEN UPDATE SET ");
-		deparseUpdateSets(mergeUpdate.getUpdateSets(), buffer, expressionDeParser);
+    @Override
+    public void visit(MergeUpdate mergeUpdate) {
+        buffer.append(" WHEN MATCHED");
+        if (mergeUpdate.getAndPredicate() != null) {
+            buffer.append(" AND ");
+            mergeUpdate.getAndPredicate().accept(expressionDeParser);
+        }
+        buffer.append(" THEN UPDATE SET ");
+        deparseUpdateSets(mergeUpdate.getUpdateSets(), buffer, expressionDeParser);
 
-		if (mergeUpdate.getWhereCondition() != null) {
-			buffer.append(" WHERE ");
-			mergeUpdate.getWhereCondition().accept(expressionDeParser);
-		}
+        if (mergeUpdate.getWhereCondition() != null) {
+            buffer.append(" WHERE ");
+            mergeUpdate.getWhereCondition().accept(expressionDeParser);
+        }
 
-		if (mergeUpdate.getDeleteWhereCondition() != null) {
-			buffer.append(" DELETE WHERE ");
-			mergeUpdate.getDeleteWhereCondition().accept(expressionDeParser);
-		}
-	}
+        if (mergeUpdate.getDeleteWhereCondition() != null) {
+            buffer.append(" DELETE WHERE ");
+            mergeUpdate.getDeleteWhereCondition().accept(expressionDeParser);
+        }
+    }
 
-	@Override
-	public void visit(MergeInsert mergeInsert) {
-		buffer.append(" WHEN NOT MATCHED");
-		if (mergeInsert.getAndPredicate() != null) {
-			buffer.append(" AND ");
-			mergeInsert.getAndPredicate().accept(expressionDeParser);
-		}
-		buffer.append(" THEN INSERT ");
-		if (mergeInsert.getColumns() != null) {
-			mergeInsert.getColumns().accept(expressionDeParser);
-		}
-		buffer.append(" VALUES ");
-		mergeInsert.getValues().accept(expressionDeParser);
+    @Override
+    public void visit(MergeInsert mergeInsert) {
+        buffer.append(" WHEN NOT MATCHED");
+        if (mergeInsert.getAndPredicate() != null) {
+            buffer.append(" AND ");
+            mergeInsert.getAndPredicate().accept(expressionDeParser);
+        }
+        buffer.append(" THEN INSERT ");
+        if (mergeInsert.getColumns() != null) {
+            mergeInsert.getColumns().accept(expressionDeParser);
+        }
+        buffer.append(" VALUES ");
+        mergeInsert.getValues().accept(expressionDeParser);
 
-		if (mergeInsert.getWhereCondition() != null) {
-			buffer.append(" WHERE ");
-			mergeInsert.getWhereCondition().accept(expressionDeParser);
-		}
-	}
+        if (mergeInsert.getWhereCondition() != null) {
+            buffer.append(" WHERE ");
+            mergeInsert.getWhereCondition().accept(expressionDeParser);
+        }
+    }
 }

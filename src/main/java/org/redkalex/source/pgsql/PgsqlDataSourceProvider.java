@@ -16,19 +16,19 @@ import org.redkale.util.AnyValue;
 @Priority(-900)
 public class PgsqlDataSourceProvider implements DataSourceProvider {
 
-	@Override
-	public boolean acceptsConf(AnyValue config) {
-		String dbtype = config.getValue("dbtype");
-		if (dbtype == null) {
-			AnyValue read = config.getAnyValue("read");
-			AnyValue node = read == null ? config : read;
-			dbtype = parseDbtype(node.getValue(DATA_SOURCE_URL));
-		}
-		return "postgresql".equalsIgnoreCase(dbtype);
-	}
+    @Override
+    public boolean acceptsConf(AnyValue config) {
+        String dbtype = config.getValue("dbtype");
+        if (dbtype == null) {
+            AnyValue read = config.getAnyValue("read");
+            AnyValue node = read == null ? config : read;
+            dbtype = parseDbtype(node.getValue(DATA_SOURCE_URL));
+        }
+        return "postgresql".equalsIgnoreCase(dbtype);
+    }
 
-	@Override
-	public DataSource createInstance() {
-		return new PgsqlDataSource();
-	}
+    @Override
+    public DataSource createInstance() {
+        return new PgsqlDataSource();
+    }
 }

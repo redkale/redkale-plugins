@@ -17,46 +17,46 @@ import org.redkale.util.*;
 /** @author zhangjx */
 public class MyReqUpdate extends MyClientRequest {
 
-	protected int fetchSize;
+    protected int fetchSize;
 
-	protected Attribute[] attrs;
+    protected Attribute[] attrs;
 
-	protected String sql;
+    protected String sql;
 
-	protected Object[][] parameters;
+    protected Object[][] parameters;
 
-	public <T> MyReqUpdate prepare(String sql) {
-		prepare(sql, 0, null);
-		return this;
-	}
+    public <T> MyReqUpdate prepare(String sql) {
+        prepare(sql, 0, null);
+        return this;
+    }
 
-	public <T> MyReqUpdate prepare(
-			String sql, int fetchSize, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
-		super.prepare();
-		this.sql = sql;
-		this.fetchSize = fetchSize;
-		this.attrs = attrs;
-		this.parameters = parameters;
-		return this;
-	}
+    public <T> MyReqUpdate prepare(
+            String sql, int fetchSize, final Attribute<T, Serializable>[] attrs, final Object[]... parameters) {
+        super.prepare();
+        this.sql = sql;
+        this.fetchSize = fetchSize;
+        this.attrs = attrs;
+        this.parameters = parameters;
+        return this;
+    }
 
-	@Override
-	public int getType() {
-		return REQ_TYPE_UPDATE;
-	}
+    @Override
+    public int getType() {
+        return REQ_TYPE_UPDATE;
+    }
 
-	@Override
-	public String toString() {
-		return "MyReqUpdate_" + Objects.hashCode(this) + "{sql=" + sql + ", parameters="
-				+ JsonConvert.root().convertTo(parameters) + "}";
-	}
+    @Override
+    public String toString() {
+        return "MyReqUpdate_" + Objects.hashCode(this) + "{sql=" + sql + ", parameters="
+                + JsonConvert.root().convertTo(parameters) + "}";
+    }
 
-	@Override
-	public void writeTo(ClientConnection conn, ByteArray array) {
-		byte[] sqlbytes = sql.getBytes(StandardCharsets.UTF_8);
-		Mysqls.writeUB3(array, 1 + sqlbytes.length);
-		array.put(packetIndex);
-		array.put(COM_QUERY);
-		array.put(sqlbytes);
-	}
+    @Override
+    public void writeTo(ClientConnection conn, ByteArray array) {
+        byte[] sqlbytes = sql.getBytes(StandardCharsets.UTF_8);
+        Mysqls.writeUB3(array, 1 + sqlbytes.length);
+        array.put(packetIndex);
+        array.put(COM_QUERY);
+        array.put(sqlbytes);
+    }
 }
