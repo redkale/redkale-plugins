@@ -14,22 +14,22 @@ import java.util.Map;
  */
 public class PayRefundQueryResponse extends PayResponse {
 
-    @Override
-    public PayRefundQueryResponse retcode(int retcode) {
-        this.retcode = retcode;
-        this.retinfo = PayRetCodes.retInfo(retcode);
-        return this;
-    }
+	@Override
+	public PayRefundQueryResponse retcode(int retcode) {
+		this.retcode = retcode;
+		this.retinfo = PayRetCodes.retInfo(retcode);
+		return this;
+	}
 
-    @Override
-    public PayRefundQueryResponse retinfo(String retinfo) {
-        if (retinfo != null) this.retinfo = retinfo;
-        return this;
-    }
+	@Override
+	public PayRefundQueryResponse retinfo(String retinfo) {
+		if (retinfo != null) this.retinfo = retinfo;
+		return this;
+	}
 
-    @Override
-    public PayRefundQueryResponse result(Map<String, String> result) {
-        this.setResult(result);
-        return this;
-    }
+	@Override
+	public PayRefundQueryResponse result(Map<String, String> result) {
+		this.setResult(result);
+		return this;
+	}
 }

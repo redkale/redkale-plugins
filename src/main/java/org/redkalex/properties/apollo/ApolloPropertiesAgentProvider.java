@@ -11,17 +11,17 @@ import org.redkale.util.AnyValue;
 @Priority(-900)
 public class ApolloPropertiesAgentProvider implements PropertiesAgentProvider {
 
-    @Override
-    public boolean acceptsConf(AnyValue config) {
-        try {
-            return new ApolloPropertiesAgent().acceptsConf(config);
-        } catch (Throwable t) {
-            return false;
-        }
-    }
+	@Override
+	public boolean acceptsConf(AnyValue config) {
+		try {
+			return new ApolloPropertiesAgent().acceptsConf(config);
+		} catch (Throwable t) {
+			return false;
+		}
+	}
 
-    @Override
-    public PropertiesAgent createInstance() {
-        return new ApolloPropertiesAgent();
-    }
+	@Override
+	public PropertiesAgent createInstance() {
+		return new ApolloPropertiesAgent();
+	}
 }

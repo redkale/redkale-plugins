@@ -11,17 +11,17 @@ import org.redkale.util.AnyValue;
 @Priority(-900)
 public class NacosPropertiesAgentProvider implements PropertiesAgentProvider {
 
-    @Override
-    public boolean acceptsConf(AnyValue config) {
-        try {
-            return new NacosPropertiesAgent().acceptsConf(config);
-        } catch (Throwable t) {
-            return false;
-        }
-    }
+	@Override
+	public boolean acceptsConf(AnyValue config) {
+		try {
+			return new NacosPropertiesAgent().acceptsConf(config);
+		} catch (Throwable t) {
+			return false;
+		}
+	}
 
-    @Override
-    public PropertiesAgent createInstance() {
-        return new NacosPropertiesAgent();
-    }
+	@Override
+	public PropertiesAgent createInstance() {
+		return new NacosPropertiesAgent();
+	}
 }

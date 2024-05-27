@@ -19,36 +19,36 @@ import net.sf.jsqlparser.util.deparser.StatementDeParser;
 
 public class CustomStatementDeParser extends StatementDeParser {
 
-    protected final ExpressionDeParser expressionDeParser;
+	protected final ExpressionDeParser expressionDeParser;
 
-    protected final SelectDeParser selectDeParser;
+	protected final SelectDeParser selectDeParser;
 
-    public CustomStatementDeParser(
-            ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder buffer) {
-        super(expressionDeParser, selectDeParser, buffer);
-        this.expressionDeParser = expressionDeParser;
-        this.selectDeParser = selectDeParser;
-    }
+	public CustomStatementDeParser(
+			ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder buffer) {
+		super(expressionDeParser, selectDeParser, buffer);
+		this.expressionDeParser = expressionDeParser;
+		this.selectDeParser = selectDeParser;
+	}
 
-    public void deParse(Statement statement) {
-        statement.accept(this);
-    }
+	public void deParse(Statement statement) {
+		statement.accept(this);
+	}
 
-    @Override
-    public void visit(Delete delete) {
-        CustomDeleteDeParser deleteDeParser = new CustomDeleteDeParser(expressionDeParser, buffer);
-        deleteDeParser.deParse(delete);
-    }
+	@Override
+	public void visit(Delete delete) {
+		CustomDeleteDeParser deleteDeParser = new CustomDeleteDeParser(expressionDeParser, buffer);
+		deleteDeParser.deParse(delete);
+	}
 
-    @Override
-    public void visit(Update update) {
-        CustomUpdateDeParser updateDeParser = new CustomUpdateDeParser(expressionDeParser, buffer);
-        updateDeParser.deParse(update);
-    }
+	@Override
+	public void visit(Update update) {
+		CustomUpdateDeParser updateDeParser = new CustomUpdateDeParser(expressionDeParser, buffer);
+		updateDeParser.deParse(update);
+	}
 
-    @Override
-    public void visit(Merge merge) {
-        CustomMergeDeParser mergeDeParser = new CustomMergeDeParser(expressionDeParser, selectDeParser, buffer);
-        mergeDeParser.deParse(merge);
-    }
+	@Override
+	public void visit(Merge merge) {
+		CustomMergeDeParser mergeDeParser = new CustomMergeDeParser(expressionDeParser, selectDeParser, buffer);
+		mergeDeParser.deParse(merge);
+	}
 }

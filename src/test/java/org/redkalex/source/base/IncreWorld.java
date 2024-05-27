@@ -10,30 +10,30 @@ import org.redkale.persistence.*;
 @Entity
 public class IncreWorld {
 
-    @Id
-    @GeneratedValue
-    protected int id;
+	@Id
+	@GeneratedValue
+	protected int id;
 
-    protected Integer randomNumber;
+	protected Integer randomNumber;
 
-    public int getId() {
-        return id;
-    }
+	public int getId() {
+		return id;
+	}
 
-    public void setId(int id) {
-        this.id = id;
-    }
+	public void setId(int id) {
+		this.id = id;
+	}
 
-    public Integer getRandomNumber() {
-        return randomNumber;
-    }
+	public Integer getRandomNumber() {
+		return randomNumber;
+	}
 
-    public void setRandomNumber(Integer randomNumber) {
-        this.randomNumber = randomNumber;
-    }
+	public void setRandomNumber(Integer randomNumber) {
+		this.randomNumber = randomNumber;
+	}
 
-    @Override
-    public String toString() {
-        return JsonConvert.root().convertTo(this);
-    }
+	@Override
+	public String toString() {
+		return JsonConvert.root().convertTo(this);
+	}
 }

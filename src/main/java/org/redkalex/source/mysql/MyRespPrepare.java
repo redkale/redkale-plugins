@@ -10,24 +10,24 @@ import org.redkale.convert.json.JsonConvert;
 /** @author zhangjx */
 public class MyRespPrepare {
 
-    public Long statementId;
+	public Long statementId;
 
-    public int numberOfParameters; // 先param后column
+	public int numberOfParameters; // 先param后column
 
-    public int numberOfColumns;
+	public int numberOfColumns;
 
-    public int numberOfWarnings;
+	public int numberOfWarnings;
 
-    MyRowDesc paramDescs; // STATUS_PREPARE_PARAM时赋值
+	MyRowDesc paramDescs; // STATUS_PREPARE_PARAM时赋值
 
-    int paramDecodeIndex = -1;
+	int paramDecodeIndex = -1;
 
-    MyRowDesc columnDescs; // STATUS_PREPARE_PARAM时赋值
+	MyRowDesc columnDescs; // STATUS_PREPARE_PARAM时赋值
 
-    int columnDecodeIndex = -1;
+	int columnDecodeIndex = -1;
 
-    @Override
-    public String toString() {
-        return JsonConvert.root().convertTo(this);
-    }
+	@Override
+	public String toString() {
+		return JsonConvert.root().convertTo(this);
+	}
 }

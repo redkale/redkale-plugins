@@ -10,29 +10,29 @@ import java.util.Arrays;
 /** @author zhangjx */
 public class MyRowDesc {
 
-    final MyRowColumn[] columns;
+	final MyRowColumn[] columns;
 
-    public MyRowDesc(MyRowColumn[] columns) {
-        this.columns = columns;
-    }
+	public MyRowDesc(MyRowColumn[] columns) {
+		this.columns = columns;
+	}
 
-    public MyRowColumn[] getColumns() {
-        return columns;
-    }
+	public MyRowColumn[] getColumns() {
+		return columns;
+	}
 
-    public MyRowColumn getColumn(int i) {
-        return columns[i];
-    }
+	public MyRowColumn getColumn(int i) {
+		return columns[i];
+	}
 
-    public int length() {
-        if (columns == null) {
-            return -1;
-        }
-        return columns.length;
-    }
+	public int length() {
+		if (columns == null) {
+			return -1;
+		}
+		return columns.length;
+	}
 
-    @Override
-    public String toString() {
-        return Arrays.toString(columns);
-    }
+	@Override
+	public String toString() {
+		return Arrays.toString(columns);
+	}
 }

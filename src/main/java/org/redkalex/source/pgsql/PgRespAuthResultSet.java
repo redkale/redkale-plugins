@@ -10,45 +10,45 @@ import java.util.List;
 /** @author zhangjx */
 public class PgRespAuthResultSet extends PgResultSet {
 
-    protected boolean authOK;
+	protected boolean authOK;
 
-    protected byte[] authSalt;
+	protected byte[] authSalt;
 
-    protected List<String> authMechanisms;
+	protected List<String> authMechanisms;
 
-    protected PgReqAuthScramSaslContinueResult authSaslContinueResult;
+	protected PgReqAuthScramSaslContinueResult authSaslContinueResult;
 
-    public PgRespAuthResultSet() {}
+	public PgRespAuthResultSet() {}
 
-    public boolean isAuthOK() {
-        return authOK;
-    }
+	public boolean isAuthOK() {
+		return authOK;
+	}
 
-    public void setAuthOK(boolean authOK) {
-        this.authOK = authOK;
-    }
+	public void setAuthOK(boolean authOK) {
+		this.authOK = authOK;
+	}
 
-    public byte[] getAuthSalt() {
-        return authSalt;
-    }
+	public byte[] getAuthSalt() {
+		return authSalt;
+	}
 
-    public void setAuthSalt(byte[] authSalt) {
-        this.authSalt = authSalt;
-    }
+	public void setAuthSalt(byte[] authSalt) {
+		this.authSalt = authSalt;
+	}
 
-    public List<String> getAuthMechanisms() {
-        return authMechanisms;
-    }
+	public List<String> getAuthMechanisms() {
+		return authMechanisms;
+	}
 
-    public void setAuthMechanisms(List<String> authMechanisms) {
-        this.authMechanisms = authMechanisms;
-    }
+	public void setAuthMechanisms(List<String> authMechanisms) {
+		this.authMechanisms = authMechanisms;
+	}
 
-    public PgReqAuthScramSaslContinueResult getAuthSaslContinueResult() {
-        return authSaslContinueResult;
-    }
+	public PgReqAuthScramSaslContinueResult getAuthSaslContinueResult() {
+		return authSaslContinueResult;
+	}
 
-    public void setAuthSaslContinueResult(PgReqAuthScramSaslContinueResult authSaslContinueResult) {
-        this.authSaslContinueResult = authSaslContinueResult;
-    }
+	public void setAuthSaslContinueResult(PgReqAuthScramSaslContinueResult authSaslContinueResult) {
+		this.authSaslContinueResult = authSaslContinueResult;
+	}
 }

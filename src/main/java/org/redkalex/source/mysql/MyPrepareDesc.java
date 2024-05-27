@@ -8,18 +8,18 @@ package org.redkalex.source.mysql;
 /** @author zhangjx */
 public class MyPrepareDesc {
 
-    public final int numberOfParameters; // 先param后column
+	public final int numberOfParameters; // 先param后column
 
-    public final int numberOfColumns;
+	public final int numberOfColumns;
 
-    public final MyRowDesc paramDescs;
+	public final MyRowDesc paramDescs;
 
-    public final MyRowDesc columnDescs;
+	public final MyRowDesc columnDescs;
 
-    public MyPrepareDesc(MyRespPrepare prepare) {
-        this.numberOfParameters = prepare.numberOfParameters;
-        this.numberOfColumns = prepare.numberOfColumns;
-        this.paramDescs = prepare.paramDescs;
-        this.columnDescs = prepare.columnDescs;
-    }
+	public MyPrepareDesc(MyRespPrepare prepare) {
+		this.numberOfParameters = prepare.numberOfParameters;
+		this.numberOfColumns = prepare.numberOfColumns;
+		this.paramDescs = prepare.paramDescs;
+		this.columnDescs = prepare.columnDescs;
+	}
 }

@@ -13,13 +13,13 @@ import java.util.Map;
  */
 public class HitEntity<T> extends BaseBean {
 
-    public String _index;
+	public String _index;
 
-    public String _id;
+	public String _id;
 
-    public float _score;
+	public float _score;
 
-    public T _source;
+	public T _source;
 
-    public Map<String, String[]> highlight;
+	public Map<String, String[]> highlight;
 }

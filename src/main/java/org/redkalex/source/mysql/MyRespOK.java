@@ -10,22 +10,22 @@ import org.redkale.convert.json.JsonConvert;
 /** @author zhangjx */
 public class MyRespOK {
 
-    public static final byte[] OK = new byte[] {7, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0};
+	public static final byte[] OK = new byte[] {7, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0};
 
-    public static final byte[] AC_OFF = new byte[] {7, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0};
+	public static final byte[] AC_OFF = new byte[] {7, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0};
 
-    public long affectedRows = -1;
+	public long affectedRows = -1;
 
-    public long lastInsertId = -1;
+	public long lastInsertId = -1;
 
-    public int serverStatusFlags;
+	public int serverStatusFlags;
 
-    public int warningCount;
+	public int warningCount;
 
-    public String info;
+	public String info;
 
-    @Override
-    public String toString() {
-        return JsonConvert.root().convertTo(this);
-    }
+	@Override
+	public String toString() {
+		return JsonConvert.root().convertTo(this);
+	}
 }

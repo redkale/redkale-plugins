@@ -13,8 +13,8 @@ import org.redkale.convert.json.JsonConvert;
 @Bean
 abstract class BaseBean implements Serializable {
 
-    @Override
-    public String toString() {
-        return JsonConvert.root().convertTo(this);
-    }
+	@Override
+	public String toString() {
+		return JsonConvert.root().convertTo(this);
+	}
 }

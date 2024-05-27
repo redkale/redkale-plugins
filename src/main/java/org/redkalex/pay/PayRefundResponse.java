@@ -15,44 +15,44 @@ import org.redkale.convert.ConvertDisabled;
  */
 public class PayRefundResponse extends PayResponse {
 
-    protected long refundedMoney; //  已退款金额。 单位:分
+	protected long refundedMoney; //  已退款金额。 单位:分
 
-    @Override
-    public PayRefundResponse retcode(int retcode) {
-        this.retcode = retcode;
-        this.retinfo = PayRetCodes.retInfo(retcode);
-        return this;
-    }
+	@Override
+	public PayRefundResponse retcode(int retcode) {
+		this.retcode = retcode;
+		this.retinfo = PayRetCodes.retInfo(retcode);
+		return this;
+	}
 
-    @Override
-    public PayRefundResponse retinfo(String retinfo) {
-        if (retinfo != null) this.retinfo = retinfo;
-        return this;
-    }
+	@Override
+	public PayRefundResponse retinfo(String retinfo) {
+		if (retinfo != null) this.retinfo = retinfo;
+		return this;
+	}
 
-    @Override
-    public PayRefundResponse result(Map<String, String> result) {
-        this.setResult(result);
-        return this;
-    }
+	@Override
+	public PayRefundResponse result(Map<String, String> result) {
+		this.setResult(result);
+		return this;
+	}
 
-    public long getRefundedMoney() {
-        return refundedMoney;
-    }
+	public long getRefundedMoney() {
+		return refundedMoney;
+	}
 
-    public void setRefundedMoney(long refundedMoney) {
-        this.refundedMoney = refundedMoney;
-    }
+	public void setRefundedMoney(long refundedMoney) {
+		this.refundedMoney = refundedMoney;
+	}
 
-    @Deprecated
-    @ConvertDisabled
-    public long getRefundedmoney() {
-        return refundedMoney;
-    }
+	@Deprecated
+	@ConvertDisabled
+	public long getRefundedmoney() {
+		return refundedMoney;
+	}
 
-    @Deprecated
-    @ConvertDisabled
-    public void setRefundedmoney(long refundedMoney) {
-        this.refundedMoney = refundedMoney;
-    }
+	@Deprecated
+	@ConvertDisabled
+	public void setRefundedmoney(long refundedMoney) {
+		this.refundedMoney = refundedMoney;
+	}
 }

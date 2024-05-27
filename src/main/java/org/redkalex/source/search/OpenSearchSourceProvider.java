@@ -16,19 +16,19 @@ import org.redkale.util.AnyValue;
 @Priority(-900)
 public class OpenSearchSourceProvider implements DataSourceProvider {
 
-    @Override
-    public boolean acceptsConf(AnyValue config) {
-        String dbtype = config.getValue("dbtype");
-        if (dbtype == null) {
-            AnyValue read = config.getAnyValue("read");
-            AnyValue node = read == null ? config : read;
-            dbtype = parseDbtype(node.getValue(DATA_SOURCE_URL));
-        }
-        return "search".equalsIgnoreCase(dbtype);
-    }
+	@Override
+	public boolean acceptsConf(AnyValue config) {
+		String dbtype = config.getValue("dbtype");
+		if (dbtype == null) {
+			AnyValue read = config.getAnyValue("read");
+			AnyValue node = read == null ? config : read;
+			dbtype = parseDbtype(node.getValue(DATA_SOURCE_URL));
+		}
+		return "search".equalsIgnoreCase(dbtype);
+	}
 
-    @Override
-    public DataSource createInstance() {
-        return new OpenSearchSource();
-    }
+	@Override
+	public DataSource createInstance() {
+		return new OpenSearchSource();
+	}
 }

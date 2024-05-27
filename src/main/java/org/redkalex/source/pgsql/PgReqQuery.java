@@ -12,29 +12,29 @@ import org.redkale.util.ByteArray;
 /** @author zhangjx */
 public class PgReqQuery extends PgClientRequest {
 
-    protected String sql;
+	protected String sql;
 
-    public <T> void prepare(String sql) {
-        super.prepare();
-        this.sql = sql;
-    }
+	public <T> void prepare(String sql) {
+		super.prepare();
+		this.sql = sql;
+	}
 
-    @Override
-    public int getType() {
-        return REQ_TYPE_QUERY;
-    }
+	@Override
+	public int getType() {
+		return REQ_TYPE_QUERY;
+	}
 
-    @Override
-    public String toString() {
-        return "PgReqQuery_" + Objects.hashCode(this) + "{sql=" + sql + "}";
-    }
+	@Override
+	public String toString() {
+		return "PgReqQuery_" + Objects.hashCode(this) + "{sql=" + sql + "}";
+	}
 
-    @Override
-    public void writeTo(ClientConnection conn, ByteArray array) {
-        array.putByte('Q');
-        int start = array.length();
-        array.putInt(0);
-        writeUTF8String(array, sql);
-        array.putInt(start, array.length() - start);
-    }
+	@Override
+	public void writeTo(ClientConnection conn, ByteArray array) {
+		array.putByte('Q');
+		int start = array.length();
+		array.putInt(0);
+		writeUTF8String(array, sql);
+		array.putInt(start, array.length() - start);
+	}
 }

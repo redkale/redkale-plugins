@@ -10,32 +10,32 @@ import org.redkale.convert.json.JsonConvert;
 /** @author zhangjx */
 public class PgRowDesc {
 
-    final PgRowColumn[] columns;
+	final PgRowColumn[] columns;
 
-    final PgColumnFormat[] formats;
+	final PgColumnFormat[] formats;
 
-    public PgRowDesc(PgRowColumn[] columns, PgColumnFormat[] formats) {
-        this.columns = columns;
-        this.formats = formats;
-    }
+	public PgRowDesc(PgRowColumn[] columns, PgColumnFormat[] formats) {
+		this.columns = columns;
+		this.formats = formats;
+	}
 
-    public PgRowColumn[] getColumns() {
-        return columns;
-    }
+	public PgRowColumn[] getColumns() {
+		return columns;
+	}
 
-    public PgRowColumn getColumn(int i) {
-        return columns[i];
-    }
+	public PgRowColumn getColumn(int i) {
+		return columns[i];
+	}
 
-    public int length() {
-        if (columns == null) {
-            return -1;
-        }
-        return columns.length;
-    }
+	public int length() {
+		if (columns == null) {
+			return -1;
+		}
+		return columns.length;
+	}
 
-    @Override
-    public String toString() {
-        return JsonConvert.root().convertTo(this);
-    }
+	@Override
+	public String toString() {
+		return JsonConvert.root().convertTo(this);
+	}
 }

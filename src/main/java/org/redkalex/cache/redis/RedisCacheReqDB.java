@@ -12,26 +12,26 @@ import org.redkale.util.ByteArray;
 /** @author zhangjx */
 public class RedisCacheReqDB extends RedisCacheRequest {
 
-    protected int db;
+	protected int db;
 
-    public RedisCacheReqDB(int db) {
-        this.db = db;
-    }
+	public RedisCacheReqDB(int db) {
+		this.db = db;
+	}
 
-    @Override
-    public void writeTo(ClientConnection conn, ByteArray writer) {
-        writer.put(mutliLengthBytes(2));
-        writer.put(bulkLengthBytes(6));
-        writer.put("SELECT\r\n".getBytes(StandardCharsets.UTF_8));
+	@Override
+	public void writeTo(ClientConnection conn, ByteArray writer) {
+		writer.put(mutliLengthBytes(2));
+		writer.put(bulkLengthBytes(6));
+		writer.put("SELECT\r\n".getBytes(StandardCharsets.UTF_8));
 
-        byte[] dbs = String.valueOf(db).getBytes(StandardCharsets.UTF_8);
-        writer.put(bulkLengthBytes(dbs.length));
-        writer.put(dbs);
-        writer.put(CRLF);
-    }
+		byte[] dbs = String.valueOf(db).getBytes(StandardCharsets.UTF_8);
+		writer.put(bulkLengthBytes(dbs.length));
+		writer.put(dbs);
+		writer.put(CRLF);
+	}
 
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "{SELECT " + db + "}";
-    }
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + "{SELECT " + db + "}";
+	}
 }

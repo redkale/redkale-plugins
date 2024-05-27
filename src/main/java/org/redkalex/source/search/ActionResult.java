@@ -8,21 +8,21 @@ package org.redkalex.source.search;
 /** @author zhangjx */
 public class ActionResult extends BaseBean {
 
-    public String _index;
+	public String _index;
 
-    public String _id;
+	public String _id;
 
-    public int _version;
+	public int _version;
 
-    public String result;
+	public String result;
 
-    public ShardResult _shards;
+	public ShardResult _shards;
 
-    public int status;
+	public int status;
 
-    public int _primary_term;
+	public int _primary_term;
 
-    public int successCount() {
-        return _shards == null ? 0 : _shards.successful;
-    }
+	public int successCount() {
+		return _shards == null ? 0 : _shards.successful;
+	}
 }

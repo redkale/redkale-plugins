@@ -12,28 +12,28 @@ import org.redkale.util.ByteArray;
 /** @author zhangjx */
 public class RedisCacheReqAuth extends RedisCacheRequest {
 
-    private static final byte[] PS = "AUTH\r\n".getBytes(StandardCharsets.UTF_8);
+	private static final byte[] PS = "AUTH\r\n".getBytes(StandardCharsets.UTF_8);
 
-    protected String password;
+	protected String password;
 
-    public RedisCacheReqAuth(String password) {
-        this.password = password;
-    }
+	public RedisCacheReqAuth(String password) {
+		this.password = password;
+	}
 
-    @Override
-    public void writeTo(ClientConnection conn, ByteArray writer) {
-        byte[] pwd = password.getBytes();
-        writer.put(mutliLengthBytes(2));
-        writer.put(bulkLengthBytes(4));
-        writer.put(PS);
+	@Override
+	public void writeTo(ClientConnection conn, ByteArray writer) {
+		byte[] pwd = password.getBytes();
+		writer.put(mutliLengthBytes(2));
+		writer.put(bulkLengthBytes(4));
+		writer.put(PS);
 
-        writer.put(bulkLengthBytes(pwd.length));
-        writer.put(pwd);
-        writer.put(CRLF);
-    }
+		writer.put(bulkLengthBytes(pwd.length));
+		writer.put(pwd);
+		writer.put(CRLF);
+	}
 
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "{AUTH " + password + "}";
-    }
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + "{AUTH " + password + "}";
+	}
 }

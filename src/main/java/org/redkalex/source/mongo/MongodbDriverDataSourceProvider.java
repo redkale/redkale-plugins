@@ -16,24 +16,24 @@ import org.redkale.util.*;
 @Priority(-700)
 public class MongodbDriverDataSourceProvider implements DataSourceProvider {
 
-    @Override
-    public boolean acceptsConf(AnyValue config) {
-        try {
-            Object.class.isAssignableFrom(com.mongodb.reactivestreams.client.MongoClient.class); // 试图加载MongoClient相关类
-            String dbtype = config.getValue("dbtype");
-            if (dbtype == null) {
-                AnyValue read = config.getAnyValue("read");
-                AnyValue node = read == null ? config : read;
-                dbtype = parseDbtype(node.getValue(DATA_SOURCE_URL));
-            }
-            return "mongodb".equalsIgnoreCase(dbtype);
-        } catch (Throwable e) {
-            return false;
-        }
-    }
+	@Override
+	public boolean acceptsConf(AnyValue config) {
+		try {
+			Object.class.isAssignableFrom(com.mongodb.reactivestreams.client.MongoClient.class); // 试图加载MongoClient相关类
+			String dbtype = config.getValue("dbtype");
+			if (dbtype == null) {
+				AnyValue read = config.getAnyValue("read");
+				AnyValue node = read == null ? config : read;
+				dbtype = parseDbtype(node.getValue(DATA_SOURCE_URL));
+			}
+			return "mongodb".equalsIgnoreCase(dbtype);
+		} catch (Throwable e) {
+			return false;
+		}
+	}
 
-    @Override
-    public DataSource createInstance() {
-        return new MongodbDriverDataSource();
-    }
+	@Override
+	public DataSource createInstance() {
+		return new MongodbDriverDataSource();
+	}
 }

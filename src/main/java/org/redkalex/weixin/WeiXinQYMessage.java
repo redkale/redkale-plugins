@@ -18,102 +18,102 @@ import org.redkale.convert.json.JsonFactory;
  */
 public class WeiXinQYMessage {
 
-    private String agentid = "1";
+	private String agentid = "1";
 
-    private String msgtype = "text";
+	private String msgtype = "text";
 
-    private Map<String, String> text;
+	private Map<String, String> text;
 
-    private String touser = "@all";
+	private String touser = "@all";
 
-    private String toparty;
+	private String toparty;
 
-    private String totag;
+	private String totag;
 
-    private String safe;
+	private String safe;
 
-    private Supplier<String> contentSupplier;
+	private Supplier<String> contentSupplier;
 
-    public WeiXinQYMessage() {}
+	public WeiXinQYMessage() {}
 
-    public WeiXinQYMessage(String agentid, String text) {
-        this.agentid = agentid;
-        setTextMessage(text);
-    }
+	public WeiXinQYMessage(String agentid, String text) {
+		this.agentid = agentid;
+		setTextMessage(text);
+	}
 
-    public WeiXinQYMessage(String agentid, Supplier<String> contentSupplier) {
-        this.agentid = agentid;
-        this.contentSupplier = contentSupplier;
-    }
+	public WeiXinQYMessage(String agentid, Supplier<String> contentSupplier) {
+		this.agentid = agentid;
+		this.contentSupplier = contentSupplier;
+	}
 
-    public final void setTextMessage(String content) {
-        if (content == null || content.isEmpty()) return;
-        if (text == null) text = new HashMap<>();
-        text.put("content", content);
-    }
+	public final void setTextMessage(String content) {
+		if (content == null || content.isEmpty()) return;
+		if (text == null) text = new HashMap<>();
+		text.put("content", content);
+	}
 
-    public void supplyContent() {
-        if (contentSupplier != null) setTextMessage(contentSupplier.get());
-    }
+	public void supplyContent() {
+		if (contentSupplier != null) setTextMessage(contentSupplier.get());
+	}
 
-    public String getAgentid() {
-        return agentid;
-    }
+	public String getAgentid() {
+		return agentid;
+	}
 
-    public void setAgentid(String agentid) {
-        this.agentid = agentid;
-    }
+	public void setAgentid(String agentid) {
+		this.agentid = agentid;
+	}
 
-    public String getMsgtype() {
-        return msgtype;
-    }
+	public String getMsgtype() {
+		return msgtype;
+	}
 
-    public void setMsgtype(String msgtype) {
-        this.msgtype = msgtype;
-    }
+	public void setMsgtype(String msgtype) {
+		this.msgtype = msgtype;
+	}
 
-    public Map<String, String> getText() {
-        return text;
-    }
+	public Map<String, String> getText() {
+		return text;
+	}
 
-    public void setText(Map<String, String> text) {
-        this.text = text;
-    }
+	public void setText(Map<String, String> text) {
+		this.text = text;
+	}
 
-    public String getTouser() {
-        return touser;
-    }
+	public String getTouser() {
+		return touser;
+	}
 
-    public void setTouser(String touser) {
-        this.touser = touser;
-    }
+	public void setTouser(String touser) {
+		this.touser = touser;
+	}
 
-    public String getToparty() {
-        return toparty;
-    }
+	public String getToparty() {
+		return toparty;
+	}
 
-    public void setToparty(String toparty) {
-        this.toparty = toparty;
-    }
+	public void setToparty(String toparty) {
+		this.toparty = toparty;
+	}
 
-    public String getTotag() {
-        return totag;
-    }
+	public String getTotag() {
+		return totag;
+	}
 
-    public void setTotag(String totag) {
-        this.totag = totag;
-    }
+	public void setTotag(String totag) {
+		this.totag = totag;
+	}
 
-    public String getSafe() {
-        return safe;
-    }
+	public String getSafe() {
+		return safe;
+	}
 
-    public void setSafe(String safe) {
-        this.safe = safe;
-    }
+	public void setSafe(String safe) {
+		this.safe = safe;
+	}
 
-    @Override
-    public String toString() {
-        return JsonFactory.root().getConvert().convertTo(this);
-    }
+	@Override
+	public String toString() {
+		return JsonFactory.root().getConvert().convertTo(this);
+	}
 }
