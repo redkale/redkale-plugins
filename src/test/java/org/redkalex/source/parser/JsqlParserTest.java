@@ -82,10 +82,10 @@ public class JsqlParserTest {
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        SourceException exp = null;
+        Exception exp = null;
         try {
             parser.parse(signFunc, "mysql", sql, false, params);
-        } catch (SourceException e) {
+        } catch (Exception e) {
             exp = e;
         }
         Assertions.assertEquals("Missing parameter v2", exp == null ? null : exp.getMessage());
@@ -185,10 +185,10 @@ public class JsqlParserTest {
                 List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        SourceException exp = null;
+        Exception exp = null;
         try {
             parser.parse(signFunc, "mysql", sql, false, params);
-        } catch (SourceException e) {
+        } catch (Exception e) {
             exp = e;
         }
         Assertions.assertEquals("Missing parameter t2", exp == null ? null : exp.getMessage());
