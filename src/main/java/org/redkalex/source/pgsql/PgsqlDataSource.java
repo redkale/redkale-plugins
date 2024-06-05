@@ -5,8 +5,6 @@
  */
 package org.redkalex.source.pgsql;
 
-import static org.redkale.source.DataSources.*;
-
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.*;
@@ -21,6 +19,7 @@ import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
@@ -629,11 +628,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
         final String listSql = cachePrepared
                 ? info.getAllQueryPrepareSQL()
-                : (listSubSql
-                        + createSQLOrderby(info, flipper)
-                        + (flipper == null || flipper.getLimit() < 1
-                                ? ""
-                                : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
+                : (createLimitSQL(listSubSql + createOrderbySql(info, flipper), flipper));
         if (!needTotal) {
             CompletableFuture<PgResultSet> listFuture;
             if (cachePrepared) {
@@ -1183,10 +1178,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = sinfo.getNativeSql()
-                                + (flipper == null || flipper.getLimit() < 1
-                                        ? ""
-                                        : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                        String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
                         PgReqExtended req = conn.pollReqExtended(workThread, null);
                         Stream<Serializable> pstream2 =
                                 sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
@@ -1215,10 +1207,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = sinfo.getNativeSql()
-                                + (flipper == null || flipper.getLimit() < 1
-                                        ? ""
-                                        : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                        String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
                         PgReqQuery req = conn.pollReqQuery(workThread, null);
                         req.prepare(listSql);
                         Function<PgResultSet, Sheet<V>> sheetTransfer = dataset -> {

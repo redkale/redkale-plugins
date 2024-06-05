@@ -5,8 +5,6 @@
  */
 package org.redkalex.source.mysql;
 
-import static org.redkale.source.DataSources.*;
-
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.*;
@@ -21,6 +19,7 @@ import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.service.Local;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
@@ -655,11 +654,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         }
         final String listSql = cachePrepared
                 ? info.getAllQueryPrepareSQL()
-                : (listSubSql
-                        + createSQLOrderby(info, flipper)
-                        + (flipper == null || flipper.getLimit() < 1
-                                ? ""
-                                : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset())));
+                : (createLimitSQL(listSubSql + createOrderbySql(info, flipper), flipper));
         if (readcache && info.isLoggable(logger, Level.FINEST, listSql)) {
             logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
         }
@@ -1196,10 +1191,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = sinfo.getNativeSql()
-                                + (flipper == null || flipper.getLimit() < 1
-                                        ? ""
-                                        : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                        String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
                         MyReqExtended req = conn.pollReqExtended(workThread, null);
                         Stream<Object> pstream2 = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
                         req.prepare(
@@ -1225,10 +1217,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = sinfo.getNativeSql()
-                                + (flipper == null || flipper.getLimit() < 1
-                                        ? ""
-                                        : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                        String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
                         MyReqQuery req = conn.pollReqQuery(workThread, null);
                         req.prepare(listSql);
                         Function<MyResultSet, Sheet<V>> sheetTransfer = dataset -> {

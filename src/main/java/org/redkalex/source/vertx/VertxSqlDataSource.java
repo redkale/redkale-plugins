@@ -5,8 +5,6 @@
  */
 package org.redkalex.source.vertx;
 
-import static org.redkale.source.DataSources.*;
-
 import io.vertx.core.*;
 import io.vertx.core.metrics.MetricsOptions;
 import io.vertx.sqlclient.*;
@@ -28,6 +26,7 @@ import org.redkale.inject.ResourceEvent;
 import org.redkale.net.WorkThread;
 import org.redkale.service.Local;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
@@ -812,11 +811,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM ("
                     + (union) + ") a";
         }
-        final String listSql = listsubsql
-                + createSQLOrderby(info, flipper)
-                + (flipper == null || flipper.getLimit() < 1
-                        ? ""
-                        : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+        final String listSql = createLimitSQL(listsubsql + createOrderbySql(info, flipper), flipper);
         if (readcache && info.isLoggable(logger, Level.FINEST, listSql)) {
             logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
         }
@@ -1149,10 +1144,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     complete(workThread, future, new Sheet<>(total, new ArrayList<>()));
                 }
                 final long count = total;
-                String listSql = sinfo.getNativeSql()
-                        + (flipper == null || flipper.getLimit() < 1
-                                ? ""
-                                : (" LIMIT " + flipper.getLimit() + " OFFSET " + flipper.getOffset()));
+                String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
                 Handler<AsyncResult<RowSet<Row>>> listHandler = (AsyncResult<RowSet<Row>> event) -> {
                     slowLog(s, listSql);
                     if (event.failed()) {
