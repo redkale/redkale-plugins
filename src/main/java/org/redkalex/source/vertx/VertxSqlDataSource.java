@@ -351,7 +351,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     writePool().query(tableSqls[createIndex.get()]).execute(createHandler);
                 } else { // 分表模式
                     // 执行一遍复制表操作
-                    final String copySql = getTableCopySQL(info, info.getTable(values[0]));
+                    final String copySql = getTableCopySql(info, info.getTable(values[0]));
                     final ObjectRef<Handler<AsyncResult<RowSet<Row>>>> copySqlHandlerRef = new ObjectRef<>();
                     final Handler<AsyncResult<RowSet<Row>>> copySqlHandler = (AsyncResult<RowSet<Row>> event2) -> {
                         if (event2.failed()) {
@@ -811,7 +811,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM ("
                     + (union) + ") a";
         }
-        final String listSql = createLimitSQL(listsubsql + createOrderbySql(info, flipper), flipper);
+        final String listSql = createLimitSql(listsubsql + createOrderbySql(info, flipper), flipper);
         if (readcache && info.isLoggable(logger, Level.FINEST, listSql)) {
             logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
         }
@@ -1144,7 +1144,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     complete(workThread, future, new Sheet<>(total, new ArrayList<>()));
                 }
                 final long count = total;
-                String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
+                String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
                 Handler<AsyncResult<RowSet<Row>>> listHandler = (AsyncResult<RowSet<Row>> event) -> {
                     slowLog(s, listSql);
                     if (event.failed()) {

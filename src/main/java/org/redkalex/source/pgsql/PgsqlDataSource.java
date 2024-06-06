@@ -628,7 +628,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
 
         final String listSql = cachePrepared
                 ? info.getAllQueryPrepareSQL()
-                : (createLimitSQL(listSubSql + createOrderbySql(info, flipper), flipper));
+                : (createLimitSql(listSubSql + createOrderbySql(info, flipper), flipper));
         if (!needTotal) {
             CompletableFuture<PgResultSet> listFuture;
             if (cachePrepared) {
@@ -786,7 +786,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     // 执行一遍复制表操作
                     final String newTable = info.getTable(values[0]);
                     final PgReqUpdate copyTableReq = new PgReqUpdate();
-                    copyTableReq.prepare(getTableCopySQL(info, newTable));
+                    copyTableReq.prepare(getTableCopySql(info, newTable));
                     writePool().writeChannel(connRef.get(), copyTableReq).whenComplete((g2, t2) -> {
                         if (t2 != null) {
                             while (t2 instanceof CompletionException) t2 = t2.getCause();
@@ -822,7 +822,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                                                 if (t4 == null) { // 建表成功
                                                     // 再执行一遍复制表操作
                                                     final PgReqUpdate copyTableReq2 = new PgReqUpdate();
-                                                    copyTableReq2.prepare(getTableCopySQL(info, newTable));
+                                                    copyTableReq2.prepare(getTableCopySql(info, newTable));
                                                     writePool()
                                                             .writeChannel(connRef.get(), copyTableReq2)
                                                             .whenComplete((g5, t5) -> {
@@ -859,7 +859,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                                             if (t4 == null) { // 建库成功
                                                 // 再执行一遍复制表操作
                                                 final PgReqUpdate copyTableReq2 = new PgReqUpdate();
-                                                copyTableReq2.prepare(getTableCopySQL(info, newTable));
+                                                copyTableReq2.prepare(getTableCopySql(info, newTable));
                                                 writePool()
                                                         .writeChannel(connRef.get(), copyTableReq2)
                                                         .whenComplete((g5, t5) -> {
@@ -903,7 +903,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                                                                                     final PgReqUpdate copyTableReq3 =
                                                                                             new PgReqUpdate();
                                                                                     copyTableReq3.prepare(
-                                                                                            getTableCopySQL(
+                                                                                            getTableCopySql(
                                                                                                     info, newTable));
                                                                                     writePool()
                                                                                             .writeChannel(
@@ -1178,7 +1178,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
+                        String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
                         PgReqExtended req = conn.pollReqExtended(workThread, null);
                         Stream<Serializable> pstream2 =
                                 sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
@@ -1207,7 +1207,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
+                        String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
                         PgReqQuery req = conn.pollReqQuery(workThread, null);
                         req.prepare(listSql);
                         Function<PgResultSet, Sheet<V>> sheetTransfer = dataset -> {

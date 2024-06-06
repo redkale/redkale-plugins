@@ -654,7 +654,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         }
         final String listSql = cachePrepared
                 ? info.getAllQueryPrepareSQL()
-                : (createLimitSQL(listSubSql + createOrderbySql(info, flipper), flipper));
+                : (createLimitSql(listSubSql + createOrderbySql(info, flipper), flipper));
         if (readcache && info.isLoggable(logger, Level.FINEST, listSql)) {
             logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
         }
@@ -807,7 +807,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                     // 执行一遍复制表操作
                     final String newTable = info.getTable(values[0]);
                     final MyReqUpdate copyTableReq = new MyReqUpdate();
-                    copyTableReq.prepare(getTableCopySQL(info, newTable));
+                    copyTableReq.prepare(getTableCopySql(info, newTable));
                     writePool().writeChannel(connRef.get(), copyTableReq).whenComplete((g2, t2) -> {
                         if (t2 != null) {
                             while (t2 instanceof CompletionException) t2 = t2.getCause();
@@ -843,7 +843,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                                                 if (t4 == null) { // 建表成功
                                                     // 再执行一遍复制表操作
                                                     final MyReqUpdate copyTableReq2 = new MyReqUpdate();
-                                                    copyTableReq2.prepare(getTableCopySQL(info, newTable));
+                                                    copyTableReq2.prepare(getTableCopySql(info, newTable));
                                                     writePool()
                                                             .writeChannel(connRef.get(), copyTableReq2)
                                                             .whenComplete((g5, t5) -> {
@@ -880,7 +880,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                                             if (t4 == null) { // 建库成功
                                                 // 再执行一遍复制表操作
                                                 final MyReqUpdate copyTableReq2 = new MyReqUpdate();
-                                                copyTableReq2.prepare(getTableCopySQL(info, newTable));
+                                                copyTableReq2.prepare(getTableCopySql(info, newTable));
                                                 writePool()
                                                         .writeChannel(connRef.get(), copyTableReq2)
                                                         .whenComplete((g5, t5) -> {
@@ -925,7 +925,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                                                                                     final MyReqUpdate copyTableReq3 =
                                                                                             new MyReqUpdate();
                                                                                     copyTableReq3.prepare(
-                                                                                            getTableCopySQL(
+                                                                                            getTableCopySql(
                                                                                                     info, newTable));
                                                                                     writePool()
                                                                                             .writeChannel(
@@ -1191,7 +1191,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
+                        String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
                         MyReqExtended req = conn.pollReqExtended(workThread, null);
                         Stream<Object> pstream2 = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
                         req.prepare(
@@ -1217,7 +1217,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = createLimitSQL(sinfo.getNativeSql(), flipper);
+                        String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
                         MyReqQuery req = conn.pollReqQuery(workThread, null);
                         req.prepare(listSql);
                         Function<MyResultSet, Sheet<V>> sheetTransfer = dataset -> {
