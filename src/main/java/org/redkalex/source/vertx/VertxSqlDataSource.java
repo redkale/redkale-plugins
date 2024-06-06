@@ -783,7 +783,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         final WorkThread workThread = WorkThread.currentWorkThread();
         String[] tables = info.getTables(node);
 
-        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
+        PageCountSql sqls = filterPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
         if (!needTotal) {
             CompletableFuture<VertxResultSet> listfuture = readResultSet(workThread, info, sqls.pageSql);
             return listfuture.thenApply((VertxResultSet set) -> {
@@ -1026,7 +1026,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<Integer> future = new CompletableFuture<>();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, null, params);
         if (!sinfo.isEmptyNamed()) {
             writePool()
                     .preparedQuery(sinfo.getNativeSql())
@@ -1061,7 +1061,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<V> future = new CompletableFuture<>();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, null, params);
         if (!sinfo.isEmptyNamed()) {
             readPool()
                     .preparedQuery(sinfo.getNativeSql())
@@ -1091,7 +1091,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<Sheet<V>> future = new CompletableFuture<>();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, flipper, params);
         Pool pool = readPool();
         final String countSql = sinfo.getNativeCountSql();
         Handler<AsyncResult<RowSet<Row>>> countHandler = (AsyncResult<RowSet<Row>> evt) -> {
@@ -1108,9 +1108,9 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     complete(workThread, future, new Sheet<>(total, new ArrayList<>()));
                 }
                 final long count = total;
-                String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
+                String pageSql = sinfo.getNativePageSql();
                 Handler<AsyncResult<RowSet<Row>>> listHandler = (AsyncResult<RowSet<Row>> event) -> {
-                    slowLog(s, listSql);
+                    slowLog(s, pageSql);
                     if (event.failed()) {
                         completeExceptionally(workThread, future, event.cause());
                     } else {
@@ -1119,9 +1119,9 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     }
                 };
                 if (!sinfo.isEmptyNamed()) {
-                    pool.preparedQuery(listSql).execute(tupleParameter(sinfo, params), listHandler);
+                    pool.preparedQuery(pageSql).execute(tupleParameter(sinfo, params), listHandler);
                 } else {
-                    pool.preparedQuery(listSql).execute(listHandler);
+                    pool.preparedQuery(pageSql).execute(listHandler);
                 }
             }
         };

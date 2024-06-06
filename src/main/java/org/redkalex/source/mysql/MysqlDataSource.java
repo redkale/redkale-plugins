@@ -624,7 +624,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                 && flipper == null
                 && !distinct
                 && !needTotal;
-        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
+        PageCountSql sqls = filterPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
 
         final String pageSql = cachePrepared ? info.getAllQueryPrepareSQL() : sqls.pageSql;
         if (cachePrepared && info.isLoggable(logger, Level.FINEST, pageSql)) {
@@ -678,7 +678,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     }
 
     private static int fetchSize(Flipper flipper) {
-        return flipper == null || flipper.getLimit() <= 0 ? 0 : flipper.getLimit();
+        return Flipper.validLimit(flipper) ? flipper.getLimit() : 0;
     }
 
     protected <T> CompletableFuture<MyResultSet> thenApplyQueryUpdateStrategy(
@@ -1075,7 +1075,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     @Override
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, null, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = writePool();
         if (!sinfo.isEmptyNamed()) {
@@ -1112,7 +1112,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
             Function<DataResultSet, V> handler,
             Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, null, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = readPool();
         Function<MyResultSet, V> transfer = dataset -> {
@@ -1139,7 +1139,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(
             Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, flipper, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         MyClient pool = readPool();
         final String countSql = sinfo.getNativeCountSql();
@@ -1158,17 +1158,17 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
+                        String pageSql = sinfo.getNativePageSql();
                         MyReqExtended req = conn.pollReqExtended(workThread, null);
                         Stream<Object> pstream2 = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
                         req.prepare(
                                 MyClientRequest.REQ_TYPE_EXTEND_QUERY,
-                                listSql,
+                                pageSql,
                                 flipper == null ? 0 : flipper.getLimit(),
                                 pstream2);
                         Function<MyResultSet, Sheet<V>> sheetTransfer = dataset -> {
                             List<V> list = EntityBuilder.getListValue(type, dataset);
-                            slowLog(s2, listSql);
+                            slowLog(s2, pageSql);
                             return new Sheet<>(total, list);
                         };
                         return pool.writeChannel(conn, req, sheetTransfer);
@@ -1184,12 +1184,12 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
+                        String pageSql = sinfo.getNativePageSql();
                         MyReqQuery req = conn.pollReqQuery(workThread, null);
-                        req.prepare(listSql);
+                        req.prepare(pageSql);
                         Function<MyResultSet, Sheet<V>> sheetTransfer = dataset -> {
                             List<V> list = EntityBuilder.getListValue(type, dataset);
-                            slowLog(s2, listSql);
+                            slowLog(s2, pageSql);
                             return new Sheet<>(total, list);
                         };
                         return pool.writeChannel(conn, req, sheetTransfer);

@@ -594,7 +594,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 && flipper == null
                 && !distinct
                 && !needTotal;
-        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
+        PageCountSql sqls = filterPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
 
         final String pageSql = cachePrepared ? info.getAllQueryPrepareSQL() : sqls.pageSql;
         if (cachePrepared && info.isLoggable(logger, Level.FINEST, pageSql)) {
@@ -1038,7 +1038,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     @Override
     public CompletableFuture<Integer> nativeUpdateAsync(String sql, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, null, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = writePool();
         if (!sinfo.isEmptyNamed()) {
@@ -1083,7 +1083,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             Function<DataResultSet, V> handler,
             Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, false, null, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = readPool();
         Function<PgResultSet, V> transfer = dataset -> {
@@ -1116,7 +1116,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(
             Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
         long s = System.currentTimeMillis();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, flipper, params);
         final WorkThread workThread = WorkThread.currentWorkThread();
         PgClient pool = readPool();
         final String countSql = sinfo.getNativeCountSql();
@@ -1141,20 +1141,20 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
+                        String pageSql = sinfo.getNativePageSql();
                         PgReqExtended req = conn.pollReqExtended(workThread, null);
                         Stream<Serializable> pstream2 =
                                 sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
                         req.prepareParams(
                                 PgClientRequest.REQ_TYPE_EXTEND_QUERY,
                                 PgExtendMode.OTHER_NATIVE,
-                                listSql,
+                                pageSql,
                                 flipper == null ? 0 : flipper.getLimit(),
                                 sinfo.getParamNames().size(),
                                 pstream2);
                         Function<PgResultSet, Sheet<V>> sheetTransfer = dataset -> {
                             List<V> list = EntityBuilder.getListValue(type, dataset);
-                            slowLog(s2, listSql);
+                            slowLog(s2, pageSql);
                             return new Sheet<>(total, list);
                         };
                         return pool.writeChannel(conn, req, sheetTransfer);
@@ -1170,12 +1170,12 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
                         long s2 = System.currentTimeMillis();
-                        String listSql = createLimitSql(sinfo.getNativePageSql(), flipper);
+                        String pageSql = sinfo.getNativePageSql();
                         PgReqQuery req = conn.pollReqQuery(workThread, null);
-                        req.prepare(listSql);
+                        req.prepare(pageSql);
                         Function<PgResultSet, Sheet<V>> sheetTransfer = dataset -> {
                             List<V> list = EntityBuilder.getListValue(type, dataset);
-                            slowLog(s2, listSql);
+                            slowLog(s2, pageSql);
                             return new Sheet<>(total, list);
                         };
                         return pool.writeChannel(conn, req, sheetTransfer);

@@ -12,10 +12,13 @@ import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.junit.jupiter.api.Test;
 import org.redkale.source.DataNativeSqlStatement;
+import org.redkale.source.Flipper;
 import org.redkale.util.Utility;
 
 /** @author zhangjx */
 public class JsqlJdbcParserTest {
+
+    private static final Flipper flipper = new Flipper();
 
     private static final IntFunction<String> signFunc = index -> "?";
 
@@ -43,7 +46,7 @@ public class JsqlJdbcParserTest {
         Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("新countsql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
@@ -56,7 +59,7 @@ public class JsqlJdbcParserTest {
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=========================================2========================================");
@@ -68,7 +71,7 @@ public class JsqlJdbcParserTest {
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================3=======================================");
@@ -81,7 +84,7 @@ public class JsqlJdbcParserTest {
         Map<String, Object> params = Utility.ofMap("startTime", 1, "endTime", 3);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================4=======================================");
@@ -98,7 +101,7 @@ public class JsqlJdbcParserTest {
         System.out.println(sqlParser.Statement());
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================5=======================================");
@@ -128,7 +131,7 @@ public class JsqlJdbcParserTest {
         System.out.println(sqlParser.Statement());
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================6=======================================");
@@ -160,7 +163,7 @@ public class JsqlJdbcParserTest {
         System.out.println(sqlParser.Statement());
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================7=======================================");
@@ -177,7 +180,7 @@ public class JsqlJdbcParserTest {
         System.out.println(stmt);
         System.out.println(stmt.getOrderByElements());
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, null, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
@@ -197,7 +200,7 @@ public class JsqlJdbcParserTest {
 
         Map<String, Object> params = Utility.ofMap("idx", 100);
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, flipper, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
@@ -220,8 +223,8 @@ public class JsqlJdbcParserTest {
         System.out.println("语句sql : " + tempSql);
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, params);
-        System.out.println("生成sql = " + statement.getNativeSql());
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, flipper, params);
+        System.out.println("page-sql = " + statement.getNativePageSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================10=======================================");

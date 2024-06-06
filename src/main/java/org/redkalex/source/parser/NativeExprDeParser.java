@@ -78,7 +78,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
             return;
         }
         jdbcNames.add(expr.getName());
-        // 使用JdbcParameter代替JdbcNamedParameter
+        // 使用JdbcParameter ? 代替JdbcNamedParameter xx.xx
         buffer.append(signFunc.apply(jdbcNames.size()));
     }
 

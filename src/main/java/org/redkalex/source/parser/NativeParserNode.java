@@ -15,6 +15,7 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import org.redkale.annotation.Nullable;
 import org.redkale.source.DataNativeSqlStatement;
+import org.redkale.source.Flipper;
 import org.redkale.source.SourceException;
 import org.redkale.util.Utility;
 
@@ -52,19 +53,25 @@ public class NativeParserNode {
         this.countSelectItems = createCountSelectItems();
     }
 
-    public DataNativeSqlStatement loadStatement(Map<String, Object> fullParams) {
+    public DataNativeSqlStatement loadStatement(Flipper flipper, Map<String, Object> fullParams) {
         if (info.isDynamic()) { // 根据${xx}参数值动态生成的sql语句不缓存
-            return createStatement(fullParams);
+            return createStatement(flipper, fullParams);
         }
-        return statements.computeIfAbsent(cacheKey(fullParams), k -> createStatement(fullParams));
+        return statements.computeIfAbsent(cacheKey(flipper, fullParams), k -> createStatement(flipper, fullParams));
     }
 
-    protected DataNativeSqlStatement createStatement(Map<String, Object> fullParams) {
+    protected DataNativeSqlStatement createStatement(Flipper flipper, Map<String, Object> fullParams) {
         final NativeExprDeParser exprDeParser = new NativeExprDeParser(info.signFunc(), fullParams);
         String stmtSql = exprDeParser.deParseSql(originStmt);
         List<String> jdbcNames = exprDeParser.getJdbcNames();
+        String pageSql = null;
         String countSql = null;
+        List<String> paramNames = new ArrayList<>();
+        for (String name : jdbcNames) {
+            paramNames.add(info.jdbcToNumsignMap == null ? name : info.jdbcToNumsignMap.getOrDefault(name, name));
+        }
         if (countable) {
+            String dbtype = info.getDbType();
             // 生成COUNT语句
             PlainSelect select = (PlainSelect) originStmt;
             exprDeParser.reset();
@@ -74,16 +81,26 @@ public class NativeParserNode {
             countDeParser.initCountSelect(select, countSelectItems);
             select.accept(countDeParser);
             countSql = buffer.toString();
+            if (Flipper.validLimit(flipper)) {
+                if ("mysql".equals(dbtype) || "postgresql".equals(dbtype)) {
+                    paramNames.add(".limit");
+                    String limitParam = info.signFunc().apply(paramNames.size());
+                    paramNames.add(".offset");
+                    String offsetParam = info.signFunc().apply(paramNames.size());
+                    pageSql = stmtSql + " LIMIT " + limitParam + " OFFSET " + offsetParam;
+                    fullParams.put(".limit", flipper.getLimit());
+                    fullParams.put(".offset", flipper.getOffset());
+                } else if ("oracle".equals(dbtype)) {
+                    // to do
+                }
+            }
         }
         DataNativeSqlStatement result = new DataNativeSqlStatement();
         result.setJdbcNames(jdbcNames);
-        List<String> paramNames = new ArrayList<>();
-        for (String name : jdbcNames) {
-            paramNames.add(info.jdbcToNumsignMap == null ? name : info.jdbcToNumsignMap.getOrDefault(name, name));
-        }
         result.setParamNames(paramNames);
         result.setParamValues(fullParams);
         result.setNativeSql(stmtSql);
+        result.setNativePageSql(pageSql);
         result.setNativeCountSql(countSql);
         return result;
     }
@@ -114,10 +131,11 @@ public class NativeParserNode {
         }
     }
 
-    private String cacheKey(Map<String, Object> params) {
+    private String cacheKey(Flipper flipper, Map<String, Object> params) {
         List<String> list =
                 info.fullJdbcNames.stream().filter(params::containsKey).collect(Collectors.toList());
         // fullJdbcNames是TreeSet, 已排序  //Collections.sort(list);
-        return list.isEmpty() ? "" : list.stream().collect(Collectors.joining(","));
+        return (Flipper.validLimit(flipper) ? "1:" : "0:")
+                + (list.isEmpty() ? "" : list.stream().collect(Collectors.joining(",")));
     }
 }

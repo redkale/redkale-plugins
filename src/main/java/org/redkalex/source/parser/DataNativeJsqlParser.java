@@ -11,6 +11,7 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.source.DataNativeSqlInfo;
 import org.redkale.source.DataNativeSqlParser;
 import org.redkale.source.DataNativeSqlStatement;
+import org.redkale.source.Flipper;
 
 /**
  * 基于jsqlparser的DataNativeSqlParser实现类
@@ -31,7 +32,12 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
 
     @Override
     public DataNativeSqlStatement parse(
-            IntFunction<String> signFunc, String dbType, String rawSql, boolean countable, Map<String, Object> params) {
+            IntFunction<String> signFunc,
+            String dbType,
+            String rawSql,
+            boolean countable,
+            Flipper flipper,
+            Map<String, Object> params) {
         NativeParserInfo info = parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql, dbType, signFunc));
         NativeSqlTemplet templet = info.createTemplet(params);
         if (logger.isLoggable(Level.FINER)) {
@@ -41,13 +47,20 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
                             + info.isDynamic() + ", templetSql: " + templet.getJdbcSql());
         }
         NativeParserNode node = info.loadParserNode(templet.getJdbcSql(), countable);
-        DataNativeSqlStatement statement = node.loadStatement(templet.getTempletParams());
+        DataNativeSqlStatement statement = node.loadStatement(flipper, templet.getTempletParams());
         if (logger.isLoggable(Level.FINE)) {
-            String countSql = countable ? (", nativeCountSql: " + statement.getNativeCountSql()) : "";
-            logger.log(
-                    Level.FINE,
-                    DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql + ", nativeSql: "
-                            + statement.getNativeSql() + countSql + ", paramNames: " + statement.getParamNames());
+            if (countable) {
+                logger.log(
+                        Level.FINE,
+                        DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql + ", nativePageSql: "
+                                + statement.getNativePageSql() + ", nativeCountSql: " + statement.getNativeCountSql()
+                                + ", paramNames: " + statement.getParamNames());
+            } else {
+                logger.log(
+                        Level.FINE,
+                        DataNativeSqlParser.class.getSimpleName() + " parse. rawSql: " + rawSql + ", nativeSql: "
+                                + statement.getNativeSql() + ", paramNames: " + statement.getParamNames());
+            }
         }
         return statement;
     }
