@@ -606,70 +606,42 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     @Override
     protected <T> CompletableFuture<Sheet<T>> querySheetDBAsync(
             EntityInfo<T> info,
-            final boolean readcache,
-            boolean needtotal,
+            final boolean readCache,
+            boolean needTotal,
             final boolean distinct,
             SelectColumn selects,
             Flipper flipper,
             FilterNode node) {
         final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
-        final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
-        final CharSequence join =
-                node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
-        final CharSequence where = node == null ? null : createSQLExpress(node, info, joinTabalis);
         final MyClient pool = readPool();
+        String[] tables = info.getTables(node);
         final boolean cachePrepared = pool.cachePreparedStatements()
-                && readcache
+                && readCache
                 && info.getTableStrategy() == null
                 && sels == null
                 && node == null
                 && flipper == null
-                && !distinct;
-        String[] tables = info.getTables(node);
-        String joinAndWhere =
-                (join == null ? "" : join) + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
-        String listSubSql;
-        StringBuilder union = new StringBuilder();
-        if (tables.length == 1) {
-            listSubSql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM "
-                    + tables[0] + " a" + joinAndWhere;
-        } else {
-            int b = 0;
-            for (String table : tables) {
-                if (union.length() > 0) {
-                    union.append(" UNION ALL ");
-                }
-                String tabalis = "t" + (++b);
-                union.append("SELECT ")
-                        .append(info.getQueryColumns(tabalis, selects))
-                        .append(" FROM ")
-                        .append(table)
-                        .append(" ")
-                        .append(tabalis)
-                        .append(joinAndWhere);
-            }
-            listSubSql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM ("
-                    + (union) + ") a";
+                && !distinct
+                && !needTotal;
+        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
+
+        final String pageSql = cachePrepared ? info.getAllQueryPrepareSQL() : sqls.pageSql;
+        if (cachePrepared && info.isLoggable(logger, Level.FINEST, pageSql)) {
+            logger.finest(info.getType().getSimpleName() + " query sql=" + pageSql);
         }
-        final String listSql = cachePrepared
-                ? info.getAllQueryPrepareSQL()
-                : (createLimitSql(listSubSql + createOrderbySql(info, flipper), flipper));
-        if (readcache && info.isLoggable(logger, Level.FINEST, listSql)) {
-            logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
-        }
-        if (!needtotal) {
+        if (!needTotal) {
             CompletableFuture<MyResultSet> listFuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currentWorkThread();
                 listFuture = pool.connect()
                         .thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
                             MyReqExtended req = conn.pollReqExtended(workThread, info);
-                            req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, listSql, 0, null);
+                            req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, pageSql, 0, null);
                             return pool.writeChannel(conn, req);
                         }));
             } else {
-                listFuture = executeQuery(info, listSql);
+                listFuture = executeQuery(info, pageSql);
             }
             return listFuture.thenApply((MyResultSet dataset) -> {
                 final List<T> list = new ArrayList();
@@ -677,34 +649,29 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
-                slowLog(s, listSql);
+                slowLog(s, pageSql);
                 return Sheet.asSheet(list);
             });
         }
-        String countsubsql;
-        if (tables.length == 1) {
-            countsubsql =
-                    "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)")
-                            + " FROM " + tables[0] + " a" + joinAndWhere;
-        } else {
-            countsubsql =
-                    "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)")
-                            + " FROM (" + (union) + ") a";
-        }
-        final String countsql = countsubsql;
         return getNumberResultDBAsync(
-                        info, null, countsql, distinct ? FilterFunc.DISTINCTCOUNT : FilterFunc.COUNT, 0, countsql, node)
+                        info,
+                        null,
+                        sqls.countSql,
+                        distinct ? FilterFunc.DISTINCTCOUNT : FilterFunc.COUNT,
+                        0,
+                        null,
+                        node)
                 .thenCompose(total -> {
                     if (total.longValue() <= 0) {
                         return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
                     }
-                    return executeQuery(info, listSql).thenApply((MyResultSet dataset) -> {
+                    return executeQuery(info, pageSql).thenApply((MyResultSet dataset) -> {
                         final List<T> list = new ArrayList();
                         while (dataset.next()) {
                             list.add(getEntityValue(info, sels, dataset));
                         }
                         dataset.close();
-                        slowLog(s, listSql);
+                        slowLog(s, pageSql);
                         return new Sheet(total.longValue(), list);
                     });
                 });

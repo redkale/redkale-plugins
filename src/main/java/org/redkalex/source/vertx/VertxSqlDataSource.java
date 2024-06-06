@@ -773,50 +773,19 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     protected <T> CompletableFuture<Sheet<T>> querySheetDBAsync(
             EntityInfo<T> info,
-            final boolean readcache,
-            boolean needtotal,
+            final boolean readCache,
+            boolean needTotal,
             final boolean distinct,
             SelectColumn selects,
             Flipper flipper,
             FilterNode node) {
         final SelectColumn sels = selects;
-        final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
-        final CharSequence join =
-                node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
-        final CharSequence where = node == null ? null : createSQLExpress(node, info, joinTabalis);
         final WorkThread workThread = WorkThread.currentWorkThread();
         String[] tables = info.getTables(node);
-        String joinAndWhere =
-                (join == null ? "" : join) + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
-        String listsubsql;
-        StringBuilder union = new StringBuilder();
-        if (tables.length == 1) {
-            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM "
-                    + tables[0] + " a" + joinAndWhere;
-        } else {
-            int b = 0;
-            for (String table : tables) {
-                if (union.length() > 0) {
-                    union.append(" UNION ALL ");
-                }
-                String tabalis = "t" + (++b);
-                union.append("SELECT ")
-                        .append(info.getQueryColumns(tabalis, selects))
-                        .append(" FROM ")
-                        .append(table)
-                        .append(" ")
-                        .append(tabalis)
-                        .append(joinAndWhere);
-            }
-            listsubsql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM ("
-                    + (union) + ") a";
-        }
-        final String listSql = createLimitSql(listsubsql + createOrderbySql(info, flipper), flipper);
-        if (readcache && info.isLoggable(logger, Level.FINEST, listSql)) {
-            logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
-        }
-        if (!needtotal) {
-            CompletableFuture<VertxResultSet> listfuture = readResultSet(workThread, info, listSql);
+
+        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
+        if (!needTotal) {
+            CompletableFuture<VertxResultSet> listfuture = readResultSet(workThread, info, sqls.pageSql);
             return listfuture.thenApply((VertxResultSet set) -> {
                 final List<T> list = new ArrayList();
                 while (set.next()) {
@@ -826,24 +795,19 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 return sheet;
             });
         }
-        String countsubsql;
-        if (tables.length == 1) {
-            countsubsql =
-                    "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)")
-                            + " FROM " + tables[0] + " a" + joinAndWhere;
-        } else {
-            countsubsql =
-                    "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)")
-                            + " FROM (" + (union) + ") a";
-        }
-        final String countsql = countsubsql;
         return getNumberResultDBAsync(
-                        info, null, countsql, distinct ? FilterFunc.DISTINCTCOUNT : FilterFunc.COUNT, 0, countsql, node)
+                        info,
+                        null,
+                        sqls.countSql,
+                        distinct ? FilterFunc.DISTINCTCOUNT : FilterFunc.COUNT,
+                        0,
+                        null,
+                        node)
                 .thenCompose(total -> {
                     if (total.longValue() <= 0) {
                         return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
                     }
-                    return readResultSet(workThread, info, listSql).thenApply((VertxResultSet set) -> {
+                    return readResultSet(workThread, info, sqls.pageSql).thenApply((VertxResultSet set) -> {
                         final List<T> list = new ArrayList();
                         while (set.next()) {
                             list.add(getEntityValue(info, sels, set));

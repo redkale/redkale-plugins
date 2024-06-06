@@ -584,71 +584,39 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             FilterNode node) {
         final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
-        final Map<Class, String> joinTabalis = node == null ? null : getJoinTabalis(node);
-        final CharSequence join =
-                node == null ? null : createSQLJoin(node, this, false, joinTabalis, new HashSet<>(), info);
-        final CharSequence where = node == null ? null : createSQLExpress(node, info, joinTabalis);
         final PgClient pool = readPool();
+        String[] tables = info.getTables(node);
         final boolean cachePrepared = pool.cachePreparedStatements()
                 && readCache
                 && info.getTableStrategy() == null
                 && sels == null
                 && node == null
                 && flipper == null
-                && !distinct;
-        StringBuilder union = new StringBuilder();
-        String listSubSql = null;
-        String joinAndWhere = null;
-        String[] tables = info.getTables(node);
-        if (!cachePrepared || needTotal) {
-            joinAndWhere =
-                    (join == null ? "" : join) + ((where == null || where.length() == 0) ? "" : (" WHERE " + where));
-            if (tables.length == 1) {
-                listSubSql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM "
-                        + tables[0] + " a" + joinAndWhere;
-            } else {
-                int b = 0;
-                for (String table : tables) {
-                    if (union.length() > 0) {
-                        union.append(" UNION ALL ");
-                    }
-                    String tabalis = "t" + (++b);
-                    union.append("SELECT ")
-                            .append(info.getQueryColumns(tabalis, selects))
-                            .append(" FROM ")
-                            .append(table)
-                            .append(" ")
-                            .append(tabalis)
-                            .append(joinAndWhere);
-                }
-                listSubSql = "SELECT " + (distinct ? "DISTINCT " : "") + info.getQueryColumns("a", selects) + " FROM ("
-                        + (union) + ") a";
-            }
-        }
+                && !distinct
+                && !needTotal;
+        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
 
-        final String listSql = cachePrepared
-                ? info.getAllQueryPrepareSQL()
-                : (createLimitSql(listSubSql + createOrderbySql(info, flipper), flipper));
+        final String pageSql = cachePrepared ? info.getAllQueryPrepareSQL() : sqls.pageSql;
+        if (cachePrepared && info.isLoggable(logger, Level.FINEST, pageSql)) {
+            logger.finest(info.getType().getSimpleName() + " query sql=" + pageSql);
+        }
         if (!needTotal) {
             CompletableFuture<PgResultSet> listFuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currentWorkThread();
                 return pool.connect().thenCompose(conn -> {
                     PgReqExtended req = conn.pollReqExtended(workThread, info);
-                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, listSql, 0);
+                    req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, pageSql, 0);
                     Function<PgResultSet, Sheet<T>> transfer = dataset -> {
                         List<T> rs = dataset.listEntity == null ? new ArrayList<>() : (List) dataset.listEntity;
                         conn.offerResultSet(req, dataset);
-                        slowLog(s, listSql);
+                        slowLog(s, pageSql);
                         return Sheet.asSheet(rs);
                     };
                     return pool.writeChannel(conn, req, transfer);
                 });
             } else {
-                if (readCache && info.isLoggable(logger, Level.FINEST, listSql)) {
-                    logger.finest(info.getType().getSimpleName() + " query sql=" + listSql);
-                }
-                listFuture = executeQuery(info, listSql);
+                listFuture = executeQuery(info, pageSql);
             }
             return listFuture.thenApply(dataset -> {
                 final List<T> list = new ArrayList();
@@ -656,34 +624,29 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     list.add(getEntityValue(info, sels, dataset));
                 }
                 dataset.close();
-                slowLog(s, listSql);
+                slowLog(s, pageSql);
                 return Sheet.asSheet(list);
             });
         }
-        String countSubSql;
-        if (tables.length == 1) {
-            countSubSql =
-                    "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)")
-                            + " FROM " + tables[0] + " a" + joinAndWhere;
-        } else {
-            countSubSql =
-                    "SELECT " + (distinct ? "DISTINCT COUNT(" + info.getQueryColumns("a", selects) + ")" : "COUNT(*)")
-                            + " FROM (" + (union) + ") a";
-        }
-        final String countSql = countSubSql;
         return getNumberResultDBAsync(
-                        info, null, countSql, distinct ? FilterFunc.DISTINCTCOUNT : FilterFunc.COUNT, 0, countSql, node)
+                        info,
+                        null,
+                        sqls.countSql,
+                        distinct ? FilterFunc.DISTINCTCOUNT : FilterFunc.COUNT,
+                        0,
+                        null,
+                        node)
                 .thenCompose(total -> {
                     if (total.longValue() <= 0) {
                         return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
                     }
-                    return executeQuery(info, listSql).thenApply((PgResultSet dataset) -> {
+                    return executeQuery(info, pageSql).thenApply((PgResultSet dataset) -> {
                         final List<T> list = new ArrayList();
                         while (dataset.next()) {
                             list.add(getEntityValue(info, sels, dataset));
                         }
                         dataset.close();
-                        slowLog(s, listSql);
+                        slowLog(s, pageSql);
                         return new Sheet(total.longValue(), list);
                     });
                 });
