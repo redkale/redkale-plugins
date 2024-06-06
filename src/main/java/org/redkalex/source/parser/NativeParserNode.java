@@ -62,7 +62,7 @@ public class NativeParserNode {
 
     protected DataNativeSqlStatement createStatement(Flipper flipper, Map<String, Object> fullParams) {
         final NativeExprDeParser exprDeParser = new NativeExprDeParser(info.signFunc(), fullParams);
-        String stmtSql = exprDeParser.deParseSql(originStmt);
+        final String stmtSql = exprDeParser.deParseSql(originStmt);
         List<String> jdbcNames = exprDeParser.getJdbcNames();
         String pageSql = null;
         String countSql = null;
@@ -82,7 +82,18 @@ public class NativeParserNode {
             select.accept(countDeParser);
             countSql = buffer.toString();
             if (Flipper.validLimit(flipper)) {
-                if ("mysql".equals(dbtype) || "postgresql".equals(dbtype)) {
+                if ("oracle".equals(dbtype)) {
+                    paramNames.add(".start");
+                    String startParam = info.signFunc().apply(paramNames.size());
+                    paramNames.add(".end");
+                    String endParam = info.signFunc().apply(paramNames.size());
+                    int start = flipper.getOffset();
+                    int end = flipper.getOffset() + flipper.getLimit();
+                    fullParams.put(".start", start);
+                    fullParams.put(".end", end);
+                    pageSql = "SELECT * FROM (SELECT T_.*, ROWNUM RN_ FROM (" + stmtSql + ") T_) WHERE RN_ BETWEEN "
+                            + startParam + " AND " + endParam;
+                } else if ("mysql".equals(dbtype) || "postgresql".equals(dbtype)) {
                     paramNames.add(".limit");
                     String limitParam = info.signFunc().apply(paramNames.size());
                     paramNames.add(".offset");
@@ -90,8 +101,14 @@ public class NativeParserNode {
                     pageSql = stmtSql + " LIMIT " + limitParam + " OFFSET " + offsetParam;
                     fullParams.put(".limit", flipper.getLimit());
                     fullParams.put(".offset", flipper.getOffset());
-                } else if ("oracle".equals(dbtype)) {
-                    // to do
+                } else if ("sqlserver".equals(dbtype)) {
+                    paramNames.add(".offset");
+                    String offsetParam = info.signFunc().apply(paramNames.size());
+                    paramNames.add(".limit");
+                    String limitParam = info.signFunc().apply(paramNames.size());
+                    pageSql = stmtSql + " OFFSET " + offsetParam + " ROWS FETCH NEXT " + limitParam + " ROWS ONLY";
+                    fullParams.put(".offset", flipper.getOffset());
+                    fullParams.put(".limit", flipper.getLimit());
                 }
             }
         }
