@@ -83,32 +83,30 @@ public class NativeParserNode {
             countSql = buffer.toString();
             if (Flipper.validLimit(flipper)) {
                 if ("oracle".equals(dbtype)) {
-                    paramNames.add(".start");
-                    String startParam = info.signFunc().apply(paramNames.size());
-                    paramNames.add(".end");
+                    paramNames.add("#start");
+                    paramNames.add("#end");
+                    fullParams.put("#start", flipper.getOffset());
+                    fullParams.put("#end", flipper.getOffset() + flipper.getLimit());
+                    String startParam = info.signFunc().apply(paramNames.size() - 1);
                     String endParam = info.signFunc().apply(paramNames.size());
-                    int start = flipper.getOffset();
-                    int end = flipper.getOffset() + flipper.getLimit();
-                    fullParams.put(".start", start);
-                    fullParams.put(".end", end);
                     pageSql = "SELECT * FROM (SELECT T_.*, ROWNUM RN_ FROM (" + stmtSql + ") T_) WHERE RN_ BETWEEN "
                             + startParam + " AND " + endParam;
                 } else if ("sqlserver".equals(dbtype)) {
-                    paramNames.add(".offset");
-                    String offsetParam = info.signFunc().apply(paramNames.size());
-                    paramNames.add(".limit");
+                    paramNames.add("#offset");
+                    paramNames.add("#limit");
+                    fullParams.put("#offset", flipper.getOffset());
+                    fullParams.put("#limit", flipper.getLimit());
+                    String offsetParam = info.signFunc().apply(paramNames.size() - 1);
                     String limitParam = info.signFunc().apply(paramNames.size());
                     pageSql = stmtSql + " OFFSET " + offsetParam + " ROWS FETCH NEXT " + limitParam + " ROWS ONLY";
-                    fullParams.put(".offset", flipper.getOffset());
-                    fullParams.put(".limit", flipper.getLimit());
                 } else { // 按mysql、postgresql、mariadb、h2处理
-                    paramNames.add(".limit");
-                    String limitParam = info.signFunc().apply(paramNames.size());
-                    paramNames.add(".offset");
+                    paramNames.add("#limit");
+                    paramNames.add("#offset");
+                    fullParams.put("#limit", flipper.getLimit());
+                    fullParams.put("#offset", flipper.getOffset());
+                    String limitParam = info.signFunc().apply(paramNames.size() - 1);
                     String offsetParam = info.signFunc().apply(paramNames.size());
                     pageSql = stmtSql + " LIMIT " + limitParam + " OFFSET " + offsetParam;
-                    fullParams.put(".limit", flipper.getLimit());
-                    fullParams.put(".offset", flipper.getOffset());
                 }
             }
         }

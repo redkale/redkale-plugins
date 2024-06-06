@@ -14,6 +14,7 @@ import org.redkale.util.Utility;
 public class JsqlParserTest {
     private static final Flipper flipper = new Flipper();
     private static final IntFunction<String> signFunc = index -> "?";
+    private static final IntFunction<String> signFunc2 = index -> "$" + index;
 
     public static void main(String[] args) throws Throwable {
         LoggingBaseHandler.initDebugLogConfig();
@@ -32,6 +33,7 @@ public class JsqlParserTest {
         test.run12();
         test.run13();
         test.run14();
+        test.run15();
     }
 
     @Test
@@ -325,9 +327,8 @@ public class JsqlParserTest {
                 "SELECT * FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 "
                         + "WHERE userid = ?) a ORDER BY name DESC";
         Assertions.assertEquals(repect, statement.getNativeSql());
-        repect =
-                "SELECT * FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 "
-                        + "WHERE userid = ?) a ORDER BY name DESC LIMIT ? OFFSET ?";
+        repect = "SELECT * FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 "
+                + "WHERE userid = ?) a ORDER BY name DESC LIMIT ? OFFSET ?";
         Assertions.assertEquals(repect, statement.getNativePageSql());
         repect =
                 "SELECT COUNT(1) FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 WHERE userid = ?) a";
@@ -336,5 +337,20 @@ public class JsqlParserTest {
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================14============================================");
+    }
+
+    @Test
+    public void run15() throws Exception {
+        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
+                + "WHERE u.id = #{id} AND r.type = MOD(#{t1},#{t2}) ORDER BY u.createTime DESC";
+        Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc2, "postgresql", sql, true, flipper, params);
+        String repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
+                + "WHERE u.id = $1 ORDER BY u.createTime DESC LIMIT $2 OFFSET $3";
+        Assertions.assertEquals(repect, statement.getNativePageSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================15============================================");
     }
 }
