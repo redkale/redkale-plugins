@@ -783,7 +783,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         final WorkThread workThread = WorkThread.currentWorkThread();
         String[] tables = info.getTables(node);
 
-        PageCountSql sqls = filterPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
+        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
         if (!needTotal) {
             CompletableFuture<VertxResultSet> listfuture = readResultSet(workThread, info, sqls.pageSql);
             return listfuture.thenApply((VertxResultSet set) -> {

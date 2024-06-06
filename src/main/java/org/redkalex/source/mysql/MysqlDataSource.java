@@ -624,7 +624,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                 && flipper == null
                 && !distinct
                 && !needTotal;
-        PageCountSql sqls = filterPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
+        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
 
         final String pageSql = cachePrepared ? info.getAllQueryPrepareSQL() : sqls.pageSql;
         if (cachePrepared && info.isLoggable(logger, Level.FINEST, pageSql)) {
