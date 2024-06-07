@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.redkale.source.DataSqlSource;
-import org.redkale.source.Flipper;
+import org.redkale.source.RowBound;
 import org.redkale.util.Sheet;
 
 /** @author zhangjx */
@@ -55,12 +55,12 @@ public class DynForumInfoMapperImpl implements ForumInfoMapper {
     }
 
     @Override
-    public Sheet<ForumResult> queryForumResultSheet(ForumBean bean, Flipper flipper) {
+    public Sheet<ForumResult> queryForumResultSheet(ForumBean bean, RowBound round) {
         String sql =
                 "SELECT f.forum_groupid, s.forum_section_color FROM forum_info f, forum_section s WHERE f.forumid = s.forumid";
         Map<String, Object> params = new HashMap<>();
         params.put("bean", bean);
-        return dataSource().nativeQuerySheet(ForumResult.class, sql, flipper, params);
+        return dataSource().nativeQuerySheet(ForumResult.class, sql, round, params);
     }
 
     @Override

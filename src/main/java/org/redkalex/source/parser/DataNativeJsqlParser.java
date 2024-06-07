@@ -11,7 +11,7 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.source.DataNativeSqlInfo;
 import org.redkale.source.DataNativeSqlParser;
 import org.redkale.source.DataNativeSqlStatement;
-import org.redkale.source.Flipper;
+import org.redkale.source.RowBound;
 
 /**
  * 基于jsqlparser的DataNativeSqlParser实现类
@@ -36,7 +36,7 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
             String dbType,
             String rawSql,
             boolean countable,
-            Flipper flipper,
+            RowBound round,
             Map<String, Object> params) {
         NativeParserInfo info = parserInfo.computeIfAbsent(rawSql, sql -> new NativeParserInfo(sql, dbType, signFunc));
         NativeSqlTemplet templet = info.createTemplet(params);
@@ -47,7 +47,7 @@ public class DataNativeJsqlParser implements DataNativeSqlParser {
                             + info.isDynamic() + ", templetSql: " + templet.getJdbcSql());
         }
         NativeParserNode node = info.loadParserNode(templet.getJdbcSql(), countable);
-        DataNativeSqlStatement statement = node.loadStatement(flipper, templet.getTempletParams());
+        DataNativeSqlStatement statement = node.loadStatement(round, templet.getTempletParams());
         if (logger.isLoggable(Level.FINE)) {
             if (countable) {
                 logger.log(

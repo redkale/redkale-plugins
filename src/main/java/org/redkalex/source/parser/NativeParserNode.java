@@ -15,7 +15,7 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import org.redkale.annotation.Nullable;
 import org.redkale.source.DataNativeSqlStatement;
-import org.redkale.source.Flipper;
+import org.redkale.source.RowBound;
 import org.redkale.source.SourceException;
 import org.redkale.util.Utility;
 
@@ -53,16 +53,15 @@ public class NativeParserNode {
         this.countSelectItems = createCountSelectItems();
     }
 
-    public DataNativeSqlStatement loadStatement(Flipper flipper, Map<String, Object> fullParams) {
+    public DataNativeSqlStatement loadStatement(RowBound round, Map<String, Object> fullParams) {
         if (info.isDynamic()) { // 根据${xx}参数值动态生成的sql语句不缓存
-            return createStatement(flipper, fullParams);
+            return createStatement(round, fullParams);
         }
-        return statements.computeIfAbsent(cacheKey(flipper, fullParams), k -> createStatement(flipper, fullParams));
+        return statements.computeIfAbsent(cacheKey(round, fullParams), k -> createStatement(round, fullParams));
     }
 
-    protected DataNativeSqlStatement createStatement(Flipper flipper, Map<String, Object> fullParams) {
+    protected DataNativeSqlStatement createStatement(RowBound round, Map<String, Object> fullParams) {
         final NativeExprDeParser exprDeParser = new NativeExprDeParser(info.signFunc(), fullParams);
-        final String stmtSql = exprDeParser.deParseSql(originStmt);
         List<String> jdbcNames = exprDeParser.getJdbcNames();
         String pageSql = null;
         String countSql = null;
@@ -70,6 +69,7 @@ public class NativeParserNode {
         for (String name : jdbcNames) {
             paramNames.add(info.jdbcToNumsignMap == null ? name : info.jdbcToNumsignMap.getOrDefault(name, name));
         }
+        String stmtSql = exprDeParser.deParseSql(originStmt);
         if (countable) {
             String dbtype = info.getDbType();
             // 生成COUNT语句
@@ -81,12 +81,12 @@ public class NativeParserNode {
             countDeParser.initCountSelect(select, countSelectItems);
             select.accept(countDeParser);
             countSql = buffer.toString();
-            if (Flipper.validLimit(flipper)) {
+            if (RowBound.validLimit(round)) {
                 if ("oracle".equals(dbtype)) {
                     paramNames.add("#start");
                     paramNames.add("#end");
-                    fullParams.put("#start", flipper.getOffset());
-                    fullParams.put("#end", flipper.getOffset() + flipper.getLimit());
+                    fullParams.put("#start", round.getOffset());
+                    fullParams.put("#end", round.getOffset() + round.getLimit());
                     String startParam = info.signFunc().apply(paramNames.size() - 1);
                     String endParam = info.signFunc().apply(paramNames.size());
                     pageSql = "SELECT * FROM (SELECT T_.*, ROWNUM RN_ FROM (" + stmtSql + ") T_) WHERE RN_ BETWEEN "
@@ -94,16 +94,16 @@ public class NativeParserNode {
                 } else if ("sqlserver".equals(dbtype)) {
                     paramNames.add("#offset");
                     paramNames.add("#limit");
-                    fullParams.put("#offset", flipper.getOffset());
-                    fullParams.put("#limit", flipper.getLimit());
+                    fullParams.put("#offset", round.getOffset());
+                    fullParams.put("#limit", round.getLimit());
                     String offsetParam = info.signFunc().apply(paramNames.size() - 1);
                     String limitParam = info.signFunc().apply(paramNames.size());
                     pageSql = stmtSql + " OFFSET " + offsetParam + " ROWS FETCH NEXT " + limitParam + " ROWS ONLY";
                 } else { // 按mysql、postgresql、mariadb、h2处理
                     paramNames.add("#limit");
                     paramNames.add("#offset");
-                    fullParams.put("#limit", flipper.getLimit());
-                    fullParams.put("#offset", flipper.getOffset());
+                    fullParams.put("#limit", round.getLimit());
+                    fullParams.put("#offset", round.getOffset());
                     String limitParam = info.signFunc().apply(paramNames.size() - 1);
                     String offsetParam = info.signFunc().apply(paramNames.size());
                     pageSql = stmtSql + " LIMIT " + limitParam + " OFFSET " + offsetParam;
@@ -146,11 +146,11 @@ public class NativeParserNode {
         }
     }
 
-    private String cacheKey(Flipper flipper, Map<String, Object> params) {
+    private String cacheKey(RowBound round, Map<String, Object> params) {
         List<String> list =
                 info.fullJdbcNames.stream().filter(params::containsKey).collect(Collectors.toList());
         // fullJdbcNames是TreeSet, 已排序  //Collections.sort(list);
-        return (Flipper.validLimit(flipper) ? "1:" : "0:")
+        return (RowBound.validLimit(round) ? "1:" : "0:")
                 + (list.isEmpty() ? "" : list.stream().collect(Collectors.joining(",")));
     }
 }

@@ -1087,11 +1087,11 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     }
 
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(
-            Class<V> type, String sql, Flipper flipper, Map<String, Object> params) {
+            Class<V> type, String sql, RowBound round, Map<String, Object> params) {
         long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
         final CompletableFuture<Sheet<V>> future = new CompletableFuture<>();
-        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, flipper, params);
+        DataNativeSqlStatement sinfo = super.nativeParse(sql, true, round, params);
         Pool pool = readPool();
         final String countSql = sinfo.getNativeCountSql();
         Handler<AsyncResult<RowSet<Row>>> countHandler = (AsyncResult<RowSet<Row>> evt) -> {
