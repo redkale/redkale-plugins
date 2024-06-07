@@ -62,14 +62,14 @@ public class NativeParserNode {
 
     protected DataNativeSqlStatement createStatement(RowBound round, Map<String, Object> fullParams) {
         final NativeExprDeParser exprDeParser = new NativeExprDeParser(info.signFunc(), fullParams);
+        String stmtSql = exprDeParser.deParseSql(originStmt);
         List<String> jdbcNames = exprDeParser.getJdbcNames();
         String pageSql = null;
         String countSql = null;
         List<String> paramNames = new ArrayList<>();
-        for (String name : jdbcNames) {
+        for (String name : jdbcNames) { // jdbcNames在exprDeParser.deParseSql执行之后才有值
             paramNames.add(info.jdbcToNumsignMap == null ? name : info.jdbcToNumsignMap.getOrDefault(name, name));
         }
-        String stmtSql = exprDeParser.deParseSql(originStmt);
         if (countable) {
             String dbtype = info.getDbType();
             // 生成COUNT语句
