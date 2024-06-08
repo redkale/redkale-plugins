@@ -3,12 +3,12 @@
  */
 package org.redkalex.schedule.xxljob;
 
-import org.redkale.schedule.ScheduleManager;
-import org.redkale.schedule.spi.ScheduleManagerProvider;
 import org.redkale.util.AnyValue;
+import org.redkale.scheduled.ScheduledManager;
+import org.redkale.scheduled.spi.ScheduledManagerProvider;
 
 /** @author zhangjx */
-public class XxljobScheduleProvider implements ScheduleManagerProvider {
+public class XxljobScheduleProvider implements ScheduledManagerProvider {
 
     /**
      * &#60;xxljob addresses="http://localhost:8080/xxl-job-admin" executorName="xxx" ip="127.0.0.1" port="5678"
@@ -23,7 +23,7 @@ public class XxljobScheduleProvider implements ScheduleManagerProvider {
     }
 
     @Override
-    public ScheduleManager createInstance() {
+    public ScheduledManager createInstance() {
         return new XxljobScheduleManager(null);
     }
 }

@@ -4,9 +4,6 @@
  */
 package org.redkalex.cache.redis;
 
-import static org.redkale.boot.Application.RESNAME_APP_EXECUTOR;
-import static org.redkale.boot.Application.RESNAME_APP_NAME;
-
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -18,6 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import org.redkale.annotation.Resource;
+import static org.redkale.boot.Application.RESNAME_APP_EXECUTOR;
+import static org.redkale.boot.Application.RESNAME_APP_NAME;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceFactory;
@@ -92,6 +91,8 @@ public abstract class RedisSource extends AbstractCacheSource {
     @Resource(name = Resource.PARENT_NAME + "_convert", required = false)
     protected JsonConvert convert;
 
+    protected boolean closed;
+
     protected int db;
 
     protected RedisCryptor cryptor;
@@ -132,10 +133,12 @@ public abstract class RedisSource extends AbstractCacheSource {
             }
             cryptor.init(conf);
         }
+        this.closed = false;
     }
 
     @Override
     public void destroy(AnyValue conf) {
+        this.closed = true;
         super.destroy(conf);
         if (cryptor != null) {
             cryptor.destroy(conf);

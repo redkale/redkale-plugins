@@ -2,8 +2,6 @@
  */
 package org.redkalex.cache.redis;
 
-import static org.redkale.util.Utility.*;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -60,6 +58,7 @@ import org.redkale.util.Creator;
 import org.redkale.util.RedkaleException;
 import org.redkale.util.TypeToken;
 import org.redkale.util.Utility;
+import static org.redkale.util.Utility.*;
 
 /** @author zhangjx */
 @Local
@@ -198,6 +197,13 @@ public class RedisVertxCacheSource extends RedisSource {
         }
     }
 
+    protected void retryConnectPubSub() {
+        if (!closed) {
+            logger.log(Level.INFO, getClass().getSimpleName() + " (name = " + name + ") retry new pubSub connection");
+            pubSubConn();
+        }
+    }
+
     protected CompletableFuture<RedisConnection> pubSubConn() {
         RedisConnection conn = this.pubSubConn;
         if (conn != null) {
@@ -210,7 +216,10 @@ public class RedisVertxCacheSource extends RedisSource {
                 if (r.succeeded()) {
                     if (pubSubConn == null) {
                         pubSubConn = r.result();
-                        pubSubConn.exceptionHandler(t -> pubSubConn = null);
+                        pubSubConn.endHandler(t -> {
+                            pubSubConn = null;
+                            retryConnectPubSub();
+                        });
                         future.complete(pubSubConn);
                         // 重连时重新订阅
                         if (!pubSubListeners.isEmpty()) {

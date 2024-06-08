@@ -17,16 +17,16 @@ import org.redkale.annotation.Component;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.http.HttpServer;
-import org.redkale.schedule.ScheduleEvent;
-import org.redkale.schedule.ScheduleManager;
-import org.redkale.schedule.Scheduled;
-import org.redkale.schedule.spi.ScheduleManagerService;
+import org.redkale.scheduled.ScheduledEvent;
+import org.redkale.scheduled.Scheduled;
+import org.redkale.scheduled.spi.ScheduleManagerService;
 import org.redkale.service.Local;
 import org.redkale.service.RetResult;
 import org.redkale.util.AnyValue;
 import org.redkale.util.AnyValueWriter;
 import org.redkale.util.RedkaleException;
 import org.redkale.util.Utility;
+import org.redkale.scheduled.ScheduledManager;
 
 /**
  * 配置项: &#60;xxljob addresses="http://localhost:8080/xxl-job-admin" executorName="xxx" ip="127.0.0.1" port="5678"
@@ -37,7 +37,7 @@ import org.redkale.util.Utility;
 @Local
 @Component
 @AutoLoad(false)
-@ResourceType(ScheduleManager.class)
+@ResourceType(ScheduledManager.class)
 public class XxljobScheduleManager extends ScheduleManagerService {
 
     private final Map<String, XxljobTask> xxljobs = new ConcurrentHashMap<>();
@@ -213,7 +213,7 @@ public class XxljobScheduleManager extends ScheduleManagerService {
 
         int jobid;
 
-        private final Function<ScheduleEvent, Object> delegate;
+        private final Function<ScheduledEvent, Object> delegate;
 
         public XxljobTask(WeakReference ref, String name, Method method) {
             super(ref, name, method);

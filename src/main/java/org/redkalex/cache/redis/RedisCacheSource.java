@@ -5,11 +5,6 @@
  */
 package org.redkalex.cache.redis;
 
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
-import static org.redkale.util.Utility.*;
-import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_COUNT;
-import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
-
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -23,6 +18,7 @@ import java.util.logging.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
@@ -35,6 +31,9 @@ import org.redkale.net.client.ClientResponse;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
+import static org.redkale.util.Utility.*;
+import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_COUNT;
+import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
 
 /**
  * 详情见: https://redkale.org
@@ -67,6 +66,10 @@ public final class RedisCacheSource extends RedisSource {
     private InetSocketAddress address;
 
     private RedisCacheConnection pubSubConn;
+
+    private ScheduledThreadPoolExecutor pubSubScheduler;
+
+    private final ReentrantLock schedulerLock = new ReentrantLock();
 
     private final ReentrantLock pubSubLock = new ReentrantLock();
 
@@ -171,6 +174,85 @@ public final class RedisCacheSource extends RedisSource {
         if (client != null) {
             client.close();
         }
+        if (pubSubScheduler != null) {
+            pubSubScheduler.shutdown();
+        }
+    }
+
+    protected ClientMessageListener createMessageListener(long startTime) {
+        return new ClientMessageListener() {
+            @Override
+            public void onMessage(ClientConnection conn, ClientResponse resp) {
+                if (resp.getCause() == null) {
+                    RedisCacheResult result = (RedisCacheResult) resp.getMessage();
+                    if (result.getFrameValue() == null) {
+                        List<byte[]> events = result.getListValue(null, null, byte[].class);
+                        String type = new String(events.get(0), StandardCharsets.UTF_8);
+                        if (events.size() == 3 && "message".equals(type)) {
+                            String channel = new String(events.get(1), StandardCharsets.UTF_8);
+                            Set<CacheEventListener<byte[]>> set = pubSubListeners.get(channel);
+                            if (set != null) {
+                                byte[] msg = events.get(2);
+                                for (CacheEventListener item : set) {
+                                    pubSubExecutor().execute(() -> {
+                                        try {
+                                            item.onMessage(channel, msg);
+                                        } catch (Throwable t) {
+                                            logger.log(
+                                                    Level.SEVERE,
+                                                    "CacheSource subscribe message error, topic: " + channel,
+                                                    t);
+                                        }
+                                    });
+                                }
+                            }
+                        } else {
+                            RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
+                            ClientFuture respFuture =
+                                    ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
+                            respFuture.complete(result);
+                        }
+                    } else {
+                        RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
+                        ClientFuture respFuture = ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
+                        respFuture.complete(result);
+                    }
+                } else {
+                    RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
+                    ClientFuture respFuture = ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
+                    respFuture.completeExceptionally(resp.getCause());
+                }
+            }
+
+            public void onClose(ClientConnection conn) {
+                pubSubConn = null;
+                retryConnectPubSub(startTime);
+            }
+        };
+    }
+
+    protected void retryConnectPubSub(long startTime) {
+        if (!closed) {
+            logger.log(Level.INFO, getClass().getSimpleName() + " (name = " + name + ") retry new pubSub connection");
+            long delay = System.currentTimeMillis() - startTime;
+            if (delay > 3000) {
+                pubSubConn();
+            } else {
+                if (pubSubScheduler == null) {
+                    schedulerLock.lock();
+                    try {
+                        if (pubSubScheduler == null) {
+                            pubSubScheduler = new ScheduledThreadPoolExecutor(
+                                    1, Utility.newThreadFactory("Redkale-PubSub-Connect-Thread-%s"));
+                            pubSubScheduler.setRemoveOnCancelPolicy(true);
+                        }
+                    } finally {
+                        schedulerLock.unlock();
+                    }
+                }
+                pubSubScheduler.schedule(this::pubSubConn, 3000 - delay, TimeUnit.MILLISECONDS);
+            }
+        }
     }
 
     protected CompletableFuture<RedisCacheConnection> pubSubConn() {
@@ -178,80 +260,37 @@ public final class RedisCacheSource extends RedisSource {
         if (conn != null) {
             return CompletableFuture.completedFuture(conn);
         }
-        return client.newConnection().thenApply(r -> {
-            pubSubLock.lock();
-            try {
-                if (pubSubConn == null) {
-                    pubSubConn = r;
-                    r.getCodec().withMessageListener(new ClientMessageListener() {
-                        @Override
-                        public void onMessage(ClientConnection conn, ClientResponse resp) {
-                            if (resp.getCause() == null) {
-                                RedisCacheResult result = (RedisCacheResult) resp.getMessage();
-                                if (result.getFrameValue() == null) {
-                                    List<byte[]> events = result.getListValue(null, null, byte[].class);
-                                    String type = new String(events.get(0), StandardCharsets.UTF_8);
-                                    if (events.size() == 3 && "message".equals(type)) {
-                                        String channel = new String(events.get(1), StandardCharsets.UTF_8);
-                                        Set<CacheEventListener<byte[]>> set = pubSubListeners.get(channel);
-                                        if (set != null) {
-                                            byte[] msg = events.get(2);
-                                            for (CacheEventListener item : set) {
-                                                pubSubExecutor().execute(() -> {
-                                                    try {
-                                                        item.onMessage(channel, msg);
-                                                    } catch (Throwable t) {
-                                                        logger.log(
-                                                                Level.SEVERE,
-                                                                "CacheSource subscribe message error, topic: "
-                                                                        + channel,
-                                                                t);
-                                                    }
-                                                });
-                                            }
-                                        }
-                                    } else {
-                                        RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
-                                        ClientFuture respFuture =
-                                                ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
-                                        respFuture.complete(result);
-                                    }
-                                } else {
-                                    RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
-                                    ClientFuture respFuture =
-                                            ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
-                                    respFuture.complete(result);
-                                }
-                            } else {
-                                RedisCacheRequest request = ((RedisCacheCodec) conn.getCodec()).nextRequest();
-                                ClientFuture respFuture =
-                                        ((RedisCacheConnection) conn).pollRespFuture(request.getRequestid());
-                                respFuture.completeExceptionally(resp.getCause());
+        long startTime = System.currentTimeMillis();
+        return client.newConnection(0, 0)
+                .thenApply(r -> {
+                    pubSubLock.lock();
+                    try {
+                        if (pubSubConn == null) {
+                            pubSubConn = r;
+                            r.getCodec().withMessageListener(createMessageListener(startTime));
+                            // 重连时重新订阅
+                            if (!pubSubListeners.isEmpty()) {
+                                final Map<CacheEventListener<byte[]>, HashSet<String>> listeners = new HashMap<>();
+                                pubSubListeners.forEach((t, s) -> {
+                                    s.forEach(l -> listeners
+                                            .computeIfAbsent(l, x -> new HashSet<>())
+                                            .add(t));
+                                });
+                                listeners.forEach((listener, topics) -> {
+                                    subscribeAsync(listener, topics.toArray(Creator.funcStringArray()));
+                                });
                             }
                         }
-
-                        public void onClose(ClientConnection conn) {
-                            pubSubConn = null;
-                        }
-                    });
-                    // 重连时重新订阅
-                    if (!pubSubListeners.isEmpty()) {
-                        final Map<CacheEventListener<byte[]>, HashSet<String>> listeners = new HashMap<>();
-                        pubSubListeners.forEach((t, s) -> {
-                            s.forEach(l -> listeners
-                                    .computeIfAbsent(l, x -> new HashSet<>())
-                                    .add(t));
-                        });
-                        listeners.forEach((listener, topics) -> {
-                            subscribeAsync(listener, topics.toArray(Creator.funcStringArray()));
-                        });
+                        return pubSubConn;
+                    } finally {
+                        pubSubLock.unlock();
                     }
-                }
-                return pubSubConn;
-            } finally {
-                pubSubLock.unlock();
-            }
-        });
+                })
+                .whenComplete((t, e) -> {
+                    if (e != null) {
+                        retryConnectPubSub(startTime);
+                    }
+                });
     }
 
     @Override
