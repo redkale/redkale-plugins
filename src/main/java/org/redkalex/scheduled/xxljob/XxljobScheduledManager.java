@@ -1,7 +1,7 @@
 /*
  *
  */
-package org.redkalex.schedule.xxljob;
+package org.redkalex.scheduled.xxljob;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
@@ -38,7 +38,7 @@ import org.redkale.scheduled.ScheduledManager;
 @Component
 @AutoLoad(false)
 @ResourceType(ScheduledManager.class)
-public class XxljobScheduleManager extends ScheduleManagerService {
+public class XxljobScheduledManager extends ScheduleManagerService {
 
     private final Map<String, XxljobTask> xxljobs = new ConcurrentHashMap<>();
 
@@ -50,7 +50,7 @@ public class XxljobScheduleManager extends ScheduleManagerService {
 
     private RegistryParam registryParam;
 
-    public XxljobScheduleManager(UnaryOperator<String> propertyFunc) {
+    public XxljobScheduledManager(UnaryOperator<String> propertyFunc) {
         super(propertyFunc);
     }
 
@@ -61,7 +61,7 @@ public class XxljobScheduleManager extends ScheduleManagerService {
             return;
         }
         this.xxljobConfig = new XxljobConfig(conf.getAnyValue("xxljob"), this::getProperty);
-        logger.log(Level.INFO, XxljobScheduleManager.class.getSimpleName() + " inited " + this.xxljobConfig);
+        logger.log(Level.INFO, XxljobScheduledManager.class.getSimpleName() + " inited " + this.xxljobConfig);
     }
 
     @Override
@@ -73,14 +73,13 @@ public class XxljobScheduleManager extends ScheduleManagerService {
                     String regUrl = xxljobConfig.getDomain() + "/api/registryRemove";
                     String paramBody = JsonConvert.root().convertTo(registryParam);
                     String regResult = Utility.postHttpContent(regUrl, xxljobConfig.getHeaders(), paramBody);
-                    logger.log(
-                            Level.INFO,
-                            XxljobScheduleManager.class.getSimpleName() + " registryRemove(" + regUrl + ") : "
+                    logger.log(Level.INFO,
+                            XxljobScheduledManager.class.getSimpleName() + " registryRemove(" + regUrl + ") : "
                                     + regResult);
                 }
                 server.shutdown();
             } catch (Exception ex) {
-                logger.log(Level.WARNING, XxljobScheduleManager.class.getSimpleName() + " shutdown error", ex);
+                logger.log(Level.WARNING, XxljobScheduledManager.class.getSimpleName() + " shutdown error", ex);
             }
         }
     }
@@ -113,13 +112,12 @@ public class XxljobScheduleManager extends ScheduleManagerService {
             String regUrl = clientConf.getDomain() + "/api/registry";
             String regResult = Utility.postHttpContent(regUrl, clientConf.getHeaders(), paramBody);
             this.registryParam = regParam;
-            logger.log(
-                    Level.INFO,
-                    XxljobScheduleManager.class.getSimpleName() + " registry(" + regUrl + ")(" + paramBody + ") : "
+            logger.log(Level.INFO,
+                    XxljobScheduledManager.class.getSimpleName() + " registry(" + regUrl + ")(" + paramBody + ") : "
                             + regResult);
         } catch (Exception ex) {
             throw new RedkaleException(
-                    XxljobScheduleManager.class.getSimpleName() + " connect " + clientConf.getDomain() + "/api/registry"
+                    XxljobScheduledManager.class.getSimpleName() + " connect " + clientConf.getDomain() + "/api/registry"
                             + " error",
                     ex);
         }
