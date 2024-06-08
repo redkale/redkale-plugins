@@ -33,7 +33,7 @@ public class PubSubRedisTest {
         asyncGroup.start();
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
-        RedisVertxCacheSource source = new RedisVertxCacheSource();
+        RedissonCacheSource source = new RedissonCacheSource();
         factory.inject(source);
         source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
@@ -49,7 +49,7 @@ public class PubSubRedisTest {
         Utility.sleep(1000);
         source.publish(TOPIC, "这是一个推送消息");
         // ----------------------------------------------
-        Utility.sleep(3000);
+        Utility.sleep(1000);
         source.close();
     }
 

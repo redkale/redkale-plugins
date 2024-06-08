@@ -31,6 +31,8 @@ public abstract class RedisSource extends AbstractCacheSource {
 
     public static final String CACHE_SOURCE_CRYPTOR = "cryptor";
 
+    protected static final long PUBSUB_RETRY_DELAY_MILLS = 1000;
+
     protected static final String SCRIPT_DELEX = "if redis.call('get', KEYS[1]) == ARGV[1] then\n"
             + "  redis.call('del', KEYS[1]);\n"
             + "  return 1\n"

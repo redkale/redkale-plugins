@@ -68,11 +68,10 @@ public final class RedisCacheSource extends RedisSource {
     private RedisCacheConnection pubSubConn;
 
     private final ReentrantLock pubSubLock = new ReentrantLock();
-    
+
     private ScheduledThreadPoolExecutor pubSubScheduler;
 
     private final ReentrantLock schedulerLock = new ReentrantLock();
-
 
     // key: topic
     private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubSubListeners =
@@ -236,7 +235,7 @@ public final class RedisCacheSource extends RedisSource {
         if (!closed) {
             logger.log(Level.INFO, getClass().getSimpleName() + " (name = " + name + ") retry new pubSub connection");
             long delay = System.currentTimeMillis() - startTime;
-            if (delay > 3000) {
+            if (delay > PUBSUB_RETRY_DELAY_MILLS) {
                 pubSubConn();
             } else {
                 if (pubSubScheduler == null) {
@@ -251,7 +250,7 @@ public final class RedisCacheSource extends RedisSource {
                         schedulerLock.unlock();
                     }
                 }
-                pubSubScheduler.schedule(this::pubSubConn, 3000 - delay, TimeUnit.MILLISECONDS);
+                pubSubScheduler.schedule(this::pubSubConn, PUBSUB_RETRY_DELAY_MILLS - delay, TimeUnit.MILLISECONDS);
             }
         }
     }
