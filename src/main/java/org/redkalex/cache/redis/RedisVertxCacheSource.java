@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -77,6 +78,10 @@ public class RedisVertxCacheSource extends RedisSource {
     private RedisConnection pubSubConn;
 
     private final ReentrantLock pubSubLock = new ReentrantLock();
+
+    private ScheduledThreadPoolExecutor pubSubScheduler;
+
+    private final ReentrantLock schedulerLock = new ReentrantLock();
 
     // key: topic
     private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubSubListeners =
@@ -195,12 +200,32 @@ public class RedisVertxCacheSource extends RedisSource {
         if (this.vertx != null) {
             this.vertx.close();
         }
+        if (pubSubScheduler != null) {
+            pubSubScheduler.shutdown();
+        }
     }
 
-    protected void retryConnectPubSub() {
+    protected void retryConnectPubSub(long startTime) {
         if (!closed) {
             logger.log(Level.INFO, getClass().getSimpleName() + " (name = " + name + ") retry new pubSub connection");
-            pubSubConn();
+            long delay = System.currentTimeMillis() - startTime;
+            if (delay > 3000) {
+                pubSubConn();
+            } else {
+                if (pubSubScheduler == null) {
+                    schedulerLock.lock();
+                    try {
+                        if (pubSubScheduler == null) {
+                            pubSubScheduler = new ScheduledThreadPoolExecutor(
+                                    1, Utility.newThreadFactory("Redkale-PubSub-Connect-Thread-%s"));
+                            pubSubScheduler.setRemoveOnCancelPolicy(true);
+                        }
+                    } finally {
+                        schedulerLock.unlock();
+                    }
+                }
+                pubSubScheduler.schedule(this::pubSubConn, 3000 - delay, TimeUnit.MILLISECONDS);
+            }
         }
     }
 
@@ -209,6 +234,7 @@ public class RedisVertxCacheSource extends RedisSource {
         if (conn != null) {
             return CompletableFuture.completedFuture(conn);
         }
+        long startTime = System.currentTimeMillis();
         CompletableFuture<RedisConnection> future = new CompletableFuture<>();
         redisClient().connect().onComplete(r -> {
             pubSubLock.lock();
@@ -218,7 +244,7 @@ public class RedisVertxCacheSource extends RedisSource {
                         pubSubConn = r.result();
                         pubSubConn.endHandler(t -> {
                             pubSubConn = null;
-                            retryConnectPubSub();
+                            retryConnectPubSub(startTime);
                         });
                         future.complete(pubSubConn);
                         // 重连时重新订阅
@@ -240,6 +266,7 @@ public class RedisVertxCacheSource extends RedisSource {
                 } else {
                     if (pubSubConn == null) {
                         future.completeExceptionally(r.cause());
+                        retryConnectPubSub(startTime);
                     } else {
                         future.complete(pubSubConn);
                     }

@@ -67,11 +67,12 @@ public final class RedisCacheSource extends RedisSource {
 
     private RedisCacheConnection pubSubConn;
 
+    private final ReentrantLock pubSubLock = new ReentrantLock();
+    
     private ScheduledThreadPoolExecutor pubSubScheduler;
 
     private final ReentrantLock schedulerLock = new ReentrantLock();
 
-    private final ReentrantLock pubSubLock = new ReentrantLock();
 
     // key: topic
     private final Map<String, CopyOnWriteArraySet<CacheEventListener<byte[]>>> pubSubListeners =

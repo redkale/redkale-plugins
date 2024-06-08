@@ -13,7 +13,6 @@ import org.redkale.net.AsyncIOGroup;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODES;
 import org.redkale.source.CacheEventListener;
-import org.redkale.source.CacheSource;
 import org.redkale.util.AnyValueWriter;
 import org.redkale.util.Utility;
 
@@ -34,14 +33,14 @@ public class PubSubRedisTest {
         asyncGroup.start();
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
-        RedisCacheSource source = new RedisCacheSource();
+        RedisVertxCacheSource source = new RedisVertxCacheSource();
         factory.inject(source);
         source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
         run(source);
     }
 
-    public static void run(CacheSource source) throws Exception {
+    public static void run(RedisSource source) throws Exception {
         // ----------------------------------------------
         TestEventListener listener = new TestEventListener();
         source.subscribe(listener, TOPIC);
@@ -51,6 +50,7 @@ public class PubSubRedisTest {
         source.publish(TOPIC, "这是一个推送消息");
         // ----------------------------------------------
         Utility.sleep(3000);
+        source.close();
     }
 
     public static class TestEventListener implements CacheEventListener<byte[]> {
