@@ -32,8 +32,8 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
                 address,
                 maxConns,
                 maxPipelines,
-                () -> new RedisCacheReqPing(),
-                () -> new RedisCacheReqClose(),
+                RedisCacheReqPing::new,
+                RedisCacheReqClose::new,
                 null); // maxConns
         RedisCacheReqClientName clientNameReq = new RedisCacheReqClientName(appName, name);
         if (authReq != null && dbReq != null) {
@@ -61,6 +61,7 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
                 return conn -> writeChannel(conn, clientNameReq.createTime()).thenApply(v -> conn);
             };
         }
+        this.connectTimeoutSeconds = 3;
         this.readTimeoutSeconds = 3;
         this.writeTimeoutSeconds = 3;
     }

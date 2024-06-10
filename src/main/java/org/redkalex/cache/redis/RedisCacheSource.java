@@ -45,8 +45,8 @@ import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
 @ResourceType(CacheSource.class)
 public final class RedisCacheSource extends RedisSource {
 
-    static final boolean debug =
-            false; // System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
+    // System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");
+    static final boolean debug = false;
 
     protected static final byte[] NX = "NX".getBytes();
 
@@ -261,7 +261,7 @@ public final class RedisCacheSource extends RedisSource {
             return CompletableFuture.completedFuture(conn);
         }
         long startTime = System.currentTimeMillis();
-        return client.newConnection(0, 0)
+        return client.newConnection()
                 .thenApply(r -> {
                     pubSubLock.lock();
                     try {
@@ -1097,12 +1097,11 @@ public final class RedisCacheSource extends RedisSource {
     @Local
     public CompletableFuture<RedisCacheResult> sendAsync(
             final RedisCommand command, final String key, final byte[]... args) {
-        WorkThread workThread = WorkThread.currentWorkThread();
         String traceid = Traces.currentTraceid();
         RedisCacheRequest req = RedisCacheRequest.create(command, key, args);
-        if (false && logger.isLoggable(Level.FINEST)) {
+        if (debug && logger.isLoggable(Level.FINEST)) {
             logger.log(Level.FINEST, "redis.send(traceid=" + traceid + ") " + command + " " + key);
-            CompletableFuture<RedisCacheResult> future = client.connect(req).thenCompose(conn -> {
+            return client.connect(req).thenCompose(conn -> {
                 if (isNotEmpty(traceid)) {
                     Traces.computeIfAbsent(traceid);
                 }
@@ -1112,17 +1111,13 @@ public final class RedisCacheSource extends RedisSource {
                     return v;
                 });
             });
-            return Utility.orTimeout(
-                    future, () -> "redis (" + command + " " + key + ") timeout", 6010, TimeUnit.MILLISECONDS);
         } else {
-            CompletableFuture<RedisCacheResult> future = client.connect(req).thenCompose(conn -> {
+            return client.connect(req).thenCompose(conn -> {
                 if (isNotEmpty(traceid)) {
                     Traces.computeIfAbsent(traceid);
                 }
                 return conn.writeRequest(req);
             });
-            return Utility.orTimeout(
-                    future, () -> "redis (" + command + " " + key + ") timeout", 6010, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -1133,15 +1128,12 @@ public final class RedisCacheSource extends RedisSource {
         for (RedisCacheRequest request : requests) {
             request.workThread(workThread).traceid(traceid);
         }
-        CompletableFuture<List<RedisCacheResult>> future = client.connect(requests[0])
-                .thenCompose(conn -> {
-                    if (isNotEmpty(traceid)) {
-                        Traces.computeIfAbsent(traceid);
-                    }
-                    return conn.writeRequest(requests);
-                });
-        return Utility.orTimeout(
-                future, () -> "redis " + Arrays.toString(requests) + " timeout", 6010, TimeUnit.MILLISECONDS);
+        return client.connect(requests[0]).thenCompose(conn -> {
+            if (isNotEmpty(traceid)) {
+                Traces.computeIfAbsent(traceid);
+            }
+            return conn.writeRequest(requests);
+        });
     }
 
     private byte[][] keyArgs(String key) {

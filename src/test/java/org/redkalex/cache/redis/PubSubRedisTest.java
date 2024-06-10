@@ -7,6 +7,7 @@ package org.redkalex.cache.redis;
 
 import java.nio.charset.StandardCharsets;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import org.redkale.boot.LoggingBaseHandler;
 import org.redkale.convert.json.JsonFactory;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
@@ -25,6 +26,7 @@ public class PubSubRedisTest {
     private static final String TOPIC = "channel001";
 
     public static void main(String[] args) throws Exception {
+        LoggingBaseHandler.initDebugLogConfig();
         AnyValueWriter conf = new AnyValueWriter()
                 .addValue(CACHE_SOURCE_MAXCONNS, "1")
                 .addValue(CACHE_SOURCE_NODES, "redis://127.0.0.1:6363");
@@ -33,7 +35,7 @@ public class PubSubRedisTest {
         asyncGroup.start();
         factory.register(RESNAME_APP_CLIENT_ASYNCGROUP, asyncGroup);
 
-        RedissonCacheSource source = new RedissonCacheSource();
+        RedisCacheSource source = new RedisCacheSource();
         factory.inject(source);
         source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
