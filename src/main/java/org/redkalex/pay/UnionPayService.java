@@ -5,9 +5,6 @@
  */
 package org.redkalex.pay;
 
-import static org.redkalex.pay.PayRetCodes.*;
-import static org.redkalex.pay.Pays.*;
-
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -19,11 +16,12 @@ import java.util.logging.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.util.*;
+import static org.redkalex.pay.PayRetCodes.*;
+import static org.redkalex.pay.Pays.*;
 
 /**
  * 银联支付官网文档： https://open.unionpay.com/ajweb/help/file/techFile?productId=1
@@ -71,6 +69,7 @@ public final class UnionPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
+        super.init(conf);
         if (this.convert == null) {
             this.convert = JsonConvert.root();
         }

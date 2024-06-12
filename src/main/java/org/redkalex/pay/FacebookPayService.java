@@ -5,9 +5,6 @@
  */
 package org.redkalex.pay;
 
-import static org.redkalex.pay.PayRetCodes.*;
-import static org.redkalex.pay.Pays.PAYTYPE_FACEBOOK;
-
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -17,11 +14,12 @@ import javax.crypto.spec.SecretKeySpec;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.util.*;
+import static org.redkalex.pay.PayRetCodes.*;
+import static org.redkalex.pay.Pays.PAYTYPE_FACEBOOK;
 
 /**
  * 详情见: https://redkale.org
@@ -55,6 +53,7 @@ public final class FacebookPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
+        super.init(conf);
         if (this.convert == null) {
             this.convert = JsonConvert.root();
         }

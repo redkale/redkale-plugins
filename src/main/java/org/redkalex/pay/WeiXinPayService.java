@@ -5,9 +5,6 @@
  */
 package org.redkalex.pay;
 
-import static org.redkalex.pay.PayRetCodes.*;
-import static org.redkalex.pay.Pays.*;
-
 import java.io.*;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
@@ -23,12 +20,13 @@ import javax.crypto.spec.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.net.http.HttpHeaders;
 import org.redkale.service.Local;
 import org.redkale.util.*;
+import static org.redkalex.pay.PayRetCodes.*;
+import static org.redkalex.pay.Pays.*;
 
 /**
  * 详情见: https://redkale.org
@@ -71,6 +69,7 @@ public class WeiXinPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
+        super.init(conf);
         if (this.convert == null) {
             this.convert = JsonConvert.root();
         }

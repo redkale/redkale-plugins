@@ -5,9 +5,6 @@
  */
 package org.redkalex.pay;
 
-import static org.redkalex.pay.PayRetCodes.*;
-import static org.redkalex.pay.Pays.*;
-
 import java.io.*;
 import java.nio.charset.*;
 import java.security.*;
@@ -19,13 +16,14 @@ import java.util.stream.Collectors;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.*;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.net.http.HttpHeaders;
 import org.redkale.net.http.RestHeaders;
 import org.redkale.service.Local;
 import org.redkale.util.*;
+import static org.redkalex.pay.PayRetCodes.*;
+import static org.redkalex.pay.Pays.*;
 
 /**
  * 详情见: https://redkale.org
@@ -65,6 +63,7 @@ public final class AliPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
+        super.init(conf);
         if (this.convert == null) {
             this.convert = JsonConvert.root();
         }

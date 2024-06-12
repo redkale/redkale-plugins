@@ -84,6 +84,11 @@ public abstract class AbstractPayService implements Service {
     public abstract CompletableFuture<PayRefundResponse> queryRefundAsync(PayRefundQryReq request);
 
     // ------------------------------------------------------------------
+    @Override
+    public void init(AnyValue conf) {
+        PayRetCodes.init();
+    }
+
     @Comment("计算签名; map和text只会存在一个有值")
     protected abstract String createSign(final PayElement element, Map<String, ?> map, String text);
 

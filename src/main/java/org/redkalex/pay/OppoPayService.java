@@ -5,8 +5,6 @@
  */
 package org.redkalex.pay;
 
-import static org.redkalex.pay.PayRetCodes.*;
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -18,11 +16,11 @@ import java.util.regex.Pattern;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.Comment;
-import org.redkale.annotation.ResourceChanged;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.util.*;
+import static org.redkalex.pay.PayRetCodes.*;
 
 /**
  * 详情见: https://redkale.org
@@ -59,6 +57,7 @@ public final class OppoPayService extends AbstractPayService {
 
     @Override
     public void init(AnyValue conf) {
+        super.init(conf);
         if (this.convert == null) {
             this.convert = JsonConvert.root();
         }

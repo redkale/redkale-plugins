@@ -5,6 +5,8 @@
  */
 package org.redkalex.pay;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.redkale.annotation.AutoLoad;
 import org.redkale.service.*;
 
 /**
@@ -12,6 +14,7 @@ import org.redkale.service.*;
  *
  * @author zhangjx
  */
+@AutoLoad(false)
 public abstract class PayRetCodes extends RetCodes {
 
     protected PayRetCodes() {}
@@ -55,4 +58,12 @@ public abstract class PayRetCodes extends RetCodes {
 
     @RetLabel("用户标识缺失")
     public static final int RETPAY_PARAM_ERROR = 20010021;
+
+    protected static AtomicBoolean loaded = new AtomicBoolean();
+
+    static void init() {
+        if (loaded.compareAndSet(false, true)) {
+            RetCodes.load(PayRetCodes.class);
+        }
+    }
 }
