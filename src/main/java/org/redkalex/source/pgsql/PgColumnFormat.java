@@ -3,20 +3,19 @@
  */
 package org.redkalex.source.pgsql;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.redkalex.source.pgsql.PgsqlFormatter.LDT_MINUS_INFINITY;
-import static org.redkalex.source.pgsql.PgsqlFormatter.LDT_PLUS_INFINITY;
-import static org.redkalex.source.pgsql.PgsqlFormatter.LOCAL_DATE_EPOCH;
-import static org.redkalex.source.pgsql.PgsqlFormatter.LOCAL_DATE_TIME_EPOCH;
-
 import java.math.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.sql.JDBCType;
 import java.time.*;
 import java.time.temporal.*;
 import java.util.*;
-import org.redkale.source.EntityInfo.EntityColumn;
+import org.redkale.source.EntityColumn;
 import org.redkale.source.SourceException;
 import org.redkale.util.Attribute;
+import static org.redkalex.source.pgsql.PgsqlFormatter.LDT_MINUS_INFINITY;
+import static org.redkalex.source.pgsql.PgsqlFormatter.LDT_PLUS_INFINITY;
+import static org.redkalex.source.pgsql.PgsqlFormatter.LOCAL_DATE_EPOCH;
+import static org.redkalex.source.pgsql.PgsqlFormatter.LOCAL_DATE_TIME_EPOCH;
 
 /** @author zhangjx */
 public enum PgColumnFormat {
@@ -409,11 +408,11 @@ public enum PgColumnFormat {
         } else if (clazz == long.class || clazz == Long.class) {
             return PgColumnFormat.INT8;
         } else if (clazz == String.class) {
-            if (column == null || column.length < 65535) {
+            if (column == null || column.getLength() < 65535) {
                 return PgColumnFormat.VARCHAR;
-            } else if (column.length == 65535) { // TEXT
+            } else if (column.getLength() == 65535) { // TEXT
                 return PgColumnFormat.TEXT;
-            } else if (column.length <= 16777215) { // MEDIUMTEXT
+            } else if (column.getLength() <= 16777215) { // MEDIUMTEXT
                 return PgColumnFormat.TEXT;
             } else { // LONGTEXT
                 return PgColumnFormat.TEXT;

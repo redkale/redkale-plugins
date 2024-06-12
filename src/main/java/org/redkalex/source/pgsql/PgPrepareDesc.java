@@ -3,13 +3,12 @@
  */
 package org.redkalex.source.pgsql;
 
-import static org.redkalex.source.pgsql.PgClientRequest.writeUTF8String;
-
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.redkale.net.client.ClientConnection;
-import org.redkale.source.EntityInfo.EntityColumn;
+import org.redkale.source.EntityColumn;
 import org.redkale.util.*;
+import static org.redkalex.source.pgsql.PgClientRequest.writeUTF8String;
 
 /** @author zhangjx */
 public class PgPrepareDesc {

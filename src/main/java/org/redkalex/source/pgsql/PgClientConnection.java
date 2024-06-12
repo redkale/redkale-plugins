@@ -9,7 +9,6 @@ import java.util.*;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.source.*;
-import org.redkale.source.EntityInfo.EntityColumn;
 import org.redkale.util.*;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
