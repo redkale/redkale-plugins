@@ -131,6 +131,10 @@ public class KafkaMessageAgent extends MessageAgent {
         return timeoutExecutor;
     }
 
+    public AdminClient getAdminClient() {
+        return adminClient;
+    }
+
     @Override // ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) {
