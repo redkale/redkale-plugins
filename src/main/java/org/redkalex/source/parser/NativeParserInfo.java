@@ -178,22 +178,28 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 }
                 String name = sb.toString().trim();
                 sb.delete(0, sb.length());
+                String defaultValStr = null;
+                int defPos = name.indexOf(',');
+                if (defPos > 0) {
+                    defaultValStr = name.substring(defPos + 1).trim();
+                    name = name.substring(0, defPos).trim();
+                }
                 if (type == 1) { // ${xx.xx}
-                    dollarNames.put(name, new NativeSqlParameter(name, name, true));
+                    dollarNames.put(name, new NativeSqlParameter(name, name, true, defaultValStr));
                     fragments.add(new NativeSqlFragment(true, name));
                 } else if (type >= 2) { // #{xx.xx}、##{xx.xx}
                     NativeSqlParameter old = numsignParameters.get(name);
                     String jdbc = old == null ? null : old.getJdbcName();
                     if (jdbc == null) {
                         jdbc = formatNumsignToJdbcName(name);
-                        NativeSqlParameter p = new NativeSqlParameter(name, jdbc, type == 3);
+                        NativeSqlParameter p = new NativeSqlParameter(name, jdbc, type == 3, defaultValStr);
                         numsignParameters.put(name, p);
                         jdbcToNumsignMap.put(jdbc, name);
                         if (p.isRequired()) {
                             requiredNumsignNames.put(name, p);
                         }
                     } else if (!old.isRequired() && type == 3) { // 参数先非必需，后必需，需要更改required属性
-                        old.required(true);
+                        old.require(true);
                     }
                     fragments.add(new NativeSqlFragment(false, ":" + jdbc));
                 }
@@ -287,7 +293,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                         for (NativeSqlParameter p : allNamedParameters) {
                             if (Objects.equals(p.getJdbcName(), jdbcName)) {
                                 if (!p.isRequired()) { // UPDATE SET中的参数都是必需的
-                                    numsignParameters.put(p.getNumsignName(), p.required(true));
+                                    numsignParameters.put(p.getNumsignName(), p.require(true));
                                 }
                                 return;
                             }

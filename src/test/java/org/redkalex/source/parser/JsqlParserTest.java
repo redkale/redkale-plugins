@@ -34,6 +34,9 @@ public class JsqlParserTest {
         test.run13();
         test.run14();
         test.run15();
+        test.run16();
+        test.run17();
+        test.run18();
     }
 
     @Test
@@ -352,5 +355,50 @@ public class JsqlParserTest {
         Assertions.assertEquals(repect, statement.getNativePageSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================15============================================");
+    }
+
+    @Test
+    public void run16() throws Exception {
+        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
+                + "WHERE u.id = ##{id,(long)2000} AND r.type = MOD(#{t1},#{t2}) ORDER BY u.createTime DESC";
+        Map<String, Object> params = Utility.ofMap("t1", 30, "t", 4);
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc2, "postgresql", sql, true, flipper, params);
+        String repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
+                + "WHERE u.id = $1 ORDER BY u.createTime DESC LIMIT $2 OFFSET $3";
+        Assertions.assertEquals(repect, statement.getNativePageSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================16============================================");
+    }
+
+    @Test
+    public void run17() throws Exception {
+        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
+                + "WHERE u.id = #{id} AND r.type IN #{types,(1, 2, 3)} ORDER BY u.createTime DESC";
+        Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc2, "postgresql", sql, true, flipper, params);
+        String repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
+                + "WHERE u.id = $1 AND r.type IN (1, 2, 3) ORDER BY u.createTime DESC LIMIT $2 OFFSET $3";
+        Assertions.assertEquals(repect, statement.getNativePageSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================17============================================");
+    }
+
+    @Test
+    public void run18() throws Exception {
+        String sql = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
+                + "WHERE u.id = #{id} AND r.type IN (1, 2, #{type, (int)3}) ORDER BY u.createTime DESC";
+        Map<String, Object> params = Utility.ofMap("id", 1, "t1", 30, "t", 4);
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc2, "postgresql", sql, true, flipper, params);
+        String repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
+                + "WHERE u.id = $1 AND r.type IN (1, 2, 3) ORDER BY u.createTime DESC LIMIT $2 OFFSET $3";
+        Assertions.assertEquals(repect, statement.getNativePageSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================18============================================");
     }
 }

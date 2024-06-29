@@ -264,21 +264,31 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 for (int i = newList.size() - 1; i >= 0; i--) {
                     Expression item = newList.get(i);
                     if (item instanceof JdbcNamedParameter) {
-                        List<Expression> es = createInParamItemList((JdbcNamedParameter) item);
-                        newList.remove(i);
-                        if (es != null) {
-                            newList.addAll(i, es);
+                        Object val = createInParamItemList(true, (JdbcNamedParameter) item);
+                        if (val instanceof String) {
+                            buffer.append(val);
+                        } else {
+                            List<Expression> es = (List<Expression>) val;
+                            newList.remove(i);
+                            if (es != null) {
+                                newList.addAll(i, es);
+                            }
                         }
                     }
                 }
                 new ParenthesedExpressionList(newList).accept(this);
             } else if (rightExpr instanceof JdbcNamedParameter) {
-                List<Expression> itemList = createInParamItemList((JdbcNamedParameter) rightExpr);
-                if (itemList == null) {
-                    buffer.delete(start, end);
-                    buffer.append(expr.isNot() ? "1=1" : "1=2");
+                Object val = createInParamItemList(false, (JdbcNamedParameter) rightExpr);
+                if (val instanceof String) {
+                    buffer.append(val);
                 } else {
-                    new ParenthesedExpressionList(itemList).accept(this);
+                    List<Expression> itemList = (List<Expression>) val;
+                    if (itemList == null) {
+                        buffer.delete(start, end);
+                        buffer.append(expr.isNot() ? "1=1" : "1=2");
+                    } else {
+                        new ParenthesedExpressionList(itemList).accept(this);
+                    }
                 }
             } else {
                 throw new SourceException("Not support expression (" + rightExpr + "), type: "
@@ -346,7 +356,8 @@ public class NativeExprDeParser extends ExpressionDeParser {
         }
     }
 
-    private List<Expression> createInParamItemList(JdbcNamedParameter namedParam) {
+    // 返回类型只能是List<Expression>、String
+    private Object createInParamItemList(boolean subIn, JdbcNamedParameter namedParam) {
         String name = namedParam.getName();
         Object val = paramValues.get(name);
         if (val == null) { // 没有参数值
@@ -368,40 +379,47 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 list.add(Array.get(val, i));
             }
             val = list;
+        } else if (subIn) {
+            return List.of(createItemExpression(val, name));
+        } else if (val instanceof String) { // 默认完整参数值
+            return val;
         } else {
             throw new SourceException("Parameter (name=" + name + ") is not Collection or Array, value = " + val);
         }
         List<Expression> itemList = new ArrayList();
         for (Object item : (Collection) val) {
-            if (item == null) {
-                itemList.add(new NullValue());
-            } else if (item instanceof String) {
-                itemList.add(new StringValue(item.toString().replace("'", "\\'")));
-            } else if (item instanceof Short || item instanceof Integer || item instanceof Long) {
-                itemList.add(new LongValue().withValue(((Number) item).longValue()));
-            } else if (item instanceof Float || item instanceof Double) {
-                itemList.add(new DoubleValue().withValue(((Number) item).doubleValue()));
-            } else if (item instanceof BigInteger || item instanceof BigDecimal) {
-                itemList.add(new StringValue(item.toString()));
-            } else if (item instanceof java.util.Date) {
-                itemList.add(new DateValue().withValue(new java.sql.Date(((java.util.Date) item).getTime())));
-            } else if (item instanceof java.sql.Date) {
-                itemList.add(new DateValue().withValue((java.sql.Date) item));
-            } else if (item instanceof java.sql.Time) {
-                itemList.add(new TimeValue().withValue((java.sql.Time) item));
-            } else if (item instanceof java.sql.Timestamp) {
-                itemList.add(new TimestampValue().withValue((java.sql.Timestamp) item));
-            } else if (item instanceof java.time.LocalDate) {
-                itemList.add(new DateValue().withValue(java.sql.Date.valueOf((java.time.LocalDate) item)));
-            } else if (item instanceof java.time.LocalTime) {
-                itemList.add(new TimeValue().withValue(java.sql.Time.valueOf((java.time.LocalTime) item)));
-            } else if (item instanceof java.time.LocalDateTime) {
-                itemList.add(
-                        new TimestampValue().withValue(java.sql.Timestamp.valueOf((java.time.LocalDateTime) item)));
-            } else {
-                throw new SourceException("Not support parameter: " + val);
-            }
+            itemList.add(createItemExpression(item, name));
         }
         return itemList;
+    }
+
+    private Expression createItemExpression(Object item, String name) {
+        if (item == null) {
+            return new NullValue();
+        } else if (item instanceof String) {
+            return new StringValue(item.toString().replace("'", "\\'"));
+        } else if (item instanceof Short || item instanceof Integer || item instanceof Long) {
+            return new LongValue().withValue(((Number) item).longValue());
+        } else if (item instanceof Float || item instanceof Double) {
+            return new DoubleValue().withValue(((Number) item).doubleValue());
+        } else if (item instanceof BigInteger || item instanceof BigDecimal) {
+            return new StringValue(item.toString());
+        } else if (item instanceof java.util.Date) {
+            return new DateValue().withValue(new java.sql.Date(((java.util.Date) item).getTime()));
+        } else if (item instanceof java.sql.Date) {
+            return new DateValue().withValue((java.sql.Date) item);
+        } else if (item instanceof java.sql.Time) {
+            return new TimeValue().withValue((java.sql.Time) item);
+        } else if (item instanceof java.sql.Timestamp) {
+            return new TimestampValue().withValue((java.sql.Timestamp) item);
+        } else if (item instanceof java.time.LocalDate) {
+            return new DateValue().withValue(java.sql.Date.valueOf((java.time.LocalDate) item));
+        } else if (item instanceof java.time.LocalTime) {
+            return new TimeValue().withValue(java.sql.Time.valueOf((java.time.LocalTime) item));
+        } else if (item instanceof java.time.LocalDateTime) {
+            return new TimestampValue().withValue(java.sql.Timestamp.valueOf((java.time.LocalDateTime) item));
+        } else {
+            throw new SourceException("Not support parameter: " + name);
+        }
     }
 }
