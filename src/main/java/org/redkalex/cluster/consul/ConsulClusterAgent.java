@@ -213,14 +213,14 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     protected void beatLocalHealth(final ClusterEntry entry) {
-        String url = this.apiUrl + "/agent/check/pass/" + entry.checkid;
+        String url = this.apiUrl + "/agent/check/pass/" + entry.checkId;
         try {
             String rs = Utility.remoteHttpContent(httpClient, "PUT", url, StandardCharsets.UTF_8, httpHeaders);
             if (!rs.isEmpty()) {
-                logger.log(Level.SEVERE, entry.checkid + " check error: " + rs);
+                logger.log(Level.SEVERE, entry.checkId + " check error: " + rs);
             }
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, entry.checkid + " check error: " + url, ex);
+            logger.log(Level.SEVERE, entry.checkId + " check error: " + url, ex);
         }
     }
 
@@ -403,7 +403,7 @@ public class ConsulClusterAgent extends ClusterAgent {
         deregister(ns, protocol, service, false);
         //
         ClusterEntry clusterEntry = new ClusterEntry(ns, protocol, service);
-        String json = "{\"ID\": \"" + clusterEntry.serviceid + "\",\"Name\": \"" + clusterEntry.serviceName
+        String json = "{\"ID\": \"" + clusterEntry.serviceId + "\",\"Name\": \"" + clusterEntry.serviceName
                 + "\",\"Address\": \"" + clusterEntry.address.getHostString() + "\",\"Port\": "
                 + clusterEntry.address.getPort()
                 + ",\"Check\":{\"CheckID\": \"" + generateCheckId(ns, protocol, service)
@@ -426,10 +426,10 @@ public class ConsulClusterAgent extends ClusterAgent {
                         StandardCharsets.UTF_8,
                         httpHeaders);
             } else {
-                logger.log(Level.SEVERE, clusterEntry.serviceid + " register error: " + rs);
+                logger.log(Level.SEVERE, clusterEntry.serviceId + " register error: " + rs);
             }
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, clusterEntry.serviceid + " register error", ex);
+            logger.log(Level.SEVERE, clusterEntry.serviceId + " register error", ex);
             return null;
         }
         return clusterEntry;
@@ -444,14 +444,14 @@ public class ConsulClusterAgent extends ClusterAgent {
         String serviceid = generateServiceId(ns, protocol, service);
         ClusterEntry currEntry = null;
         for (final ClusterEntry entry : localEntrys.values()) {
-            if (entry.serviceid.equals(serviceid)) {
+            if (entry.serviceId.equals(serviceid)) {
                 currEntry = entry;
                 break;
             }
         }
         if (currEntry == null) {
             for (final ClusterEntry entry : remoteEntrys.values()) {
-                if (entry.serviceid.equals(serviceid)) {
+                if (entry.serviceId.equals(serviceid)) {
                     currEntry = entry;
                     break;
                 }

@@ -475,12 +475,12 @@ public class NacosClusterAgent extends ClusterAgent {
     protected void deregister(NodeServer ns, String protocol, Service service, boolean realCanceled) {
         String serviceid = generateServiceId(ns, protocol, service);
         ClusterEntry currEntry = localEntrys.values().stream()
-                .filter(x -> serviceid.equals(x.serviceid))
+                .filter(x -> serviceid.equals(x.serviceId))
                 .findAny()
                 .orElse(null);
         if (currEntry == null) {
             currEntry = remoteEntrys.values().stream()
-                    .filter(x -> serviceid.equals(x.serviceid))
+                    .filter(x -> serviceid.equals(x.serviceId))
                     .findAny()
                     .orElse(null);
         }
