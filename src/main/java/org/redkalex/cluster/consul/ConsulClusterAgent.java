@@ -54,13 +54,7 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     protected ScheduledThreadPoolExecutor scheduler;
 
-    protected ScheduledFuture taskFuture1;
-
-    protected ScheduledFuture taskFuture2;
-
-    protected ScheduledFuture taskFuture3;
-
-    protected ScheduledFuture taskFuture4;
+    protected ScheduledFuture taskFuture;
 
     // 可能被HttpMessageClient用到的服务 key: serviceName
     protected final ConcurrentHashMap<String, Set<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
@@ -157,54 +151,24 @@ public class ConsulClusterAgent extends ClusterAgent {
             });
         }
         // delay为了错开请求
-        if (this.taskFuture1 != null) {
-            this.taskFuture1.cancel(true);
+        if (this.taskFuture != null) {
+            this.taskFuture.cancel(true);
         }
-        this.taskFuture1 = this.scheduler.scheduleAtFixedRate(
+        this.taskFuture = this.scheduler.scheduleAtFixedRate(
                 () -> {
                     beatApplicationHealth();
                     localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
                         beatLocalHealth(entry);
                     });
-                },
-                18,
-                Math.max(2000, ttls * 1000 - 168),
-                TimeUnit.MILLISECONDS);
-
-        if (this.taskFuture2 != null) {
-            this.taskFuture2.cancel(true);
-        }
-        this.taskFuture2 = this.scheduler.scheduleAtFixedRate(
-                () -> {
                     reloadSncpAddressHealth();
-                },
-                88 * 2,
-                Math.max(2000, ttls * 1000 - 168),
-                TimeUnit.MILLISECONDS);
-
-        if (this.taskFuture3 != null) {
-            this.taskFuture3.cancel(true);
-        }
-        this.taskFuture3 = this.scheduler.scheduleAtFixedRate(
-                () -> {
                     reloadHttpAddressHealth();
-                },
-                128 * 3,
-                Math.max(2000, ttls * 1000 - 168),
-                TimeUnit.MILLISECONDS);
-
-        if (this.taskFuture4 != null) {
-            this.taskFuture4.cancel(true);
-        }
-        this.taskFuture4 = this.scheduler.scheduleAtFixedRate(
-                () -> {
                     remoteEntrys.values().stream()
                             .filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol))
                             .forEach(entry -> {
                                 updateSncpAddress(entry);
                             });
                 },
-                188 * 4,
+                18,
                 Math.max(2000, ttls * 1000 - 168),
                 TimeUnit.MILLISECONDS);
     }
@@ -214,13 +178,13 @@ public class ConsulClusterAgent extends ClusterAgent {
             String content = Utility.remoteHttpContent(
                     httpClient, "GET", this.apiUrl + "/agent/services", StandardCharsets.UTF_8, httpHeaders);
             final Map<String, ServiceEntry> map = JsonConvert.root().convertFrom(MAP_STRING_SERVICEENTRY, content);
-            Set<String> sncpkeys = new HashSet<>();
+            Set<String> sncpKeys = new HashSet<>();
             map.forEach((key, en) -> {
                 if (en.Service.startsWith("sncp:")) {
-                    sncpkeys.add(en.Service);
+                    sncpKeys.add(en.Service);
                 }
             });
-            sncpkeys.forEach(serviceName -> {
+            sncpKeys.forEach(serviceName -> {
                 try {
                     this.sncpAddressMap.put(
                             serviceName, queryAddress(serviceName).get(Math.max(2, ttls / 2), TimeUnit.SECONDS));
@@ -292,7 +256,7 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     private CompletableFuture<Set<InetSocketAddress>> queryAddress(final String serviceName) {
-        final HttpClient client = (HttpClient) httpClient;
+        final HttpClient client = httpClient;
         String url = this.apiUrl + "/agent/services?filter="
                 + URLEncoder.encode("Service==\"" + serviceName + "\"", StandardCharsets.UTF_8);
         HttpRequest.Builder builder = HttpRequest.newBuilder()
@@ -304,7 +268,7 @@ public class ConsulClusterAgent extends ClusterAgent {
                 for (Object val : (Collection) v) {
                     builder.header(n, val.toString());
                 }
-            } else {
+            } else if (v != null) {
                 builder.header(n, v.toString());
             }
         });
@@ -329,7 +293,7 @@ public class ConsulClusterAgent extends ClusterAgent {
                                 for (Object val : (Collection) v) {
                                     builder0.header(n, val.toString());
                                 }
-                            } else {
+                            } else if (v != null) {
                                 builder0.header(n, v.toString());
                             }
                         });
@@ -351,37 +315,37 @@ public class ConsulClusterAgent extends ClusterAgent {
     }
 
     protected boolean isApplicationHealth() {
-        String serviceid = generateApplicationServiceId();
+        String serviceId = generateApplicationServiceId();
         try {
             String irs = Utility.remoteHttpContent(
                     httpClient,
                     "GET",
-                    this.apiUrl + "/agent/health/service/id/" + serviceid + "?format=text",
+                    this.apiUrl + "/agent/health/service/id/" + serviceId + "?format=text",
                     StandardCharsets.UTF_8,
                     httpHeaders);
             return "passing".equalsIgnoreCase(irs);
         } catch (java.io.FileNotFoundException ex) {
             return false;
         } catch (Exception e) {
-            logger.log(Level.SEVERE, serviceid + " health format=text error", e);
+            logger.log(Level.SEVERE, serviceId + " health format=text error", e);
             return true;
         }
     }
 
     protected void beatApplicationHealth() {
-        String checkid = generateApplicationCheckId();
+        String checkId = generateApplicationCheckId();
         try {
             String rs = Utility.remoteHttpContent(
                     httpClient,
                     "PUT",
-                    this.apiUrl + "/agent/check/pass/" + checkid,
+                    this.apiUrl + "/agent/check/pass/" + checkId,
                     StandardCharsets.UTF_8,
                     httpHeaders);
             if (!rs.isEmpty()) {
-                logger.log(Level.SEVERE, checkid + " check error: " + rs);
+                logger.log(Level.SEVERE, checkId + " check error: " + rs);
             }
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, checkid + " check error", ex);
+            logger.log(Level.SEVERE, checkId + " check error", ex);
         }
     }
 
@@ -392,10 +356,10 @@ public class ConsulClusterAgent extends ClusterAgent {
         }
         deregister(application);
 
-        String serviceid = generateApplicationServiceId();
+        String serviceId = generateApplicationServiceId();
         String serviceName = generateApplicationServiceName();
         String host = this.appAddress.getHostString();
-        String json = "{\"ID\": \"" + serviceid + "\",\"Name\": \"" + serviceName
+        String json = "{\"ID\": \"" + serviceId + "\",\"Name\": \"" + serviceName
                 + "\",\"Address\": \"" + host + "\",\"Port\": " + this.appAddress.getPort()
                 + ",\"Check\":{\"CheckID\": \"" + generateApplicationCheckId()
                 + "\",\"Name\": \"" + generateApplicationCheckName()
@@ -409,28 +373,28 @@ public class ConsulClusterAgent extends ClusterAgent {
                     httpHeaders,
                     json);
             if (!rs.isEmpty()) {
-                logger.log(Level.SEVERE, serviceid + " register error: " + rs);
+                logger.log(Level.SEVERE, serviceId + " register error: " + rs);
             }
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, serviceid + " register error", ex);
+            logger.log(Level.SEVERE, serviceId + " register error", ex);
         }
     }
 
     @Override
     public void deregister(Application application) {
-        String serviceid = generateApplicationServiceId();
+        String serviceId = generateApplicationServiceId();
         try {
             String rs = Utility.remoteHttpContent(
                     httpClient,
                     "PUT",
-                    this.apiUrl + "/agent/service/deregister/" + serviceid,
+                    this.apiUrl + "/agent/service/deregister/" + serviceId,
                     StandardCharsets.UTF_8,
                     httpHeaders);
             if (!rs.isEmpty()) {
-                logger.log(Level.SEVERE, serviceid + " deregister error: " + rs);
+                logger.log(Level.SEVERE, serviceId + " deregister error: " + rs);
             }
         } catch (Exception ex) {
-            logger.log(Level.SEVERE, serviceid + " deregister error", ex);
+            logger.log(Level.SEVERE, serviceId + " deregister error", ex);
         }
     }
 
@@ -517,7 +481,7 @@ public class ConsulClusterAgent extends ClusterAgent {
 
     public static final class ServiceEntry {
 
-        public String ID; // serviceid
+        public String ID; // serviceId
 
         public String Service; // serviceName
     }
