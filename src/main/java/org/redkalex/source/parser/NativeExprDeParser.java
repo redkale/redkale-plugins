@@ -85,7 +85,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
             expr.getLeftExpression().accept(this, context);
             final int end1 = buffer.length();
             int size2 = jdbcNames.size();
-            if (end1 > start1) {
+            if (end1 > start1) { // 不能用!paramLosing
                 if (afterLeftRunner != null) {
                     afterLeftRunner.run();
                 }
@@ -164,8 +164,6 @@ public class NativeExprDeParser extends ExpressionDeParser {
             if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_RIGHT) {
                 buffer.append("(+)");
             }
-        }
-        if (!paramLosing) {
             buffer.append(operator);
         } else {
             trimJdbcNames(size1, size2);
@@ -201,7 +199,6 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
     @Override
     public <S> StringBuilder visit(Function function, S context) {
-        System.out.println("观察func: " + function);
         return super.visit(function, context);
     }
 
