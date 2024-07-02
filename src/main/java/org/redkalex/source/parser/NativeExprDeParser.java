@@ -70,71 +70,147 @@ public class NativeExprDeParser extends ExpressionDeParser {
         return paramValues;
     }
 
-    @Override
-    protected <S> void deparse(BinaryExpression expr, String operator, S context) {
-        deparse(expr, () -> buffer.append(operator), null, context);
+    // AND  OR  XOR 关系
+    // 左右两个表达式任意一个存在
+    protected <S> StringBuilder deparseAnyCconditionExpression(
+            BinaryExpression expr, Runnable afterLeftRunner, Runnable afterRightRunner, S context) {
+        if (expr.getClass().getPackage() != conditionalPkg) {
+            throw new SourceException("Not support expression (" + expr + ") ");
+        }
+        paramLosing = false;
+        conditions.push(expr);
+
+        int size1 = jdbcNames.size();
+        final int start1 = buffer.length();
+        expr.getLeftExpression().accept(this, context);
+        final int end1 = buffer.length();
+        int size2 = jdbcNames.size();
+        if (end1 > start1) { // 不能用!paramLosing
+            if (afterLeftRunner != null) {
+                afterLeftRunner.run();
+            }
+        } else {
+            trimJdbcNames(size1, size2);
+        }
+
+        size1 = jdbcNames.size();
+        final int start2 = buffer.length();
+        expr.getRightExpression().accept(this, context);
+        final int end2 = buffer.length();
+        size2 = jdbcNames.size();
+        if (end2 == start2) { // 没有right
+            buffer.delete(end1, end2);
+            trimJdbcNames(size1, size2);
+        }
+
+        conditions.pop();
+        paramLosing = false;
+        return buffer;
+    }
+    // 左右两个表达式都得存在
+    protected <S> StringBuilder deparseBothRelationExpression(
+            BinaryExpression expr, Runnable afterLeftRunner, Runnable afterRightRunner, S context) {
+        return deparseBothRelationExpression(
+                expr, expr.getLeftExpression(), expr.getRightExpression(), afterLeftRunner, afterRightRunner, context);
     }
 
-    private <S> void deparse(BinaryExpression expr, Runnable afterLeftRunner, Runnable afterRightRunner, S context) {
-        if (expr.getClass().getPackage() == conditionalPkg) {
-            paramLosing = false;
-            conditions.push(expr);
+    // 左右两个表达式都得存在
+    protected <S> StringBuilder deparseBothRelationExpression(
+            Expression parentExpr,
+            Expression leftExpr,
+            Expression rightExpr,
+            Runnable afterLeftRunner,
+            Runnable afterRightRunner,
+            S context) {
+        if (parentExpr.getClass().getPackage() != relationalPkg) {
+            throw new SourceException("Not support expression (" + parentExpr + ") ");
+        }
+        paramLosing = false;
+        relations.push(parentExpr);
 
-            int size1 = jdbcNames.size();
-            final int start1 = buffer.length();
-            expr.getLeftExpression().accept(this, context);
+        int size1 = jdbcNames.size();
+        final int start1 = buffer.length();
+        leftExpr.accept(this, context);
+        if (paramLosing) {
+            trimJdbcNames(size1, jdbcNames.size());
+        } else {
+            if (afterLeftRunner != null) {
+                afterLeftRunner.run();
+            }
+            rightExpr.accept(this, context);
             final int end1 = buffer.length();
-            int size2 = jdbcNames.size();
-            if (end1 > start1) { // 不能用!paramLosing
-                if (afterLeftRunner != null) {
-                    afterLeftRunner.run();
-                }
-            } else {
-                trimJdbcNames(size1, size2);
-            }
-
-            size1 = jdbcNames.size();
-            final int start2 = buffer.length();
-            expr.getRightExpression().accept(this, context);
-            final int end2 = buffer.length();
-            size2 = jdbcNames.size();
-            if (end2 == start2) { // 没有right
-                buffer.delete(end1, end2);
-                trimJdbcNames(size1, size2);
-            }
-
-            conditions.pop();
-            paramLosing = false;
-        } else if (expr.getClass().getPackage() == relationalPkg) {
-            paramLosing = false;
-            relations.push(expr);
-
-            int size1 = jdbcNames.size();
-            final int start1 = buffer.length();
-            expr.getLeftExpression().accept(this, context);
-            if (!paramLosing) {
-                if (afterLeftRunner != null) {
-                    afterLeftRunner.run();
-                }
-                expr.getRightExpression().accept(this, context);
-                final int end1 = buffer.length();
-                if (paramLosing) { // 没有right
-                    buffer.delete(start1, end1);
-                    trimJdbcNames(size1, jdbcNames.size());
-                } else if (afterRightRunner != null) {
-                    afterRightRunner.run();
-                }
-            } else {
+            if (paramLosing) { // 没有right
+                buffer.delete(start1, end1);
                 trimJdbcNames(size1, jdbcNames.size());
+            } else if (afterRightRunner != null) {
+                afterRightRunner.run();
             }
+        }
 
-            relations.pop();
-            paramLosing = false;
+        relations.pop();
+        paramLosing = false;
+        return buffer;
+    }
+
+    // 左右两个表达式任意一个存在
+    protected <S> StringBuilder deparseAnyRelationExpression(
+            BinaryExpression expr, Runnable afterLeftRunner, Runnable afterRightRunner, S context) {
+        return deparseAnyRelationExpression(
+                expr, expr.getLeftExpression(), expr.getRightExpression(), afterLeftRunner, afterRightRunner, context);
+    }
+
+    // 左右两个表达式任意一个存在
+    protected <S> StringBuilder deparseAnyRelationExpression(
+            Expression parentExpr,
+            Expression leftExpr,
+            Expression rightExpr,
+            Runnable afterLeftRunner,
+            Runnable afterRightRunner,
+            S context) {
+        if (parentExpr.getClass().getPackage() != relationalPkg) {
+            throw new SourceException("Not support expression (" + parentExpr + ") ");
+        }
+        paramLosing = false;
+        relations.push(parentExpr);
+
+        int size1 = jdbcNames.size();
+        final int start1 = buffer.length();
+        leftExpr.accept(this, context);
+        int size2 = jdbcNames.size();
+        if (paramLosing) {
+            trimJdbcNames(size1, size2);
+        } else if (afterLeftRunner != null) {
+            afterLeftRunner.run();
+        }
+
+        size1 = jdbcNames.size();
+        rightExpr.accept(this, context);
+        int end2 = buffer.length();
+        size2 = jdbcNames.size();
+        if (paramLosing) { // 没有right
+            buffer.delete(start1, end2);
+            // 多个paramNames里中一个不存在，需要删除另外几个
+            trimJdbcNames(size1, size2);
+        } else if (afterRightRunner != null) {
+            afterRightRunner.run();
+        }
+        relations.pop();
+        paramLosing = false;
+        return buffer;
+    }
+
+    protected <S> StringBuilder deparse(
+            BinaryExpression expr, Runnable afterLeftRunner, Runnable afterRightRunner, S context) {
+        if (expr.getClass().getPackage() == conditionalPkg) {
+            return deparseAnyCconditionExpression(expr, afterLeftRunner, afterRightRunner, context);
+        } else if (expr.getClass().getPackage() == relationalPkg) {
+            return deparseBothRelationExpression(expr, afterLeftRunner, afterRightRunner, context);
         } else {
             throw new SourceException("Not support expression (" + expr + ") ");
         }
     }
 
+    // ----------------------------------------- 重载方法 -----------------------------------------
     @Override
     public <S> StringBuilder visit(JdbcNamedParameter expr, S context) {
         Object val = paramValues.get(expr.getName());
@@ -149,82 +225,32 @@ public class NativeExprDeParser extends ExpressionDeParser {
     }
 
     @Override
+    protected <S> void deparse(BinaryExpression expr, String operator, S context) {
+        deparse(expr, () -> buffer.append(operator), null, context);
+    }
+
+    @Override
     public <S> StringBuilder deparse(OldOracleJoinBinaryExpression expr, String operator, S context) {
-        if (expr.getClass().getPackage() != relationalPkg) {
-            throw new SourceException("Not support expression (" + expr + ") ");
-        }
-        paramLosing = false;
-        relations.push(expr);
-
-        int size1 = jdbcNames.size();
-        final int start1 = buffer.length();
-        expr.getLeftExpression().accept(this, context);
-        int size2 = jdbcNames.size();
-        if (!paramLosing) {
-            if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_RIGHT) {
-                buffer.append("(+)");
-            }
-            buffer.append(operator);
-        } else {
-            trimJdbcNames(size1, size2);
-        }
-
-        size1 = jdbcNames.size();
-        expr.getRightExpression().accept(this, context);
-        int end2 = buffer.length();
-        size2 = jdbcNames.size();
-        if (paramLosing) { // 没有right
-            buffer.delete(start1, end2);
-            // 多个paramNames里中一个不存在，需要删除另外几个
-            trimJdbcNames(size1, size2);
-        } else {
-            if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_LEFT) {
-                buffer.append("(+)");
-            }
-        }
-        relations.pop();
-        paramLosing = false;
-        return buffer;
-    }
-
-    @Override
-    public <S> StringBuilder visit(TranscodingFunction transcodingFunction, S context) {
-        return super.visit(transcodingFunction, context);
-    }
-
-    @Override
-    public <S> StringBuilder visit(TrimFunction trimFunction, S context) {
-        return super.visit(trimFunction, context);
-    }
-
-    @Override
-    public <S> StringBuilder visit(Function function, S context) {
-        return super.visit(function, context);
+        return deparseAnyRelationExpression(
+                expr,
+                () -> {
+                    if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_RIGHT) {
+                        buffer.append("(+)");
+                    }
+                    buffer.append(operator);
+                },
+                () -> {
+                    if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_LEFT) {
+                        buffer.append("(+)");
+                    }
+                },
+                context);
     }
 
     @Override
     public <S> StringBuilder visit(RangeExpression expr, S context) {
-        paramLosing = false;
-        relations.push(expr);
-
-        int size1 = jdbcNames.size();
-        final int start1 = buffer.length();
-        expr.getStartExpression().accept(this, context);
-        if (!paramLosing) {
-            buffer.append(":");
-            expr.getEndExpression().accept(this, context);
-            final int end1 = buffer.length();
-            if (paramLosing) { // 没有right
-                buffer.delete(start1, end1);
-                trimJdbcNames(size1, jdbcNames.size());
-            }
-        } else {
-            trimJdbcNames(size1, jdbcNames.size());
-        }
-
-        relations.pop();
-        paramLosing = false;
-        return buffer;
+        return deparseBothRelationExpression(
+                expr, expr.getStartExpression(), expr.getEndExpression(), () -> buffer.append(":"), null, context);
     }
 
     @Override
@@ -232,7 +258,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
         int start = buffer.length();
         super.visit(expressionList, context);
         int end = buffer.length();
-        if (end == (start + 2) && buffer.charAt(start) == '(') {
+        if (end == (start + 2) && buffer.charAt(start) == '(') { // 空()
             buffer.delete(start - 1, end);
         }
         return buffer;
@@ -246,25 +272,27 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
         final int size = jdbcNames.size();
         final int start = buffer.length();
-        expr.getLeftExpression().accept(this, context);
-        if (!paramLosing) {
+        expr.getLeftExpression().accept(this, context); // 字段名
+        if (paramLosing) {
+            // do nothing
+        } else {
             if (expr.isNot()) {
                 buffer.append(" NOT");
             }
             buffer.append(" BETWEEN ");
-            expr.getBetweenExpressionStart().accept(this, context);
+            expr.getBetweenExpressionStart().accept(this, context); // 最小值
             int end = buffer.length();
-            if (!paramLosing) {
+            if (paramLosing) {
+                buffer.delete(start, end);
+                trimJdbcNames(size, jdbcNames.size());
+            } else {
                 buffer.append(" AND ");
-                expr.getBetweenExpressionEnd().accept(this, context);
+                expr.getBetweenExpressionEnd().accept(this, context); // 最大值
                 end = buffer.length();
                 if (paramLosing) {
                     buffer.delete(start, end);
                     trimJdbcNames(size, jdbcNames.size());
                 }
-            } else {
-                buffer.delete(start, end);
-                trimJdbcNames(size, jdbcNames.size());
             }
         }
 
@@ -280,9 +308,12 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
         final int size1 = jdbcNames.size();
         final int start = buffer.length();
-        expr.getLeftExpression().accept(this, context);
+        expr.getLeftExpression().accept(this, context); // 字段名
         int end = buffer.length();
-        if (!paramLosing) {
+        if (paramLosing) {
+            buffer.delete(start, end);
+            trimJdbcNames(size1, jdbcNames.size());
+        } else {
             if (expr.getOldOracleJoinSyntax() == SupportsOldOracleJoinSyntax.ORACLE_JOIN_RIGHT) {
                 buffer.append("(+)");
             }
@@ -290,10 +321,10 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 buffer.append(" NOT");
             }
             buffer.append(" IN ");
-            Expression rightExpr = expr.getRightExpression();
-            if (rightExpr instanceof Select) {
+            Expression rightExpr = expr.getRightExpression(); // 集合值
+            if (rightExpr instanceof Select) { // 子查询
                 rightExpr.accept(this, context);
-            } else if (rightExpr instanceof ExpressionList) {
+            } else if (rightExpr instanceof ExpressionList) { // 集合
                 List<Expression> newList = new ArrayList<>((ExpressionList) rightExpr);
                 for (int i = newList.size() - 1; i >= 0; i--) {
                     Expression item = newList.get(i);
@@ -311,7 +342,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
                     }
                 }
                 new ParenthesedExpressionList(newList).accept(this, context);
-            } else if (rightExpr instanceof JdbcNamedParameter) {
+            } else if (rightExpr instanceof JdbcNamedParameter) { // 变量
                 Object val = createInParamItemList(false, (JdbcNamedParameter) rightExpr);
                 if (val instanceof String) {
                     buffer.append(val);
@@ -328,9 +359,6 @@ public class NativeExprDeParser extends ExpressionDeParser {
                 throw new SourceException("Not support expression (" + rightExpr + "), type: "
                         + (rightExpr == null ? null : rightExpr.getClass().getName()));
             }
-        } else {
-            buffer.delete(start, end);
-            trimJdbcNames(size1, jdbcNames.size());
         }
 
         relations.pop();
@@ -340,43 +368,29 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
     @Override
     public <S> StringBuilder visit(LikeExpression expr, S context) {
-        paramLosing = false;
-        relations.push(expr);
-
-        int size1 = jdbcNames.size();
-        final int start1 = buffer.length();
-        expr.getLeftExpression().accept(this, context);
-        if (!paramLosing) {
-            buffer.append(" ");
-            if (expr.isNot()) {
-                buffer.append("NOT ");
-            }
-            String keywordStr = expr.getLikeKeyWord() == LikeExpression.KeyWord.SIMILAR_TO
-                    ? " SIMILAR TO"
-                    : expr.getLikeKeyWord().toString();
-            buffer.append(keywordStr).append(" ");
-            if (expr.isUseBinary()) {
-                buffer.append("BINARY ");
-            }
-            expr.getRightExpression().accept(this, context);
-            final int end1 = buffer.length();
-            if (paramLosing) { // 没有right
-                buffer.delete(start1, end1);
-                trimJdbcNames(size1, jdbcNames.size());
-            } else {
-                Expression escape = expr.getEscape();
-                if (escape != null) {
-                    buffer.append(" ESCAPE ");
-                    expr.getEscape().accept(this);
-                }
-            }
-        } else {
-            trimJdbcNames(size1, jdbcNames.size());
-        }
-
-        relations.pop();
-        paramLosing = false;
-        return buffer;
+        return deparseBothRelationExpression(
+                expr,
+                () -> {
+                    buffer.append(" ");
+                    if (expr.isNot()) {
+                        buffer.append("NOT ");
+                    }
+                    String keywordStr = expr.getLikeKeyWord() == LikeExpression.KeyWord.SIMILAR_TO
+                            ? " SIMILAR TO"
+                            : expr.getLikeKeyWord().toString();
+                    buffer.append(keywordStr).append(" ");
+                    if (expr.isUseBinary()) {
+                        buffer.append("BINARY ");
+                    }
+                },
+                () -> {
+                    Expression escape = expr.getEscape();
+                    if (escape != null) {
+                        buffer.append(" ESCAPE ");
+                        expr.getEscape().accept(this, context);
+                    }
+                },
+                context);
     }
 
     @Override
@@ -450,7 +464,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
             val = list;
         } else if (subIn) {
             return List.of(createItemExpression(val, name));
-        } else if (val instanceof String) { // 默认完整参数值
+        } else if (val instanceof String) { // 默认值-完整参数值
             return val;
         } else {
             throw new SourceException("Parameter (name=" + name + ") is not Collection or Array, value = " + val);
