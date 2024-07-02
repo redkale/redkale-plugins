@@ -49,7 +49,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
     public String deParseSql(Statement stmt) {
         SelectDeParser parser = (SelectDeParser) getSelectVisitor();
         CustomStatementDeParser deParser = new CustomStatementDeParser(this, parser, buffer);
-        stmt.accept(deParser);
+        stmt.accept(deParser, null);
         return buffer.toString();
     }
 
@@ -71,77 +71,31 @@ public class NativeExprDeParser extends ExpressionDeParser {
     }
 
     @Override
-    public void visit(JdbcNamedParameter expr) {
-        Object val = paramValues.get(expr.getName());
-        if (val == null) { // 没有参数值
-            paramLosing = true;
-            return;
-        }
-        jdbcNames.add(expr.getName());
-        // 使用JdbcParameter ? 代替JdbcNamedParameter xx.xx
-        buffer.append(signFunc.apply(jdbcNames.size()));
+    protected <S> void deparse(BinaryExpression expr, String operator, S context) {
+        deparse(expr, () -> buffer.append(operator), null, context);
     }
 
-    @Override
-    public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expr, String operator) {
-        if (expr.getClass().getPackage() != relationalPkg) {
-            throw new SourceException("Not support expression (" + expr + ") ");
-        }
-        paramLosing = false;
-        relations.push(expr);
-
-        int size1 = jdbcNames.size();
-        final int start1 = buffer.length();
-        expr.getLeftExpression().accept(this);
-        int size2 = jdbcNames.size();
-        if (!paramLosing) {
-            if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_RIGHT) {
-                buffer.append("(+)");
-            }
-        }
-        if (!paramLosing) {
-            buffer.append(operator);
-        } else {
-            trimJdbcNames(size1, size2);
-        }
-
-        size1 = jdbcNames.size();
-        expr.getRightExpression().accept(this);
-        int end2 = buffer.length();
-        size2 = jdbcNames.size();
-        if (paramLosing) { // 没有right
-            buffer.delete(start1, end2);
-            // 多个paramNames里中一个不存在，需要删除另外几个
-            trimJdbcNames(size1, size2);
-        } else {
-            if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_LEFT) {
-                buffer.append("(+)");
-            }
-        }
-        relations.pop();
-        paramLosing = false;
-    }
-
-    @Override
-    protected void visitBinaryExpression(BinaryExpression expr, String operator) {
+    private <S> void deparse(BinaryExpression expr, Runnable afterLeftRunner, Runnable afterRightRunner, S context) {
         if (expr.getClass().getPackage() == conditionalPkg) {
             paramLosing = false;
             conditions.push(expr);
 
             int size1 = jdbcNames.size();
             final int start1 = buffer.length();
-            expr.getLeftExpression().accept(this);
+            expr.getLeftExpression().accept(this, context);
             final int end1 = buffer.length();
             int size2 = jdbcNames.size();
             if (end1 > start1) {
-                buffer.append(operator);
+                if (afterLeftRunner != null) {
+                    afterLeftRunner.run();
+                }
             } else {
                 trimJdbcNames(size1, size2);
             }
 
             size1 = jdbcNames.size();
             final int start2 = buffer.length();
-            expr.getRightExpression().accept(this);
+            expr.getRightExpression().accept(this, context);
             final int end2 = buffer.length();
             size2 = jdbcNames.size();
             if (end2 == start2) { // 没有right
@@ -157,15 +111,18 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
             int size1 = jdbcNames.size();
             final int start1 = buffer.length();
-            expr.getLeftExpression().accept(this);
+            expr.getLeftExpression().accept(this, context);
             if (!paramLosing) {
-                buffer.append(operator);
-
-                expr.getRightExpression().accept(this);
+                if (afterLeftRunner != null) {
+                    afterLeftRunner.run();
+                }
+                expr.getRightExpression().accept(this, context);
                 final int end1 = buffer.length();
                 if (paramLosing) { // 没有right
                     buffer.delete(start1, end1);
                     trimJdbcNames(size1, jdbcNames.size());
+                } else if (afterRightRunner != null) {
+                    afterRightRunner.run();
                 }
             } else {
                 trimJdbcNames(size1, jdbcNames.size());
@@ -179,52 +136,130 @@ public class NativeExprDeParser extends ExpressionDeParser {
     }
 
     @Override
-    public void visit(AndExpression expr) {
-        visitBinaryExpression(expr, expr.isUseOperator() ? " && " : " AND ");
+    public <S> StringBuilder visit(JdbcNamedParameter expr, S context) {
+        Object val = paramValues.get(expr.getName());
+        if (val == null) { // 没有参数值
+            paramLosing = true;
+            return buffer;
+        }
+        jdbcNames.add(expr.getName());
+        // 使用JdbcParameter ? 代替JdbcNamedParameter xx.xx
+        buffer.append(signFunc.apply(jdbcNames.size()));
+        return buffer;
     }
 
     @Override
-    public void visit(OrExpression expr) {
-        visitBinaryExpression(expr, " OR ");
-    }
+    public <S> StringBuilder deparse(OldOracleJoinBinaryExpression expr, String operator, S context) {
+        if (expr.getClass().getPackage() != relationalPkg) {
+            throw new SourceException("Not support expression (" + expr + ") ");
+        }
+        paramLosing = false;
+        relations.push(expr);
 
-    @Override
-    public void visit(XorExpression expr) {
-        visitBinaryExpression(expr, " XOR ");
-    }
-
-    @Override
-    public void visit(Parenthesis parenthesis) {
-        buffer.append("(");
-        int start = buffer.length();
-        parenthesis.getExpression().accept(this);
-        int end = buffer.length();
-        if (end > start) {
-            buffer.append(")");
+        int size1 = jdbcNames.size();
+        final int start1 = buffer.length();
+        expr.getLeftExpression().accept(this, context);
+        int size2 = jdbcNames.size();
+        if (!paramLosing) {
+            if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_RIGHT) {
+                buffer.append("(+)");
+            }
+        }
+        if (!paramLosing) {
+            buffer.append(operator);
         } else {
+            trimJdbcNames(size1, size2);
+        }
+
+        size1 = jdbcNames.size();
+        expr.getRightExpression().accept(this, context);
+        int end2 = buffer.length();
+        size2 = jdbcNames.size();
+        if (paramLosing) { // 没有right
+            buffer.delete(start1, end2);
+            // 多个paramNames里中一个不存在，需要删除另外几个
+            trimJdbcNames(size1, size2);
+        } else {
+            if (expr.getOldOracleJoinSyntax() == EqualsTo.ORACLE_JOIN_LEFT) {
+                buffer.append("(+)");
+            }
+        }
+        relations.pop();
+        paramLosing = false;
+        return buffer;
+    }
+
+    @Override
+    public <S> StringBuilder visit(TranscodingFunction transcodingFunction, S context) {
+        return super.visit(transcodingFunction, context);
+    }
+
+    @Override
+    public <S> StringBuilder visit(TrimFunction trimFunction, S context) {
+        return super.visit(trimFunction, context);
+    }
+
+    @Override
+    public <S> StringBuilder visit(Function function, S context) {
+        System.out.println("观察func: " + function);
+        return super.visit(function, context);
+    }
+
+    @Override
+    public <S> StringBuilder visit(RangeExpression expr, S context) {
+        paramLosing = false;
+        relations.push(expr);
+
+        int size1 = jdbcNames.size();
+        final int start1 = buffer.length();
+        expr.getStartExpression().accept(this, context);
+        if (!paramLosing) {
+            buffer.append(":");
+            expr.getEndExpression().accept(this, context);
+            final int end1 = buffer.length();
+            if (paramLosing) { // 没有right
+                buffer.delete(start1, end1);
+                trimJdbcNames(size1, jdbcNames.size());
+            }
+        } else {
+            trimJdbcNames(size1, jdbcNames.size());
+        }
+
+        relations.pop();
+        paramLosing = false;
+        return buffer;
+    }
+
+    @Override
+    public <S> StringBuilder visit(ExpressionList<? extends Expression> expressionList, S context) {
+        int start = buffer.length();
+        super.visit(expressionList, context);
+        int end = buffer.length();
+        if (end == (start + 2) && buffer.charAt(start) == '(') {
             buffer.delete(start - 1, end);
         }
+        return buffer;
     }
 
     // --------------------------------------------------
     @Override
-    public void visit(Between expr) {
+    public <S> StringBuilder visit(Between expr, S context) {
         paramLosing = false;
         relations.push(expr);
 
         final int size = jdbcNames.size();
         final int start = buffer.length();
-        expr.getLeftExpression().accept(this);
+        expr.getLeftExpression().accept(this, context);
         if (!paramLosing) {
             if (expr.isNot()) {
                 buffer.append(" NOT");
             }
             buffer.append(" BETWEEN ");
-            expr.getBetweenExpressionStart().accept(this);
+            expr.getBetweenExpressionStart().accept(this, context);
             int end = buffer.length();
             if (!paramLosing) {
                 buffer.append(" AND ");
-                expr.getBetweenExpressionEnd().accept(this);
+                expr.getBetweenExpressionEnd().accept(this, context);
                 end = buffer.length();
                 if (paramLosing) {
                     buffer.delete(start, end);
@@ -238,15 +273,17 @@ public class NativeExprDeParser extends ExpressionDeParser {
 
         relations.pop();
         paramLosing = false;
+        return buffer;
     }
 
     @Override
-    public void visit(InExpression expr) {
+    public <S> StringBuilder visit(InExpression expr, S context) {
         paramLosing = false;
         relations.push(expr);
+
         final int size1 = jdbcNames.size();
         final int start = buffer.length();
-        expr.getLeftExpression().accept(this);
+        expr.getLeftExpression().accept(this, context);
         int end = buffer.length();
         if (!paramLosing) {
             if (expr.getOldOracleJoinSyntax() == SupportsOldOracleJoinSyntax.ORACLE_JOIN_RIGHT) {
@@ -258,7 +295,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
             buffer.append(" IN ");
             Expression rightExpr = expr.getRightExpression();
             if (rightExpr instanceof Select) {
-                rightExpr.accept(this);
+                rightExpr.accept(this, context);
             } else if (rightExpr instanceof ExpressionList) {
                 List<Expression> newList = new ArrayList<>((ExpressionList) rightExpr);
                 for (int i = newList.size() - 1; i >= 0; i--) {
@@ -276,7 +313,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
                         }
                     }
                 }
-                new ParenthesedExpressionList(newList).accept(this);
+                new ParenthesedExpressionList(newList).accept(this, context);
             } else if (rightExpr instanceof JdbcNamedParameter) {
                 Object val = createInParamItemList(false, (JdbcNamedParameter) rightExpr);
                 if (val instanceof String) {
@@ -287,7 +324,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
                         buffer.delete(start, end);
                         buffer.append(expr.isNot() ? "1=1" : "1=2");
                     } else {
-                        new ParenthesedExpressionList(itemList).accept(this);
+                        new ParenthesedExpressionList(itemList).accept(this, context);
                     }
                 }
             } else {
@@ -298,56 +335,91 @@ public class NativeExprDeParser extends ExpressionDeParser {
             buffer.delete(start, end);
             trimJdbcNames(size1, jdbcNames.size());
         }
+
         relations.pop();
         paramLosing = false;
+        return buffer;
     }
 
     @Override
-    public void visit(LikeExpression expr) {
-        final int start = buffer.length();
-        visitBinaryExpression(expr, (expr.isNot() ? " NOT " : " ") + expr.getLikeKeyWord() + " ");
-        final int end = buffer.length();
-        Expression escape = expr.getEscape();
-        if (end > start && escape != null) {
-            buffer.append(" ESCAPE ");
-            expr.getEscape().accept(this);
+    public <S> StringBuilder visit(LikeExpression expr, S context) {
+        paramLosing = false;
+        relations.push(expr);
+
+        int size1 = jdbcNames.size();
+        final int start1 = buffer.length();
+        expr.getLeftExpression().accept(this, context);
+        if (!paramLosing) {
+            buffer.append(" ");
+            if (expr.isNot()) {
+                buffer.append("NOT ");
+            }
+            String keywordStr = expr.getLikeKeyWord() == LikeExpression.KeyWord.SIMILAR_TO
+                    ? " SIMILAR TO"
+                    : expr.getLikeKeyWord().toString();
+            buffer.append(keywordStr).append(" ");
+            if (expr.isUseBinary()) {
+                buffer.append("BINARY ");
+            }
+            expr.getRightExpression().accept(this, context);
+            final int end1 = buffer.length();
+            if (paramLosing) { // 没有right
+                buffer.delete(start1, end1);
+                trimJdbcNames(size1, jdbcNames.size());
+            } else {
+                Expression escape = expr.getEscape();
+                if (escape != null) {
+                    buffer.append(" ESCAPE ");
+                    expr.getEscape().accept(this);
+                }
+            }
+        } else {
+            trimJdbcNames(size1, jdbcNames.size());
         }
+
+        relations.pop();
+        paramLosing = false;
+        return buffer;
     }
 
     @Override
-    public void visit(FullTextSearch expr) {
+    public <S> StringBuilder visit(FullTextSearch expr, S context) {
         paramLosing = false;
         relations.push(expr);
-        super.visit(expr);
+        super.visit(expr, context);
         relations.pop();
         paramLosing = false;
+        return buffer;
     }
 
     @Override
-    public void visit(IsNullExpression expr) {
+    public <S> StringBuilder visit(IsNullExpression expr, S context) {
         paramLosing = false;
         relations.push(expr);
-        super.visit(expr);
+        super.visit(expr, context);
         relations.pop();
         paramLosing = false;
+        return buffer;
     }
 
     @Override
-    public void visit(IsBooleanExpression expr) {
+    public <S> StringBuilder visit(IsBooleanExpression expr, S context) {
         paramLosing = false;
         relations.push(expr);
-        super.visit(expr);
+        super.visit(expr, context);
         relations.pop();
         paramLosing = false;
+        return buffer;
     }
 
     @Override
-    public void visit(ExistsExpression expr) {
+    public <S> StringBuilder visit(ExistsExpression expr, S context) {
         paramLosing = false;
         relations.push(expr);
-        super.visit(expr);
+        super.visit(expr, context);
         relations.pop();
         paramLosing = false;
+        return buffer;
     }
 
     private void trimJdbcNames(int size1, int size2) {

@@ -79,7 +79,7 @@ public class NativeParserNode {
             NativeCountDeParser countDeParser = new NativeCountDeParser(exprDeParser, buffer);
             exprDeParser.setSelectVisitor(countDeParser);
             countDeParser.initCountSelect(select, countSelectItems);
-            select.accept(countDeParser);
+            select.accept(countDeParser, null);
             countSql = buffer.toString();
             if (RowBound.validLimit(round)) {
                 if ("oracle".equals(dbtype)) {

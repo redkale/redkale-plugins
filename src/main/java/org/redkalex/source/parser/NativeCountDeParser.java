@@ -33,12 +33,14 @@ public class NativeCountDeParser extends CustomSelectDeParser {
         this.countRootSelectItems = countSelectItems;
     }
 
+    @Override
     protected void deparseDistinctClause(PlainSelect plainSelect, Distinct distinct) {
         if (this.countSelect != plainSelect) {
             super.deparseDistinctClause(plainSelect, distinct);
         }
     }
 
+    @Override
     protected void deparseSelectItemsClause(PlainSelect plainSelect, List<SelectItem<?>> selectItems) {
         if (this.countSelect != plainSelect) {
             super.deparseSelectItemsClause(plainSelect, selectItems);
@@ -47,6 +49,7 @@ public class NativeCountDeParser extends CustomSelectDeParser {
         }
     }
 
+    @Override
     protected void deparseOrderByElementsClause(PlainSelect plainSelect, List<OrderByElement> orderByElements) {
         if (this.countSelect != plainSelect) {
             super.deparseOrderByElementsClause(plainSelect, orderByElements);

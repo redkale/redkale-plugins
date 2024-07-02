@@ -3,10 +3,9 @@
  */
 package org.redkalex.source.parser;
 
-import static java.util.stream.Collectors.joining;
-
 import java.util.Iterator;
 import java.util.List;
+import static java.util.stream.Collectors.joining;
 import net.sf.jsqlparser.expression.ExpressionVisitor;
 import net.sf.jsqlparser.expression.OracleHint;
 import net.sf.jsqlparser.expression.WindowDefinition;
@@ -16,8 +15,9 @@ import net.sf.jsqlparser.statement.select.First;
 import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.LateralView;
 import net.sf.jsqlparser.statement.select.OptimizeFor;
-import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
+import static net.sf.jsqlparser.statement.select.PlainSelect.BigQuerySelectQualifier.AS_STRUCT;
+import static net.sf.jsqlparser.statement.select.PlainSelect.BigQuerySelectQualifier.AS_VALUE;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
 import net.sf.jsqlparser.statement.select.Skip;
@@ -25,78 +25,32 @@ import net.sf.jsqlparser.statement.select.Top;
 import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.util.deparser.GroupByDeParser;
 import net.sf.jsqlparser.util.deparser.LimitDeparser;
-import net.sf.jsqlparser.util.deparser.OrderByDeParser;
 import net.sf.jsqlparser.util.deparser.SelectDeParser;
 
-/** @author zhangjx */
+/* -
+ * #%L
+ * JSQLParser library
+ * %%
+ * Copyright (C) 2004 - 2019 JSQLParser
+ * %%
+ * Dual licensed under GNU LGPL 2.1 or Apache License 2.0
+ * #L%
+ *
+ * 复制过来重载visit方法
+ */
 public class CustomSelectDeParser extends SelectDeParser {
 
     public CustomSelectDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
         super(expressionVisitor, buffer);
     }
 
-    protected void deparseWhereClause(PlainSelect plainSelect) {
-        if (plainSelect.getWhere() != null) {
-            buffer.append(" WHERE ");
-            int len = buffer.length();
-            plainSelect.getWhere().accept(getExpressionVisitor());
-            if (buffer.length() == len) {
-                buffer.delete(len - " WHERE ".length(), len);
-            }
-        }
-    }
-
-    protected void deparseDistinctClause(PlainSelect plainSelect, Distinct distinct) {
-        if (distinct != null) {
-            if (distinct.isUseUnique()) {
-                buffer.append("UNIQUE ");
-            } else {
-                buffer.append("DISTINCT ");
-            }
-            if (distinct.getOnSelectItems() != null) {
-                buffer.append("ON (");
-                for (Iterator<SelectItem<?>> iter = distinct.getOnSelectItems().iterator(); iter.hasNext(); ) {
-                    SelectItem<?> selectItem = iter.next();
-                    selectItem.accept(this);
-                    if (iter.hasNext()) {
-                        buffer.append(", ");
-                    }
-                }
-                buffer.append(") ");
-            }
-        }
-    }
-
-    protected void deparseSelectItemsClause(PlainSelect plainSelect, List<SelectItem<?>> selectItems) {
-        if (selectItems != null) {
-            for (Iterator<SelectItem<?>> iter = selectItems.iterator(); iter.hasNext(); ) {
-                SelectItem<?> selectItem = iter.next();
-                selectItem.accept(this);
-                if (iter.hasNext()) {
-                    buffer.append(", ");
-                }
-            }
-        }
-    }
-
-    protected void deparseOrderByElementsClause(PlainSelect plainSelect, List<OrderByElement> orderByElements) {
-        if (orderByElements != null) {
-            new OrderByDeParser(getExpressionVisitor(), buffer)
-                    .deParse(plainSelect.isOracleSiblings(), orderByElements);
-        }
-    }
-
-    public void visit(Top top) {
-        buffer.append(top).append(" ");
-    }
-
     @Override
-    public void visit(PlainSelect plainSelect) {
+    public <S> StringBuilder visit(PlainSelect plainSelect, S context) {
         List<WithItem> withItemsList = plainSelect.getWithItemsList();
         if (withItemsList != null && !withItemsList.isEmpty()) {
             buffer.append("WITH ");
             for (Iterator<WithItem> iter = withItemsList.iterator(); iter.hasNext(); ) {
-                iter.next().accept((SelectVisitor) this);
+                iter.next().accept((SelectVisitor<?>) this, context);
                 if (iter.hasNext()) {
                     buffer.append(",");
                 }
@@ -127,6 +81,17 @@ public class CustomSelectDeParser extends SelectDeParser {
 
         deparseDistinctClause(plainSelect, plainSelect.getDistinct());
 
+        if (plainSelect.getBigQuerySelectQualifier() != null) {
+            switch (plainSelect.getBigQuerySelectQualifier()) {
+                case AS_STRUCT:
+                    buffer.append("AS STRUCT ");
+                    break;
+                case AS_VALUE:
+                    buffer.append("AS VALUE ");
+                    break;
+            }
+        }
+
         Top top = plainSelect.getTop();
         if (top != null) {
             visit(top);
@@ -145,7 +110,7 @@ public class CustomSelectDeParser extends SelectDeParser {
         if (plainSelect.getIntoTables() != null) {
             buffer.append(" INTO ");
             for (Iterator<Table> iter = plainSelect.getIntoTables().iterator(); iter.hasNext(); ) {
-                visit(iter.next());
+                visit(iter.next(), context);
                 if (iter.hasNext()) {
                     buffer.append(", ");
                 }
@@ -157,7 +122,7 @@ public class CustomSelectDeParser extends SelectDeParser {
             if (plainSelect.isUsingOnly()) {
                 buffer.append("ONLY ");
             }
-            plainSelect.getFromItem().accept(this);
+            plainSelect.getFromItem().accept(this, context);
 
             if (plainSelect.getFromItem() instanceof Table) {
                 Table table = (Table) plainSelect.getFromItem();
@@ -191,7 +156,7 @@ public class CustomSelectDeParser extends SelectDeParser {
         deparseWhereClause(plainSelect);
 
         if (plainSelect.getOracleHierarchical() != null) {
-            plainSelect.getOracleHierarchical().accept(getExpressionVisitor());
+            plainSelect.getOracleHierarchical().accept(getExpressionVisitor(), context);
         }
 
         if (plainSelect.getGroupBy() != null) {
@@ -201,11 +166,11 @@ public class CustomSelectDeParser extends SelectDeParser {
 
         if (plainSelect.getHaving() != null) {
             buffer.append(" HAVING ");
-            plainSelect.getHaving().accept(getExpressionVisitor());
+            plainSelect.getHaving().accept(getExpressionVisitor(), context);
         }
         if (plainSelect.getQualify() != null) {
             buffer.append(" QUALIFY ");
-            plainSelect.getQualify().accept(getExpressionVisitor());
+            plainSelect.getQualify().accept(getExpressionVisitor(), context);
         }
         if (plainSelect.getWindowDefinitions() != null) {
             buffer.append(" WINDOW ");
@@ -218,7 +183,6 @@ public class CustomSelectDeParser extends SelectDeParser {
         }
 
         deparseOrderByElementsClause(plainSelect, plainSelect.getOrderByElements());
-
         if (plainSelect.isEmitChanges()) {
             buffer.append(" EMIT CHANGES");
         }
@@ -266,11 +230,58 @@ public class CustomSelectDeParser extends SelectDeParser {
         if (plainSelect.isUseWithNoLog()) {
             buffer.append(" WITH NO LOG");
         }
+        return buffer;
     }
 
     private void deparseOptimizeFor(OptimizeFor optimizeFor) {
         buffer.append(" OPTIMIZE FOR ");
         buffer.append(optimizeFor.getRowCount());
         buffer.append(" ROWS");
+    }
+
+    @Override
+    protected void deparseWhereClause(PlainSelect plainSelect) {
+        if (plainSelect.getWhere() != null) {
+            buffer.append(" WHERE ");
+            int len = buffer.length();
+            plainSelect.getWhere().accept(getExpressionVisitor());
+            if (buffer.length() == len) {
+                buffer.delete(len - " WHERE ".length(), len);
+            }
+        }
+    }
+
+    protected void deparseDistinctClause(PlainSelect plainSelect, Distinct distinct) {
+        if (distinct != null) {
+            if (distinct.isUseUnique()) {
+                buffer.append("UNIQUE ");
+            } else {
+                buffer.append("DISTINCT ");
+            }
+            if (distinct.getOnSelectItems() != null) {
+                buffer.append("ON (");
+                for (Iterator<SelectItem<?>> iter = distinct.getOnSelectItems().iterator(); iter
+                        .hasNext();) {
+                    SelectItem<?> selectItem = iter.next();
+                    selectItem.accept(this, null);
+                    if (iter.hasNext()) {
+                        buffer.append(", ");
+                    }
+                }
+                buffer.append(") ");
+            }
+        }
+    }
+
+    protected void deparseSelectItemsClause(PlainSelect plainSelect, List<SelectItem<?>> selectItems) {
+        if (selectItems != null) {
+            for (Iterator<SelectItem<?>> iter = selectItems.iterator(); iter.hasNext();) {
+                SelectItem<?> selectItem = iter.next();
+                selectItem.accept(this, null);
+                if (iter.hasNext()) {
+                    buffer.append(", ");
+                }
+            }
+        }
     }
 }

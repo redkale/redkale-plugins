@@ -236,9 +236,10 @@ public class NativeParserInfo extends DataNativeSqlInfo {
             ExpressionDeParser exprDeParser = new ExpressionDeParser() {
 
                 @Override
-                public void visit(JdbcNamedParameter expr) {
-                    super.visit(expr);
+                public <S> StringBuilder visit(JdbcNamedParameter expr, S context) {
+                    super.visit(expr, context);
                     fullJdbcNames.add(expr.getName());
+                    return buffer;
                 }
 
                 @Override
@@ -252,7 +253,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 }
 
                 @Override
-                public void visit(JdbcParameter jdbcParameter) {
+                public <S> StringBuilder visit(JdbcParameter jdbcParameter, S context) {
                     throw new SourceException("Cannot contains ? JdbcParameter");
                 }
             };
@@ -272,9 +273,10 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 ExpressionDeParser updateDeParser = new ExpressionDeParser() {
 
                     @Override
-                    public void visit(JdbcNamedParameter expr) {
-                        super.visit(expr);
+                    public <S> StringBuilder visit(JdbcNamedParameter expr, S context) {
+                        super.visit(expr, context);
                         updateNames.add(expr.getName());
+                        return buffer;
                     }
                 };
                 updateDeParser.setSelectVisitor(new SelectDeParser(updateDeParser, updateDeParser.getBuffer()));
