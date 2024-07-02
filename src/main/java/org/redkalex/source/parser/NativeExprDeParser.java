@@ -264,7 +264,6 @@ public class NativeExprDeParser extends ExpressionDeParser {
         return buffer;
     }
 
-    // --------------------------------------------------
     @Override
     public <S> StringBuilder visit(Between expr, S context) {
         paramLosing = false;
@@ -433,6 +432,7 @@ public class NativeExprDeParser extends ExpressionDeParser {
         return buffer;
     }
 
+    // ----------------------------------------- 私有方法 -----------------------------------------
     private void trimJdbcNames(int size1, int size2) {
         for (int i = size1; i < size2; i++) {
             jdbcNames.remove(jdbcNames.size() - 1);

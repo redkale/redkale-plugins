@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.expression.operators.relational.ParenthesedExpressionList;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
@@ -141,7 +140,7 @@ public class NativeParserNode {
             Expression countFunc = new net.sf.jsqlparser.expression.Function()
                     .withName("COUNT")
                     .withDistinct(true)
-                    .withParameters(new ParenthesedExpressionList(exprs));
+                    .withParameters(new ExpressionList(exprs));
             return Utility.ofList(new SelectItem(countFunc));
         }
     }

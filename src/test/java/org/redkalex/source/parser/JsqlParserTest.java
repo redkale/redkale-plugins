@@ -39,6 +39,7 @@ public class JsqlParserTest {
         test.run18();
         test.run19();
         test.run20();
+        test.run21();
     }
 
     @Test
@@ -59,7 +60,7 @@ public class JsqlParserTest {
                 + "AND time BETWEEN ? AND ? AND col2 >= ? AND id IN (SELECT id FROM table2 WHERE time > 1) "
                 + "LIMIT ? OFFSET ?";
         Assertions.assertEquals(expect, statement.getNativePageSql());
-        String expectCount = "SELECT COUNT(DISTINCT (col1, col2, col3)) FROM table_20240807 T "
+        String expectCount = "SELECT COUNT(DISTINCT col1, col2, col3) FROM table_20240807 T "
                 + "WHERE col1 = 10 AND (col2 = ?) AND name LIKE '%' AND seqid IS NULL "
                 + "AND (gameid IN (2, 3) OR gameName IN ('%', 'zzz')) AND time BETWEEN ? "
                 + "AND ? AND col2 >= ? AND id IN (SELECT id FROM table2 WHERE time > 1)";
@@ -432,5 +433,32 @@ public class JsqlParserTest {
         Assertions.assertEquals(repect, statement.getNativePageSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================20============================================");
+    }
+
+    @Test
+    public void run21() throws Exception {
+        String sql =
+                "SELECT DISTINCT userid, username FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 "
+                        + "WHERE userid = :idx) a ORDER BY name DESC";
+        Map<String, Object> params = Utility.ofMap("idx", 100);
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, flipper, params);
+
+        String repect =
+                "SELECT DISTINCT userid, username FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 "
+                        + "WHERE userid = ?) a ORDER BY name DESC";
+        Assertions.assertEquals(repect, statement.getNativeSql());
+        repect =
+                "SELECT DISTINCT userid, username FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 "
+                        + "WHERE userid = ?) a ORDER BY name DESC LIMIT ? OFFSET ?";
+        Assertions.assertEquals(repect, statement.getNativePageSql());
+        repect =
+                "SELECT COUNT(DISTINCT userid, username) FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 WHERE userid = ?) a";
+        Assertions.assertEquals(repect, statement.getNativeCountSql());
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("count-sql = " + statement.getNativeCountSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("=====================================21============================================");
     }
 }

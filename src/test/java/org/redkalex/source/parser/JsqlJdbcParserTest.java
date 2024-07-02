@@ -34,6 +34,7 @@ public class JsqlJdbcParserTest {
         test.run8();
         test.run9();
         test.run10();
+        test.run11();
     }
 
     @Test
@@ -46,7 +47,7 @@ public class JsqlJdbcParserTest {
         Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
 
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
-        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, null, params);
         System.out.println("新sql = " + statement.getNativeSql());
         System.out.println("新countsql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
@@ -228,5 +229,22 @@ public class JsqlJdbcParserTest {
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("==========================================10=======================================");
+    }
+
+    @Test
+    public void run11() throws Exception {
+        String sql = "SELECT COUNT(DISTINCT col1, col2, col3) FROM table T "
+                + "WHERE col1 = 10 AND (col2 = :c2 OR col3 = MAX(:c3)) AND name LIKE '%'"
+                + " AND seqid IS NULL AND (gameid IN :gameids OR gameName IN ('%', 'zzz'))"
+                + " AND time BETWEEN :min AND :range_max AND col2 >= :c2"
+                + " AND id IN (SELECT id FROM table2 WHERE name LIKE :name AND time > 1)";
+        Map<String, Object> params = Utility.ofMap("min2", 1, "c2", 3, "range_max", 100, "gameids", List.of(2, 3));
+
+        DataNativeJsqlParser parser = new DataNativeJsqlParser();
+        DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
+        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("新countsql = " + statement.getNativeCountSql());
+        System.out.println("paramNames = " + statement.getParamNames());
+        System.out.println("========================================11=========================================");
     }
 }
