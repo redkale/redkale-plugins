@@ -135,6 +135,26 @@ public class KafkaMessageAgent extends MessageAgent {
         return adminClient;
     }
 
+    public Properties getConsumerConfig() {
+        return consumerConfig;
+    }
+
+    public Properties getProducerConfig() {
+        return producerConfig;
+    }
+
+    public int getPartitions() {
+        return partitions;
+    }
+
+    public MessageClientConsumer getHttpMessageClientConsumer() {
+        return httpMessageClientConsumer;
+    }
+
+    public MessageClientConsumer getSncpMessageClientConsumer() {
+        return sncpMessageClientConsumer;
+    }
+
     @Override // ServiceLoader时判断配置是否符合当前实现类
     public boolean acceptsConf(AnyValue config) {
         if (config == null) {
@@ -154,61 +174,61 @@ public class KafkaMessageAgent extends MessageAgent {
     }
 
     @Override
-    public boolean createTopic(String... topics) {
+    public CompletableFuture<Void> createTopic(String... topics) {
         if (topics == null || topics.length < 1) {
-            return true;
+            return CompletableFuture.completedFuture(null);
         }
         try {
             List<NewTopic> newTopics = new ArrayList<>(topics.length);
             for (String t : topics) {
                 newTopics.add(new NewTopic(t, Optional.empty(), Optional.empty()));
             }
-            adminClient
+            return (CompletableFuture) adminClient
                     .createTopics(newTopics, new CreateTopicsOptions().timeoutMs(3000))
                     .all()
-                    .get(3, TimeUnit.SECONDS);
-            return true;
+                    .toCompletionStage();
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "createTopic error: " + Arrays.toString(topics), ex);
-            return false;
+            return CompletableFuture.failedFuture(ex);
         }
     }
 
     @Override
-    public boolean deleteTopic(String... topics) {
+    public CompletableFuture<Void> deleteTopic(String... topics) {
         if (topics == null || topics.length < 1) {
-            return true;
+            return CompletableFuture.completedFuture(null);
         }
         try {
-            adminClient
+            return (CompletableFuture) adminClient
                     .deleteTopics(Utility.ofList(topics), new DeleteTopicsOptions().timeoutMs(3000))
                     .all()
-                    .get(3, TimeUnit.SECONDS);
-            return true;
+                    .toCompletionStage();
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "deleteTopic error: " + Arrays.toString(topics), ex);
-            return false;
+            return CompletableFuture.failedFuture(ex);
         }
     }
 
     @Override
-    public List<String> queryTopic() {
+    public CompletableFuture<List<String>> queryTopic() {
         try {
-            Collection<TopicListing> list = adminClient
+            return (CompletableFuture) adminClient
                     .listTopics(new ListTopicsOptions().timeoutMs(3000))
                     .listings()
-                    .get(3, TimeUnit.SECONDS);
-            List<String> result = new ArrayList<>(list.size());
-            for (TopicListing t : list) {
-                if (!t.isInternal()) {
-                    result.add(t.name());
-                }
-            }
-            return result;
+                    .thenApply(list -> {
+                        List<String> result = new ArrayList<>(list.size());
+                        for (TopicListing t : list) {
+                            if (!t.isInternal()) {
+                                result.add(t.name());
+                            }
+                        }
+                        return result;
+                    })
+                    .toCompletionStage();
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "queryTopic error ", ex);
+            return CompletableFuture.failedFuture(ex);
         }
-        return null;
     }
 
     @Override
