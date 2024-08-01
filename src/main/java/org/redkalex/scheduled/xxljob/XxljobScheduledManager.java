@@ -17,8 +17,9 @@ import org.redkale.annotation.Component;
 import org.redkale.annotation.ResourceType;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.http.HttpServer;
-import org.redkale.scheduled.ScheduledEvent;
 import org.redkale.scheduled.Scheduled;
+import org.redkale.scheduled.ScheduledEvent;
+import org.redkale.scheduled.ScheduledManager;
 import org.redkale.scheduled.spi.ScheduleManagerService;
 import org.redkale.service.Local;
 import org.redkale.service.RetResult;
@@ -26,7 +27,6 @@ import org.redkale.util.AnyValue;
 import org.redkale.util.AnyValueWriter;
 import org.redkale.util.RedkaleException;
 import org.redkale.util.Utility;
-import org.redkale.scheduled.ScheduledManager;
 
 /**
  * 配置项: &#60;xxljob addresses="http://localhost:8080/xxl-job-admin" executorName="xxx" ip="127.0.0.1" port="5678"
@@ -73,7 +73,8 @@ public class XxljobScheduledManager extends ScheduleManagerService {
                     String regUrl = xxljobConfig.getDomain() + "/api/registryRemove";
                     String paramBody = JsonConvert.root().convertTo(registryParam);
                     String regResult = Utility.postHttpContent(regUrl, xxljobConfig.getHeaders(), paramBody);
-                    logger.log(Level.INFO,
+                    logger.log(
+                            Level.INFO,
                             XxljobScheduledManager.class.getSimpleName() + " registryRemove(" + regUrl + ") : "
                                     + regResult);
                 }
@@ -112,13 +113,14 @@ public class XxljobScheduledManager extends ScheduleManagerService {
             String regUrl = clientConf.getDomain() + "/api/registry";
             String regResult = Utility.postHttpContent(regUrl, clientConf.getHeaders(), paramBody);
             this.registryParam = regParam;
-            logger.log(Level.INFO,
+            logger.log(
+                    Level.INFO,
                     XxljobScheduledManager.class.getSimpleName() + " registry(" + regUrl + ")(" + paramBody + ") : "
                             + regResult);
         } catch (Exception ex) {
             throw new RedkaleException(
-                    XxljobScheduledManager.class.getSimpleName() + " connect " + clientConf.getDomain() + "/api/registry"
-                            + " error",
+                    XxljobScheduledManager.class.getSimpleName() + " connect " + clientConf.getDomain()
+                            + "/api/registry" + " error",
                     ex);
         }
     }
@@ -218,22 +220,20 @@ public class XxljobScheduledManager extends ScheduleManagerService {
             this.delegate = createFuncJob(ref, method);
         }
 
+        @Override
+        protected Function<ScheduledEvent, Object> delegate() {
+            return delegate;
+        }
+
         public ReturnT run() {
-            doing.set(true);
-            Object rs = null;
-            try {
-                rs = delegate.apply(event);
-            } catch (Throwable t) {
-                logger.log(Level.SEVERE, "schedule task error", t);
-                return new ReturnT(ReturnT.FAIL_CODE, t.toString());
-            } finally {
-                doing.set(false);
-            }
+            Object rs = super.execute();
             if (rs == null) {
                 return ReturnT.SUCCESS;
             } else if (rs instanceof RetResult) {
                 RetResult ret = (RetResult) rs;
-                return new ReturnT(ret.isSuccess() ? ReturnT.SUCCESS_CODE : ReturnT.FAIL_CODE, ret.getRetinfo());
+                ReturnT rt = new ReturnT(ret.isSuccess() ? ReturnT.SUCCESS_CODE : ReturnT.FAIL_CODE, ret.getRetinfo());
+                rt.setContent(ret.getResult());
+                return rt;
             }
             return new ReturnT(rs);
         }
