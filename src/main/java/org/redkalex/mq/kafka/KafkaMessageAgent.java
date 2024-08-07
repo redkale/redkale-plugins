@@ -175,7 +175,7 @@ public class KafkaMessageAgent extends MessageAgent {
 
     @Override
     public CompletableFuture<Void> createTopic(String... topics) {
-        if (topics == null || topics.length < 1) {
+        if (Utility.isEmpty(topics)) {
             return CompletableFuture.completedFuture(null);
         }
         try {
@@ -195,7 +195,7 @@ public class KafkaMessageAgent extends MessageAgent {
 
     @Override
     public CompletableFuture<Void> deleteTopic(String... topics) {
-        if (topics == null || topics.length < 1) {
+        if (Utility.isEmpty(topics)) {
             return CompletableFuture.completedFuture(null);
         }
         try {

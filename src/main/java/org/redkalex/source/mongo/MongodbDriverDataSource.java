@@ -96,7 +96,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
     @Override
     @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
-        if (events == null || events.length < 1) {
+        if (Utility.isEmpty(events)) {
             return;
         }
         // 不支持读写分离模式的动态切换

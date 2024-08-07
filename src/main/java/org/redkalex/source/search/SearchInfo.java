@@ -456,14 +456,14 @@ public final class SearchInfo<T> {
         if (tableStrategy == null) {
             return table;
         }
-        String[] t = tableStrategy.getTables(table, node);
-        if (t == null || t.length < 1) {
+        String[] ts = tableStrategy.getTables(table, node);
+        if (Utility.isEmpty(ts)) {
             throw new SourceException(table + " tableStrategy.getTable is empty, filter=" + node);
         }
-        if (t.length == 1) {
-            return t[0];
+        if (ts.length == 1) {
+            return ts[0];
         }
-        return Utility.joining(t, ',');
+        return Utility.joining(ts, ',');
     }
 
     /**

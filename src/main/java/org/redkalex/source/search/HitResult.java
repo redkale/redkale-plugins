@@ -7,6 +7,7 @@ package org.redkalex.source.search;
 
 import java.util.*;
 import org.redkale.util.Attribute;
+import org.redkale.util.Utility;
 
 /**
  * @author zhangjx
@@ -22,7 +23,9 @@ public class HitResult<T> extends BaseBean {
 
     public List<T> list(final SearchInfo<T> info) {
         List<T> vals = new ArrayList();
-        if (hits == null || hits.length < 1) return vals;
+        if (Utility.isEmpty(hits)) {
+            return vals;
+        }
         Attribute<T, String> highlightAttrId = info.getHighlightAttributeId();
         Attribute<T, String> highlightAttrIndex = info.getHighlightAttributeIndex();
         for (HitEntity<T> item : hits) {

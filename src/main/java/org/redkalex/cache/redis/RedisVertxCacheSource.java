@@ -157,7 +157,7 @@ public class RedisVertxCacheSource extends RedisSource {
     @Override
     @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
-        if (events == null || events.length < 1) {
+        if (Utility.isEmpty(events)) {
             return;
         }
         StringBuilder sb = new StringBuilder();
@@ -724,7 +724,7 @@ public class RedisVertxCacheSource extends RedisSource {
     @Override
     public CompletableFuture<Void> subscribeAsync(CacheEventListener<byte[]> listener, String... topics) {
         Objects.requireNonNull(listener);
-        if (topics == null || topics.length < 1) {
+        if (Utility.isEmpty(topics)) {
             throw new RedkaleException("topics is empty");
         }
         return pubSubConn().thenCompose(conn -> {
@@ -785,7 +785,7 @@ public class RedisVertxCacheSource extends RedisSource {
     public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
         if (listener == null) { // 清掉指定topic的所有订阅者
             Set<String> delTopics = new HashSet<>();
-            if (topics == null || topics.length < 1) {
+            if (Utility.isEmpty(topics)) {
                 delTopics.addAll(pubSubListeners.keySet());
             } else {
                 delTopics.addAll(Arrays.asList(topics));

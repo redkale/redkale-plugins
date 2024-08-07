@@ -12,6 +12,7 @@ import java.util.*;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientResult;
 import org.redkale.source.CacheScoredValue;
+import org.redkale.util.Utility;
 
 /** @author zhangjx */
 public class RedisCacheResult implements ClientResult {
@@ -51,7 +52,7 @@ public class RedisCacheResult implements ClientResult {
     }
 
     public int getCursor() {
-        if (frameCursor == null || frameCursor.length < 1) {
+        if (Utility.isEmpty(frameCursor)) {
             return -1;
         } else {
             return Integer.parseInt(new String(frameCursor));

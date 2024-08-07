@@ -5,8 +5,6 @@
  */
 package org.redkalex.cache.redis;
 
-import static org.redkale.util.Utility.*;
-
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +31,7 @@ import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
+import static org.redkale.util.Utility.*;
 
 /**
  * //https://www.cnblogs.com/xiami2046/p/13934146.html
@@ -202,7 +201,7 @@ public class RedissonCacheSource extends RedisSource {
     @Override
     @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
-        if (events == null || events.length < 1) {
+        if (Utility.isEmpty(events)) {
             return;
         }
         StringBuilder sb = new StringBuilder();
@@ -357,7 +356,7 @@ public class RedissonCacheSource extends RedisSource {
     public CompletableFuture<Integer> unsubscribeAsync(CacheEventListener listener, String... topics) {
         if (listener == null) { // 清掉指定topic的所有订阅者
             Set<String> delTopics = new HashSet<>();
-            if (topics == null || topics.length < 1) {
+            if (Utility.isEmpty(topics)) {
                 pubsubListeners.values().forEach(m -> delTopics.addAll(m.keySet()));
             } else {
                 delTopics.addAll(Arrays.asList(topics));
@@ -373,7 +372,7 @@ public class RedissonCacheSource extends RedisSource {
             if (topicToIds == null || topicToIds.isEmpty()) { // 没有找到指定订阅者
                 return CompletableFuture.completedFuture(0);
             } else { // 清掉指定订阅者的指定topic
-                if (topics == null || topics.length < 1) {
+                if (Utility.isEmpty(topics)) {
                     return CompletableFuture.failedFuture(new RedkaleException("topics is empty"));
                 }
                 Predicate<String> filter = t -> Utility.contains(topics, t);

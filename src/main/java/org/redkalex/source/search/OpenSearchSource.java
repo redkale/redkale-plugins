@@ -116,7 +116,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @ResourceChanged
     public void onResourceChange(ResourceEvent[] events) {
-        if (events == null || events.length < 1) {
+        if (Utility.isEmpty(events)) {
             return;
         }
         StringBuilder sb = new StringBuilder();
