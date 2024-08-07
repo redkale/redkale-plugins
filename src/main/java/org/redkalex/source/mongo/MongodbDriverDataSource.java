@@ -5,8 +5,6 @@
  */
 package org.redkalex.source.mongo;
 
-import static org.redkale.source.DataSources.*;
-
 import com.mongodb.*;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.model.*;
@@ -28,6 +26,7 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
@@ -589,7 +588,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
         if (entitys.length == 0) {
             return 0;
         }
-        checkEntity("insert", false, entitys);
+        checkEntity("insert", entitys);
         return insertAsync(entitys).join();
     }
 
@@ -598,7 +597,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
         if (entitys.length == 0) {
             return CompletableFuture.completedFuture(0);
         }
-        checkEntity("insert", false, entitys);
+        checkEntity("insert", entitys);
         EntityInfo<T> info = loadEntityInfo((Class<T>) entitys[0].getClass());
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
@@ -612,7 +611,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
         if (entitys.length == 0) {
             return 0;
         }
-        checkEntity("delete", false, entitys);
+        checkEntity("delete", entitys);
         return deleteAsync(entitys).join();
     }
 
@@ -621,7 +620,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
         if (entitys.length == 0) {
             return CompletableFuture.completedFuture(0);
         }
-        checkEntity("delete", false, entitys);
+        checkEntity("delete", entitys);
         EntityInfo<T> info = loadEntityInfo((Class<T>) entitys[0].getClass());
         MongoCollection<T> collection = getWriteMongoCollection(info);
         Attribute<T, Serializable> primary = info.getPrimary();
@@ -724,7 +723,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
         if (entitys.length == 0) {
             return CompletableFuture.completedFuture(0);
         }
-        checkEntity("update", false, entitys);
+        checkEntity("update", entitys);
         EntityInfo<T> info = loadEntityInfo((Class<T>) entitys[0].getClass());
         MongoCollection<T> collection = getWriteMongoCollection(info);
 

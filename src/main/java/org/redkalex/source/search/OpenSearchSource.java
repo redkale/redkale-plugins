@@ -5,8 +5,6 @@
  */
 package org.redkalex.source.search;
 
-import static org.redkale.source.DataSources.*;
-
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.net.*;
@@ -27,6 +25,7 @@ import org.redkale.inject.ResourceEvent;
 import org.redkale.persistence.Entity;
 import org.redkale.service.*;
 import org.redkale.source.*;
+import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
@@ -180,31 +179,19 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     }
 
     // 检查对象是否都是同一个Entity类
-    protected <T> CompletableFuture checkEntity(String action, boolean async, T... entitys) {
-        if (entitys.length < 1) {
-            return null;
-        }
+    protected <T> void checkEntity(String action, T... entitys) {
         Class clazz = null;
         for (T val : entitys) {
             if (clazz == null) {
                 clazz = val.getClass();
                 if (clazz.getAnnotation(Entity.class) == null) {
-                    throw new SourceException("Entity Class " + clazz + " must be on annotation @Entity");
+                    throw new SourceException("Entity Class " + clazz + " must be on Annotation @Entity");
                 }
-                continue;
-            }
-            if (clazz != val.getClass()) {
-                if (async) {
-                    CompletableFuture future = new CompletableFuture<>();
-                    future.completeExceptionally(new RuntimeException("SearchSource." + action
-                            + " must the same Class Entity, but diff is " + clazz + " and " + val.getClass()));
-                    return future;
-                }
-                throw new SourceException("SearchSource." + action + " must the same Class Entity, but diff is " + clazz
+            } else if (clazz != val.getClass()) {
+                throw new SourceException("DataSource." + action + " must the same Class Entity, but diff is " + clazz
                         + " and " + val.getClass());
             }
         }
-        return null;
     }
 
     protected CompletableFuture<RetResult<String>> deleteAsync(CharSequence path) {
@@ -404,10 +391,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T> CompletableFuture<Integer> insertAsync(T... entitys) {
-        CompletableFuture future = checkEntity("insert", true, entitys);
-        if (future != null) {
-            return future;
-        }
+        checkEntity("insert", entitys);
         final SearchInfo<T> info = loadSearchInfo(entitys[0].getClass());
         if (entitys.length == 1) {
             return insertOneAsync(info, entitys[0]);
@@ -480,10 +464,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T> CompletableFuture<Integer> deleteAsync(T... entitys) {
-        CompletableFuture future = checkEntity("delete", true, entitys);
-        if (future != null) {
-            return future;
-        }
+        checkEntity("delete", entitys);
         final SearchInfo<T> info = loadSearchInfo(entitys[0].getClass());
         final Attribute<T, Serializable> primary = info.getPrimary();
         if (entitys.length == 1) {
@@ -736,10 +717,7 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
 
     @Override
     public <T> CompletableFuture<Integer> updateAsync(T... entitys) {
-        CompletableFuture future = checkEntity("update", true, entitys);
-        if (future != null) {
-            return future;
-        }
+        checkEntity("update", entitys);
         final SearchInfo<T> info = loadSearchInfo(entitys[0].getClass());
         if (entitys.length == 1) {
             return updateOneAsync(info, entitys[0]);
