@@ -232,7 +232,9 @@ public class MongodbDriverDataSource extends AbstractDataSource
     }
 
     // 可重载
-    protected void initProperties(Properties props) {}
+    protected void initProperties(Properties props) {
+        // do nothing
+    }
 
     @Override
     public void destroy(AnyValue config) {
@@ -440,22 +442,22 @@ public class MongodbDriverDataSource extends AbstractDataSource
             return null;
         } else if (node instanceof ColumnNumberNode) {
             Number val = ((ColumnNumberNode) node).getValue();
-            BsonNumber bn = null;
+            BsonNumber bn;
             if (val instanceof Number) {
                 if (val instanceof Float || val instanceof Double) {
-                    double d = ((Number) val).doubleValue();
+                    double d = val.doubleValue();
                     if (dec) {
                         d = -d;
                     }
                     bn = new BsonDouble(d);
                 } else if (val instanceof Long) {
-                    long d = ((Number) val).longValue();
+                    long d = val.longValue();
                     if (dec) {
                         d = -d;
                     }
                     bn = new BsonInt64(d);
                 } else {
-                    int d = ((Number) val).intValue();
+                    int d = val.intValue();
                     if (dec) {
                         d = -d;
                     }
@@ -848,9 +850,10 @@ public class MongodbDriverDataSource extends AbstractDataSource
         MongoCollection<T> collection = getWriteMongoCollection(info);
 
         ReatorFuture<UpdateResult> future = new ReatorFuture<>();
-        collection
-                .updateMany(createFilterBson(info, node), Updates.combine(items))
-                .subscribe(future);
+        Bson filter = node == null
+                ? Filters.eq(info.getPrimaryField(), info.getPrimary().get(entity))
+                : createFilterBson(info, node);
+        collection.updateMany(filter, Updates.combine(items)).subscribe(future);
         return future.thenApply(v -> (int) v.getModifiedCount());
     }
 
