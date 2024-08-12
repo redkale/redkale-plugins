@@ -112,15 +112,11 @@ public class KafkaMessageProducer implements MessageProducer {
 
     public void stop() {
         if (this.closed.compareAndSet(false, true)) {
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + messageAgent.getName() + ") closing");
-            }
+            logger.log(Level.INFO, getClass().getSimpleName() + "(name=" + messageAgent.getName() + ") closing");
             if (this.producer != null) {
                 this.producer.close();
             }
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + messageAgent.getName() + ") closed");
-            }
+            logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + messageAgent.getName() + ") closed");
         }
     }
 }

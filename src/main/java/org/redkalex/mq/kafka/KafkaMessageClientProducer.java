@@ -42,12 +42,9 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
         this.config = messageAgent.createProducerProperties();
         this.producer = new KafkaProducer<>(
                 this.config, new StringSerializer(), new MessageRecordSerializer(messageAgent.getMessageRecordCoder()));
-        if (logger.isLoggable(Level.INFO)) {
-            logger.log(
-                    Level.INFO,
-                    getClass().getSimpleName() + "(mq=" + messageAgent.getName() + "， name=" + producerName
-                            + ") started");
-        }
+        logger.log(
+                Level.INFO,
+                getClass().getSimpleName() + "(mq=" + messageAgent.getName() + "， name=" + producerName + ") started");
     }
 
     @Override
@@ -143,15 +140,11 @@ public class KafkaMessageClientProducer extends MessageClientProducer {
     @Override
     public void stop() {
         if (this.closed.compareAndSet(false, true)) {
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + name + ") closing");
-            }
+            logger.log(Level.INFO, getClass().getSimpleName() + "(name=" + name + ") closing");
             if (this.producer != null) {
                 this.producer.close();
             }
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(name=" + name + ") closed");
-            }
+            logger.log(Level.INFO, getClass().getSimpleName() + "(name=" + name + ") closed");
         }
     }
 

@@ -788,7 +788,7 @@ public class WeiXinPayService extends AbstractPayService {
                                 || apiv3key.length() != 32
                                 || (prikeypath.isEmpty() && prikeybase64.isEmpty())
                                 || (certpath.isEmpty() && certbase64.isEmpty())) {
-                            logger.log(Level.WARNING, properties + "; has illegal weixinpay conf by prefix" + prefix);
+                            logger.log(Level.WARNING, "WeixinPayElement has illegal weixinpay conf by prefix" + prefix);
                             return;
                         }
                         WeixinPayElement element = new WeixinPayElement();

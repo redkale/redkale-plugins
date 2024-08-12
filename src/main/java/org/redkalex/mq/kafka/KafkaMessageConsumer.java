@@ -65,9 +65,6 @@ class KafkaMessageConsumer implements Runnable {
                 new ByteArrayDeserializer());
         this.consumer.subscribe(this.topics);
         this.startFuture.complete(null);
-        if (logger.isLoggable(Level.FINE)) {
-            logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") started");
-        }
         try {
             Map<String, Map<Integer, List<ConsumerRecord<String, byte[]>>>> map = new LinkedHashMap<>();
             Map<String, Map<Integer, MessageConext>> contexts = new LinkedHashMap<>();
@@ -145,14 +142,11 @@ class KafkaMessageConsumer implements Runnable {
             if (this.consumer != null) {
                 this.consumer.close();
             }
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") stoped");
-            }
         } catch (Throwable t) {
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") stoped");
-            }
-            logger.log(Level.SEVERE, getClass().getSimpleName() + "(topics=" + this.topics + ") occur error", t);
+            logger.log(
+                    Level.SEVERE,
+                    getClass().getSimpleName() + "(topics=" + this.topics + ", group=" + group + ") occur error",
+                    t);
         } finally {
             if (this.closeFuture != null) {
                 this.closeFuture.complete(null);
@@ -170,11 +164,14 @@ class KafkaMessageConsumer implements Runnable {
             this.thread = new Thread(this);
             this.startFuture = new CompletableFuture<>();
             this.thread.setName(MessageConsumer.class.getSimpleName() + "-[" + group + "]-Thread");
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") starting");
-            }
+            logger.log(
+                    Level.INFO,
+                    getClass().getSimpleName() + "(topics=" + this.topics + ", group=" + group + ") starting");
             this.thread.start();
             this.startFuture.join();
+            logger.log(
+                    Level.INFO,
+                    getClass().getSimpleName() + "(topics=" + this.topics + ", group=" + group + ") started");
         } finally {
             startCloseLock.unlock();
         }
@@ -193,13 +190,16 @@ class KafkaMessageConsumer implements Runnable {
             if (this.closed) {
                 return;
             }
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, getClass().getSimpleName() + "(topics=" + this.topics + ") stoping");
-            }
+            logger.log(
+                    Level.INFO,
+                    getClass().getSimpleName() + "(topics=" + this.topics + ", group=" + group + ") stoping");
             this.closeFuture = new CompletableFuture<>();
             this.closed = true;
             this.thread.interrupt();
             this.closeFuture.join();
+            logger.log(
+                    Level.INFO,
+                    getClass().getSimpleName() + "(topics=" + this.topics + ", group=" + group + ") stoped");
         } finally {
             startCloseLock.unlock();
         }

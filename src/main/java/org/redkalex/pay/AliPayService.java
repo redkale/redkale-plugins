@@ -731,7 +731,7 @@ public final class AliPayService extends AbstractPayService {
                                 .trim();
 
                         if (appid.isEmpty() || notifyurl.isEmpty() || appprikeybase64.isEmpty()) {
-                            logger.log(Level.WARNING, properties + "; has illegal alipay conf by prefix" + prefix);
+                            logger.log(Level.WARNING, "AliPayElement has illegal alipay conf by prefix" + prefix);
                             return;
                         }
                         AliPayElement element = new AliPayElement();

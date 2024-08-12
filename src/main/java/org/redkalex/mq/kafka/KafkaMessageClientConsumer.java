@@ -56,12 +56,6 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
         Collection<String> topics = getTopics();
         this.kafkaConsumer.subscribe(topics);
         this.startFuture.complete(null);
-        if (logger.isLoggable(Level.FINE)) {
-            logger.log(
-                    Level.FINE,
-                    getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this)
-                            + ") started");
-        }
         try {
             MessageProcessor processor = this.messageClient;
             ConsumerRecords<String, MessageRecord> records;
@@ -160,19 +154,7 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             if (this.kafkaConsumer != null) {
                 this.kafkaConsumer.close();
             }
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(
-                        Level.FINE,
-                        getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this)
-                                + ") stoped");
-            }
         } catch (Throwable t) {
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(
-                        Level.FINE,
-                        getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this)
-                                + ") stoped");
-            }
             if (!this.closed) {
                 logger.log(
                         Level.SEVERE,
@@ -198,15 +180,17 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             this.thread = new Thread(this);
             this.thread.setName(
                     MessageClientConsumer.class.getSimpleName() + "-" + messageClient.getAppRespTopic() + "-Thread");
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(
-                        Level.FINE,
-                        getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this)
-                                + ") starting");
-            }
+            logger.log(
+                    Level.INFO,
+                    getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this)
+                            + ") starting");
             this.startFuture = new CompletableFuture<>();
             this.thread.start();
             this.startFuture.join();
+            logger.log(
+                    Level.INFO,
+                    getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this)
+                            + ") started");
         } finally {
             startCloseLock.unlock();
         }
@@ -223,16 +207,18 @@ public class KafkaMessageClientConsumer extends MessageClientConsumer implements
             if (this.kafkaConsumer == null || this.closed) {
                 return;
             }
-            if (logger.isLoggable(Level.FINE)) {
-                logger.log(
-                        Level.FINE,
-                        getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this)
-                                + ") stoping");
-            }
+            logger.log(
+                    Level.INFO,
+                    getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this)
+                            + ") stoping");
             this.closeFuture = new CompletableFuture<>();
             this.closed = true;
             this.thread.interrupt();
             this.closeFuture.join();
+            logger.log(
+                    Level.INFO,
+                    getClass().getSimpleName() + "(" + messageClient.getProtocol() + "-" + Objects.hashCode(this)
+                            + ") stoped");
         } finally {
             startCloseLock.unlock();
         }
