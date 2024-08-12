@@ -121,9 +121,8 @@ public class KafkaMessageAgent extends MessageAgent {
         if (group != null) {
             props.put(ConsumerConfig.GROUP_ID_CONFIG, group);
         }
-        props.put(
-                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                "latest"); // 当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
+        // 当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, "1000");
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
@@ -140,7 +139,8 @@ public class KafkaMessageAgent extends MessageAgent {
         props.put(ProducerConfig.BATCH_SIZE_CONFIG, 1024);
         props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
         props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
-        props.put(ProducerConfig.ACKS_CONFIG, "1"); // all:所有follower都响应了才认为消息提交成功，即"committed"
+        // all:所有follower都响应了才认为消息提交成功，即"committed"
+        props.put(ProducerConfig.ACKS_CONFIG, "1");
         props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "6000");
         props.put(ConsumerConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, "6000");
         props.putAll(producerConfig);
