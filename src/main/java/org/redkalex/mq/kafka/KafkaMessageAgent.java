@@ -8,7 +8,6 @@ package org.redkalex.mq.kafka;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -27,6 +26,8 @@ public class KafkaMessageAgent extends MessageAgent {
     protected String controllers;
 
     protected int checkIntervals = 10;
+
+    protected Properties adminConfig = new Properties();
 
     protected Properties consumerConfig = new Properties();
 
@@ -62,12 +63,23 @@ public class KafkaMessageAgent extends MessageAgent {
                     for (AnyValue val : confValues.getAnyValues("property")) {
                         this.producerConfig.put(val.getValue("name"), val.getValue("value"));
                     }
+                } else if ("admin".equals(confValues.getValue("type"))) {
+                    for (AnyValue val : confValues.getAnyValues("property")) {
+                        this.adminConfig.put(val.getValue("name"), val.getValue("value"));
+                    }
                 }
             }
         }
-        Properties props = new Properties();
-        props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, controllers);
-        this.adminClient = KafkaAdminClient.create(props);
+        this.adminClient = KafkaAdminClient.create(createAdminProperties());
+        // 需要ping配置是否正确
+        try {
+            long s = System.currentTimeMillis();
+            this.adminClient.listConsumerGroups().errors().get(6, TimeUnit.SECONDS);
+            long e = System.currentTimeMillis() - s;
+            logger.log(Level.INFO, "KafkaMessageAgent ping cost " + e + " ms");
+        } catch (Exception e) {
+            throw new RedkaleException("KafkaMessageAgent controllers: " + this.controllers, e);
+        }
     }
 
     @Override
@@ -95,6 +107,15 @@ public class KafkaMessageAgent extends MessageAgent {
         }
     }
 
+    protected Properties createAdminProperties() {
+        final Properties props = new Properties();
+        props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "6000");
+        props.put(ConsumerConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, "6000");
+        props.putAll(adminConfig);
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, controllers);
+        return props;
+    }
+
     protected Properties createConsumerProperties(String group) {
         final Properties props = new Properties();
         if (group != null) {
@@ -106,6 +127,8 @@ public class KafkaMessageAgent extends MessageAgent {
         props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, "1000");
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
+        props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "6000");
+        props.put(ConsumerConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, "6000");
         props.putAll(consumerConfig);
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         return props;
@@ -118,6 +141,8 @@ public class KafkaMessageAgent extends MessageAgent {
         props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
         props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
         props.put(ProducerConfig.ACKS_CONFIG, "1"); // all:所有follower都响应了才认为消息提交成功，即"committed"
+        props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "6000");
+        props.put(ConsumerConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, "6000");
         props.putAll(producerConfig);
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, servers);
         return props;
@@ -167,10 +192,7 @@ public class KafkaMessageAgent extends MessageAgent {
         if (ser == null) {
             return false;
         }
-        if (ser.getValue("value") != null && !ser.getValue("value").contains("pulsar")) {
-            return true;
-        }
-        return false;
+        return (ser.getValue("value") != null && !ser.getValue("value").contains("pulsar"));
     }
 
     @Override
