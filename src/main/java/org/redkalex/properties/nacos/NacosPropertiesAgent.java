@@ -276,7 +276,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
         if (info.dataId.endsWith(".properties")) {
             props.load(new StringReader(content));
         } else { // yml
-            props.putAll(new YmlReader(content).read().toProperties());
+            props.putAll(new YamlReader(content).read().toProperties());
         }
     }
 
