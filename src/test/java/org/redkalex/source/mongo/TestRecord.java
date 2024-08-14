@@ -5,6 +5,7 @@
  */
 package org.redkalex.source.mongo;
 
+import org.redkale.convert.ConvertColumn;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.*;
 
@@ -21,6 +22,7 @@ public class TestRecord {
 
     private int score;
 
+    @ConvertColumn(ignore = true)
     private long createTime;
 
     public String getRecordid() {

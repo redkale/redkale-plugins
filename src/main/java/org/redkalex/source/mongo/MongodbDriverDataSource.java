@@ -17,6 +17,8 @@ import java.util.logging.*;
 import java.util.stream.Stream;
 import org.bson.*;
 import org.bson.codecs.configuration.*;
+import org.bson.codecs.pojo.ClassModelBuilder;
+import org.bson.codecs.pojo.Convention;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import org.bson.conversions.Bson;
 import org.reactivestreams.*;
@@ -220,10 +222,42 @@ public class MongodbDriverDataSource extends AbstractDataSource
         settingBuilder.applyConnectionString(cc);
         CodecRegistry registry = CodecRegistries.fromRegistries(
                 MongoClientSettings.getDefaultCodecRegistry(),
-                CodecRegistries.fromProviders(
-                        PojoCodecProvider.builder().automatic(true).build()));
+                CodecRegistries.fromProviders(PojoCodecProvider.builder()
+                        .automatic(true)
+                        .conventions(List.of(createConvention()))
+                        .build()));
         settingBuilder.codecRegistry(registry);
         return MongoClients.create(settingBuilder.build());
+    }
+
+    protected Convention createConvention() {
+        return new MongoConvention();
+    }
+
+    protected class MongoConvention implements Convention {
+
+        @Override
+        public void apply(ClassModelBuilder<?> builder) {
+            EntityInfo info = getEntityInfo(builder.getType());
+            if (info != null) {
+                Set<String> validCols = new HashSet<>();
+                for (EntityColumn col : info.getInsertColumns()) {
+                    validCols.add(col.getField());
+                }
+                for (EntityColumn col : info.getUpdateColumns()) {
+                    validCols.add(col.getField());
+                }
+                Set<String> fields = new HashSet<>();
+                builder.getPropertyModelBuilders().forEach(p -> {
+                    fields.add(p.getName());
+                });
+                for (String field : fields) {
+                    if (!validCols.contains(field)) {
+                        builder.removeProperty(field);
+                    }
+                }
+            }
+        }
     }
 
     // 解密可能存在的加密字段, 可重载
@@ -261,8 +295,22 @@ public class MongodbDriverDataSource extends AbstractDataSource
         return loadEntityInfo(t);
     }
 
+    @Local
     protected <T> EntityInfo<T> loadEntityInfo(Class<T> clazz) {
         return loadEntityInfo(clazz, this.cacheForbidden, readConfProps, null);
+    }
+
+    /**
+     * 加载指定类的EntityInfo
+     *
+     * @param <T> 泛型
+     * @param clazz 类
+     * @return EntityInfo
+     */
+    @Local
+    @Override
+    protected <T> EntityInfo<T> getEntityInfo(Class<T> clazz) {
+        return getEntityInfo(clazz);
     }
 
     @Override
