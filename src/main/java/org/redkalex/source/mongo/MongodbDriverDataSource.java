@@ -515,7 +515,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
                 return Filters.eq(node.getColumn(), formatFilterValue(info, node.getValue()));
             }
             case IG_EQ: {
-                return Filters.regex(node.getColumn(), "/^" + node.getValue() + "$/i");
+                return Filters.regex(node.getColumn(), "^" + node.getValue() + "$", "i");
             }
             case NE:
             case IG_NE: {
@@ -534,10 +534,16 @@ public class MongodbDriverDataSource extends AbstractDataSource
                 return Filters.lte(node.getColumn(), formatFilterValue(info, node.getValue()));
             }
             case LIKE: {
-                return Filters.regex(node.getColumn(), "/" + node.getValue() + "/");
+                return Filters.regex(node.getColumn(), "" + node.getValue());
+            }
+            case IG_LIKE: {
+                return Filters.regex(node.getColumn(), "" + node.getValue(), "i");
             }
             case NOT_LIKE: {
-                return Filters.not(Filters.regex(node.getColumn(), "/" + node.getValue() + "/"));
+                return Filters.not(Filters.regex(node.getColumn(), "" + node.getValue()));
+            }
+            case IG_NOT_LIKE: {
+                return Filters.not(Filters.regex(node.getColumn(), "" + node.getValue(), "i"));
             }
             case IN: {
                 return Filters.in(

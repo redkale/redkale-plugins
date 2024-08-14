@@ -130,11 +130,11 @@ public class NacosPropertiesAgent extends PropertiesAgent {
                             Thread.sleep(5_000);
                             return;
                         }
-                        if (content == null || content.trim().isEmpty()) {
+                        if (Utility.isBlank(content)) {
                             return;
                         }
                         logger.log(
-                                Level.FINER,
+                                Level.INFO,
                                 "nacos pulling content: " + content.trim() + ", cost "
                                         + (System.currentTimeMillis() - s) + " ms");
                         String split1 = Character.toString((char) 1);
@@ -251,7 +251,7 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             } else {
                 info.contentMD5 = md5Header;
             }
-            props.load(new StringReader(content));
+            readContent(info, props, content);
 
             if (result == null) { // 配置项动态变更时需要一次性提交所有配置项
                 onEnvironmentUpdated(application, info.dataId, ResourceEvent.create(info.properties, props));
@@ -269,6 +269,14 @@ public class NacosPropertiesAgent extends PropertiesAgent {
             if (result != null) {
                 throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
             }
+        }
+    }
+
+    protected static void readContent(NacosInfo info, Properties props, String content) throws Exception {
+        if (info.dataId.endsWith(".properties")) {
+            props.load(new StringReader(content));
+        } else { // yml
+            props.putAll(new YmlReader(content).read().toProperties());
         }
     }
 

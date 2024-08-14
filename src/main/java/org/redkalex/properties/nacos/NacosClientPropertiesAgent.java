@@ -6,7 +6,6 @@ import com.alibaba.nacos.api.NacosFactory;
 import com.alibaba.nacos.api.config.ConfigService;
 import com.alibaba.nacos.api.config.listener.Listener;
 import com.alibaba.nacos.api.exception.NacosException;
-import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,6 +15,7 @@ import org.redkale.inject.ResourceEvent;
 import org.redkale.props.spi.PropertiesAgent;
 import org.redkale.util.*;
 import org.redkalex.properties.nacos.NacosPropertiesAgent.NacosInfo;
+import static org.redkalex.properties.nacos.NacosPropertiesAgent.readContent;
 
 /**
  * 依赖于nacos-client实现的Nacos配置 https://github.com/alibaba/nacos
@@ -116,8 +116,8 @@ public class NacosClientPropertiesAgent extends PropertiesAgent {
         try {
             info.content = content;
             info.contentMD5 = Utility.md5Hex(content);
-            props.load(new StringReader(content));
-        } catch (IOException e) {
+            readContent(info, props, content);
+        } catch (Exception e) {
             logger.log(Level.SEVERE, "Load nacos content (dataId=" + info.dataId + ") error", e);
             return;
         }
