@@ -23,7 +23,7 @@ import org.redkale.util.*;
  * 4、 目前使用的基础数据类型为：bool、sint32、sint64、float、double、bytes、string、map、Any <br>
  *
  * @deprecated
- * @see org.redkale.convert.proto.ProtobufConvert
+ * @see org.redkale.convert.pb.ProtobufConvert
  * @author zhangjx
  */
 @Deprecated(since = "2.8.0")

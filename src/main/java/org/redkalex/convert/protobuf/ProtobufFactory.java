@@ -16,7 +16,7 @@ import org.redkale.util.AnyValueWriter;
 
 /**
  * @deprecated
- * @see org.redkale.convert.proto.ProtobufFactory
+ * @see org.redkale.convert.pb.ProtobufFactory
  * @author zhangjx
  */
 @Deprecated(since = "2.8.0")
