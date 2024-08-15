@@ -310,7 +310,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
     @Local
     @Override
     protected <T> EntityInfo<T> getEntityInfo(Class<T> clazz) {
-        return getEntityInfo(clazz);
+        return super.getEntityInfo(clazz);
     }
 
     @Override
