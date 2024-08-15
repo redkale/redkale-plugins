@@ -377,11 +377,12 @@ public class MongodbDriverDataSource extends AbstractDataSource
         if (flipper == null) {
             return null;
         }
-        if (flipper.getSort() == null || flipper.getSort().isEmpty()) {
+        if (flipper.getSort() == null || flipper.getSort().trim().isEmpty()) {
             return null;
         }
         List<Bson> sorts = new ArrayList<>();
-        for (String item : flipper.getSort().split(",")) {
+        for (String item : flipper.getSort().trim().split(",")) {
+            item = item.trim();
             if (item.isEmpty()) {
                 continue;
             }
