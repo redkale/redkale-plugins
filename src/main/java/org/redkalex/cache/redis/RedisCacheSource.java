@@ -1132,7 +1132,7 @@ public final class RedisCacheSource extends RedisSource {
             if (isNotEmpty(traceid)) {
                 Traces.computeIfAbsent(traceid);
             }
-            return conn.writeRequest(requests);
+            return Utility.allOfFutures(conn.writeRequest(requests));
         });
     }
 

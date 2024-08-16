@@ -11,6 +11,7 @@ import org.redkale.annotation.Nullable;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.util.Traces;
+import org.redkale.util.Utility;
 
 /** @author zhangjx */
 public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheRequest, RedisCacheResult> {
@@ -39,19 +40,21 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
         if (authReq != null && dbReq != null) {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
-                return conn -> writeChannel(conn, authReq.currentNow(), dbReq.currentNow(), clientNameReq.currentNow())
+                return conn -> Utility.allOfFutures(writeChannel(
+                                conn, authReq.currentNow(), dbReq.currentNow(), clientNameReq.currentNow()))
                         .thenApply(v -> conn);
             };
         } else if (authReq != null) {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
-                return conn -> writeChannel(conn, authReq.currentNow(), clientNameReq.currentNow())
+                return conn -> Utility.allOfFutures(
+                                writeChannel(conn, authReq.currentNow(), clientNameReq.currentNow()))
                         .thenApply(v -> conn);
             };
         } else if (dbReq != null) {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
-                return conn -> writeChannel(conn, dbReq.currentNow(), clientNameReq.currentNow())
+                return conn -> Utility.allOfFutures(writeChannel(conn, dbReq.currentNow(), clientNameReq.currentNow()))
                         .thenApply(v -> conn);
             };
         } else {

@@ -58,7 +58,8 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
                 boolean over = false;
                 list.clear();
                 list.add(respFuture);
-                while ((respFuture = writeQueue.poll()) != null) {
+                int max = getMaxPipelines();
+                while (--max > 0 && (respFuture = writeQueue.poll()) != null) {
                     if (respFuture == ClientFuture.NIL) {
                         over = true;
                         break;
