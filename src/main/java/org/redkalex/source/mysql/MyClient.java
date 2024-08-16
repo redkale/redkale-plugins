@@ -87,8 +87,8 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
 
     @Override
     protected <T> CompletableFuture<T> writeChannel(
-            ClientConnection conn, MyClientRequest request, Function<MyResultSet, T> respTransfer) {
-        return super.writeChannel(conn, request, respTransfer);
+            ClientConnection conn, Function<MyResultSet, T> respTransfer, MyClientRequest request) {
+        return super.writeChannel(conn, respTransfer, request);
     }
 
     @Override

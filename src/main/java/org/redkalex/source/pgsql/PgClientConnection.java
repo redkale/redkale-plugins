@@ -66,7 +66,7 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
                         list.add(respFuture);
                     }
                 }
-                super.sendRequestInLocking(list.toArray(new ClientFuture[list.size()]));
+                super.sendRequestToChannel(list.toArray(new ClientFuture[list.size()]));
                 list.clear();
                 if (over) {
                     return;
@@ -80,8 +80,14 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
     }
 
     @Override
-    protected void sendRequestInLocking(PgClientRequest request, ClientFuture respFuture) {
+    protected void offerRespFuture(ClientFuture respFuture) {
+        super.offerRespFuture(respFuture);
         writeQueue.offer(respFuture);
+    }
+
+    @Override
+    protected void sendRequestInLocking(ClientFuture... respFutures) {
+        // do nothing
     }
 
     protected void offerResultSet(PgReqExtended req, PgResultSet rs) {

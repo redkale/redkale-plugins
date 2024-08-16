@@ -33,13 +33,13 @@ public class RedisCacheConnection extends ClientConnection<RedisCacheRequest, Re
     }
 
     protected <T> CompletableFuture<T> writeRequest(
-            RedisCacheRequest request, Function<RedisCacheResult, T> respTransfer) {
-        return super.writeChannel(request, respTransfer);
+            Function<RedisCacheResult, T> respTransfer, RedisCacheRequest request) {
+        return super.writeChannel(respTransfer, request);
     }
 
     protected <T> CompletableFuture<List<T>> writeRequest(
-            RedisCacheRequest[] requests, Function<RedisCacheResult, T> respTransfer) {
-        return super.writeChannel(requests, respTransfer);
+            Function<RedisCacheResult, T> respTransfer, RedisCacheRequest[] requests) {
+        return super.writeChannel(respTransfer, requests);
     }
 
     public RedisCacheResult pollResultSet(RedisCacheRequest request) {

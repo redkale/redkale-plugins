@@ -1153,7 +1153,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                 MyReqExtended countReq = conn.pollReqExtended(workThread, null);
                 Stream<Object> pstream = sinfo.getParamNames().stream().map(n -> (Serializable) params.get(n));
                 countReq.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, countSql, 0, pstream);
-                return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
+                return pool.writeChannel(conn, countTransfer, countReq).thenCompose(total -> {
                     if (total < 1) {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
@@ -1171,7 +1171,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                             slowLog(s2, pageSql);
                             return new Sheet<>(total, list);
                         };
-                        return pool.writeChannel(conn, req, sheetTransfer);
+                        return pool.writeChannel(conn, sheetTransfer, req);
                     }
                 });
             });
@@ -1179,7 +1179,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
             return pool.connect().thenCompose(conn -> {
                 MyReqQuery countReq = conn.pollReqQuery(workThread, null);
                 countReq.prepare(countSql);
-                return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
+                return pool.writeChannel(conn, countTransfer, countReq).thenCompose(total -> {
                     if (total < 1) {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
@@ -1192,7 +1192,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                             slowLog(s2, pageSql);
                             return new Sheet<>(total, list);
                         };
-                        return pool.writeChannel(conn, req, sheetTransfer);
+                        return pool.writeChannel(conn, sheetTransfer, req);
                     }
                 });
             });

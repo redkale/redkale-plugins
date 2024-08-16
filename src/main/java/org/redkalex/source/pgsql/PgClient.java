@@ -91,8 +91,8 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
 
     @Override
     protected <T> CompletableFuture<T> writeChannel(
-            ClientConnection conn, PgClientRequest request, Function<PgResultSet, T> respTransfer) {
-        return super.writeChannel(conn, request, respTransfer);
+            ClientConnection conn, Function<PgResultSet, T> respTransfer, PgClientRequest request) {
+        return super.writeChannel(conn, respTransfer, request);
     }
 
     @Override

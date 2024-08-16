@@ -245,7 +245,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     slowLog(s, sql);
                     return rs;
                 };
-                return pool.writeChannel(conn, req, transfer);
+                return pool.writeChannel(conn, transfer, req);
             });
         } else {
             return executeUpdate(
@@ -365,7 +365,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     slowLog(s, sql);
                     return rs;
                 };
-                return pool.writeChannel(conn, req, transfer);
+                return pool.writeChannel(conn, transfer, req);
             });
         } else {
             return executeUpdate(
@@ -476,7 +476,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     slowLog(s, sql);
                     return rs;
                 };
-                return pool.writeChannel(conn, req, transfer);
+                return pool.writeChannel(conn, transfer, req);
             });
         }
         String sql = findSql(info, selects, pk);
@@ -517,7 +517,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     slowLog(s, sql);
                     return rs;
                 };
-                return pool.writeChannel(conn, req, transfer);
+                return pool.writeChannel(conn, transfer, req);
             });
         } else {
             return super.findsDBAsync(info, selects, pks);
@@ -543,7 +543,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     slowLog(s, sql);
                     return rs;
                 };
-                return pool.writeChannel(conn, req, transfer);
+                return pool.writeChannel(conn, transfer, req);
             });
         } else {
             return queryListAsync(
@@ -613,7 +613,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         slowLog(s, pageSql);
                         return Sheet.asSheet(rs);
                     };
-                    return pool.writeChannel(conn, req, transfer);
+                    return pool.writeChannel(conn, transfer, req);
                 });
             } else {
                 listFuture = executeQuery(info, pageSql);
@@ -1058,7 +1058,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     slowLog(s, sinfo.getNativeSql());
                     return rs;
                 };
-                return pool.writeChannel(conn, req, transfer);
+                return pool.writeChannel(conn, transfer, req);
             });
         } else {
             return pool.connect().thenCompose(conn -> {
@@ -1070,7 +1070,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     slowLog(s, sinfo.getNativeSql());
                     return rs;
                 };
-                return pool.writeChannel(conn, req, transfer);
+                return pool.writeChannel(conn, transfer, req);
             });
         }
     }
@@ -1102,13 +1102,13 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         0,
                         sinfo.getParamNames().size(),
                         pstream);
-                return pool.writeChannel(conn, req, transfer);
+                return pool.writeChannel(conn, transfer, req);
             });
         } else {
             return pool.connect().thenCompose(conn -> {
                 PgReqQuery req = conn.pollReqQuery(workThread, null);
                 req.prepare(sinfo.getNativeSql());
-                return pool.writeChannel(conn, req, transfer);
+                return pool.writeChannel(conn, transfer, req);
             });
         }
     }
@@ -1136,7 +1136,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         0,
                         sinfo.getParamNames().size(),
                         pstream);
-                return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
+                return pool.writeChannel(conn, countTransfer, countReq).thenCompose(total -> {
                     if (total < 1) {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
@@ -1157,7 +1157,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                             slowLog(s2, pageSql);
                             return new Sheet<>(total, list);
                         };
-                        return pool.writeChannel(conn, req, sheetTransfer);
+                        return pool.writeChannel(conn, sheetTransfer, req);
                     }
                 });
             });
@@ -1165,7 +1165,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             return pool.connect().thenCompose(conn -> {
                 PgReqQuery countReq = conn.pollReqQuery(workThread, null);
                 countReq.prepare(countSql);
-                return pool.writeChannel(conn, countReq, countTransfer).thenCompose(total -> {
+                return pool.writeChannel(conn, countTransfer, countReq).thenCompose(total -> {
                     if (total < 1) {
                         return CompletableFuture.completedFuture(new Sheet(total, new ArrayList<>()));
                     } else {
@@ -1178,7 +1178,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                             slowLog(s2, pageSql);
                             return new Sheet<>(total, list);
                         };
-                        return pool.writeChannel(conn, req, sheetTransfer);
+                        return pool.writeChannel(conn, sheetTransfer, req);
                     }
                 });
             });

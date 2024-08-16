@@ -39,26 +39,25 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
         if (authReq != null && dbReq != null) {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
-                return conn -> writeChannelBatch(
-                                conn, authReq.createTime(), dbReq.createTime(), clientNameReq.createTime())
+                return conn -> writeChannel(conn, authReq.currentNow(), dbReq.currentNow(), clientNameReq.currentNow())
                         .thenApply(v -> conn);
             };
         } else if (authReq != null) {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
-                return conn -> writeChannelBatch(conn, authReq.createTime(), clientNameReq.createTime())
+                return conn -> writeChannel(conn, authReq.currentNow(), clientNameReq.currentNow())
                         .thenApply(v -> conn);
             };
         } else if (dbReq != null) {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
-                return conn -> writeChannelBatch(conn, dbReq.createTime(), clientNameReq.createTime())
+                return conn -> writeChannel(conn, dbReq.currentNow(), clientNameReq.currentNow())
                         .thenApply(v -> conn);
             };
         } else {
             this.authenticate = traceid -> {
                 Traces.currentTraceid(traceid);
-                return conn -> writeChannel(conn, clientNameReq.createTime()).thenApply(v -> conn);
+                return conn -> writeChannel(conn, clientNameReq.currentNow()).thenApply(v -> conn);
             };
         }
         this.connectTimeoutSeconds = 3;
