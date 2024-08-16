@@ -70,11 +70,6 @@ public abstract class PgClientRequest extends ClientRequest {
         return super.recycle();
     }
 
-    @Override
-    protected boolean isCompleted() {
-        return super.isCompleted();
-    }
-
     protected final void writeExecute(ByteArray array, int fetchSize) { // EXECUTE
         if (fetchSize < 1) {
             array.put(EXECUTE_BYTES);

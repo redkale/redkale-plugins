@@ -6,6 +6,7 @@
 package org.redkalex.source.pgsql;
 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import org.redkale.net.*;
 import org.redkale.net.client.*;
 import org.redkale.source.*;
@@ -19,8 +20,15 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
 
     private final Map<String, PgPrepareDesc> cachePreparedDescs = new HashMap<>();
 
+    private final LinkedBlockingQueue<ClientFuture> writeQueue = new LinkedBlockingQueue();
+
+    private final Thread writeThread;
+
     public PgClientConnection(PgClient client, AsyncConnection channel) {
         super(client, channel);
+        this.writeThread = new Thread(this::runInWriteThread);
+        this.writeThread.setDaemon(true);
+        this.writeThread.start();
     }
 
     @Override
@@ -30,6 +38,50 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
 
     protected boolean autoddl() {
         return ((PgClient) client).autoddl;
+    }
+
+    @Override // AsyncConnection.beforeCloseListener
+    public void accept(AsyncConnection t) {
+        super.accept(t);
+        this.writeQueue.add(ClientFuture.NIL);
+        this.writeThread.interrupt();
+    }
+
+    private void runInWriteThread() {
+        final List<ClientFuture> list = new ArrayList<>();
+        while (true) {
+            try {
+                ClientFuture respFuture = writeQueue.take();
+                if (respFuture == ClientFuture.NIL) {
+                    return;
+                }
+                boolean over = false;
+                list.clear();
+                list.add(respFuture);
+                while ((respFuture = writeQueue.poll()) != null) {
+                    if (respFuture == ClientFuture.NIL) {
+                        over = true;
+                        break;
+                    } else {
+                        list.add(respFuture);
+                    }
+                }
+                super.sendRequestInLocking(list.toArray(new ClientFuture[list.size()]));
+                list.clear();
+                if (over) {
+                    return;
+                }
+            } catch (InterruptedException ie) {
+                break;
+            } catch (Throwable e) {
+                // do nothing
+            }
+        }
+    }
+
+    @Override
+    protected void sendRequestInLocking(PgClientRequest request, ClientFuture respFuture) {
+        writeQueue.offer(respFuture);
     }
 
     protected void offerResultSet(PgReqExtended req, PgResultSet rs) {
