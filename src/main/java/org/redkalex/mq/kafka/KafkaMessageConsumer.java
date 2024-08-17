@@ -5,7 +5,6 @@ package org.redkalex.mq.kafka;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,8 +17,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.redkale.mq.MessageConext;
 import org.redkale.mq.MessageConsumer;
+import org.redkale.mq.MessageEvent;
 import org.redkale.mq.spi.MessageAgent.MessageConsumerWrapper;
 
 /** @author zhangjx */
@@ -66,8 +65,8 @@ class KafkaMessageConsumer implements Runnable {
         this.consumer.subscribe(this.topics);
         this.startFuture.complete(null);
         try {
-            Map<String, Map<Integer, List<ConsumerRecord<String, byte[]>>>> map = new LinkedHashMap<>();
-            Map<String, Map<Integer, MessageConext>> contexts = new LinkedHashMap<>();
+            // key: topic
+            Map<String, List<MessageEvent<byte[]>>> map = new LinkedHashMap<>();
             ConsumerRecords<String, byte[]> records;
             while (!this.closed) {
                 try {
@@ -100,18 +99,13 @@ class KafkaMessageConsumer implements Runnable {
                 long s = System.currentTimeMillis();
                 try {
                     for (ConsumerRecord<String, byte[]> r : records) {
-                        map.computeIfAbsent(r.topic(), t -> new LinkedHashMap<>())
-                                .computeIfAbsent(r.partition(), p -> new ArrayList<>())
-                                .add(r);
+                        map.computeIfAbsent(r.topic(), t -> new ArrayList<>())
+                                .add(new MessageEvent<>(r.topic(), r.partition(), r.key(), r.value()));
                     }
-                    map.forEach((topic, items) -> {
+                    map.forEach((topic, events) -> {
                         MessageConsumerWrapper wrapper = consumerMap.get(topic);
                         if (wrapper != null) {
-                            items.forEach((partition, list) -> {
-                                MessageConext context = contexts.computeIfAbsent(topic, t -> new HashMap<>())
-                                        .computeIfAbsent(partition, p -> messageAgent.createMessageConext(topic, p));
-                                list.forEach(r -> wrapper.onMessage(context, r.key(), r.value()));
-                            });
+                            wrapper.onMessage(events);
                         }
                     });
                 } catch (Throwable e) {
