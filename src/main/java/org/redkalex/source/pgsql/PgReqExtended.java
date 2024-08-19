@@ -3,8 +3,6 @@
  */
 package org.redkalex.source.pgsql;
 
-import static org.redkalex.source.pgsql.PgClientCodec.logger;
-
 import java.io.Serializable;
 import java.util.*;
 import java.util.logging.Level;
@@ -12,6 +10,7 @@ import java.util.stream.Stream;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
+import static org.redkalex.source.pgsql.PgClientCodec.logger;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
 /** @author zhangjx */
@@ -72,7 +71,7 @@ public class PgReqExtended extends PgClientRequest {
         return rs;
     }
 
-    public <T> void prepare(int type, PgExtendMode mode, String sql, int fetchSize) {
+    public void prepare(int type, PgExtendMode mode, String sql, int fetchSize) {
         super.prepare();
         this.type = type;
         this.mode = mode;
@@ -80,19 +79,19 @@ public class PgReqExtended extends PgClientRequest {
         this.fetchSize = fetchSize;
     }
 
-    public <T> void preparePrimarys(
+    public void preparePrimarys(
             int type, PgExtendMode mode, String sql, int fetchSize, final Serializable... pkValues) {
         prepare(type, mode, sql, fetchSize);
         this.pkValues = pkValues;
     }
 
-    public <T> void prepareParams(
+    public void prepareParams(
             int type, PgExtendMode mode, String sql, int fetchSize, final Serializable[][] paramValues) {
         prepare(type, mode, sql, fetchSize);
         this.paramValues = paramValues;
     }
 
-    public <T> void prepareParams(
+    public void prepareParams(
             int type, PgExtendMode mode, String sql, int fetchSize, int paramLen, final Stream<Serializable> stream) {
         prepare(type, mode, sql, fetchSize);
         this.paramLen = paramLen;

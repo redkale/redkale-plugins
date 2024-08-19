@@ -38,16 +38,7 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
             boolean autoddl,
             final Properties prop,
             final SourceUrlInfo info) {
-        super(
-                name,
-                group,
-                true,
-                address,
-                maxConns,
-                maxPipelines,
-                () -> new PgReqPing(),
-                () -> new PgReqClose(),
-                null); // maxConns
+        super(name, group, true, address, maxConns, maxPipelines, PgReqPing::new, PgReqClose::new, null); // maxConns
         this.autoddl = autoddl;
         this.authenticate = traceid -> {
             Traces.currentTraceid(traceid);
