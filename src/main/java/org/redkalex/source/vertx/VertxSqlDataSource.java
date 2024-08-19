@@ -377,7 +377,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         Row row = rows.iterator().next();
                         if (primaryType == int.class || primaryType == Integer.class) {
                             primary.set(entity, row.getInteger(0));
-                        } else if (primaryType == long.class || primaryType == long.class) {
+                        } else if (primaryType == long.class || primaryType == Long.class) {
                             primary.set(entity, row.getLong(0));
                         } else if (primaryType == String.class) {
                             primary.set(entity, row.getString(0));
@@ -391,7 +391,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         long id = firstId + (++i);
                         if (primaryType == int.class || primaryType == Integer.class) {
                             primary.set(entity, (int) id);
-                        } else if (primaryType == long.class || primaryType == long.class) {
+                        } else if (primaryType == long.class || primaryType == Long.class) {
                             primary.set(entity, id);
                         } else if (primaryType == String.class) {
                             primary.set(entity, String.valueOf(id));
@@ -893,12 +893,12 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         final long s = System.currentTimeMillis();
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
         PreparedQuery<RowSet<Row>> query;
-        if (workThread != null && workThread.inIO()) {
+        //if (workThread != null && workThread.inIO()) {
             query = info.getSubobjectIfAbsent(
                     resourceName() + ":" + sql, n -> readPool().preparedQuery(sql));
-        } else {
-            query = readPool().preparedQuery(sql);
-        }
+        //} else {
+        //    query = readPool().preparedQuery(sql);
+        //}
         query.execute(tuple, newQueryHandler(s, workThread, sql, info, future));
         return future;
     }
@@ -1086,6 +1086,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         return future;
     }
 
+    @Override
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(
             Class<V> type, String sql, RowBound round, Map<String, Object> params) {
         long s = System.currentTimeMillis();
@@ -1135,8 +1136,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     protected Tuple tupleParameter(DataNativeSqlStatement sinfo, Map<String, Object> params) {
         List<Object> objs = new ArrayList<>();
-        for (String name : sinfo.getParamNames()) {
-            objs.add(params.get(name));
+        for (String n : sinfo.getParamNames()) {
+            objs.add(params.get(n));
         }
         return Tuple.from(objs);
     }
