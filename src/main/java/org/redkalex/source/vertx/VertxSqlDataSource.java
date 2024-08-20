@@ -438,13 +438,13 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             final String debugsql =
                     flipper == null || flipper.getLimit() <= 0 ? sqls[0] : (sqls[0] + " LIMIT " + flipper.getLimit());
             if (info.isLoggable(logger, Level.FINEST, debugsql)) {
+                String typeName = info.getType().getSimpleName();
                 if (sqls.length == 1) {
-                    logger.finest(info.getType().getSimpleName() + " delete sql=" + debugsql);
+                    logger.finest(typeName + " delete sql=" + debugsql);
                 } else if (flipper == null || flipper.getLimit() <= 0) {
-                    logger.finest(info.getType().getSimpleName() + " delete sqls=" + Arrays.toString(sqls));
+                    logger.finest(typeName + " delete sqls=" + Arrays.toString(sqls));
                 } else {
-                    logger.finest(info.getType().getSimpleName() + " limit " + flipper.getLimit() + " delete sqls="
-                            + Arrays.toString(sqls));
+                    logger.finest(typeName + " limit " + flipper.getLimit() + " delete sqls=" + Arrays.toString(sqls));
                 }
             }
         }
@@ -456,10 +456,11 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             EntityInfo<T> info, final String[] tables, FilterNode node, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
+                String typeName = info.getType().getSimpleName();
                 if (sqls.length == 1) {
-                    logger.finest(info.getType().getSimpleName() + " clearTable sql=" + sqls[0]);
+                    logger.finest(typeName + " clearTable sql=" + sqls[0]);
                 } else {
-                    logger.finest(info.getType().getSimpleName() + " clearTable sqls=" + Arrays.toString(sqls));
+                    logger.finest(typeName + " clearTable sqls=" + Arrays.toString(sqls));
                 }
             }
         }
@@ -481,10 +482,11 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             EntityInfo<T> info, final String[] tables, FilterNode node, String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
             if (info.isLoggable(logger, Level.FINEST, sqls[0])) {
+                String typeName = info.getType().getSimpleName();
                 if (sqls.length == 1) {
-                    logger.finest(info.getType().getSimpleName() + " dropTable sql=" + sqls[0]);
+                    logger.finest(typeName + " dropTable sql=" + sqls[0]);
                 } else {
-                    logger.finest(info.getType().getSimpleName() + " dropTable sqls=" + Arrays.toString(sqls));
+                    logger.finest(typeName + " dropTable sqls=" + Arrays.toString(sqls));
                 }
             }
         }
@@ -910,13 +912,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             final WorkThread workThread, final EntityInfo<T> info, final String sql, Tuple tuple) {
         final long s = System.currentTimeMillis();
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
-        PreparedQuery<RowSet<Row>> query;
-        if (workThread != null && workThread.inIO()) {
-            String key = resourceName() + ":" + sql;
-            query = info.getSubobjectIfAbsent(key, n -> readPool().preparedQuery(sql));
-        } else {
-            query = readPool().preparedQuery(sql);
-        }
+        PreparedQuery<RowSet<Row>> query = readPool().preparedQuery(sql);
         query.execute(tuple, newQueryHandler(s, workThread, sql, info, future));
         return future;
     }
