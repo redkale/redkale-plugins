@@ -793,21 +793,25 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Override
     public <T> CompletableFuture<List<T>> queryListAsync(final Class<T> clazz) {
         final EntityInfo<T> info = loadEntityInfo(clazz);
-        final EntityCache<T> cache = info.getCache();
-        if (cache != null && cache.isFullLoaded()) {
-            return CompletableFuture.completedFuture(
-                    cache.querySheet(false, false, null, null, null).list(true));
-        }
-        final WorkThread workThread = WorkThread.currentWorkThread();
-        final String pageSql = info.getAllQueryPrepareSQL();
-        CompletableFuture<VertxResultSet> future = readResultSet(workThread, info, pageSql);
-        return future.thenApply((VertxResultSet set) -> {
-            final List<T> list = new ArrayList();
-            while (set.next()) {
-                list.add(getEntityValue(info, null, set));
+        if (info.getTableStrategy() == null) {
+            final EntityCache<T> cache = info.getCache();
+            if (cache != null && cache.isFullLoaded()) {
+                return CompletableFuture.completedFuture(
+                        cache.querySheet(false, false, null, null, null).list(true));
             }
-            return list;
-        });
+            final WorkThread workThread = WorkThread.currentWorkThread();
+            final String pageSql = info.getAllQueryPrepareSQL();
+            CompletableFuture<VertxResultSet> future = readResultSet(workThread, info, pageSql);
+            return future.thenApply((VertxResultSet set) -> {
+                final List<T> list = new ArrayList();
+                while (set.next()) {
+                    list.add(getEntityValue(info, null, set));
+                }
+                return list;
+            });
+        } else {
+            return super.queryListAsync(clazz);
+        }
     }
 
     @Override
