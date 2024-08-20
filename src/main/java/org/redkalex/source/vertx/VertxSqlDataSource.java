@@ -304,6 +304,24 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     }
 
     @Override
+    protected <T> void complete(WorkThread workThread, CompletableFuture<T> future, T value) {
+        if (workThread != null && workThread.inIO()) {
+            future.complete(value);
+        } else {
+            getExecutor().execute(() -> future.complete(value));
+        }
+    }
+
+    @Override
+    protected <T> void completeExceptionally(WorkThread workThread, CompletableFuture<T> future, Throwable exp) {
+        if (workThread != null && workThread.inIO()) {
+            future.completeExceptionally(exp);
+        } else {
+            getExecutor().execute(() -> future.completeExceptionally(exp));
+        }
+    }
+
+    @Override
     protected <T> CompletableFuture<Integer> insertDBAsync(EntityInfo<T> info, T... values) {
         final long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
@@ -765,8 +783,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     protected <T> CompletableFuture<Boolean> existsDBAsync(
             EntityInfo<T> info, final String[] tables, String sql, boolean onlypk, Serializable pk, FilterNode node) {
         final WorkThread workThread = WorkThread.currentWorkThread();
-        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
-            return set.next() ? (((Number) set.getObject(1)).intValue() > 0) : false;
+        return readResultSet(workThread, info, sql).thenApply(set -> {
+            return set.next() && (((Number) set.getObject(1)).intValue() > 0);
         });
     }
 
@@ -893,12 +911,12 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         final long s = System.currentTimeMillis();
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
         PreparedQuery<RowSet<Row>> query;
-        //if (workThread != null && workThread.inIO()) {
-            query = info.getSubobjectIfAbsent(
-                    resourceName() + ":" + sql, n -> readPool().preparedQuery(sql));
-        //} else {
-        //    query = readPool().preparedQuery(sql);
-        //}
+        if (workThread != null && workThread.inIO()) {
+            String key = resourceName() + ":" + sql;
+            query = info.getSubobjectIfAbsent(key, n -> readPool().preparedQuery(sql));
+        } else {
+            query = readPool().preparedQuery(sql);
+        }
         query.execute(tuple, newQueryHandler(s, workThread, sql, info, future));
         return future;
     }

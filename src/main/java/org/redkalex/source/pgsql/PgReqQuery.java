@@ -14,7 +14,7 @@ public class PgReqQuery extends PgClientRequest {
 
     protected String sql;
 
-    public <T> void prepare(String sql) {
+    public void prepare(String sql) {
         super.prepare();
         this.sql = sql;
     }
