@@ -573,6 +573,31 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         return existsDBApply(info, executeQuery(info, sql), onlypk);
     }
 
+    @Override
+    public <T> CompletableFuture<List<T>> queryListAsync(final Class<T> clazz) {
+        final EntityInfo<T> info = loadEntityInfo(clazz);
+        final EntityCache<T> cache = info.getCache();
+        if (cache != null && cache.isFullLoaded()) {
+            return CompletableFuture.completedFuture(
+                    cache.querySheet(false, false, null, null, null).list(true));
+        }
+        final long s = System.currentTimeMillis();
+        final WorkThread workThread = WorkThread.currentWorkThread();
+        final String pageSql = info.getAllQueryPrepareSQL();
+        final PgClient pool = readPool();
+        return pool.connect().thenCompose(conn -> {
+            PgReqExtended req = conn.pollReqExtended(workThread, info);
+            req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, pageSql, 0);
+            Function<PgResultSet, List<T>> transfer = dataset -> {
+                List<T> rs = dataset.listEntity == null ? new ArrayList<>() : (List) dataset.listEntity;
+                conn.offerResultSet(req, dataset);
+                slowLog(s, pageSql);
+                return rs;
+            };
+            return pool.writeChannel(conn, transfer, req);
+        });
+    }
+
     @Override // 无Cache版querySheetDBAsync
     protected <T> CompletableFuture<Sheet<T>> querySheetDBAsync(
             EntityInfo<T> info,
