@@ -296,8 +296,13 @@ public class KafkaMessageAgent extends MessageAgent {
     @Override
     protected void startMessageConsumer() {
         List<KafkaMessageConsumer> list = new ArrayList<>();
-        this.messageConsumerMap.forEach((group, map) -> {
-            list.add(new KafkaMessageConsumer(this, group, map));
+        this.messageTopicConsumerMap.forEach((group, map) -> {
+            list.add(new KafkaMessageConsumer(this, group, null, map));
+        });
+        this.messageRegexConsumerMap.forEach((group, map) -> {
+            map.forEach((regexTopic, wrapper) -> {
+                list.add(new KafkaMessageConsumer(this, group, wrapper, null));
+            });
         });
         for (KafkaMessageConsumer item : list) {
             item.start();

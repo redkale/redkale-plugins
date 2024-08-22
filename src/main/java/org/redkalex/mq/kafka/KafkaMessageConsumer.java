@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -20,6 +21,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.redkale.mq.MessageConsumer;
 import org.redkale.mq.MessageEvent;
 import org.redkale.mq.spi.MessageAgent.MessageConsumerWrapper;
+import org.redkale.util.Utility;
 
 /** @author zhangjx */
 class KafkaMessageConsumer implements Runnable {
@@ -36,11 +38,15 @@ class KafkaMessageConsumer implements Runnable {
 
     private boolean autoCommit;
 
-    private final Map<String, MessageConsumerWrapper> consumerMap;
-
     private final String group;
 
+    private final Map<String, MessageConsumerWrapper> topicConsumerMap;
+
     private final List<String> topics;
+
+    private final MessageConsumerWrapper regexConsumerWrapper;
+
+    private final String regexTopic;
 
     private KafkaConsumer<String, byte[]> consumer;
 
@@ -49,11 +55,23 @@ class KafkaMessageConsumer implements Runnable {
     private boolean closed;
 
     protected KafkaMessageConsumer(
-            KafkaMessageAgent messageAgent, String group, Map<String, MessageConsumerWrapper> consumerMap) {
+            KafkaMessageAgent messageAgent,
+            String group,
+            MessageConsumerWrapper regexConsumerWrapper,
+            Map<String, MessageConsumerWrapper> topicConsumerMap) {
         this.messageAgent = messageAgent;
         this.group = group;
-        this.consumerMap = consumerMap;
-        this.topics = new ArrayList<>(consumerMap.keySet());
+        if (regexConsumerWrapper != null) {
+            this.regexConsumerWrapper = regexConsumerWrapper;
+            this.regexTopic = regexConsumerWrapper.getRegexTopic();
+            this.topicConsumerMap = null;
+            this.topics = List.of(this.regexTopic);
+        } else {
+            this.regexConsumerWrapper = null;
+            this.regexTopic = null;
+            this.topicConsumerMap = topicConsumerMap;
+            this.topics = new ArrayList<>(topicConsumerMap.keySet());
+        }
     }
 
     @Override
@@ -62,8 +80,14 @@ class KafkaMessageConsumer implements Runnable {
                 this.messageAgent.createConsumerProperties(this.group),
                 new StringDeserializer(),
                 new ByteArrayDeserializer());
-        this.consumer.subscribe(this.topics);
+        final boolean regex = Utility.isNotEmpty(this.regexTopic);
+        if (regex) {
+            this.consumer.subscribe(Pattern.compile(this.regexTopic));
+        } else {
+            this.consumer.subscribe(this.topics);
+        }
         this.startFuture.complete(null);
+        MessageConsumerWrapper regexConsumer = this.regexConsumerWrapper;
         try {
             // key: topic
             Map<String, List<MessageEvent<byte[]>>> map = new LinkedHashMap<>();
@@ -98,16 +122,24 @@ class KafkaMessageConsumer implements Runnable {
                 map.clear();
                 long s = System.currentTimeMillis();
                 try {
-                    for (ConsumerRecord<String, byte[]> r : records) {
-                        map.computeIfAbsent(r.topic(), t -> new ArrayList<>())
-                                .add(new MessageEvent<>(r.topic(), r.partition(), r.key(), r.value()));
-                    }
-                    map.forEach((topic, events) -> {
-                        MessageConsumerWrapper wrapper = consumerMap.get(topic);
-                        if (wrapper != null) {
-                            wrapper.onMessage(events);
+                    if (regex) {
+                        List<MessageEvent> events = new ArrayList<>();
+                        for (ConsumerRecord<String, byte[]> r : records) {
+                            events.add(new MessageEvent<>(r.topic(), r.partition(), r.key(), r.value()));
                         }
-                    });
+                        regexConsumer.onMessage(events);
+                    } else {
+                        for (ConsumerRecord<String, byte[]> r : records) {
+                            map.computeIfAbsent(r.topic(), t -> new ArrayList<>())
+                                    .add(new MessageEvent<>(r.topic(), r.partition(), r.key(), r.value()));
+                        }
+                        map.forEach((topic, events) -> {
+                            MessageConsumerWrapper wrapper = topicConsumerMap.get(topic);
+                            if (wrapper != null) {
+                                wrapper.onMessage(events);
+                            }
+                        });
+                    }
                 } catch (Throwable e) {
                     logger.log(
                             Level.SEVERE,
