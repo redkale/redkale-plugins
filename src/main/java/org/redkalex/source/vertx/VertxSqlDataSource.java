@@ -1048,7 +1048,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     @Local
     @Override
     public CompletableFuture<Integer> nativeUpdateAsync(String sql) {
-        return nativeUpdatesAsync(new String[] {sql}).thenApply(v -> v[0]);
+        return nativeUpdatesAsync(sql).thenApply(v -> v[0]);
     }
 
     @Local
