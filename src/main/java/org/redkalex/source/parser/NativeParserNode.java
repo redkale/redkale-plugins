@@ -80,7 +80,7 @@ public class NativeParserNode {
             countDeParser.initCountSelect(select, countSelectItems);
             select.accept(countDeParser, null);
             countSql = buffer.toString();
-            if (RowBound.validLimit(round)) {
+            if (RowBound.hasLimit(round)) {
                 if ("oracle".equals(dbtype)) {
                     paramNames.add("#start");
                     paramNames.add("#end");
@@ -149,7 +149,7 @@ public class NativeParserNode {
         List<String> list =
                 info.fullJdbcNames.stream().filter(params::containsKey).collect(Collectors.toList());
         // fullJdbcNames是TreeSet, 已排序  //Collections.sort(list);
-        return (RowBound.validLimit(round) ? "1:" : "0:")
+        return (RowBound.hasLimit(round) ? "1:" : "0:")
                 + (list.isEmpty() ? "" : list.stream().collect(Collectors.joining(",")));
     }
 }

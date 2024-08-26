@@ -678,7 +678,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
     }
 
     private static int fetchSize(Flipper flipper) {
-        return Flipper.validLimit(flipper) ? flipper.getLimit() : 0;
+        return Flipper.hasLimit(flipper) ? flipper.getLimit() : 0;
     }
 
     protected <T> CompletableFuture<MyResultSet> thenApplyQueryUpdateStrategy(
