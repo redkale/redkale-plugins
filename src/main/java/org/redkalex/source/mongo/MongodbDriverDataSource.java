@@ -41,7 +41,7 @@ import org.redkale.util.*;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
-public class MongodbDriverDataSource extends AbstractDataSource
+public class MongodbDriverDataSource extends MongodbDataSource
         implements java.util.function.Function<Class, EntityInfo> {
 
     protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
@@ -325,6 +325,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
     }
 
     @Local
+    @Override
     public MongoDatabase getReadMongoDatabase() {
         if (this.readMongoDatabase != null) {
             return this.readMongoDatabase;
@@ -334,21 +335,25 @@ public class MongodbDriverDataSource extends AbstractDataSource
     }
 
     @Local
+    @Override
     public <T> MongoCollection<T> getReadMongoCollection(EntityInfo<T> info) {
         return this.getReadMongoDatabase().getCollection(info.getTable((T) null), info.getType());
     }
 
     @Local
+    @Override
     public <T> MongoCollection<Document> getReadMongoDocumentCollection(EntityInfo<T> info) {
         return this.getReadMongoDatabase().getCollection(info.getTable((T) null));
     }
 
     @Local
+    @Override
     public MongoClient getWriteMongoClient() {
         return this.writeMongoClient;
     }
 
     @Local
+    @Override
     public MongoDatabase getWriteMongoDatabase() {
         if (this.writeMongoDatabase != null) {
             return this.writeMongoDatabase;
@@ -358,11 +363,13 @@ public class MongodbDriverDataSource extends AbstractDataSource
     }
 
     @Local
+    @Override
     public <T> MongoCollection<T> getWriteMongoCollection(EntityInfo<T> info) {
         return this.getWriteMongoDatabase().getCollection(info.getTable((T) null), info.getType());
     }
 
     @Local
+    @Override
     public <T> MongoCollection<Document> getWriteMongoDocumentCollection(EntityInfo<T> info) {
         return this.getWriteMongoDatabase().getCollection(info.getTable((T) null));
     }
@@ -373,6 +380,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
     }
 
     @Local
+    @Override
     public Bson createSortBson(Flipper flipper) {
         if (flipper == null) {
             return null;
@@ -403,6 +411,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
     }
 
     @Local
+    @Override
     public <T> List<Bson> createUpdateBson(EntityInfo<T> info, ColumnValue... values) {
         List<Bson> items = new ArrayList<>(values.length);
         for (ColumnValue colval : values) {
@@ -415,6 +424,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
     }
 
     @Local
+    @Override
     public <T> Bson createUpdateBson(EntityInfo<T> info, ColumnValue colval) {
         String key = colval.getColumn();
         ColumnNode val = colval.getValue();
@@ -452,6 +462,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
     }
 
     @Local
+    @Override
     public BsonField createBsonField(FilterFunc func, String fieldName, Serializable column) {
         BsonField bf = null;
         if (column == null || FilterFuncColumn.COLUMN_NULL.equals(column)) {
@@ -478,6 +489,7 @@ public class MongodbDriverDataSource extends AbstractDataSource
     }
 
     @Local
+    @Override
     public <T> Bson createFilterBson(EntityInfo<T> info, FilterNode node) {
         return createFilter(info, node, false);
     }
