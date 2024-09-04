@@ -54,6 +54,7 @@ import org.redkale.service.Local;
 import org.redkale.source.CacheEventListener;
 import org.redkale.source.CacheScoredValue;
 import org.redkale.source.CacheSource;
+import org.redkale.source.SourceType;
 import org.redkale.util.AnyValue;
 import org.redkale.util.Creator;
 import org.redkale.util.RedkaleException;
@@ -65,6 +66,7 @@ import static org.redkale.util.Utility.*;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
+@SourceType(RedisSource.class)
 public class RedisVertxCacheSource extends RedisSource {
 
     private final Logger logger = Logger.getLogger(this.getClass().getSimpleName());

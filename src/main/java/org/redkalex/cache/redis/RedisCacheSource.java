@@ -43,6 +43,7 @@ import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
 @Local
 @AutoLoad(false)
 @ResourceType(CacheSource.class)
+@SourceType(RedisSource.class)
 public final class RedisCacheSource extends RedisSource {
 
     // System.getProperty("os.name").contains("Window") || System.getProperty("os.name").contains("Mac");

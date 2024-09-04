@@ -41,6 +41,7 @@ import org.redkale.util.*;
 @AutoLoad(false)
 @SuppressWarnings("unchecked")
 @ResourceType(DataSource.class)
+@SourceType(MongodbDataSource.class)
 public class MongodbDriverDataSource extends MongodbDataSource
         implements java.util.function.Function<Class, EntityInfo> {
 
