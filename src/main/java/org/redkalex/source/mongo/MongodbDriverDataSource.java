@@ -1281,10 +1281,8 @@ public class MongodbDriverDataSource extends AbstractDataSource
     @Override
     public <T> CompletableFuture<Boolean> existsAsync(Class<T> clazz, Serializable pk) {
         EntityInfo<T> info = loadEntityInfo(clazz);
-        MongoCollection<T> collection = getReadMongoCollection(info);
-        ReatorFuture<T> future = new ReatorFuture<>();
-        collection.find(Filters.eq(info.getPrimaryField(), pk)).first().subscribe(future);
-        return future.thenApply(v -> v != null);
+        return findAsync(clazz, SelectColumn.includes(info.getPrimaryField()), pk)
+                .thenApply(v -> v != null);
     }
 
     @Override
@@ -1295,14 +1293,8 @@ public class MongodbDriverDataSource extends AbstractDataSource
     @Override
     public <T> CompletableFuture<Boolean> existsAsync(Class<T> clazz, FilterNode node) {
         EntityInfo<T> info = loadEntityInfo(clazz);
-        MongoCollection<T> collection = getReadMongoCollection(info);
-        ReatorFuture<T> future = new ReatorFuture<>();
-        collection
-                .find(createFilterElement(info, node))
-                .projection(Projections.include(info.getPrimaryField()))
-                .first()
-                .subscribe(future);
-        return future.thenApply(v -> v != null);
+        return findAsync(clazz, SelectColumn.includes(info.getPrimaryField()), node)
+                .thenApply(v -> v != null);
     }
 
     @Override
