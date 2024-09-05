@@ -337,24 +337,6 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     }
 
     @Override
-    protected <T> void complete(WorkThread workThread, CompletableFuture<T> future, T value) {
-        if (workThread != null && workThread.inIO()) {
-            future.complete(value);
-        } else {
-            getExecutor().execute(() -> future.complete(value));
-        }
-    }
-
-    @Override
-    protected <T> void completeExceptionally(WorkThread workThread, CompletableFuture<T> future, Throwable exp) {
-        if (workThread != null && workThread.inIO()) {
-            future.completeExceptionally(exp);
-        } else {
-            getExecutor().execute(() -> future.completeExceptionally(exp));
-        }
-    }
-
-    @Override
     protected <T> CompletableFuture<Integer> insertDBAsync(EntityInfo<T> info, T... values) {
         final long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
