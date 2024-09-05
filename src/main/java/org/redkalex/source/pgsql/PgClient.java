@@ -40,31 +40,37 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
             final SourceUrlInfo info) {
         super(name, group, true, address, maxConns, maxPipelines, PgReqPing::new, PgReqClose::new, null); // maxConns
         this.autoddl = autoddl;
-        this.authenticate = traceid -> {
+        this.authenticate = (workThread, traceid) -> {
             Traces.currentTraceid(traceid);
-            return conn -> writeChannel(conn, new PgReqAuthentication(info)).thenCompose((PgResultSet rs0) -> {
-                Traces.currentTraceid(traceid);
-                PgRespAuthResultSet rs = (PgRespAuthResultSet) rs0;
-                if (rs.isAuthOK()) {
-                    return CompletableFuture.completedFuture(conn);
-                }
-                if (rs.getAuthSalt() != null) {
-                    return writeChannel(conn, new PgReqAuthMd5Password(info.username, info.password, rs.getAuthSalt()))
-                            .thenApply(pg -> conn);
-                }
-                return writeChannel(
-                                conn, new PgReqAuthScramPassword(info.username, info.password, rs.getAuthMechanisms()))
-                        .thenCompose((PgResultSet rs2) -> {
-                            Traces.currentTraceid(traceid);
-                            PgReqAuthScramSaslContinueResult cr =
-                                    ((PgRespAuthResultSet) rs2).getAuthSaslContinueResult();
-                            if (cr == null) {
-                                return CompletableFuture.completedFuture(conn);
-                            }
-                            return writeChannel(conn, new PgReqAuthScramSaslFinal(cr))
+            return conn -> writeChannel(conn, new PgReqAuthentication(info).workThread(workThread))
+                    .thenCompose((PgResultSet rs0) -> {
+                        Traces.currentTraceid(traceid);
+                        PgRespAuthResultSet rs = (PgRespAuthResultSet) rs0;
+                        if (rs.isAuthOK()) {
+                            return CompletableFuture.completedFuture(conn);
+                        }
+                        if (rs.getAuthSalt() != null) {
+                            return writeChannel(
+                                            conn,
+                                            new PgReqAuthMd5Password(info.username, info.password, rs.getAuthSalt())
+                                                    .workThread(workThread))
                                     .thenApply(pg -> conn);
-                        });
-            });
+                        }
+                        return writeChannel(
+                                        conn,
+                                        new PgReqAuthScramPassword(info.username, info.password, rs.getAuthMechanisms())
+                                                .workThread(workThread))
+                                .thenCompose((PgResultSet rs2) -> {
+                                    Traces.currentTraceid(traceid);
+                                    PgReqAuthScramSaslContinueResult cr =
+                                            ((PgRespAuthResultSet) rs2).getAuthSaslContinueResult();
+                                    if (cr == null) {
+                                        return CompletableFuture.completedFuture(conn);
+                                    }
+                                    return writeChannel(conn, new PgReqAuthScramSaslFinal(cr).workThread(workThread))
+                                            .thenApply(pg -> conn);
+                                });
+                    });
         };
         this.cachePreparedStatements =
                 prop == null || "true".equalsIgnoreCase(prop.getProperty("preparecache", "true"));

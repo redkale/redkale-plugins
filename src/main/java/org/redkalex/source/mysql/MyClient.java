@@ -35,31 +35,22 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
             final SourceUrlInfo info,
             boolean autoddl,
             final Properties attributes) {
-        super(
-                name,
-                group,
-                true,
-                address,
-                maxConns,
-                maxPipelines,
-                () -> new MyReqPing(),
-                () -> new MyReqClose(),
-                null); // maxConns
+        super(name, group, true, address, maxConns, maxPipelines, MyReqPing::new, MyReqClose::new, null); // maxConns
         this.info = info;
         this.autoddl = autoddl;
-        this.authenticate = traceid -> {
+        this.authenticate = (workThread, traceid) -> {
             Traces.currentTraceid(traceid);
             return conn -> {
                 MyRespHandshakeResultSet handshake = ((MyClientConnection) conn).handshake;
-                return writeChannel(
-                                conn,
-                                new MyReqAuthentication(
-                                        handshake, info.username, info.password, info.database, attributes))
+                MyReqAuthentication authReq = new MyReqAuthentication(
+                                handshake, info.username, info.password, info.database, attributes)
+                        .workThread(workThread);
+                return writeChannel(conn, authReq)
                         .thenCompose(v -> {
                             Traces.currentTraceid(traceid);
                             MyRespAuthResultSet authrs = (MyRespAuthResultSet) v;
                             if (authrs.authSwitch != null) {
-                                return writeChannel(conn, authrs.authSwitch);
+                                return writeChannel(conn, authrs.authSwitch.workThread(workThread));
                             }
                             return CompletableFuture.completedFuture(authrs);
                         })

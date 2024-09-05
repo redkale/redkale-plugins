@@ -65,8 +65,9 @@ public class RedisCacheRequest extends ClientRequest {
         return this;
     }
 
-    public RedisCacheRequest currentNow() {
-        this.createTime = System.currentTimeMillis();
+    @Override
+    public RedisCacheRequest workThread(WorkThread thread) {
+        super.workThread(thread);
         return this;
     }
 

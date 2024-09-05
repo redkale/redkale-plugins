@@ -18,6 +18,10 @@ public class RedisCacheReqDB extends RedisCacheRequest {
         this.db = db;
     }
 
+    public int getDb() {
+        return db;
+    }
+
     @Override
     public void writeTo(ClientConnection conn, ByteArray writer) {
         writer.put(mutliLengthBytes(2));
