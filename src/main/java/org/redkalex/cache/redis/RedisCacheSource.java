@@ -106,7 +106,11 @@ public final class RedisCacheSource extends RedisSource {
         AsyncGroup ioGroup = clientAsyncGroup;
         if (clientAsyncGroup == null) {
             String f = "Redkalex-Redis-IOThread-" + resourceName() + "-%s";
-            ioGroup = AsyncGroup.create(f, workExecutor, 16 * 1024, Utility.cpus() * 4)
+            ioGroup = AsyncGroup.create(
+                            f,
+                            workExecutor,
+                            ByteBufferPool.DEFAULT_BUFFER_CAPACITY,
+                            ByteBufferPool.DEFAULT_BUFFER_POOL_SIZE)
                     .start();
         }
         RedisCacheClient old = this.client;

@@ -76,7 +76,11 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         if (clientAsyncGroup == null || "write".equalsIgnoreCase(rw)) {
             String f = "Redkalex-MyClient-IOThread-" + resourceName() + "-"
                     + (rw.length() < 3 ? rw.toUpperCase() : Utility.firstCharUpperCase(rw)) + "-%s";
-            ioGroup = AsyncGroup.create(f, workExecutor, 16 * 1024, Utility.cpus() * 4)
+            ioGroup = AsyncGroup.create(
+                            f,
+                            workExecutor,
+                            ByteBufferPool.DEFAULT_BUFFER_CAPACITY,
+                            ByteBufferPool.DEFAULT_BUFFER_POOL_SIZE)
                     .start();
         }
         return new MyClient(
