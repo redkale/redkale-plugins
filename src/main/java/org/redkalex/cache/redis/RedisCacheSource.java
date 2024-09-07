@@ -109,7 +109,7 @@ public final class RedisCacheSource extends RedisSource {
             ioGroup = AsyncGroup.create(
                             f,
                             workExecutor,
-                            ByteBufferPool.DEFAULT_BUFFER_CAPACITY,
+                            ByteBufferPool.DEFAULT_BUFFER_TCP_CAPACITY,
                             ByteBufferPool.DEFAULT_BUFFER_POOL_SIZE)
                     .start();
         }
