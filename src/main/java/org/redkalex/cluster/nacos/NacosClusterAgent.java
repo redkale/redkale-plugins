@@ -39,23 +39,21 @@ public class NacosClusterAgent extends ClusterAgent {
     protected static final Map<String, Serializable> httpHeaders =
             (Map) Utility.ofMap("Content-Type", "application/json", "Accept", "application/json");
 
-    protected HttpClient httpClient; // JDK11里面的HttpClient
+    // JDK11里面的HttpClient
+    protected HttpClient httpClient;
 
-    protected String apiUrl; // 不会以/结尾，且不以/nacos结尾，目前以/nacos/v1结尾
+    // 不会以/结尾，且不以/nacos结尾，目前以/nacos/v1结尾
+    protected String apiUrl;
 
-    protected int ttls = 5; // 定时检查的秒数
+    // 定时检查的秒数
+    protected int ttls = 5;
 
-    protected String namespaceid; // 命名空间
+    // 命名空间
+    protected String namespaceid;
 
     protected ScheduledThreadPoolExecutor scheduler;
 
-    protected ScheduledFuture taskFuture1;
-
-    protected ScheduledFuture taskFuture2;
-
-    protected ScheduledFuture taskFuture3;
-
-    protected ScheduledFuture taskFuture4;
+    protected ScheduledFuture taskFuture;
 
     // 可能被HttpMessageClient用到的服务 key: serviceName
     protected final ConcurrentHashMap<String, Set<InetSocketAddress>> httpAddressMap = new ConcurrentHashMap<>();
@@ -155,55 +153,25 @@ public class NacosClusterAgent extends ClusterAgent {
             });
         }
         // delay为了错开请求
-        if (this.taskFuture1 != null) {
-            this.taskFuture1.cancel(true);
+        if (this.taskFuture != null) {
+            this.taskFuture.cancel(true);
         }
-        this.taskFuture1 = this.scheduler.scheduleAtFixedRate(
+        this.taskFuture = this.scheduler.scheduleAtFixedRate(
                 () -> {
                     beatApplicationHealth();
                     localEntrys.values().stream().filter(e -> !e.canceled).forEach(entry -> {
                         beatLocalHealth(entry);
                     });
-                },
-                18,
-                Math.max(2000, ttls * 1000 - 168),
-                TimeUnit.MILLISECONDS);
-
-        if (this.taskFuture2 != null) {
-            this.taskFuture2.cancel(true);
-        }
-        this.taskFuture2 = this.scheduler.scheduleAtFixedRate(
-                () -> {
                     reloadSncpAddressHealth();
-                },
-                68 * 2,
-                Math.max(2000, ttls * 1000 - 168),
-                TimeUnit.MILLISECONDS);
-
-        if (this.taskFuture3 != null) {
-            this.taskFuture3.cancel(true);
-        }
-        this.taskFuture3 = this.scheduler.scheduleAtFixedRate(
-                () -> {
                     reloadHttpAddressHealth();
-                },
-                128 * 3,
-                Math.max(2000, ttls * 1000 - 168),
-                TimeUnit.MILLISECONDS);
-
-        if (this.taskFuture4 != null) {
-            this.taskFuture4.cancel(true);
-        }
-        this.taskFuture4 = this.scheduler.scheduleAtFixedRate(
-                () -> {
                     remoteEntrys.values().stream()
                             .filter(entry -> "SNCP".equalsIgnoreCase(entry.protocol))
                             .forEach(entry -> {
                                 updateSncpAddress(entry);
                             });
                 },
-                188 * 4,
-                Math.max(2000, ttls * 1000 - 168),
+                1000,
+                Math.max(2000, ttls * 1000),
                 TimeUnit.MILLISECONDS);
     }
 
@@ -302,7 +270,7 @@ public class NacosClusterAgent extends ClusterAgent {
                 for (Object val : (Collection) v) {
                     builder.header(n, val.toString());
                 }
-            } else {
+            } else if (v != null) {
                 builder.header(n, v.toString());
             }
         });
