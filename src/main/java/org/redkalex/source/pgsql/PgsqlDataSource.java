@@ -502,6 +502,23 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         return findDBApply(info, executeQuery(info, sql), onlypk, selects);
     }
 
+    // 临时代码
+    @Override
+    public <T> T[] finds(Class<T> clazz, final SelectColumn selects, Serializable... pks) {
+        final EntityInfo<T> info = loadEntityInfo(clazz);
+        if (pks == null || pks.length == 0) {
+            return info.getArrayer().apply(0);
+        }
+        final EntityCache<T> cache = info.getCache();
+        if (cache != null) {
+            while (!cache.isFullLoaded()) {
+                Utility.sleep(1000);
+            }
+            return selects == null ? cache.finds(pks) : cache.finds(selects, pks);
+        }
+        return findsDBAsync(info, selects, pks).join();
+    }
+
     @Override // 无Cache的findsAsync
     protected <T> CompletableFuture<T[]> findsDBAsync(
             final EntityInfo<T> info, final SelectColumn selects, Serializable... pks) {
@@ -614,20 +631,22 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             final boolean distinct,
             SelectColumn selects,
             Flipper flipper,
-            FilterNode node) {
+            FilterNode node,
+            final boolean inCacheLoad) {
         final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
         final PgClient pool = readPool();
         String[] tables = info.getTables(node);
         final boolean cachePrepared = pool.cachePreparedStatements()
-                && readCache
                 && info.getTableStrategy() == null
                 && sels == null
                 && node == null
                 && flipper == null
                 && !distinct
                 && !needTotal;
-        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
+        PageCountSql sqls = !needTotal && cachePrepared
+                ? null
+                : createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
 
         final String pageSql = cachePrepared ? info.getAllQueryPrepareSQL() : sqls.pageSql;
         if (cachePrepared && info.isLoggable(logger, Level.FINEST, pageSql)) {
@@ -637,7 +656,11 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             CompletableFuture<PgResultSet> listFuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currentWorkThread();
-                return pool.connect().thenCompose(conn -> {
+                CompletableFuture<PgClientConnection> connFuture =
+                        clientNonBlocking && inCacheLoad && workThread != null
+                                ? pool.connect(workThread.index())
+                                : pool.connect();
+                return connFuture.thenCompose(conn -> {
                     PgReqExtended req = conn.pollReqExtended(workThread, info);
                     req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, pageSql, 0);
                     Function<PgResultSet, Sheet<T>> transfer = dataset -> {

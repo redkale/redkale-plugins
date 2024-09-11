@@ -615,20 +615,22 @@ public class MysqlDataSource extends AbstractDataSqlSource {
             final boolean distinct,
             SelectColumn selects,
             Flipper flipper,
-            FilterNode node) {
+            FilterNode node,
+            final boolean inCacheLoad) {
         final long s = System.currentTimeMillis();
         final SelectColumn sels = selects;
         final MyClient pool = readPool();
         String[] tables = info.getTables(node);
         final boolean cachePrepared = pool.cachePreparedStatements()
-                && readCache
                 && info.getTableStrategy() == null
                 && sels == null
                 && node == null
                 && flipper == null
                 && !distinct
                 && !needTotal;
-        PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
+        PageCountSql sqls = !needTotal && cachePrepared
+                ? null
+                : createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
 
         final String pageSql = cachePrepared ? info.getAllQueryPrepareSQL() : sqls.pageSql;
         if (cachePrepared && info.isLoggable(logger, Level.FINEST, pageSql)) {
@@ -638,12 +640,15 @@ public class MysqlDataSource extends AbstractDataSqlSource {
             CompletableFuture<MyResultSet> listFuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currentWorkThread();
-                listFuture = pool.connect()
-                        .thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
-                            MyReqExtended req = conn.pollReqExtended(workThread, info);
-                            req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, pageSql, 0, null);
-                            return pool.writeChannel(conn, req);
-                        }));
+                CompletableFuture<MyClientConnection> connFuture =
+                        clientNonBlocking && inCacheLoad && workThread != null
+                                ? pool.connect(workThread.index())
+                                : pool.connect();
+                listFuture = connFuture.thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
+                    MyReqExtended req = conn.pollReqExtended(workThread, info);
+                    req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, pageSql, 0, null);
+                    return pool.writeChannel(conn, req);
+                }));
             } else {
                 listFuture = executeQuery(info, pageSql);
             }

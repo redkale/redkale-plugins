@@ -838,7 +838,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             final boolean distinct,
             SelectColumn selects,
             Flipper flipper,
-            FilterNode node) {
+            FilterNode node,
+            final boolean inCacheLoad) {
         final SelectColumn sels = selects;
         final WorkThread workThread = WorkThread.currentWorkThread();
         String[] tables = info.getTables(node);
