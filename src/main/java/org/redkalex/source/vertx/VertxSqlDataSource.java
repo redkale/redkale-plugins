@@ -289,7 +289,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     protected Pool readPool(WorkThread thread) {
         Pool[] pools = readThreadPools;
-        if (thread != null && thread.inIO() && thread.index() >= 0) {
+        if (thread != null && thread.index() >= 0 && thread.index() < pools.length) {
             return pools[thread.index()];
         }
         return pools[random.nextInt(pools.length)];
@@ -297,7 +297,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     protected Pool writePool(WorkThread thread) {
         Pool[] pools = writeThreadPools;
-        if (thread != null && thread.inIO() && thread.index() >= 0) {
+        if (thread != null && thread.index() >= 0 && thread.index() < pools.length) {
             return pools[thread.index()];
         }
         return pools[random.nextInt(pools.length)];
@@ -818,7 +818,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             }
             final WorkThread workThread = WorkThread.currentWorkThread();
             final String pageSql = info.getAllQueryPrepareSQL();
-            CompletableFuture<VertxResultSet> future = readResultSet(workThread, info, pageSql);
+            CompletableFuture<VertxResultSet> future = readPrepareResultSet(workThread, info, pageSql, null);
             return future.thenApply((VertxResultSet set) -> {
                 final List<T> list = new ArrayList();
                 while (set.next()) {
@@ -957,7 +957,11 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         final long s = System.currentTimeMillis();
         final CompletableFuture<VertxResultSet> future = new CompletableFuture<>();
         PreparedQuery<RowSet<Row>> query = readPool(workThread).preparedQuery(sql);
-        query.execute(tuple, newQueryHandler(s, workThread, sql, info, future));
+        if (tuple == null) {
+            query.execute(newQueryHandler(s, workThread, sql, info, future));
+        } else {
+            query.execute(tuple, newQueryHandler(s, workThread, sql, info, future));
+        }
         return future;
     }
 
@@ -984,11 +988,11 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     completeExceptionally(workThread, future, ex);
                 } else { // 表不存在
                     if (info.getTableStrategy() == null) { // 没有原始表
-                        String[] tablesqls = createTableSqls(info);
-                        if (tablesqls == null) { // 没有建表DDL
+                        String[] tableSqls = createTableSqls(info);
+                        if (tableSqls == null) { // 没有建表DDL
                             completeExceptionally(workThread, future, ex);
                         } else {
-                            writePool(workThread).query(tablesqls[0]).execute((AsyncResult<RowSet<Row>> event2) -> {
+                            writePool(workThread).query(tableSqls[0]).execute((AsyncResult<RowSet<Row>> event2) -> {
                                 if (event2.failed()) {
                                     completeExceptionally(workThread, future, event2.cause());
                                 } else {
@@ -1000,7 +1004,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         complete(workThread, future, new VertxResultSet(info, null, null));
                     }
                 }
-            } else {
+            } else { // 成功
                 complete(workThread, future, new VertxResultSet(info, null, event.result()));
             }
         };
