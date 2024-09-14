@@ -200,6 +200,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 return options;
             }
         } catch (Throwable t) {
+            logger.log(Level.INFO, VertxSqlDataSource.class.getSimpleName() + " createPoolOptions failed", t);
             return options;
         }
     }

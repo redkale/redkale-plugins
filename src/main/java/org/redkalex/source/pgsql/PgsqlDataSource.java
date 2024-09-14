@@ -502,23 +502,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         return findDBApply(info, executeQuery(info, sql), onlypk, selects);
     }
 
-    // 临时代码
-    @Override
-    public <T> T[] finds(Class<T> clazz, final SelectColumn selects, Serializable... pks) {
-        final EntityInfo<T> info = loadEntityInfo(clazz);
-        if (pks == null || pks.length == 0) {
-            return info.getArrayer().apply(0);
-        }
-        final EntityCache<T> cache = info.getCache();
-        if (cache != null) {
-            while (!cache.isFullLoaded()) {
-                Utility.sleep(1000);
-            }
-            return selects == null ? cache.finds(pks) : cache.finds(selects, pks);
-        }
-        return findsDBAsync(info, selects, pks).join();
-    }
-
     @Override // 无Cache的findsAsync
     protected <T> CompletableFuture<T[]> findsDBAsync(
             final EntityInfo<T> info, final SelectColumn selects, Serializable... pks) {
@@ -656,11 +639,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             CompletableFuture<PgResultSet> listFuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currentWorkThread();
-                CompletableFuture<PgClientConnection> connFuture =
-                        clientNonBlocking && inCacheLoad && workThread != null
-                                ? pool.connect(workThread.index())
-                                : pool.connect();
-                return connFuture.thenCompose(conn -> {
+                return pool.connect().thenCompose(conn -> {
                     PgReqExtended req = conn.pollReqExtended(workThread, info);
                     req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, pageSql, 0);
                     Function<PgResultSet, Sheet<T>> transfer = dataset -> {

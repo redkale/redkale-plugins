@@ -640,15 +640,12 @@ public class MysqlDataSource extends AbstractDataSqlSource {
             CompletableFuture<MyResultSet> listFuture;
             if (cachePrepared) {
                 WorkThread workThread = WorkThread.currentWorkThread();
-                CompletableFuture<MyClientConnection> connFuture =
-                        clientNonBlocking && inCacheLoad && workThread != null
-                                ? pool.connect(workThread.index())
-                                : pool.connect();
-                listFuture = connFuture.thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
-                    MyReqExtended req = conn.pollReqExtended(workThread, info);
-                    req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, pageSql, 0, null);
-                    return pool.writeChannel(conn, req);
-                }));
+                listFuture = pool.connect()
+                        .thenCompose(c -> thenApplyQueryUpdateStrategy(info, c, conn -> {
+                            MyReqExtended req = conn.pollReqExtended(workThread, info);
+                            req.prepare(MyClientRequest.REQ_TYPE_EXTEND_QUERY, pageSql, 0, null);
+                            return pool.writeChannel(conn, req);
+                        }));
             } else {
                 listFuture = executeQuery(info, pageSql);
             }
