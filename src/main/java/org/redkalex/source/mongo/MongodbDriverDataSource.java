@@ -529,6 +529,10 @@ public class MongodbDriverDataSource extends MongodbDataSource
             }
         } else if (node instanceof ColumnNameNode) {
             return new BsonString("$" + ((ColumnNameNode) node).getColumn());
+        } else if (node instanceof ColumnStringNode) {
+            return new BsonString(((ColumnStringNode) node).getValue());
+        } else if (node instanceof ColumnBytesNode) {
+            return new BsonBinary(((ColumnBytesNode) node).getValue());
         }
         throw new IllegalArgumentException("Not supported ColumnValue " + node);
     }
