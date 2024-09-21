@@ -83,10 +83,6 @@ public class PgClientCodec extends ClientCodec<PgClientRequest, PgResultSet> {
         return rs;
     }
 
-    protected void offerResultSet(PgResultSet rs) {
-        // do nothing
-    }
-
     protected ByteArray pollArray() {
         if (recyclableArray == null) {
             recyclableArray = new ByteArray();

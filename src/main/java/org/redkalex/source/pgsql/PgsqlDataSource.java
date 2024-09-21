@@ -245,7 +245,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                             primary.set(entitys[++i], DataResultSet.getRowColumnValue(dataset, primary, 1, null));
                         }
                     }
-                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -365,7 +364,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         objs);
                 Function<PgResultSet, Integer> transfer = dataset -> {
                     int rs = dataset.getUpdateEffectCount();
-                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -476,7 +474,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FIND_ENTITY, sql, 0, pk);
                 Function<PgResultSet, T> transfer = dataset -> {
                     T rs = (T) dataset.oneEntity;
-                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -517,7 +514,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     T[] rs = dataset.listEntity == null
                             ? info.getArrayer().apply(pks.length)
                             : dataset.listEntity.toArray(info.getArrayer());
-                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -543,7 +539,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 req.preparePrimarys(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.FINDS_ENTITY, sql, 0, ids);
                 Function<PgResultSet, List<T>> transfer = dataset -> {
                     List<T> rs = dataset.listEntity == null ? new ArrayList<>() : (List) dataset.listEntity;
-                    conn.offerResultSet(req, dataset);
                     slowLog(s, sql);
                     return rs;
                 };
@@ -595,7 +590,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, pageSql, 0);
                 Function<PgResultSet, List<T>> transfer = dataset -> {
                     List<T> rs = dataset.listEntity == null ? new ArrayList<>() : (List) dataset.listEntity;
-                    conn.offerResultSet(req, dataset);
                     slowLog(s, pageSql);
                     return rs;
                 };
@@ -644,7 +638,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                     req.prepare(PgClientRequest.REQ_TYPE_EXTEND_QUERY, PgExtendMode.LISTALL_ENTITY, pageSql, 0);
                     Function<PgResultSet, Sheet<T>> transfer = dataset -> {
                         List<T> rs = dataset.listEntity == null ? new ArrayList<>() : (List) dataset.listEntity;
-                        conn.offerResultSet(req, dataset);
                         slowLog(s, pageSql);
                         return Sheet.asSheet(rs);
                     };
@@ -1089,7 +1082,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                         pstream);
                 Function<PgResultSet, Integer> transfer = dataset -> {
                     int rs = dataset.getUpdateEffectCount();
-                    conn.offerResultSet(req, dataset);
                     slowLog(s, sinfo.getNativeSql());
                     return rs;
                 };
@@ -1101,7 +1093,6 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 req.prepare(PgClientRequest.REQ_TYPE_EXTEND_UPDATE, PgExtendMode.OTHER_NATIVE, sinfo.getNativeSql(), 0);
                 Function<PgResultSet, Integer> transfer = dataset -> {
                     int rs = dataset.getUpdateEffectCount();
-                    conn.offerResultSet(req, dataset);
                     slowLog(s, sinfo.getNativeSql());
                     return rs;
                 };

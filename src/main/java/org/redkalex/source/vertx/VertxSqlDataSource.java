@@ -574,7 +574,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     protected <T, N extends Number> CompletableFuture<Map<String, N>> getNumberMapDBAsync(
             EntityInfo<T> info, String[] tables, String sql, FilterNode node, FilterFuncColumn... columns) {
         final WorkThread workThread = WorkThread.currentWorkThread();
-        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
+        return readResultSet(workThread, info, sql).thenApply(set -> {
             final Map map = new HashMap<>();
             if (set.next()) {
                 int index = 0;
@@ -603,7 +603,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             String column,
             final FilterNode node) {
         final WorkThread workThread = WorkThread.currentWorkThread();
-        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
+        return readResultSet(workThread, info, sql).thenApply(set -> {
             Number rs = defVal;
             if (set.next()) {
                 Object o = set.getObject(1);
@@ -625,7 +625,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             String funcColumn,
             FilterNode node) {
         final WorkThread workThread = WorkThread.currentWorkThread();
-        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
+        return readResultSet(workThread, info, sql).thenApply(set -> {
             Map<K, N> rs = new LinkedHashMap<>();
             while (set.next()) {
                 rs.put((K) set.getObject(1), (N) set.getObject(2));
@@ -643,7 +643,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             final String[] groupByColumns,
             FilterNode node) {
         final WorkThread workThread = WorkThread.currentWorkThread();
-        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
+        return readResultSet(workThread, info, sql).thenApply(set -> {
             Map rs = new LinkedHashMap<>();
             while (set.next()) {
                 int index = 0;
@@ -677,7 +677,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             final String sql = dollar ? info.getFindDollarPrepareSQL(pk) : info.getFindQuestionPrepareSQL(pk);
             return readPrepareResultSet(workThread, info, sql, Tuple.of(pk)).thenApply(rsset -> {
                 boolean rs = rsset.next();
-                T val = rs ? getEntityValue(info, null, rsset) : null;
+                T val = rs ? info.getBuilder().getFullEntityValue(rsset) : null;
                 return val;
             });
         }
@@ -741,7 +741,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         }
                     }
                 } else {
-                    VertxResultSet vrs = new VertxResultSet(info, null, event.result());
+                    VertxResultSet vrs = new VertxResultSet(info, event.result());
                     if (vrs.next()) {
                         array[index] = getEntityValue(info, null, vrs);
                     } else {
@@ -788,7 +788,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             Serializable pk,
             FilterNode node) {
         final WorkThread workThread = WorkThread.currentWorkThread();
-        return readResultSet(workThread, info, sql).thenApply((VertxResultSet set) -> {
+        return readResultSet(workThread, info, sql).thenApply(set -> {
             Serializable val = defValue;
             if (set.next()) {
                 final Attribute<T, Serializable> attr = info.getAttribute(column);
@@ -819,10 +819,11 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             final WorkThread workThread = WorkThread.currentWorkThread();
             final String pageSql = info.getAllQueryPrepareSQL();
             CompletableFuture<VertxResultSet> future = readPrepareResultSet(workThread, info, pageSql, null);
-            return future.thenApply((VertxResultSet set) -> {
+            return future.thenApply(set -> {
                 final List<T> list = new ArrayList();
+                final EntityBuilder<T> builder = info.getBuilder();
                 while (set.next()) {
-                    list.add(getEntityValue(info, null, set));
+                    list.add(builder.getFullEntityValue(set));
                 }
                 return list;
             });
@@ -848,7 +849,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         PageCountSql sqls = createPageCountSql(info, readCache, needTotal, distinct, sels, tables, flipper, node);
         if (!needTotal) {
             CompletableFuture<VertxResultSet> listfuture = readResultSet(workThread, info, sqls.pageSql);
-            return listfuture.thenApply((VertxResultSet set) -> {
+            return listfuture.thenApply(set -> {
                 final List<T> list = new ArrayList();
                 while (set.next()) {
                     list.add(getEntityValue(info, sels, set));
@@ -869,7 +870,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     if (total.longValue() <= 0) {
                         return CompletableFuture.completedFuture(new Sheet<>(0, new ArrayList()));
                     }
-                    return readResultSet(workThread, info, sqls.pageSql).thenApply((VertxResultSet set) -> {
+                    return readResultSet(workThread, info, sqls.pageSql).thenApply(set -> {
                         final List<T> list = new ArrayList();
                         while (set.next()) {
                             list.add(getEntityValue(info, sels, set));
@@ -996,16 +997,16 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                                 if (event2.failed()) {
                                     completeExceptionally(workThread, future, event2.cause());
                                 } else {
-                                    complete(workThread, future, new VertxResultSet(info, null, null));
+                                    complete(workThread, future, new VertxResultSet(info, null));
                                 }
                             });
                         }
                     } else { // 没有分表
-                        complete(workThread, future, new VertxResultSet(info, null, null));
+                        complete(workThread, future, new VertxResultSet(info, null));
                     }
                 }
             } else { // 成功
-                complete(workThread, future, new VertxResultSet(info, null, event.result()));
+                complete(workThread, future, new VertxResultSet(info, event.result()));
             }
         };
     }
@@ -1076,7 +1077,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             String sql, BiConsumer<Object, Object> consumer, Function<DataResultSet, V> handler) {
         final long s = System.currentTimeMillis();
         final WorkThread workThread = WorkThread.currentWorkThread();
-        return readResultSet(workThread, null, sql).thenApply((VertxResultSet set) -> {
+        return readResultSet(workThread, null, sql).thenApply(set -> {
             slowLog(s, sql);
             return handler.apply(set);
         });
@@ -1132,7 +1133,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         if (event.failed()) {
                             completeExceptionally(workThread, future, event.cause());
                         } else {
-                            complete(workThread, future, handler.apply(new VertxResultSet(null, null, event.result())));
+                            complete(workThread, future, handler.apply(new VertxResultSet(null, event.result())));
                         }
                     });
         } else {
@@ -1141,7 +1142,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                 if (event.failed()) {
                     completeExceptionally(workThread, future, event.cause());
                 } else {
-                    complete(workThread, future, handler.apply(new VertxResultSet(null, null, event.result())));
+                    complete(workThread, future, handler.apply(new VertxResultSet(null, event.result())));
                 }
             });
         }
@@ -1177,7 +1178,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     if (event.failed()) {
                         completeExceptionally(workThread, future, event.cause());
                     } else {
-                        List<V> list = EntityBuilder.getListValue(type, new VertxResultSet(null, null, event.result()));
+                        List<V> list = EntityBuilder.getListValue(type, new VertxResultSet(null, event.result()));
                         complete(workThread, future, new Sheet<>(count, list));
                     }
                 };

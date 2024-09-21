@@ -32,11 +32,6 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         return ((PgClient) client).autoddl;
     }
 
-    protected void offerResultSet(PgReqExtended req, PgResultSet rs) {
-        PgClientCodec c = getCodec();
-        c.offerResultSet(rs);
-    }
-
     public PgPrepareDesc getPgPrepareDesc(String prepareSql) {
         PgPrepareDesc desc = lastPrepareDesc;
         if (desc != null && desc.sql().equals(prepareSql)) {
