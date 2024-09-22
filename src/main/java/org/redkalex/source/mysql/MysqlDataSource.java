@@ -1150,7 +1150,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
         MyClient pool = readPool();
         final String countSql = sinfo.getNativeCountSql();
         Function<MyResultSet, Long> countTransfer = dataset -> {
-            long rs = dataset.next() ? dataset.getLongValue(1) : 0;
+            long rs = dataset.next() ? dataset.getLong(1, 0L) : 0;
             slowLog(s, countSql);
             return rs;
         };
