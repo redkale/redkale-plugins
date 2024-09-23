@@ -37,6 +37,7 @@
         <nacos-client.version>2.2.4</nacos-client.version>
         <mysql.version>8.3.0</mysql.version>
         <postgresql.version>42.7.3</postgresql.version>
+        <protobuf.version>4.28.2</protobuf.version>
     </properties>
 
     <dependencies>        
@@ -63,6 +64,13 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>5.7.0</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
             <scope>test</scope>
         </dependency>
         
