@@ -6,6 +6,7 @@
 package org.redkalex.source.pgsql;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.util.*;
 import org.redkale.convert.ConvertDisabled;
 import org.redkale.net.client.ClientResult;
@@ -164,6 +165,18 @@ public class PgResultSet implements DataResultSet, ClientResult {
     public byte[] getBytes(String columnLabel) {
         Object val = getObject(columnLabel);
         return val == null ? null : (byte[]) val;
+    }
+
+    @Override
+    public BigDecimal getBigDecimal(int columnIndex) {
+        Object val = getObject(columnIndex);
+        return val == null ? null : (BigDecimal) val;
+    }
+
+    @Override
+    public BigDecimal getBigDecimal(String columnLabel) {
+        Object val = getObject(columnLabel);
+        return val == null ? null : (BigDecimal) val;
     }
 
     @Override

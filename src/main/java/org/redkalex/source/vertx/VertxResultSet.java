@@ -7,6 +7,7 @@ package org.redkalex.source.vertx;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.sqlclient.*;
+import java.math.BigDecimal;
 import java.util.*;
 import org.redkale.annotation.Nullable;
 import org.redkale.convert.ConvertDisabled;
@@ -94,6 +95,20 @@ public class VertxResultSet implements DataResultSet {
         }
         Buffer buffer = currentRow.getBuffer(columnIndex);
         return buffer == null ? null : buffer.getBytes();
+    }
+
+    @Override
+    public BigDecimal getBigDecimal(int columnIndex) {
+        return currentRow.getBigDecimal(columnIndex - 1);
+    }
+
+    @Override
+    public BigDecimal getBigDecimal(String columnLabel) {
+        int columnIndex = currentRow.getColumnIndex(columnLabel);
+        if (columnIndex < 0) {
+            columnIndex = currentRow.getColumnIndex(columnLabel.toLowerCase());
+        }
+        return currentRow.getBigDecimal(columnIndex);
     }
 
     @Override
