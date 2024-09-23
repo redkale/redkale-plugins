@@ -93,6 +93,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
                 maxConns,
                 maxPipelines,
                 autoddl(),
+                clientNonBlocking,
                 prop,
                 info);
     }

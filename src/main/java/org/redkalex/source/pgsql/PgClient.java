@@ -36,10 +36,12 @@ public class PgClient extends Client<PgClientConnection, PgClientRequest, PgResu
             int maxConns,
             int maxPipelines,
             boolean autoddl,
+            boolean clientNonBlocking,
             final Properties prop,
             final SourceUrlInfo info) {
         super(name, group, true, address, maxConns, maxPipelines, PgReqPing::new, PgReqClose::new, null); // maxConns
         this.autoddl = autoddl;
+        this.nonBlocking = clientNonBlocking;
         this.authenticate = (workThread, traceid) -> {
             Traces.currentTraceid(traceid);
             return conn -> writeChannel(conn, new PgReqAuthentication(info).workThread(workThread))

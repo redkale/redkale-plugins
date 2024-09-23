@@ -22,6 +22,7 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
             AsyncGroup group,
             String key,
             ClientAddress address,
+            boolean nonBlocking,
             int maxConns,
             int maxPipelines,
             RedisCacheReqAuth authReq,
@@ -36,6 +37,7 @@ public class RedisCacheClient extends Client<RedisCacheConnection, RedisCacheReq
                 RedisCacheReqPing::new,
                 RedisCacheReqClose::new,
                 null); // maxConns
+        this.nonBlocking = nonBlocking;
         if (authReq != null && dbReq != null) {
             this.authenticate = (workThread, traceid) -> {
                 Traces.currentTraceid(traceid);

@@ -34,10 +34,12 @@ public class MyClient extends Client<MyClientConnection, MyClientRequest, MyResu
             final Properties prop,
             final SourceUrlInfo info,
             boolean autoddl,
+            boolean clientNonBlocking,
             final Properties attributes) {
         super(name, group, true, address, maxConns, maxPipelines, MyReqPing::new, MyReqClose::new, null); // maxConns
         this.info = info;
         this.autoddl = autoddl;
+        this.nonBlocking = clientNonBlocking;
         this.authenticate = (workThread, traceid) -> {
             Traces.currentTraceid(traceid);
             return conn -> {

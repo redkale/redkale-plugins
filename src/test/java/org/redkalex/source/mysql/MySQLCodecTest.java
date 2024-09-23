@@ -38,6 +38,7 @@ public class MySQLCodecTest {
                         new Properties(),
                         info,
                         false,
+                        false,
                         new Properties());
                 MyClientConnection conn =
                         (MyClientConnection) client.createClientConnection(asyncGroup.newTCPClientConnection());

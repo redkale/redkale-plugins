@@ -120,6 +120,7 @@ public final class RedisCacheSource extends RedisSource {
                 ioGroup,
                 resourceName() + "." + config.getDb(),
                 new ClientAddress(address),
+                config.isNonBlocking(),
                 config.getMaxconns(Utility.cpus()),
                 config.getPipelines(),
                 isEmpty(config.getPassword()) ? null : new RedisCacheReqAuth(config.getPassword()),

@@ -3,19 +3,20 @@
  */
 package org.redkalex.cache.redis;
 
-import static org.redkale.source.AbstractCacheSource.*;
-import static org.redkale.util.Utility.isEmpty;
-import static org.redkale.util.Utility.isNotEmpty;
-
 import java.net.URI;
 import java.util.*;
 import org.redkale.convert.json.JsonConvert;
+import static org.redkale.source.AbstractCacheSource.*;
 import org.redkale.util.*;
+import static org.redkale.util.Utility.isEmpty;
+import static org.redkale.util.Utility.isNotEmpty;
 
 /** @author zhangjx */
 public class RedisConfig {
 
     private boolean ssl;
+
+    private boolean nonBlocking;
 
     private int db;
 
@@ -33,6 +34,7 @@ public class RedisConfig {
         RedisConfig result = new RedisConfig();
         int gdb = conf.getIntValue(CACHE_SOURCE_DB, 0);
         String gusername = null;
+        boolean gnonBlocking = conf.getBoolValue(CACHE_SOURCE_NON_BLOCKING, false);
         String gpassword = conf.getValue(CACHE_SOURCE_PASSWORD);
         int gmaxconns = conf.getIntValue(CACHE_SOURCE_MAXCONNS, Utility.cpus());
         int gpipelines = conf.getIntValue(CACHE_SOURCE_PIPELINES, org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES);
@@ -103,6 +105,7 @@ public class RedisConfig {
             }
         }
         result.ssl = nodes.startsWith("rediss://");
+        result.nonBlocking = gnonBlocking;
         result.db = gdb;
         if (isNotEmpty(gusername)) {
             result.username = gusername;
@@ -122,6 +125,14 @@ public class RedisConfig {
 
     public void setSsl(boolean ssl) {
         this.ssl = ssl;
+    }
+
+    public boolean isNonBlocking() {
+        return nonBlocking;
+    }
+
+    public void setNonBlocking(boolean nonBlocking) {
+        this.nonBlocking = nonBlocking;
     }
 
     public String getUsername() {

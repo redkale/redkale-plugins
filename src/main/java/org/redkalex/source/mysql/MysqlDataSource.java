@@ -93,6 +93,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
                 prop,
                 info,
                 autoddl(),
+                clientNonBlocking,
                 info.attributes);
     }
 

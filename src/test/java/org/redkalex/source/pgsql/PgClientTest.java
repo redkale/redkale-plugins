@@ -29,7 +29,7 @@ public class PgClientTest {
         Properties prop = new Properties();
         prop.put("preparecache", "true");
         final PgClient client =
-                new PgClient("test", asyncGroup, "rw", new ClientAddress(address), 2, 16, false, prop, info);
+                new PgClient("test", asyncGroup, "rw", new ClientAddress(address), 2, 16, false, false, prop, info);
         PgReqQuery showReqQuery = new PgReqQuery();
         showReqQuery.prepare("show all");
         CompletableFuture.allOf(client.sendAsync(showReqQuery), client.sendAsync(showReqQuery))
