@@ -1,4 +1,4 @@
-package org.redkalex.test.convert.pb;
+package org.redkalex.convert.pb;
 
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;

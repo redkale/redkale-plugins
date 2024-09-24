@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 // 生成类的包名
-option java_package = "org.redkalex.test.convert.pb";
+option java_package = "org.redkalex.convert.pb";
 
 message PTestBean {
 

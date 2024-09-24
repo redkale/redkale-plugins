@@ -2,7 +2,7 @@
  * Copyright (c) 2016-2116 Redkale
  * All rights reserved.
  */
-package org.redkalex.test.convert.pb;
+package org.redkalex.convert.pb;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

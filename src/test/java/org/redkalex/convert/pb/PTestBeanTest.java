@@ -1,6 +1,6 @@
 /**
  */
-package org.redkalex.test.convert.pb;
+package org.redkalex.convert.pb;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;

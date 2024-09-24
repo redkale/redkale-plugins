@@ -1,4 +1,4 @@
-package org.redkalex.test.convert.pb;
+package org.redkalex.convert.pb;
 
 import java.util.Map;
 import org.redkale.convert.ConvertColumn;
