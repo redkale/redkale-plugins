@@ -34,7 +34,21 @@ public class PTestBeanTest {
         // System.out.println(ProtobufConvert.root().getProtoDescriptor(PTestBeanSelf.class));
         // System.out.println(Integer.toHexString(14<<3|2));
         PTestBeanSelf bean = new PTestBeanSelf();
-
+        // EnMember{attribute=bools, position=1, tag=10, encoder=org.redkale.convert.ext.BoolArraySimpledCoder},
+        // EnMember{attribute=bytes, position=2, tag=18, encoder=org.redkale.convert.ext.ByteArraySimpledCoder},
+        // EnMember{attribute=chars, position=3, tag=26, encoder=org.redkale.convert.ext.CharArraySimpledCoder},
+        // EnMember{attribute=entrys, position=4, tag=34, encoder=org.redkale.convert.pb.ProtobufArrayEncoder},
+        // EnMember{attribute=ints, position=5, tag=42, encoder=org.redkale.convert.ext.IntArraySimpledCoder},
+        // EnMember{attribute=floats, position=6, tag=50, encoder=org.redkale.convert.ext.FloatArraySimpledCoder},
+        // EnMember{attribute=longs, position=7, tag=58, encoder=org.redkale.convert.ext.LongArraySimpledCoder},
+        // EnMember{attribute=doubles, position=8, tag=66, encoder=org.redkale.convert.ext.DoubleArraySimpledCoder},
+        // EnMember{attribute=strings, position=9, tag=74, encoder=org.redkale.convert.pb.ProtobufArrayEncoder},
+        // EnMember{attribute=id, position=10, tag=80, encoder=org.redkale.convert.ext.IntSimpledCoder},
+        // EnMember{attribute=name, position=11, tag=90, encoder=org.redkale.convert.ext.StringSimpledCoder},
+        // EnMember{attribute=email, position=12, tag=98, encoder=org.redkale.convert.ext.StringSimpledCoder},
+        // EnMember{attribute=kind, position=13, tag=104, encoder=org.redkale.convert.pb.ProtobufEnumSimpledCoder},
+        // EnMember{attribute=map, position=14, tag=114, encoder=org.redkale.convert.pb.ProtobufMapEncoder},
+        // EnMember{attribute=end, position=15, tag=122, encoder=org.redkale.convert.ext.StringSimpledCoder}
         bean.bools = new boolean[] {true, false, true};
         bean.bytes = new byte[] {1, 2, 3, 4};
         bean.chars = new char[] {'A', 'B', 'C'};
@@ -48,7 +62,7 @@ public class PTestBeanTest {
         bean.strings = new String[] {"str1", "str2", "str3"};
         bean.entrys =
                 new PTestBeanSelf.PTestEntry[] {new PTestBeanSelf.PTestEntry(), null, new PTestBeanSelf.PTestEntry()};
-        bean.map = Utility.ofMap("aa", 0x55, "bb", 0x66);
+        bean.map = Utility.ofMap("aa", 0x11, "bb", 0x22);
         bean.end = "over";
 
         // -------------------------------
