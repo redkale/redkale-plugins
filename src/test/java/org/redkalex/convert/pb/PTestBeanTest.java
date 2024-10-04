@@ -4,7 +4,6 @@ package org.redkalex.convert.pb;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;
-import java.util.Arrays;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -31,7 +30,7 @@ public class PTestBeanTest {
     @Test
     public void run1() throws Exception {
         System.setProperty("convert.protobuf.enumtostring", "false"); // 禁用枚举按字符串类型出来
-        // System.out.println(ProtobufConvert.root().getProtoDescriptor(PTestBeanSelf.class));
+        // System.out.println(convert.getProtoDescriptor(PTestBeanSelf.class));
         // System.out.println(Integer.toHexString(14<<3|2));
         PTestBeanSelf bean = new PTestBeanSelf();
         // EnMember{attribute=bools, position=1, tag=10, encoder=org.redkale.convert.ext.BoolArraySimpledCoder},
@@ -66,30 +65,31 @@ public class PTestBeanTest {
         bean.end = "over";
 
         // -------------------------------
-        byte[] jsonbs = JsonConvert.root().convertToBytes(bean);
-        byte[] bs = ProtobufConvert.root().convertTo(bean);
-        Utility.println("pbconvert ", bs);
-        PTestBeanOuterClass.PTestBean.Builder builder = PTestBeanOuterClass.PTestBean.newBuilder();
+        JsonConvert jsconvert = JsonConvert.root();
+        ProtobufConvert convert = ProtobufConvert.root();
 
+        PTestBeanOuterClass.PTestBean.Builder builder = PTestBeanOuterClass.PTestBean.newBuilder();
         PTestBeanOuterClass.PTestBean bean2 = createPTestBean(bean, builder);
         byte[] bs2 = bean2.toByteArray();
         Utility.println("proto-buf ", bs2);
+
+        byte[] jsonbs = jsconvert.convertToBytes(bean);
+        byte[] bs = convert.convertTo(bean);
+        Utility.println("pbconvert ", bs);
         Utility.sleep(10);
-        if (!Arrays.equals(bs, bs2)) throw new RuntimeException("两者序列化出来的byte[]不一致");
+        Assertions.assertArrayEquals(bs2, bs);
 
         System.out.println(bean);
-        String frombean =
-                ProtobufConvert.root().convertFrom(PTestBeanSelf.class, bs).toString();
+        String frombean = convert.convertFrom(PTestBeanSelf.class, bs).toString();
         System.out.println(frombean);
-        if (!bean.toString().equals(frombean)) throw new RuntimeException("ProtobufConvert反解析后的结果不正确");
-        System.out.println(
-                JsonConvert.root().convertFrom(PTestBeanSelf.class, jsonbs).toString());
+        Assertions.assertEquals(bean.toString(), frombean);
+        System.out.println(jsconvert.convertFrom(PTestBeanSelf.class, jsonbs).toString());
 
         int count = 100000;
         long s, e;
         s = System.currentTimeMillis();
         for (int z = 0; z < count; z++) {
-            ProtobufConvert.root().convertTo(bean);
+            convert.convertTo(bean);
         }
         e = System.currentTimeMillis() - s;
         System.out.println("redkale-protobuf耗时-------" + e);
