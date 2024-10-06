@@ -44,7 +44,7 @@ public class VertxMysqlTest {
                 .getAnyValue("redkale")
                 .getAnyValue("datasource")
                 .getAnyValue("default"));
-        Pool pool = source.readThreadPools[0];
+        Pool pool = source.readThreadPool;
         Field f = PoolBase.class.getDeclaredField("delegate");
         f.setAccessible(true);
         Object delegate = f.get(pool);

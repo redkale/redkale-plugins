@@ -153,7 +153,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     }
 
     protected PoolOptions createPoolOptions(Properties prop) {
-        int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + (Utility.cpus() << 1))));
+        int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + (Utility.cpus() << 2))));
         PoolOptions options = new PoolOptions().setMaxSize(maxConns);
         try {
             if ("mysql".equalsIgnoreCase(dbtype())) {
