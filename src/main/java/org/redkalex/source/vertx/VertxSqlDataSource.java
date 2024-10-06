@@ -55,13 +55,13 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     protected PoolOptions readPoolOptions;
 
-    protected Pool[] readThreadPools;
+    protected Pool readThreadPool;
 
     protected SqlConnectOptions writeOptions;
 
     protected PoolOptions writePoolOptions;
 
-    protected Pool[] writeThreadPools;
+    protected Pool writeThreadPool;
 
     protected boolean pgsql;
 
@@ -78,24 +78,17 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             RedkaleClassLoader.putReflectionClass(clazzName);
             RedkaleClassLoader.putReflectionPublicConstructors(readOptions.getClass(), clazzName);
         }
-        Pool[] rpools = new Pool[Utility.cpus()];
-        for (int i = 0; i < rpools.length; i++) {
-            rpools[i] = Pool.pool(vertx, readOptions, readPoolOptions);
-        }
-        this.readThreadPools = rpools;
+        Pool rpool = Pool.pool(vertx, readOptions, readPoolOptions);
+        this.readThreadPool = rpool;
         if (readConfProps == writeConfProps) {
             this.writeOptions = readOptions;
             this.writePoolOptions = readPoolOptions;
-            this.writeThreadPools = this.readThreadPools;
+            this.writeThreadPool = this.readThreadPool;
         } else {
             this.writeOptions = createConnectOptions(writeConfProps);
             this.writePoolOptions = createPoolOptions(writeConfProps);
-
-            Pool[] wpools = new Pool[Utility.cpus()];
-            for (int i = 0; i < wpools.length; i++) {
-                wpools[i] = Pool.pool(vertx, writeOptions, writePoolOptions);
-            }
-            this.writeThreadPools = wpools;
+            Pool wpool = Pool.pool(vertx, writeOptions, writePoolOptions);
+            this.writeThreadPool = wpool;
         }
     }
 
@@ -115,68 +108,53 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     @Override
     protected void updateOneResourceChange(Properties newProps, ResourceEvent[] events) {
-        Pool[] oldPools = this.readThreadPools;
+        Pool oldPool = this.readThreadPool;
         SqlConnectOptions readOpt = createConnectOptions(newProps);
         PoolOptions readPoolOpt = createPoolOptions(newProps);
         this.readOptions = readOpt;
         this.readPoolOptions = readPoolOpt;
-        Pool[] wpools = new Pool[Utility.cpus()];
-        for (int i = 0; i < wpools.length; i++) {
-            wpools[i] = Pool.pool(vertx, readOpt, readPoolOpt);
-        }
-        this.readThreadPools = wpools;
+        Pool wpool = Pool.pool(vertx, readOpt, readPoolOpt);
+        this.readThreadPool = wpool;
 
         this.writeOptions = readOptions;
         this.writePoolOptions = readPoolOptions;
-        this.writeThreadPools = this.readThreadPools;
-        if (oldPools != null) {
-            for (Pool oldPool : oldPools) {
-                oldPool.close();
-            }
+        this.writeThreadPool = this.readThreadPool;
+        if (oldPool != null) {
+            oldPool.close();
         }
     }
 
     @Override
     protected void updateReadResourceChange(Properties newReadProps, ResourceEvent[] events) {
-        Pool[] oldPools = this.readThreadPools;
+        Pool oldPool = this.readThreadPool;
         SqlConnectOptions readOpt = createConnectOptions(newReadProps);
         PoolOptions readPoolOpt = createPoolOptions(newReadProps);
         this.readOptions = readOpt;
         this.readPoolOptions = readPoolOpt;
-        Pool[] wpools = new Pool[Utility.cpus()];
-        for (int i = 0; i < wpools.length; i++) {
-            wpools[i] = Pool.pool(vertx, readOpt, readPoolOpt);
-        }
-        this.readThreadPools = wpools;
-        if (oldPools != null) {
-            for (Pool oldPool : oldPools) {
-                oldPool.close();
-            }
+        Pool wpool = Pool.pool(vertx, readOpt, readPoolOpt);
+        this.readThreadPool = wpool;
+        if (oldPool != null) {
+            oldPool.close();
         }
     }
 
     @Override
     protected void updateWriteResourceChange(Properties newWriteProps, ResourceEvent[] events) {
-        Pool[] oldPools = this.writeThreadPools;
+        Pool oldPool = this.writeThreadPool;
         SqlConnectOptions writeOpt = createConnectOptions(newWriteProps);
         PoolOptions writePoolOpt = createPoolOptions(newWriteProps);
         this.writeOptions = writeOpt;
         this.writePoolOptions = writePoolOpt;
-        Pool[] rpools = new Pool[Utility.cpus()];
-        for (int i = 0; i < rpools.length; i++) {
-            rpools[i] = Pool.pool(vertx, writeOpt, writePoolOpt);
-        }
-        this.writeThreadPools = rpools;
-        if (oldPools != null) {
-            for (Pool oldPool : oldPools) {
-                oldPool.close();
-            }
+        Pool rpool = Pool.pool(vertx, writeOpt, writePoolOpt);
+        this.writeThreadPool = rpool;
+        if (oldPool != null) {
+            oldPool.close();
         }
     }
 
     protected PoolOptions createPoolOptions(Properties prop) {
-        int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
-        PoolOptions options = new PoolOptions().setMaxSize((maxConns + Utility.cpus() - 1) / Utility.cpus());
+        int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + (Utility.cpus() << 1))));
+        PoolOptions options = new PoolOptions().setMaxSize(maxConns);
         try {
             if ("mysql".equalsIgnoreCase(dbtype())) {
                 Class myclass = Class.forName("io.vertx.mysqlclient.impl.MySQLPoolOptions");
@@ -288,19 +266,11 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
     }
 
     protected Pool readPool(WorkThread thread) {
-        Pool[] pools = readThreadPools;
-        if (thread != null && thread.index() >= 0 && thread.index() < pools.length) {
-            return pools[thread.index()];
-        }
-        return pools[random.nextInt(pools.length)];
+        return readThreadPool;
     }
 
     protected Pool writePool(WorkThread thread) {
-        Pool[] pools = writeThreadPools;
-        if (thread != null && thread.index() >= 0 && thread.index() < pools.length) {
-            return pools[thread.index()];
-        }
-        return pools[random.nextInt(pools.length)];
+        return writeThreadPool;
     }
 
     @Local
@@ -315,15 +285,11 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         if (this.vertx != null) {
             this.vertx.close();
         }
-        if (readThreadPools != null) {
-            for (Pool pool : readThreadPools) {
-                pool.close();
-            }
+        if (readThreadPool != null) {
+            readThreadPool.close();
         }
-        if (this.writeThreadPools != null && this.writeThreadPools != this.readThreadPools) {
-            for (Pool pool : writeThreadPools) {
-                pool.close();
-            }
+        if (this.writeThreadPool != null && this.writeThreadPool != this.readThreadPool) {
+            writeThreadPool.close();
         }
     }
 
