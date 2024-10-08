@@ -21,7 +21,6 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
 
     public PgClientConnection(PgClient client, AsyncConnection channel) {
         super(client, channel);
-        channel.fastHandler(this.writeHandler);
     }
 
     @Override
@@ -104,16 +103,6 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
                 new PgPrepareDesc(type, mode, sql, nextSequence(), paramAttrs, paramCols, resultAttrs, resultCols);
         cachePreparedDescs.put(sql, prepareDesc);
         return prepareDesc;
-    }
-
-    @Override
-    protected void sendRequestInLocking(ClientFuture... respFutures) {
-        final ClientConnection self = this;
-        channel.fastWrite(array -> {
-            for (ClientFuture f : respFutures) {
-                f.getRequest().writeTo(self, array);
-            }
-        });
     }
 
     public PgReqInsert pollReqInsert(WorkThread workThread, EntityInfo info) {
