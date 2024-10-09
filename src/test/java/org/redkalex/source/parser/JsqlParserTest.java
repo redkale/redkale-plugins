@@ -66,8 +66,8 @@ public class JsqlParserTest {
                 + "AND ? AND col2 >= ? AND id IN (SELECT id FROM table2 WHERE time > 1)";
         Assertions.assertEquals(expectCount, statement.getNativeCountSql());
 
-        System.out.println("新pagesql = " + statement.getNativePageSql());
-        System.out.println("新countsql = " + statement.getNativeCountSql());
+        System.out.println("new-pagesql = " + statement.getNativePageSql());
+        System.out.println("new-countsql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================01============================================");
     }
@@ -80,7 +80,7 @@ public class JsqlParserTest {
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, params);
         Assertions.assertEquals(sql, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================02============================================");
     }
@@ -112,7 +112,7 @@ public class JsqlParserTest {
         String expect = "INSERT INTO dayrecord (recordid, content, createTime) SELECT recordid, content, NOW() "
                 + "FROM hourrecord WHERE createTime BETWEEN ? AND ? AND id > 0";
         Assertions.assertEquals(expect, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================04============================================");
     }
@@ -130,7 +130,7 @@ public class JsqlParserTest {
         String expect = "UPDATE dayrecord SET id = MAX(100), remark = ?, name = CASE WHEN type = 1 THEN ? "
                 + "WHEN type = 2 THEN ? ELSE ? END WHERE id IN (2, 3)";
         Assertions.assertEquals(expect, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================05============================================");
     }
@@ -163,7 +163,7 @@ public class JsqlParserTest {
         String expect = "UPDATE dayrecord SET id = ?, remark = ?, name = CASE WHEN type = 1 THEN ? "
                 + "WHEN type = 2 THEN ? ELSE ? END WHERE id IN (2, 3)";
         Assertions.assertEquals(expect, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================06============================================");
     }
@@ -250,7 +250,7 @@ public class JsqlParserTest {
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, flipper, params);
         String repect = "SELECT * FROM userdetail WHERE id = ?";
         Assertions.assertEquals(repect, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================09============================================");
     }
@@ -264,7 +264,7 @@ public class JsqlParserTest {
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, true, flipper, params);
         String repect = "SELECT * FROM userdetail WHERE id = ?";
         Assertions.assertEquals(repect, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================10============================================");
     }
@@ -280,11 +280,11 @@ public class JsqlParserTest {
         String repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
                 + "WHERE u.id = ? ORDER BY u.createTime DESC";
         Assertions.assertEquals(repect, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
                 + "WHERE u.id = ? ORDER BY u.createTime DESC LIMIT ? OFFSET ?";
         Assertions.assertEquals(repect, statement.getNativePageSql());
-        System.out.println("新pagesql = " + statement.getNativePageSql());
+        System.out.println("new-pagesql = " + statement.getNativePageSql());
         System.out.println("paramNames = " + statement.getParamNames());
 
         params = Utility.ofMap("id", 1, "t1", 30, "t1", "10", "t2", "5");
@@ -292,7 +292,7 @@ public class JsqlParserTest {
         repect = "SELECT u.* FROM userdetail u LEFT JOIN role r ON r.userid = u.userid "
                 + "WHERE u.id = ? AND r.type = MOD(?, ?) ORDER BY u.createTime DESC";
         Assertions.assertEquals(repect, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================11============================================");
@@ -304,7 +304,7 @@ public class JsqlParserTest {
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, null);
         Assertions.assertEquals(sql, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================12============================================");
     }
@@ -315,7 +315,7 @@ public class JsqlParserTest {
         DataNativeJsqlParser parser = new DataNativeJsqlParser();
         DataNativeSqlStatement statement = parser.parse(signFunc, "mysql", sql, false, null, null);
         Assertions.assertEquals(sql, statement.getNativeSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================13============================================");
     }
@@ -339,7 +339,7 @@ public class JsqlParserTest {
         repect =
                 "SELECT COUNT(1) FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 WHERE userid = ?) a";
         Assertions.assertEquals(repect, statement.getNativeCountSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================14============================================");
@@ -456,7 +456,7 @@ public class JsqlParserTest {
         repect =
                 "SELECT COUNT(DISTINCT userid, username) FROM (SELECT * FROM pooldatarecord_20220114 UNION SELECT * FROM pooldatarecord_20220119 WHERE userid = ?) a";
         Assertions.assertEquals(repect, statement.getNativeCountSql());
-        System.out.println("新sql = " + statement.getNativeSql());
+        System.out.println("new-sql = " + statement.getNativeSql());
         System.out.println("count-sql = " + statement.getNativeCountSql());
         System.out.println("paramNames = " + statement.getParamNames());
         System.out.println("=====================================21============================================");

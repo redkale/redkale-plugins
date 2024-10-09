@@ -92,21 +92,21 @@ public class PTestBeanTest {
             convert.convertTo(bean);
         }
         e = System.currentTimeMillis() - s;
-        System.out.println("redkale-protobuf耗时-------" + e);
+        System.out.println("redkale-protobuf cost-------" + e);
 
         s = System.currentTimeMillis();
         for (int z = 0; z < count; z++) {
             JsonConvert.root().convertToBytes(bean);
         }
         e = System.currentTimeMillis() - s;
-        System.out.println("redkale-json文本耗时-------" + e);
+        System.out.println("redkale-----json cost-------" + e);
 
         s = System.currentTimeMillis();
         for (int z = 0; z < count; z++) {
             createPTestBean(bean, builder).toByteArray();
         }
         e = System.currentTimeMillis() - s;
-        System.out.println("原生编译protobuf耗时-------" + e);
+        System.out.println("google--protobuf cost-------" + e);
     }
 
     @Test
@@ -117,16 +117,16 @@ public class PTestBeanTest {
         int v11 = input.readSInt32();
         int v12 = input.readSInt32();
         int v13 = input.readSInt32();
-        System.out.println("结果1： " + v11);
-        System.out.println("结果1： " + v12);
-        System.out.println("结果1： " + v13);
+        System.out.println("result-1: " + v11);
+        System.out.println("result-1: " + v12);
+        System.out.println("result-1: " + v13);
         ProtobufReader reader = new ProtobufReader(src);
         int v21 = reader.readInt();
         int v22 = reader.readInt();
         int v23 = reader.readInt();
-        System.out.println("结果2： " + v21);
-        System.out.println("结果2： " + v22);
-        System.out.println("结果2： " + v23);
+        System.out.println("result-2: " + v21);
+        System.out.println("result-2: " + v22);
+        System.out.println("result-2: " + v23);
         Assertions.assertEquals(v11, v21);
         Assertions.assertEquals(v12, v22);
         Assertions.assertEquals(v13, v23);
