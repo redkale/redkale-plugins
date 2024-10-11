@@ -64,11 +64,10 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         SourceUrlInfo info = parseSourceUrl(url);
         info.username = prop.getProperty(DATA_SOURCE_USER, "");
         info.password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
-        int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
-        int maxPipelines = Math.max(
-                1,
-                Integer.decode(prop.getProperty(
-                        DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
+        int maxConns = Math.max(
+                1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, String.valueOf(Utility.cpus() << 2))));
+        int maxPipelines =
+                Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + Client.DEFAULT_MAX_PIPELINES)));
         AsyncGroup ioGroup = clientAsyncGroup;
         if (clientAsyncGroup == null || "write".equalsIgnoreCase(rw)) {
             String f = "Redkalex-PgClient-IOThread-" + resourceName() + "-"
