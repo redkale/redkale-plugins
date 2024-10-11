@@ -265,12 +265,11 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
             Map<String, List<Serializable>> pkmap,
             String... sqls) {
         if (info.isLoggable(logger, Level.FINEST)) {
-            final String debugsql =
-                    flipper == null || flipper.getLimit() <= 0 ? sqls[0] : (sqls[0] + " LIMIT " + flipper.getLimit());
+            final String debugsql = !Flipper.hasLimit(flipper) ? sqls[0] : (sqls[0] + " LIMIT " + flipper.getLimit());
             if (info.isLoggable(logger, Level.FINEST, debugsql)) {
                 if (sqls.length == 1) {
                     logger.finest(info.getType().getSimpleName() + " delete sql=" + debugsql);
-                } else {
+                } else if (flipper != null) {
                     logger.finest(info.getType().getSimpleName() + " limit " + flipper.getLimit() + " delete sqls="
                             + Arrays.toString(sqls));
                 }
@@ -1139,6 +1138,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         }
     }
 
+    @Override
     public <V> CompletableFuture<Sheet<V>> nativeQuerySheetAsync(
             Class<V> type, String sql, RowBound round, Map<String, Object> params) {
         long s = System.currentTimeMillis();
