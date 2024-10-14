@@ -94,7 +94,7 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
 
     protected Vertx createVertx() {
         return Vertx.vertx(new VertxOptions()
-                .setEventLoopPoolSize(Utility.cpus())
+                .setEventLoopPoolSize(Utility.cpus() << 1)
                 .setPreferNativeTransport(true)
                 .setDisableTCCL(true)
                 .setHAEnabled(false)
