@@ -1,5 +1,15 @@
 ## 项目介绍
 &emsp;&emsp;RedKale的扩展插件库。
+
+## 版本
+```xml
+<dependency>
+    <groupId>org.redkalex</groupId>
+    <artifactId>redkale-plugins</artifactId>
+    <version>2.8.0</version>
+</dependency>
+```
+
 ## 功能说明
 |组件|说明|依赖|
 | --- | --- | --- |
