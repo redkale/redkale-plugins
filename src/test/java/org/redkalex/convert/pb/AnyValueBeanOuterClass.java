@@ -38,7 +38,7 @@ public final class AnyValueBeanOuterClass {
     /**
      * <code>repeated .AnyValueBean.StringEntry stringEntrys = 2;</code>
      */
-    java.util.List<org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntry> 
+    java.util.List<org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntry>
         getStringEntrysList();
     /**
      * <code>repeated .AnyValueBean.StringEntry stringEntrys = 2;</code>
@@ -51,7 +51,7 @@ public final class AnyValueBeanOuterClass {
     /**
      * <code>repeated .AnyValueBean.StringEntry stringEntrys = 2;</code>
      */
-    java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntryOrBuilder> 
+    java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntryOrBuilder>
         getStringEntrysOrBuilderList();
     /**
      * <code>repeated .AnyValueBean.StringEntry stringEntrys = 2;</code>
@@ -62,7 +62,7 @@ public final class AnyValueBeanOuterClass {
     /**
      * <code>repeated .AnyValueBean.AnyValueEntry anyEntrys = 3;</code>
      */
-    java.util.List<org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntry> 
+    java.util.List<org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntry>
         getAnyEntrysList();
     /**
      * <code>repeated .AnyValueBean.AnyValueEntry anyEntrys = 3;</code>
@@ -75,7 +75,7 @@ public final class AnyValueBeanOuterClass {
     /**
      * <code>repeated .AnyValueBean.AnyValueEntry anyEntrys = 3;</code>
      */
-    java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntryOrBuilder> 
+    java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntryOrBuilder>
         getAnyEntrysOrBuilderList();
     /**
      * <code>repeated .AnyValueBean.AnyValueEntry anyEntrys = 3;</code>
@@ -202,7 +202,7 @@ public final class AnyValueBeanOuterClass {
         if (ref instanceof java.lang.String) {
           return (java.lang.String) ref;
         } else {
-          com.google.protobuf.ByteString bs = 
+          com.google.protobuf.ByteString bs =
               (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           name_ = s;
@@ -218,7 +218,7 @@ public final class AnyValueBeanOuterClass {
           getNameBytes() {
         java.lang.Object ref = name_;
         if (ref instanceof java.lang.String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           name_ = b;
@@ -241,7 +241,7 @@ public final class AnyValueBeanOuterClass {
         if (ref instanceof java.lang.String) {
           return (java.lang.String) ref;
         } else {
-          com.google.protobuf.ByteString bs = 
+          com.google.protobuf.ByteString bs =
               (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           value_ = s;
@@ -257,7 +257,7 @@ public final class AnyValueBeanOuterClass {
           getValueBytes() {
         java.lang.Object ref = value_;
         if (ref instanceof java.lang.String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           value_ = b;
@@ -610,7 +610,7 @@ public final class AnyValueBeanOuterClass {
             getNameBytes() {
           java.lang.Object ref = name_;
           if (ref instanceof String) {
-            com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString b =
                 com.google.protobuf.ByteString.copyFromUtf8(
                     (java.lang.String) ref);
             name_ = b;
@@ -682,7 +682,7 @@ public final class AnyValueBeanOuterClass {
             getValueBytes() {
           java.lang.Object ref = value_;
           if (ref instanceof String) {
-            com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString b =
                 com.google.protobuf.ByteString.copyFromUtf8(
                     (java.lang.String) ref);
             value_ = b;
@@ -863,7 +863,7 @@ public final class AnyValueBeanOuterClass {
         if (ref instanceof java.lang.String) {
           return (java.lang.String) ref;
         } else {
-          com.google.protobuf.ByteString bs = 
+          com.google.protobuf.ByteString bs =
               (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
           name_ = s;
@@ -879,7 +879,7 @@ public final class AnyValueBeanOuterClass {
           getNameBytes() {
         java.lang.Object ref = name_;
         if (ref instanceof java.lang.String) {
-          com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString b =
               com.google.protobuf.ByteString.copyFromUtf8(
                   (java.lang.String) ref);
           name_ = b;
@@ -1279,7 +1279,7 @@ public final class AnyValueBeanOuterClass {
             getNameBytes() {
           java.lang.Object ref = name_;
           if (ref instanceof String) {
-            com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString b =
                 com.google.protobuf.ByteString.copyFromUtf8(
                     (java.lang.String) ref);
             name_ = b;
@@ -1434,7 +1434,7 @@ public final class AnyValueBeanOuterClass {
          * <code>.AnyValueBean value = 2;</code>
          */
         private com.google.protobuf.SingleFieldBuilder<
-            org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.Builder, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBeanOrBuilder> 
+            org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.Builder, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBeanOrBuilder>
             getValueFieldBuilder() {
           if (valueBuilder_ == null) {
             valueBuilder_ = new com.google.protobuf.SingleFieldBuilder<
@@ -1523,7 +1523,7 @@ public final class AnyValueBeanOuterClass {
      * <code>repeated .AnyValueBean.StringEntry stringEntrys = 2;</code>
      */
     @java.lang.Override
-    public java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntryOrBuilder> 
+    public java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntryOrBuilder>
         getStringEntrysOrBuilderList() {
       return stringEntrys_;
     }
@@ -1564,7 +1564,7 @@ public final class AnyValueBeanOuterClass {
      * <code>repeated .AnyValueBean.AnyValueEntry anyEntrys = 3;</code>
      */
     @java.lang.Override
-    public java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntryOrBuilder> 
+    public java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntryOrBuilder>
         getAnyEntrysOrBuilderList() {
       return anyEntrys_;
     }
@@ -1917,7 +1917,7 @@ public final class AnyValueBeanOuterClass {
               stringEntrysBuilder_ = null;
               stringEntrys_ = other.stringEntrys_;
               bitField0_ = (bitField0_ & ~0x00000002);
-              stringEntrysBuilder_ = 
+              stringEntrysBuilder_ =
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getStringEntrysFieldBuilder() : null;
             } else {
@@ -1943,7 +1943,7 @@ public final class AnyValueBeanOuterClass {
               anyEntrysBuilder_ = null;
               anyEntrys_ = other.anyEntrys_;
               bitField0_ = (bitField0_ & ~0x00000004);
-              anyEntrysBuilder_ = 
+              anyEntrysBuilder_ =
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
                    getAnyEntrysFieldBuilder() : null;
             } else {
@@ -2252,7 +2252,7 @@ public final class AnyValueBeanOuterClass {
       /**
        * <code>repeated .AnyValueBean.StringEntry stringEntrys = 2;</code>
        */
-      public java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntryOrBuilder> 
+      public java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntryOrBuilder>
            getStringEntrysOrBuilderList() {
         if (stringEntrysBuilder_ != null) {
           return stringEntrysBuilder_.getMessageOrBuilderList();
@@ -2278,12 +2278,12 @@ public final class AnyValueBeanOuterClass {
       /**
        * <code>repeated .AnyValueBean.StringEntry stringEntrys = 2;</code>
        */
-      public java.util.List<org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntry.Builder> 
+      public java.util.List<org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntry.Builder>
            getStringEntrysBuilderList() {
         return getStringEntrysFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntry, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntry.Builder, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntryOrBuilder> 
+          org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntry, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntry.Builder, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.StringEntryOrBuilder>
           getStringEntrysFieldBuilder() {
         if (stringEntrysBuilder_ == null) {
           stringEntrysBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -2492,7 +2492,7 @@ public final class AnyValueBeanOuterClass {
       /**
        * <code>repeated .AnyValueBean.AnyValueEntry anyEntrys = 3;</code>
        */
-      public java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntryOrBuilder> 
+      public java.util.List<? extends org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntryOrBuilder>
            getAnyEntrysOrBuilderList() {
         if (anyEntrysBuilder_ != null) {
           return anyEntrysBuilder_.getMessageOrBuilderList();
@@ -2518,12 +2518,12 @@ public final class AnyValueBeanOuterClass {
       /**
        * <code>repeated .AnyValueBean.AnyValueEntry anyEntrys = 3;</code>
        */
-      public java.util.List<org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntry.Builder> 
+      public java.util.List<org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntry.Builder>
            getAnyEntrysBuilderList() {
         return getAnyEntrysFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntry, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntry.Builder, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntryOrBuilder> 
+          org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntry, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntry.Builder, org.redkalex.convert.pb.AnyValueBeanOuterClass.AnyValueBean.AnyValueEntryOrBuilder>
           getAnyEntrysFieldBuilder() {
         if (anyEntrysBuilder_ == null) {
           anyEntrysBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
@@ -2590,17 +2590,17 @@ public final class AnyValueBeanOuterClass {
 
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_AnyValueBean_descriptor;
-  private static final 
+  private static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_AnyValueBean_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_AnyValueBean_StringEntry_descriptor;
-  private static final 
+  private static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_AnyValueBean_StringEntry_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_AnyValueBean_AnyValueEntry_descriptor;
-  private static final 
+  private static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_AnyValueBean_AnyValueEntry_fieldAccessorTable;
 

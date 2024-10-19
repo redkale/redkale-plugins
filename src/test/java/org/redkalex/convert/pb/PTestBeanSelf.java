@@ -89,5 +89,5 @@ public class PTestBeanSelf {
 
 }
 
-// protoc --java_out=D:\Java-Projects\RedkalePluginProject\src\test\java 
+// protoc --java_out=D:\Java-Projects\RedkalePluginProject\src\test\java
 // --proto_path=D:\Java-Projects\RedkalePluginProject\src\test\java\org\redkalex\convert\pb PTestBean.proto
