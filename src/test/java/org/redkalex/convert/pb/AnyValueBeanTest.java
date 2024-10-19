@@ -3,7 +3,9 @@
 
 package org.redkalex.convert.pb;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.redkale.convert.pb.ProtobufConvert;
 import org.redkale.util.AnyValueWriter;
 import org.redkale.util.Utility;
 
@@ -25,8 +27,11 @@ public class AnyValueBeanTest {
         AnyValueWriter bean = createAnyValueWriter();
         AnyValueBeanOuterClass.AnyValueBean.Builder builder = AnyValueBeanOuterClass.AnyValueBean.newBuilder();
         AnyValueBeanOuterClass.AnyValueBean bean2 = createAnyValueBean(bean, builder);
-        byte[] bs2 = bean2.toByteArray();
-        Utility.println("proto-buf ", bs2);
+        byte[] bs1 = bean2.toByteArray();
+        String rs1 = Utility.println("proto:", bs1);
+        byte[] bs2 = ProtobufConvert.root().convertTo(bean);
+        String rs2 = Utility.println("proto:", bs2);
+        Assertions.assertEquals(rs1, rs2);
     }
 
     private static AnyValueWriter createAnyValueWriter() {
