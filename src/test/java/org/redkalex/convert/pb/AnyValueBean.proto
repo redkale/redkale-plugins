@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+// 生成类的包名
+option java_package = "org.redkalex.convert.pb";
+
+message AnyValueBean {
+
+    message StringEntry {
+        string name = 1;
+        string value = 2;
+    }
+
+    message AnyValueEntry {
+        string name = 1;
+        AnyValueBean value = 2;
+    }
+
+    bool ignoreCase = 1;
+
+    repeated StringEntry stringEntrys = 2;
+
+    repeated AnyValueEntry anyEntrys = 3;
+}
