@@ -36,10 +36,12 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
     protected void sendRequestInLocking(ClientFuture... respFutures) {
         final ClientConnection self = this;
         ByteArray array = this.writeArray;
-        for (ClientFuture f : respFutures) {
-            f.getRequest().writeTo(self, array.clear());
-            channel.pipelineWrite(new PipelinePacket(array.getBytes(), writeHandler));
+        PipelinePacket[] packets = new PipelinePacket[respFutures.length];
+        for (int i = 0; i < packets.length; i++) {
+            respFutures[i].getRequest().writeTo(self, array.clear());
+            packets[i] = new PipelinePacket(array.getBytes(), writeHandler);
         }
+        channel.pipelineWrite(packets);
     }
 
     public PgPrepareDesc getPgPrepareDesc(String prepareSql) {
