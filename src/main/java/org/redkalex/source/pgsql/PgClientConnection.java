@@ -21,7 +21,6 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
 
     public PgClientConnection(PgClient client, AsyncConnection channel) {
         super(client, channel);
-//        channel.pipelineHandler(this.writeHandler);
     }
 
     @Override
@@ -33,15 +32,15 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         return ((PgClient) client).autoddl;
     }
 
-//    @Override
-//    protected void sendRequestInLocking(ClientFuture... respFutures) {
-//        final ClientConnection self = this;
-//        channel.pipelineWrite(array -> {
-//            for (ClientFuture f : respFutures) {
-//                f.getRequest().writeTo(self, array);
-//            }
-//        });
-//    }
+    @Override
+    protected void sendRequestInLocking(ClientFuture... respFutures) {
+        final ClientConnection self = this;
+        ByteArray array = this.writeArray;
+        for (ClientFuture f : respFutures) {
+            f.getRequest().writeTo(self, array.clear());
+            channel.pipelineWrite(new PipelinePacket(array.getBytes(), writeHandler));
+        }
+    }
 
     public PgPrepareDesc getPgPrepareDesc(String prepareSql) {
         PgPrepareDesc desc = lastPrepareDesc;
