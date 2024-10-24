@@ -100,11 +100,7 @@ public abstract class AbstractPayService implements Service {
     public abstract PayElement getPayElement(String appid);
 
     protected String postHttpContent(String url, String body) {
-        try {
-            return Utility.remoteHttpContent("POST", url, 10_000, null, body).toString(StandardCharsets.UTF_8);
-        } catch (IOException ex) {
-            throw new RedkaleException(ex);
-        }
+        return Utility.remoteHttpContent("POST", url, 10_000, null, body).toString(StandardCharsets.UTF_8);
     }
 
     protected String postHttpContent(String url, Charset charset, String body) {

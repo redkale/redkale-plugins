@@ -324,8 +324,6 @@ public class ConsulClusterAgent extends ClusterAgent {
                     StandardCharsets.UTF_8,
                     httpHeaders);
             return "passing".equalsIgnoreCase(irs);
-        } catch (java.io.FileNotFoundException ex) {
-            return false;
         } catch (Exception e) {
             logger.log(Level.SEVERE, serviceId + " health format=text error", e);
             return true;
