@@ -185,7 +185,8 @@ public class RedisVertxCacheSource extends RedisSource {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{addrs=" + this.nodeAddrs + ", db=" + this.db + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{addrs=" + this.nodeAddrs + ", db="
+                + this.db + "}";
     }
 
     @Local

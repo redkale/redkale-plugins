@@ -155,9 +155,10 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     @Override
     public String toString() {
         if (confProps == null) {
-            return getClass().getSimpleName() + "{}"; // compileMode模式下会为null
+            return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{}"; // compileMode模式下会为null
         }
-        return getClass().getSimpleName() + "{url = " + confProps.getProperty(DATA_SOURCE_URL) + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{url = "
+                + confProps.getProperty(DATA_SOURCE_URL) + "}";
     }
 
     @Override

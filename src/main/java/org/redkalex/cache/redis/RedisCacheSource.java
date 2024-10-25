@@ -170,8 +170,8 @@ public final class RedisCacheSource extends RedisSource {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{name=" + resourceName() + ", addrs=" + this.address + ", db=" + this.db
-                + "}";
+        return getClass().getSimpleName() + "_" + Objects.hashCode(this) + "{name=" + resourceName() + ", addrs="
+                + this.address + ", db=" + this.db + "}";
     }
 
     @Override
