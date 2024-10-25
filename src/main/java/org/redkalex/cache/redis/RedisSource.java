@@ -87,9 +87,6 @@ public abstract class RedisSource extends AbstractCacheSource {
     @Resource(required = false)
     protected ResourceFactory resourceFactory;
 
-    @Resource(required = false)
-    protected JsonConvert defaultConvert;
-
     @Resource(name = Resource.PARENT_NAME + "_convert", required = false)
     protected JsonConvert convert;
 
@@ -114,7 +111,7 @@ public abstract class RedisSource extends AbstractCacheSource {
         super.init(conf);
         this.name = conf == null ? "" : conf.getValue("name", "");
         if (this.convert == null) {
-            this.convert = this.defaultConvert;
+            this.convert = defaultConvert;
         }
         if (conf != null) {
             String cryptStr = conf.getValue(CACHE_SOURCE_CRYPTOR, "").trim();
