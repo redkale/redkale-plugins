@@ -11,7 +11,6 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
-import org.redkale.convert.json.JsonFactory;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.net.client.*;
@@ -32,7 +31,6 @@ public class RedisCacheSourceTest extends RedisAbstractTest {
 
         RedisCacheSource source = new RedisCacheSource();
         factory.inject(source);
-        source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
         try {
             run(source, true);

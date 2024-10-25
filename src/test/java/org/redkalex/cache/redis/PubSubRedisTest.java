@@ -8,7 +8,6 @@ package org.redkalex.cache.redis;
 import java.nio.charset.StandardCharsets;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.boot.LoggingBaseHandler;
-import org.redkale.convert.json.JsonFactory;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
 import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
@@ -37,7 +36,6 @@ public class PubSubRedisTest {
 
         RedisCacheSource source = new RedisCacheSource();
         factory.inject(source);
-        source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
         run(source);
     }

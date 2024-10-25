@@ -776,7 +776,6 @@ public abstract class RedisAbstractTest {
 
             RedisCacheSource source = new RedisCacheSource();
             factory.inject(source);
-            source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
                 run(source, press);
@@ -787,7 +786,6 @@ public abstract class RedisAbstractTest {
         {
             System.out.println("############################  开始 Redission ############################");
             RedissonCacheSource source = new RedissonCacheSource();
-            source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
                 run(source, press);
@@ -799,7 +797,6 @@ public abstract class RedisAbstractTest {
             System.out.println("############################  开始 Vertx ############################");
             RedisVertxCacheSource source = new RedisVertxCacheSource();
             factory.inject(source);
-            source.defaultConvert = JsonFactory.root().getConvert();
             source.init(conf);
             try {
                 run(source, press);

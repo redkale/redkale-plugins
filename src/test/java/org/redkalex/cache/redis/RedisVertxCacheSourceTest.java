@@ -4,7 +4,6 @@ package org.redkalex.cache.redis;
 
 import static org.redkale.source.AbstractCacheSource.*;
 
-import org.redkale.convert.json.JsonFactory;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.util.*;
 
@@ -19,7 +18,6 @@ public class RedisVertxCacheSourceTest extends RedisAbstractTest {
 
         RedisVertxCacheSource source = new RedisVertxCacheSource();
         factory.inject(source);
-        source.defaultConvert = JsonFactory.root().getConvert();
         source.init(conf);
         try {
             run(source, true);
