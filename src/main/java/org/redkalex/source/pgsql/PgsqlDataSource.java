@@ -65,7 +65,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         info.username = prop.getProperty(DATA_SOURCE_USER, "");
         info.password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
         int maxConns = Math.max(
-                1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, String.valueOf(Utility.cpus() << 2))));
+                1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, String.valueOf(Utility.cpus() << 1))));
         int maxPipelines =
                 Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_PIPELINES, "" + Client.DEFAULT_MAX_PIPELINES)));
         AsyncGroup ioGroup = clientAsyncGroup;
