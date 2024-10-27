@@ -67,11 +67,10 @@ public class MysqlDataSource extends AbstractDataSqlSource {
             encoding = "UTF8MB4";
         }
         info.encoding = encoding;
-        int maxConns = Math.max(1, Integer.decode(prop.getProperty(DATA_SOURCE_MAXCONNS, "" + Utility.cpus())));
-        int maxPipelines = Math.max(
-                1,
-                Integer.decode(prop.getProperty(
-                        DATA_SOURCE_PIPELINES, "" + org.redkale.net.client.Client.DEFAULT_MAX_PIPELINES)));
+        String maxStr = prop.getProperty(DATA_SOURCE_MAXCONNS, String.valueOf(Utility.cpus() << 1));
+        int maxConns = Math.max(1, Integer.decode(maxStr));
+        String pipelineStr = prop.getProperty(DATA_SOURCE_PIPELINES, "" + Client.DEFAULT_MAX_PIPELINES);
+        int maxPipelines = Math.max(1, Integer.decode(pipelineStr));
         AsyncGroup ioGroup = clientAsyncGroup;
         if (clientAsyncGroup == null || "write".equalsIgnoreCase(rw)) {
             String f = "Redkalex-MyClient-IOThread-" + resourceName() + "-"
