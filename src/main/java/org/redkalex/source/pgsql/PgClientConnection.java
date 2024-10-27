@@ -32,22 +32,17 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
         return ((PgClient) client).autoddl;
     }
 
-    @Override
-    protected void sendRequestInLocking(ClientFuture... respFutures) {
-        ClientRequest req = respFutures[0].getRequest();
-        if (req instanceof PgReqExtended && ((PgReqExtended) req).mode != PgExtendMode.FIND_ENTITY) {
-            super.sendRequestInLocking(respFutures);
-            return;
-        }
-        final ClientConnection self = this;
-        ByteArray array = this.writeArray;
-        PipelinePacket[] packets = new PipelinePacket[respFutures.length];
-        for (int i = 0; i < packets.length; i++) {
-            respFutures[i].getRequest().writeTo(self, array.clear());
-            packets[i] = new PipelinePacket(array.getBytes(), writeHandler);
-        }
-        channel.pipelineWrite(packets);
-    }
+//    @Override
+//    protected void sendRequestInLocking(ClientFuture... respFutures) {
+//        final ClientConnection self = this;
+//        ByteArray array = this.writeArray;
+//        PipelinePacket[] packets = new PipelinePacket[respFutures.length];
+//        for (int i = 0; i < packets.length; i++) {
+//            respFutures[i].getRequest().writeTo(self, array.clear());
+//            packets[i] = new PipelinePacket(array.getBytes(), writeHandler);
+//        }
+//        channel.pipelineWrite(packets);
+//    }
 
     public PgPrepareDesc getPgPrepareDesc(String prepareSql) {
         PgPrepareDesc desc = lastPrepareDesc;
