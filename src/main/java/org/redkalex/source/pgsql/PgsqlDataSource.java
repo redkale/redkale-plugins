@@ -64,7 +64,7 @@ public class PgsqlDataSource extends AbstractDataSqlSource {
         SourceUrlInfo info = parseSourceUrl(url);
         info.username = prop.getProperty(DATA_SOURCE_USER, "");
         info.password = prop.getProperty(DATA_SOURCE_PASSWORD, "");
-        String maxStr = prop.getProperty(DATA_SOURCE_MAXCONNS, String.valueOf(Utility.cpus() << 1));
+        String maxStr = prop.getProperty(DATA_SOURCE_MAXCONNS, String.valueOf(Utility.cpus()));
         int maxConns = Math.max(1, Integer.decode(maxStr));
         String pipelineStr = prop.getProperty(DATA_SOURCE_PIPELINES, "" + Client.DEFAULT_MAX_PIPELINES);
         int maxPipelines = Math.max(1, Integer.decode(pipelineStr));

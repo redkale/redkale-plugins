@@ -67,7 +67,7 @@ public class MysqlDataSource extends AbstractDataSqlSource {
             encoding = "UTF8MB4";
         }
         info.encoding = encoding;
-        String maxStr = prop.getProperty(DATA_SOURCE_MAXCONNS, String.valueOf(Utility.cpus() << 1));
+        String maxStr = prop.getProperty(DATA_SOURCE_MAXCONNS, String.valueOf(Utility.cpus()));
         int maxConns = Math.max(1, Integer.decode(maxStr));
         String pipelineStr = prop.getProperty(DATA_SOURCE_PIPELINES, "" + Client.DEFAULT_MAX_PIPELINES);
         int maxPipelines = Math.max(1, Integer.decode(pipelineStr));
