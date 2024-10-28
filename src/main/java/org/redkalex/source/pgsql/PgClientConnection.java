@@ -33,7 +33,7 @@ public class PgClientConnection extends ClientConnection<PgClientRequest, PgResu
     }
 
 //    @Override
-//    protected void sendRequestInLocking(ClientFuture... respFutures) {
+//    protected void sendRequestInLock(ClientFuture... respFutures) {
 //        final ClientConnection self = this;
 //        ByteArray array = this.writeArray;
 //        PipelinePacket[] packets = new PipelinePacket[respFutures.length];
