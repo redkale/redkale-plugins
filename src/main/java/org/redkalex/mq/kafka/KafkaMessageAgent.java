@@ -124,6 +124,7 @@ public class KafkaMessageAgent extends MessageAgent {
         // 当各分区下有已提交的offset时，从提交的offset开始消费；无提交的offset时，消费新产生的该分区下的数据
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         props.put(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG, "1000");
+        props.put(ConsumerConfig.RECONNECT_BACKOFF_MAX_MS_CONFIG, "15000");
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
         props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, "6000");
