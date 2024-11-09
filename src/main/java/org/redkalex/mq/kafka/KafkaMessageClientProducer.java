@@ -7,7 +7,6 @@ package org.redkalex.mq.kafka;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.producer.*;
@@ -21,8 +20,6 @@ import org.redkale.util.Traces;
 
 /** @author zhangjx */
 public class KafkaMessageClientProducer extends MessageClientProducer {
-
-    private final AtomicBoolean closed = new AtomicBoolean();
 
     private MessageAgent messageAgent;
 
