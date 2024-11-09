@@ -5,6 +5,7 @@ package org.redkalex.mq.kafka;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
@@ -40,6 +41,15 @@ public class KafkaMessageProducer implements MessageProducer {
         if (logger.isLoggable(Level.INFO)) {
             logger.log(Level.INFO, getClass().getSimpleName() + "(name=" + messageAgent.getName() + ") started");
         }
+    }
+
+    @Override
+    public CompletableFuture<Void> sendDelayMessage(
+            String topic, Integer partition, Duration delay, Convert convert, Type type, Object value) {
+        if (delay == null || delay.toSeconds() <= 0) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("delay is illegal"));
+        }
+        return CompletableFuture.failedFuture(new UnsupportedOperationException("Not supported yet."));
     }
 
     @Override
