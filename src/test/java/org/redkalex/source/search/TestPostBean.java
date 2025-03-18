@@ -5,6 +5,7 @@
  */
 package org.redkalex.source.search;
 
+import org.redkale.annotation.Comment;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.persistence.Column;
 import org.redkale.source.*;
@@ -12,13 +13,16 @@ import org.redkale.source.*;
 /** @author zhangjx */
 public class TestPostBean implements FilterBean {
 
-    @FilterColumn(comment = "用户ID")
+    @FilterColumn
+    @Comment("用户ID")
     private int userid;
 
-    @FilterColumn(comment = "文章标题")
+    @FilterColumn
+    @Comment("文章标题")
     private String title = "";
 
-    @FilterColumn(express = FilterExpress.LIKE, comment = "文章公开内容")
+    @FilterColumn(express = FilterExpress.LIKE)
+    @Comment("文章公开内容")
     private String pubContent = "";
 
     @Column(updatable = false, comment = "生成时间，单位毫秒")
