@@ -594,7 +594,7 @@ public final class SearchInfo<T> {
         }
         return SelectColumn.includes(columns.toArray(new String[columns.size()]));
     }
-    
+
     public Attribute<T, String> getHighlightAttribute(String fieldname) {
         return this.highlightAttributeMap.get(fieldname);
     }
