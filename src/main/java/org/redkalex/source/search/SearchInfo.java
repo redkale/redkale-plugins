@@ -579,6 +579,22 @@ public final class SearchInfo<T> {
         return this.aliasmap == null ? fieldname : aliasmap.getOrDefault(fieldname, fieldname);
     }
 
+    /**
+     * 获取实体对象非null可更新字段
+     *
+     * @param bean Entity对象
+     * @return String
+     */
+    public SelectColumn getSelectColumn(T bean) {
+        List<String> columns = new ArrayList<>();
+        for (Attribute attr : updateAttributes) {
+            if (attr.get(bean) != null && attr != primary) {
+                columns.add(attr.field());
+            }
+        }
+        return SelectColumn.includes(columns.toArray(new String[columns.size()]));
+    }
+
     public Attribute<T, String> getHighlightAttribute(String fieldname) {
         return this.highlightAttributeMap.get(fieldname);
     }

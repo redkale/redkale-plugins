@@ -904,6 +904,21 @@ public class MongodbDriverDataSource extends MongodbDataSource
     }
 
     @Override
+    public <T> int updateColumnNonnull(final T entity) {
+        return updateColumnNonnullAsync(entity).join();
+    }
+
+    @Override
+    public <T> CompletableFuture<Integer> updateColumnNonnullAsync(final T entity) {
+        if (entity == null) {
+            return CompletableFuture.completedFuture(0);
+        }
+        Class<T> clazz = (Class) entity.getClass();
+        final EntityInfo<T> info = loadEntityInfo(clazz);
+        return updateColumnAsync(entity, info.getSelectColumn(entity));
+    }
+
+    @Override
     public <T> int updateColumn(T entity, FilterNode node, SelectColumn selects) {
         return updateColumnAsync(entity, node, selects).join();
     }

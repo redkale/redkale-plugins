@@ -937,6 +937,21 @@ public final class OpenSearchSource extends AbstractService implements SearchSou
     }
 
     @Override
+    public <T> int updateColumnNonnull(final T entity) {
+        return updateColumnNonnullAsync(entity).join();
+    }
+
+    @Override
+    public <T> CompletableFuture<Integer> updateColumnNonnullAsync(final T entity) {
+        if (entity == null) {
+            return CompletableFuture.completedFuture(0);
+        }
+        Class<T> clazz = (Class) entity.getClass();
+        final SearchInfo<T> info = loadSearchInfo(clazz);
+        return updateColumnAsync(entity, info.getSelectColumn(entity));
+    }
+
+    @Override
     public <T> int updateColumn(T entity, FilterNode node, String... columns) {
         return updateColumnAsync(entity, node, SelectColumn.includes(columns)).join();
     }
