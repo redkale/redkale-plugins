@@ -56,15 +56,14 @@
             <artifactId>jsqlparser</artifactId>
             <version>${jsqlparser.version}</version>
         </dependency>
-
-        <!--
+      
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.23.3</version>
+            <version>${protobuf.version}</version>
             <scope>test</scope>
         </dependency>
-        -->
+        
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
