@@ -7,10 +7,7 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.convert.pb.ProtobufConvert;
 import org.redkale.util.Utility;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class SimpleBean {
 
     public static void main(String[] args) throws Throwable {

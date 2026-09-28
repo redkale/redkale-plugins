@@ -5,6 +5,8 @@
  */
 package org.redkalex.source.mongo;
 
+import static org.redkale.source.DataSources.*;
+
 import com.mongodb.*;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.model.*;
@@ -28,7 +30,6 @@ import org.redkale.annotation.ResourceType;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**

@@ -3,8 +3,13 @@
  */
 package org.redkalex.source.pgsql;
 
-import java.math.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.redkalex.source.pgsql.PgsqlFormatter.LDT_MINUS_INFINITY;
+import static org.redkalex.source.pgsql.PgsqlFormatter.LDT_PLUS_INFINITY;
+import static org.redkalex.source.pgsql.PgsqlFormatter.LOCAL_DATE_EPOCH;
+import static org.redkalex.source.pgsql.PgsqlFormatter.LOCAL_DATE_TIME_EPOCH;
+
+import java.math.*;
 import java.sql.JDBCType;
 import java.time.*;
 import java.time.temporal.*;
@@ -12,10 +17,6 @@ import java.util.*;
 import org.redkale.source.EntityColumn;
 import org.redkale.source.SourceException;
 import org.redkale.util.Attribute;
-import static org.redkalex.source.pgsql.PgsqlFormatter.LDT_MINUS_INFINITY;
-import static org.redkalex.source.pgsql.PgsqlFormatter.LDT_PLUS_INFINITY;
-import static org.redkalex.source.pgsql.PgsqlFormatter.LOCAL_DATE_EPOCH;
-import static org.redkalex.source.pgsql.PgsqlFormatter.LOCAL_DATE_TIME_EPOCH;
 
 /** @author zhangjx */
 public enum PgColumnFormat {

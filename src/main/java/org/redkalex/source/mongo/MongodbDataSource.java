@@ -19,10 +19,7 @@ import org.redkale.source.FilterFunc;
 import org.redkale.source.FilterNode;
 import org.redkale.source.Flipper;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public abstract class MongodbDataSource extends AbstractDataSource {
 
     public abstract MongoClient getReadMongoClient();

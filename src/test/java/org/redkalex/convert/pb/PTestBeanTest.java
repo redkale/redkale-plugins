@@ -1,5 +1,4 @@
-/**
- */
+/** */
 package org.redkalex.convert.pb;
 
 import com.google.protobuf.ByteString;
@@ -14,10 +13,7 @@ import org.redkale.service.RetResult;
 import org.redkale.util.TypeToken;
 import org.redkale.util.Utility;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PTestBeanTest {
 
     public static void main(String[] args) throws Throwable {

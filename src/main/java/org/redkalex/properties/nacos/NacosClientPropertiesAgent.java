@@ -2,6 +2,8 @@
  */
 package org.redkalex.properties.nacos;
 
+import static org.redkalex.properties.nacos.NacosPropertiesAgent.readContent;
+
 import com.alibaba.nacos.api.NacosFactory;
 import com.alibaba.nacos.api.config.ConfigService;
 import com.alibaba.nacos.api.config.listener.Listener;
@@ -15,7 +17,6 @@ import org.redkale.inject.ResourceEvent;
 import org.redkale.props.spi.PropertiesAgent;
 import org.redkale.util.*;
 import org.redkalex.properties.nacos.NacosPropertiesAgent.NacosInfo;
-import static org.redkalex.properties.nacos.NacosPropertiesAgent.readContent;
 
 /**
  * 依赖于nacos-client实现的Nacos配置 https://github.com/alibaba/nacos

@@ -8,10 +8,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.redkale.convert.pb.ProtobufConvert;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class UserTest {
 
     public static void main(String[] args) throws Throwable {

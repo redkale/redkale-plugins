@@ -5,6 +5,9 @@
  */
 package org.redkalex.pay;
 
+import static org.redkalex.pay.PayRetCodes.*;
+import static org.redkalex.pay.Pays.PAYTYPE_GOOGLE;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
@@ -19,8 +22,6 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.util.*;
-import static org.redkalex.pay.PayRetCodes.*;
-import static org.redkalex.pay.Pays.PAYTYPE_GOOGLE;
 
 /**
  * 详情见: https://redkale.org

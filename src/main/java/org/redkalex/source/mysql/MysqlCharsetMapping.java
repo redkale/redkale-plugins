@@ -118,27 +118,36 @@ public class MysqlCharsetMapping {
 
     private static final String MYSQL_4_0_CHARSET_NAME_cp1251csas = "cp1251csas";
 
-    private static final String MYSQL_4_0_CHARSET_NAME_croat = "croat"; // 4.1 =>    27    latin2        latin2_croatian_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_croat =
+            "croat"; // 4.1 =>    27    latin2        latin2_croatian_ci
 
     private static final String MYSQL_4_0_CHARSET_NAME_czech = "czech"; // 4.1 =>    2    latin2        latin2_czech_ci
 
-    private static final String MYSQL_4_0_CHARSET_NAME_danish = "danish"; // 4.1 =>    15    latin1        latin1_danish_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_danish =
+            "danish"; // 4.1 =>    15    latin1        latin1_danish_ci
 
     private static final String MYSQL_4_0_CHARSET_NAME_dos = "dos"; // 4.1 =>    4    cp850        cp850_general_ci
 
-    private static final String MYSQL_4_0_CHARSET_NAME_estonia = "estonia"; // 4.1 =>    20    latin7        latin7_estonian_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_estonia =
+            "estonia"; // 4.1 =>    20    latin7        latin7_estonian_ci
 
-    private static final String MYSQL_4_0_CHARSET_NAME_euc_kr = "euc_kr"; // 4.1 =>    19    euckr        euckr_korean_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_euc_kr =
+            "euc_kr"; // 4.1 =>    19    euckr        euckr_korean_ci
 
-    private static final String MYSQL_4_0_CHARSET_NAME_german1 = "german1"; // 4.1 =>    5    latin1        latin1_german1_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_german1 =
+            "german1"; // 4.1 =>    5    latin1        latin1_german1_ci
 
-    private static final String MYSQL_4_0_CHARSET_NAME_hungarian = "hungarian"; // 4.1 =>    21    latin2        latin2_hungarian_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_hungarian =
+            "hungarian"; // 4.1 =>    21    latin2        latin2_hungarian_ci
 
-    private static final String MYSQL_4_0_CHARSET_NAME_koi8_ru = "koi8_ru"; // 4.1 =>    7    koi8r        koi8r_general_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_koi8_ru =
+            "koi8_ru"; // 4.1 =>    7    koi8r        koi8r_general_ci
 
-    private static final String MYSQL_4_0_CHARSET_NAME_koi8_ukr = "koi8_ukr"; // 4.1 =>    22    koi8u        koi8u_ukrainian_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_koi8_ukr =
+            "koi8_ukr"; // 4.1 =>    22    koi8u        koi8u_ukrainian_ci
 
-    private static final String MYSQL_4_0_CHARSET_NAME_latin1_de = "latin1_de"; // 4.1 =>    31    latin1        latin1_german2_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_latin1_de =
+            "latin1_de"; // 4.1 =>    31    latin1        latin1_german2_ci
 
     private static final String MYSQL_4_0_CHARSET_NAME_latvian = "latvian";
 
@@ -146,7 +155,8 @@ public class MysqlCharsetMapping {
 
     private static final String MYSQL_4_0_CHARSET_NAME_usa7 = "usa7"; // 4.1 =>    11    ascii        ascii_general_ci
 
-    private static final String MYSQL_4_0_CHARSET_NAME_win1250 = "win1250"; // 4.1 =>    26    cp1250        cp1250_general_ci
+    private static final String MYSQL_4_0_CHARSET_NAME_win1250 =
+            "win1250"; // 4.1 =>    26    cp1250        cp1250_general_ci
 
     private static final String MYSQL_4_0_CHARSET_NAME_win1251 = "win1251"; // 4.1 =>    17    (removed)
 
@@ -235,8 +245,8 @@ public class MysqlCharsetMapping {
             new MysqlCharset(MYSQL_CHARSET_NAME_macroman, 1, 0, new String[] {"MacRoman"}),
             new MysqlCharset(MYSQL_CHARSET_NAME_macce, 1, 0, new String[] {"MacCentralEurope"}),
             new MysqlCharset(MYSQL_CHARSET_NAME_utf8, 3, 1, new String[] {"UTF-8"}),
-            new MysqlCharset(
-                    MYSQL_CHARSET_NAME_utf8mb4, 4, 0, new String[] {"UTF-8"}), // "UTF-8 =                *> 5.5.2 utf8mb4,"
+            new MysqlCharset(MYSQL_CHARSET_NAME_utf8mb4, 4, 0, new String[] {"UTF-8"
+            }), // "UTF-8 =                *> 5.5.2 utf8mb4,"
             new MysqlCharset(MYSQL_CHARSET_NAME_ucs2, 2, 0, new String[] {"UnicodeBig"}),
             new MysqlCharset(MYSQL_CHARSET_NAME_binary, 1, 1, new String[] {"ISO8859_1"}), // US-ASCII ?
             new MysqlCharset(MYSQL_4_0_CHARSET_NAME_latin1_de, 1, 0, new String[] {"ISO8859_1"}, 4, 0),

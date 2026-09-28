@@ -6,10 +6,7 @@ package org.redkalex.yaml;
 
 import org.redkale.util.YamlProvider;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class SnakeYamlProvider implements YamlProvider {
 
     @Override

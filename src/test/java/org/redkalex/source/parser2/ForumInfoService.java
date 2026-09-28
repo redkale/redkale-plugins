@@ -10,20 +10,17 @@ import org.redkale.annotation.Resource;
 import org.redkale.service.AbstractService;
 import org.redkale.source.DataSqlSource;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class ForumInfoService extends AbstractService {
 
-    //查询单个记录的sql
+    // 查询单个记录的sql
     private static final String findOneSql = "SELECT f.forum_groupid, s.forum_section_color "
             + "FROM forum_info f, forum_section s "
             + " WHERE f.forumid = s.forumid AND "
             + "s.forum_sectionid = ${bean.forumSectionid} AND "
             + "f.forumid = ${bean.forumid} AND s.forum_section_color = ${bean.forumSectionColor}";
 
-    //查询列表记录的sql
+    // 查询列表记录的sql
     private static final String queryListSql = "SELECT f.forum_groupid, s.forum_section_color "
             + "FROM forum_info f, forum_section s "
             + " WHERE f.forumid = s.forumid AND "

@@ -6,7 +6,6 @@
 package org.redkalex.source.vertx;
 
 import io.vertx.sqlclient.Pool;
-import java.lang.reflect.Field;
 import java.util.*;
 import org.redkale.boot.LoggingBaseHandler;
 import org.redkale.inject.ResourceFactory;
@@ -44,10 +43,10 @@ public class VertxMysqlTest {
                 .getAnyValue("datasource")
                 .getAnyValue("default"));
         Pool pool = source.readThreadPool;
-//        Field f = PoolBase.class.getDeclaredField("delegate");
-//        f.setAccessible(true);
-//        Object delegate = f.get(pool);
-//        System.out.println("client信息: " + delegate.getClass());
+        //        Field f = PoolBase.class.getDeclaredField("delegate");
+        //        f.setAccessible(true);
+        //        Object delegate = f.get(pool);
+        //        System.out.println("client信息: " + delegate.getClass());
         source.dropTable(IncreWorld.class);
         IncreWorld in1 = new IncreWorld();
         in1.setRandomNumber(11);

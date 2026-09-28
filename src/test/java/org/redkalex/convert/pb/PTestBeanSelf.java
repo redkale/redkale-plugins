@@ -4,10 +4,7 @@ import java.util.Map;
 import org.redkale.convert.ConvertColumn;
 import org.redkale.convert.json.JsonConvert;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PTestBeanSelf {
 
     public static class PTestEntry {
@@ -85,8 +82,6 @@ public class PTestBeanSelf {
     public String toString() {
         return JsonConvert.root().convertTo(this);
     }
-
-
 }
 
 // protoc --java_out=D:\Java-Projects\RedkalePluginProject\src\test\java

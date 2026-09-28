@@ -5,13 +5,14 @@
  */
 package org.redkalex.source.pgsql;
 
+import static org.redkalex.source.pgsql.PgClientCodec.logger;
+
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.logging.Level;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
-import static org.redkalex.source.pgsql.PgClientCodec.logger;
 
 /** @author zhangjx */
 public class PgReqUpdate extends PgClientRequest {

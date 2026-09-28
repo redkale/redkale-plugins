@@ -5,16 +5,17 @@
  */
 package org.redkalex.cache.redis;
 
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import static org.redkale.source.AbstractCacheSource.*;
+
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
 import org.junit.jupiter.api.*;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
 import org.redkale.net.client.*;
-import static org.redkale.source.AbstractCacheSource.*;
 import org.redkale.util.*;
 
 /** @author zhangjx */

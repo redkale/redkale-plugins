@@ -5,6 +5,9 @@
  */
 package org.redkalex.pay;
 
+import static org.redkalex.pay.PayRetCodes.*;
+import static org.redkalex.pay.Pays.*;
+
 import java.io.*;
 import java.nio.charset.*;
 import java.security.*;
@@ -22,8 +25,6 @@ import org.redkale.net.http.HttpHeaders;
 import org.redkale.net.http.RestHeaders;
 import org.redkale.service.Local;
 import org.redkale.util.*;
-import static org.redkalex.pay.PayRetCodes.*;
-import static org.redkalex.pay.Pays.*;
 
 /**
  * 详情见: https://redkale.org

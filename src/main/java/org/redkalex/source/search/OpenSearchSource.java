@@ -5,6 +5,8 @@
  */
 package org.redkalex.source.search;
 
+import static org.redkale.source.DataSources.*;
+
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.net.*;
@@ -25,7 +27,6 @@ import org.redkale.inject.ResourceEvent;
 import org.redkale.persistence.Entity;
 import org.redkale.service.*;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**

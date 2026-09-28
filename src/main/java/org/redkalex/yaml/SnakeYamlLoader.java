@@ -12,17 +12,14 @@ import org.redkale.util.AnyValueWriter;
 import org.redkale.util.YamlProvider;
 import org.yaml.snakeyaml.Yaml;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class SnakeYamlLoader implements YamlProvider.YamlLoader {
 
     /**
      * 将yml内容转换成AnyValue
      *
      * @param content yml内容
-     * @return  AnyValue
+     * @return AnyValue
      */
     @Override
     public AnyValue read(String content) {

@@ -5,6 +5,9 @@
  */
 package org.redkalex.pay;
 
+import static org.redkalex.pay.PayRetCodes.RETPAY_PAY_ERROR;
+import static org.redkalex.pay.Pays.PAYTYPE_IOS;
+
 import java.io.*;
 import java.net.http.HttpClient;
 import java.util.*;
@@ -17,8 +20,6 @@ import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.util.*;
-import static org.redkalex.pay.PayRetCodes.RETPAY_PAY_ERROR;
-import static org.redkalex.pay.Pays.PAYTYPE_IOS;
 
 /**
  * 详情见: https://redkale.org

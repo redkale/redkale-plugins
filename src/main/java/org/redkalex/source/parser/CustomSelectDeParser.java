@@ -3,9 +3,12 @@
  */
 package org.redkalex.source.parser;
 
+import static java.util.stream.Collectors.joining;
+import static net.sf.jsqlparser.statement.select.PlainSelect.BigQuerySelectQualifier.AS_STRUCT;
+import static net.sf.jsqlparser.statement.select.PlainSelect.BigQuerySelectQualifier.AS_VALUE;
+
 import java.util.Iterator;
 import java.util.List;
-import static java.util.stream.Collectors.joining;
 import net.sf.jsqlparser.expression.ExpressionVisitor;
 import net.sf.jsqlparser.expression.OracleHint;
 import net.sf.jsqlparser.expression.WindowDefinition;
@@ -16,8 +19,6 @@ import net.sf.jsqlparser.statement.select.Join;
 import net.sf.jsqlparser.statement.select.LateralView;
 import net.sf.jsqlparser.statement.select.OptimizeFor;
 import net.sf.jsqlparser.statement.select.PlainSelect;
-import static net.sf.jsqlparser.statement.select.PlainSelect.BigQuerySelectQualifier.AS_STRUCT;
-import static net.sf.jsqlparser.statement.select.PlainSelect.BigQuerySelectQualifier.AS_VALUE;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
 import net.sf.jsqlparser.statement.select.Skip;
@@ -260,8 +261,7 @@ public class CustomSelectDeParser extends SelectDeParser {
             }
             if (distinct.getOnSelectItems() != null) {
                 builder.append("ON (");
-                for (Iterator<SelectItem<?>> iter = distinct.getOnSelectItems().iterator(); iter
-                        .hasNext();) {
+                for (Iterator<SelectItem<?>> iter = distinct.getOnSelectItems().iterator(); iter.hasNext(); ) {
                     SelectItem<?> selectItem = iter.next();
                     selectItem.accept(this, null);
                     if (iter.hasNext()) {
@@ -275,7 +275,7 @@ public class CustomSelectDeParser extends SelectDeParser {
 
     protected void deparseSelectItemsClause(PlainSelect plainSelect, List<SelectItem<?>> selectItems) {
         if (selectItems != null) {
-            for (Iterator<SelectItem<?>> iter = selectItems.iterator(); iter.hasNext();) {
+            for (Iterator<SelectItem<?>> iter = selectItems.iterator(); iter.hasNext(); ) {
                 SelectItem<?> selectItem = iter.next();
                 selectItem.accept(this, null);
                 if (iter.hasNext()) {

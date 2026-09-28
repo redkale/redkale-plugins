@@ -11,10 +11,7 @@ import org.redkale.source.DataNativeSqlParser;
 import org.redkale.source.DataSqlSource;
 import org.redkale.source.spi.DataSqlMapperBuilder;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class MapperTest {
 
     private static DataSqlSource source = new DataJdbcSource();

@@ -5,6 +5,8 @@
  */
 package org.redkalex.source.vertx;
 
+import static org.redkale.source.DataSources.*;
+
 import io.vertx.core.*;
 import io.vertx.core.metrics.MetricsOptions;
 import io.vertx.sqlclient.*;
@@ -26,7 +28,6 @@ import org.redkale.inject.ResourceEvent;
 import org.redkale.net.WorkThread;
 import org.redkale.service.Local;
 import org.redkale.source.*;
-import static org.redkale.source.DataSources.*;
 import org.redkale.util.*;
 
 /**
@@ -344,14 +345,21 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         } else if (createIndex.incrementAndGet() < tableSqls.length) {
                             writePool(workThread)
                                     .query(tableSqls[createIndex.get()])
-                                    .execute().andThen(createHandlerRef.get());
+                                    .execute()
+                                    .andThen(createHandlerRef.get());
                         } else {
                             // 重新提交新增记录
-                            writePool(workThread).preparedQuery(sql).executeBatch(objs).andThen(selfHandlerRef.get());
+                            writePool(workThread)
+                                    .preparedQuery(sql)
+                                    .executeBatch(objs)
+                                    .andThen(selfHandlerRef.get());
                         }
                     };
                     createHandlerRef.set(createHandler);
-                    writePool(workThread).query(tableSqls[createIndex.get()]).execute().andThen(createHandler);
+                    writePool(workThread)
+                            .query(tableSqls[createIndex.get()])
+                            .execute()
+                            .andThen(createHandler);
                 } else { // 分表模式
                     // 执行一遍复制表操作
                     final String copySql = getTableCopySql(info, info.getTable(values[0]));
@@ -361,7 +369,10 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                             completeExceptionally(workThread, future, event2.cause());
                         } else {
                             // 重新提交新增记录
-                            writePool(workThread).preparedQuery(sql).executeBatch(objs).andThen(selfHandlerRef.get());
+                            writePool(workThread)
+                                    .preparedQuery(sql)
+                                    .executeBatch(objs)
+                                    .andThen(selfHandlerRef.get());
                         }
                     };
                     copySqlHandlerRef.set(copySqlHandler);
@@ -887,7 +898,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
             if (parameters != null && !parameters.isEmpty()) {
                 writePool(workThread)
                         .preparedQuery(sqls[0])
-                        .executeBatch(parameters).andThen((AsyncResult<RowSet<Row>> event) -> {
+                        .executeBatch(parameters)
+                        .andThen((AsyncResult<RowSet<Row>> event) -> {
                             slowLog(s, sqls);
                             if (event.failed()) {
                                 completeExceptionally(workThread, future, event.cause());
@@ -981,13 +993,16 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         if (tableSqls == null) { // 没有建表DDL
                             completeExceptionally(workThread, future, ex);
                         } else {
-                            writePool(workThread).query(tableSqls[0]).execute().andThen((AsyncResult<RowSet<Row>> event2) -> {
-                                if (event2.failed()) {
-                                    completeExceptionally(workThread, future, event2.cause());
-                                } else {
-                                    complete(workThread, future, new VertxResultSet(info, null));
-                                }
-                            });
+                            writePool(workThread)
+                                    .query(tableSqls[0])
+                                    .execute()
+                                    .andThen((AsyncResult<RowSet<Row>> event2) -> {
+                                        if (event2.failed()) {
+                                            completeExceptionally(workThread, future, event2.cause());
+                                        } else {
+                                            complete(workThread, future, new VertxResultSet(info, null));
+                                        }
+                                    });
                         }
                     } else { // 没有分表
                         complete(workThread, future, new VertxResultSet(info, null));
@@ -1081,7 +1096,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         if (!sinfo.isEmptyNamed()) {
             writePool(workThread)
                     .preparedQuery(sinfo.getNativeSql())
-                    .execute(tupleParameter(sinfo, params)).andThen((AsyncResult<RowSet<Row>> event) -> {
+                    .execute(tupleParameter(sinfo, params))
+                    .andThen((AsyncResult<RowSet<Row>> event) -> {
                         slowLog(s, sinfo.getNativeSql());
                         if (event.failed()) {
                             completeExceptionally(workThread, future, event.cause());
@@ -1116,7 +1132,8 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
         if (!sinfo.isEmptyNamed()) {
             readPool(workThread)
                     .preparedQuery(sinfo.getNativeSql())
-                    .execute(tupleParameter(sinfo, params)).andThen((AsyncResult<RowSet<Row>> event) -> {
+                    .execute(tupleParameter(sinfo, params))
+                    .andThen((AsyncResult<RowSet<Row>> event) -> {
                         slowLog(s, sinfo.getNativeSql());
                         if (event.failed()) {
                             completeExceptionally(workThread, future, event.cause());
@@ -1125,14 +1142,17 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                         }
                     });
         } else {
-            readPool(workThread).preparedQuery(sinfo.getNativeSql()).execute().andThen((AsyncResult<RowSet<Row>> event) -> {
-                slowLog(s, sinfo.getNativeSql());
-                if (event.failed()) {
-                    completeExceptionally(workThread, future, event.cause());
-                } else {
-                    complete(workThread, future, handler.apply(new VertxResultSet(null, event.result())));
-                }
-            });
+            readPool(workThread)
+                    .preparedQuery(sinfo.getNativeSql())
+                    .execute()
+                    .andThen((AsyncResult<RowSet<Row>> event) -> {
+                        slowLog(s, sinfo.getNativeSql());
+                        if (event.failed()) {
+                            completeExceptionally(workThread, future, event.cause());
+                        } else {
+                            complete(workThread, future, handler.apply(new VertxResultSet(null, event.result())));
+                        }
+                    });
         }
         return future;
     }
@@ -1171,7 +1191,9 @@ public class VertxSqlDataSource extends AbstractDataSqlSource {
                     }
                 };
                 if (!sinfo.isEmptyNamed()) {
-                    pool.preparedQuery(pageSql).execute(tupleParameter(sinfo, params)).andThen(listHandler);
+                    pool.preparedQuery(pageSql)
+                            .execute(tupleParameter(sinfo, params))
+                            .andThen(listHandler);
                 } else {
                     pool.preparedQuery(pageSql).execute().andThen(listHandler);
                 }

@@ -5,6 +5,11 @@
  */
 package org.redkalex.cache.redis;
 
+import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import static org.redkale.util.Utility.*;
+import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_COUNT;
+import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
+
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -18,7 +23,6 @@ import java.util.logging.*;
 import org.redkale.annotation.*;
 import org.redkale.annotation.AutoLoad;
 import org.redkale.annotation.ResourceType;
-import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
 import org.redkale.convert.Convert;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.inject.ResourceEvent;
@@ -31,9 +35,6 @@ import org.redkale.net.client.ClientResponse;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkale.util.Utility.*;
-import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_COUNT;
-import static org.redkalex.cache.redis.RedisCacheRequest.BYTES_MATCH;
 
 /**
  * 详情见: https://redkale.org
@@ -320,14 +321,15 @@ public final class RedisCacheSource extends RedisSource {
             throw new RedkaleException("topics is empty");
         }
         RedisCacheRequest req = RedisCacheRequest.create(RedisCommand.SUBSCRIBE, null, keysArgs(topics));
-        return pubSubConn().thenCompose(conn -> conn.writeRequest(req).thenApply(v -> {
-            for (String topic : topics) {
-                pubSubListeners
-                        .computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>())
-                        .add(listener);
-            }
-            return null;
-        }));
+        return pubSubConn()
+                .thenCompose(conn -> conn.writeRequest(req).thenApply(v -> {
+                    for (String topic : topics) {
+                        pubSubListeners
+                                .computeIfAbsent(topic, y -> new CopyOnWriteArraySet<>())
+                                .add(listener);
+                    }
+                    return null;
+                }));
     }
 
     @Override
@@ -341,12 +343,13 @@ public final class RedisCacheSource extends RedisSource {
             }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             delTopics.forEach(topic -> {
-                futures.add(pubSubConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(
-                                RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
-                        .thenApply(r -> {
-                            pubSubListeners.remove(topic);
-                            return null;
-                        })));
+                futures.add(pubSubConn()
+                        .thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(
+                                        RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
+                                .thenApply(r -> {
+                                    pubSubListeners.remove(topic);
+                                    return null;
+                                })));
             });
             return returnFutureSize(futures);
         } else { // 清掉指定topic的指定订阅者
@@ -358,12 +361,13 @@ public final class RedisCacheSource extends RedisSource {
                 }
                 listens.remove(listener);
                 if (listens.isEmpty()) {
-                    futures.add(pubSubConn().thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(
-                                    RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
-                            .thenApply(r -> {
-                                pubSubListeners.remove(topic);
-                                return null;
-                            })));
+                    futures.add(pubSubConn()
+                            .thenCompose(conn -> conn.writeRequest(RedisCacheRequest.create(
+                                            RedisCommand.UNSUBSCRIBE, topic, topic.getBytes(StandardCharsets.UTF_8)))
+                                    .thenApply(r -> {
+                                        pubSubListeners.remove(topic);
+                                        return null;
+                                    })));
                 }
             }
             return returnFutureSize(futures);
@@ -1455,5 +1459,4 @@ public final class RedisCacheSource extends RedisSource {
         }
         return bs;
     }
-
 }

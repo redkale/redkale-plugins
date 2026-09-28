@@ -5,6 +5,8 @@
  */
 package org.redkalex.cache.redis;
 
+import static org.redkale.util.Utility.*;
+
 import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +15,6 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.logging.*;
 import java.util.stream.Collectors;
@@ -31,7 +32,6 @@ import org.redkale.inject.ResourceEvent;
 import org.redkale.service.Local;
 import org.redkale.source.*;
 import org.redkale.util.*;
-import static org.redkale.util.Utility.*;
 
 /**
  * //https://www.cnblogs.com/xiami2046/p/13934146.html
@@ -659,11 +659,7 @@ public class RedissonCacheSource extends RedisSource {
         }
         return toFuture(client.getScript(StringCodec.INSTANCE)
                 .evalAsync(
-                        RScript.Mode.READ_WRITE,
-                        SCRIPT_DELEX,
-                        RScript.ReturnType.LONG,
-                        List.of(key),
-                        expectedValue));
+                        RScript.Mode.READ_WRITE, SCRIPT_DELEX, RScript.ReturnType.LONG, List.of(key), expectedValue));
     }
 
     // --------------------- incrby ------------------------------
@@ -843,12 +839,7 @@ public class RedissonCacheSource extends RedisSource {
             } else {
                 String lua = "return redis.call('hscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
                 future = script.evalAsync(
-                        RScript.Mode.READ_ONLY,
-                        lua,
-                        RScript.ReturnType.LIST,
-                        List.of(key),
-                        cursor.toString(),
-                        pattern);
+                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.LIST, List.of(key), cursor.toString(), pattern);
             }
         }
         return toFuture(future.thenApply(result -> {
@@ -943,12 +934,7 @@ public class RedissonCacheSource extends RedisSource {
             } else {
                 String lua = "return redis.call('sscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
                 future = script.evalAsync(
-                        RScript.Mode.READ_ONLY,
-                        lua,
-                        RScript.ReturnType.LIST,
-                        List.of(key),
-                        cursor.toString(),
-                        pattern);
+                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.LIST, List.of(key), cursor.toString(), pattern);
             }
         }
         return toFuture(future.thenApply(result -> {
@@ -1068,8 +1054,9 @@ public class RedissonCacheSource extends RedisSource {
 
     @Override
     public <T> CompletableFuture<List<T>> mgetAsync(final Type componentType, String... keys) {
-        return toFuture(
-                client.getBuckets(ByteArrayCodec.INSTANCE).getAsync(keys).thenApply(result -> {
+        return toFuture(client.getBuckets(ByteArrayCodec.INSTANCE)
+                .getAsync(keys)
+                .thenApply(result -> {
                     List vs = new ArrayList();
                     for (String key : keys) {
                         vs.add(result.get(key));
@@ -1080,8 +1067,9 @@ public class RedissonCacheSource extends RedisSource {
 
     @Override
     public <T> CompletableFuture<Map<String, T>> hgetallAsync(final String key, final Type type) {
-        return toFuture(
-                client.getMap(key, MapByteArrayCodec.instance).readAllMapAsync().thenApply(map -> {
+        return toFuture(client.getMap(key, MapByteArrayCodec.instance)
+                .readAllMapAsync()
+                .thenApply(map -> {
                     Map rs = new LinkedHashMap();
                     map.forEach((k, v) -> rs.put(k.toString(), decryptValue(k.toString(), cryptor, type, (byte[]) v)));
                     return rs;
@@ -1413,12 +1401,7 @@ public class RedissonCacheSource extends RedisSource {
             } else {
                 String lua = "return redis.call('zscan', KEYS[1], ARGV[1], 'match', ARGV[2]);";
                 future = script.evalAsync(
-                        RScript.Mode.READ_ONLY,
-                        lua,
-                        RScript.ReturnType.LIST,
-                        List.of(key),
-                        cursor.toString(),
-                        pattern);
+                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.LIST, List.of(key), cursor.toString(), pattern);
             }
         }
         return toFuture(future.thenApply(result -> {
@@ -1525,5 +1508,4 @@ public class RedissonCacheSource extends RedisSource {
             return StringCodec.INSTANCE.getValueEncoder();
         }
     }
-
 }

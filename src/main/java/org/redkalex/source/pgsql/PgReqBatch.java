@@ -5,11 +5,12 @@
  */
 package org.redkalex.source.pgsql;
 
+import static org.redkalex.source.pgsql.PgClientCodec.logger;
+
 import java.util.*;
 import java.util.logging.Level;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
-import static org.redkalex.source.pgsql.PgClientCodec.logger;
 
 /** @author zhangjx */
 public class PgReqBatch extends PgClientRequest {

@@ -3,6 +3,8 @@
  */
 package org.redkalex.source.pgsql;
 
+import static org.redkalex.source.pgsql.PgClientCodec.logger;
+
 import java.io.Serializable;
 import java.util.*;
 import java.util.logging.Level;
@@ -10,7 +12,6 @@ import java.util.stream.Stream;
 import org.redkale.convert.json.JsonConvert;
 import org.redkale.net.client.ClientConnection;
 import org.redkale.util.*;
-import static org.redkalex.source.pgsql.PgClientCodec.logger;
 import org.redkalex.source.pgsql.PgPrepareDesc.PgExtendMode;
 
 /** @author zhangjx */

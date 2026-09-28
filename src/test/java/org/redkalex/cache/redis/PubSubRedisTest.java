@@ -5,21 +5,19 @@
  */
 package org.redkalex.cache.redis;
 
-import java.nio.charset.StandardCharsets;
 import static org.redkale.boot.Application.RESNAME_APP_CLIENT_ASYNCGROUP;
+import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
+import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODES;
+
+import java.nio.charset.StandardCharsets;
 import org.redkale.boot.LoggingBaseHandler;
 import org.redkale.inject.ResourceFactory;
 import org.redkale.net.AsyncIOGroup;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_MAXCONNS;
-import static org.redkale.source.AbstractCacheSource.CACHE_SOURCE_NODES;
 import org.redkale.source.CacheEventListener;
 import org.redkale.util.AnyValueWriter;
 import org.redkale.util.Utility;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class PubSubRedisTest {
 
     private static final String TOPIC = "channel001";

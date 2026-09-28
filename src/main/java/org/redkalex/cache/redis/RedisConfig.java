@@ -3,13 +3,14 @@
  */
 package org.redkalex.cache.redis;
 
+import static org.redkale.source.AbstractCacheSource.*;
+import static org.redkale.util.Utility.isEmpty;
+import static org.redkale.util.Utility.isNotEmpty;
+
 import java.net.URI;
 import java.util.*;
 import org.redkale.convert.json.JsonConvert;
-import static org.redkale.source.AbstractCacheSource.*;
 import org.redkale.util.*;
-import static org.redkale.util.Utility.isEmpty;
-import static org.redkale.util.Utility.isNotEmpty;
 
 /** @author zhangjx */
 public class RedisConfig {

@@ -17,10 +17,7 @@ import org.bson.codecs.pojo.Convention;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import org.bson.json.JsonWriter;
 
-/**
- *
- * @author zhangjx
- */
+/** @author zhangjx */
 public class TestCodecProvider {
     public static void main(String[] args) throws Throwable {
         MongoClientSettings.Builder settingBuilder = MongoClientSettings.builder();
@@ -33,16 +30,14 @@ public class TestCodecProvider {
         settingBuilder.codecRegistry(registry);
         MongoClientSettings setting = settingBuilder.build();
         CodecRegistry reg = setting.getCodecRegistry();
-        /**
-         * @see org.bson.codecs.pojo.AutomaticPojoCodec
-         */
+        /** @see org.bson.codecs.pojo.AutomaticPojoCodec */
         Codec codec = reg.get(TestRecord.class);
         StringWriter pw = new StringWriter();
         JsonWriter writer = new JsonWriter(pw);
         TestRecord bean = new TestRecord();
         EncoderContext context = EncoderContext.builder().build();
         bean.setCreateTime(1);
-        bean.setStatus((short)1);
+        bean.setStatus((short) 1);
         bean.setName("haha");
         bean.setRecordid("xxxx");
         codec.encode(writer, bean, context);

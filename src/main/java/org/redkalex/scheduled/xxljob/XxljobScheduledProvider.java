@@ -3,9 +3,9 @@
  */
 package org.redkalex.scheduled.xxljob;
 
-import org.redkale.util.AnyValue;
 import org.redkale.scheduled.ScheduledManager;
 import org.redkale.scheduled.spi.ScheduledManagerProvider;
+import org.redkale.util.AnyValue;
 
 /** @author zhangjx */
 public class XxljobScheduledProvider implements ScheduledManagerProvider {

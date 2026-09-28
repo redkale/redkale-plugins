@@ -2,6 +2,8 @@
  */
 package org.redkalex.cache.redis;
 
+import static org.redkale.util.Utility.*;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -60,7 +62,6 @@ import org.redkale.util.Creator;
 import org.redkale.util.RedkaleException;
 import org.redkale.util.TypeToken;
 import org.redkale.util.Utility;
-import static org.redkale.util.Utility.*;
 
 /** @author zhangjx */
 @Local
@@ -795,13 +796,14 @@ public class RedisVertxCacheSource extends RedisSource {
             }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             delTopics.forEach(topic -> {
-                futures.add(pubSubConn().thenCompose(conn -> conn.send(
-                                Request.cmd(Command.UNSUBSCRIBE).arg(topic))
-                        .toCompletionStage()
-                        .thenApply(r -> {
-                            pubSubListeners.remove(topic);
-                            return null;
-                        })));
+                futures.add(pubSubConn()
+                        .thenCompose(conn -> conn.send(
+                                        Request.cmd(Command.UNSUBSCRIBE).arg(topic))
+                                .toCompletionStage()
+                                .thenApply(r -> {
+                                    pubSubListeners.remove(topic);
+                                    return null;
+                                })));
             });
             return returnFutureSize(futures);
         } else { // 清掉指定topic的指定订阅者
@@ -813,13 +815,14 @@ public class RedisVertxCacheSource extends RedisSource {
                 }
                 listens.remove(listener);
                 if (listens.isEmpty()) {
-                    futures.add(pubSubConn().thenCompose(conn -> conn.send(
-                                    Request.cmd(Command.UNSUBSCRIBE).arg(topic))
-                            .toCompletionStage()
-                            .thenApply(r -> {
-                                pubSubListeners.remove(topic);
-                                return null;
-                            })));
+                    futures.add(pubSubConn()
+                            .thenCompose(conn -> conn.send(
+                                            Request.cmd(Command.UNSUBSCRIBE).arg(topic))
+                                    .toCompletionStage()
+                                    .thenApply(r -> {
+                                        pubSubListeners.remove(topic);
+                                        return null;
+                                    })));
                 }
             }
             return returnFutureSize(futures);
@@ -1582,5 +1585,4 @@ public class RedisVertxCacheSource extends RedisSource {
     public CompletableFuture<Void> flushallAsync() {
         return sendAsync(Request.cmd(Command.FLUSHALL)).thenApply(v -> null);
     }
-
 }

@@ -6,8 +6,8 @@
 package org.redkalex.source.search;
 
 import java.io.Serializable;
-import org.redkale.convert.json.JsonConvert;
 import org.redkale.annotation.Serial;
+import org.redkale.convert.json.JsonConvert;
 
 /** @author zhangjx */
 @Serial
