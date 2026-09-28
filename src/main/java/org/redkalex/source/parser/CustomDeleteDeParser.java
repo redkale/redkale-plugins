@@ -23,11 +23,11 @@ public class CustomDeleteDeParser extends DeleteDeParser {
     @Override
     protected void deparseWhereClause(Delete delete) {
         if (delete.getWhere() != null) {
-            buffer.append(" WHERE ");
-            int len = buffer.length();
+            builder.append(" WHERE ");
+            int len = builder.length();
             delete.getWhere().accept(getExpressionVisitor());
-            if (buffer.length() == len) {
-                buffer.delete(len - " WHERE ".length(), len);
+            if (builder.length() == len) {
+                builder.delete(len - " WHERE ".length(), len);
             }
         }
     }

@@ -18,19 +18,19 @@ import net.sf.jsqlparser.util.deparser.StatementDeParser;
 public class CustomStatementDeParser extends StatementDeParser {
 
     public CustomStatementDeParser(
-            ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder buffer) {
-        super(expressionDeParser, selectDeParser, buffer);
+            ExpressionDeParser expressionDeParser, SelectDeParser selectDeParser, StringBuilder builder) {
+        super(expressionDeParser, selectDeParser, builder);
     }
 
     @Override
     public <S> StringBuilder visit(Delete delete, S context) {
-        new CustomDeleteDeParser(getExpressionDeParser(), buffer).deParse(delete);
-        return buffer;
+        new CustomDeleteDeParser(getExpressionDeParser(), builder).deParse(delete);
+        return builder;
     }
 
     @Override
     public <S> StringBuilder visit(Update update, S context) {
-        new CustomUpdateDeParser(getExpressionDeParser(), buffer).deParse(update);
-        return buffer;
+        new CustomUpdateDeParser(getExpressionDeParser(), builder).deParse(update);
+        return builder;
     }
 }

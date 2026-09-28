@@ -16,18 +16,18 @@ import net.sf.jsqlparser.util.deparser.UpdateDeParser;
 
 public class CustomUpdateDeParser extends UpdateDeParser {
 
-    public CustomUpdateDeParser(ExpressionVisitor expressionVisitor, StringBuilder buffer) {
-        super(expressionVisitor, buffer);
+    public CustomUpdateDeParser(ExpressionVisitor expressionVisitor, StringBuilder builder) {
+        super(expressionVisitor, builder);
     }
 
     @Override
     protected void deparseWhereClause(Update update) {
         if (update.getWhere() != null) {
-            buffer.append(" WHERE ");
-            int len = buffer.length();
+            builder.append(" WHERE ");
+            int len = builder.length();
             update.getWhere().accept(getExpressionVisitor());
-            if (buffer.length() == len) {
-                buffer.delete(len - " WHERE ".length(), len);
+            if (builder.length() == len) {
+                builder.delete(len - " WHERE ".length(), len);
             }
         }
     }

@@ -6,12 +6,14 @@ package org.redkalex.source.parser;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
+import net.sf.jsqlparser.statement.select.SelectVisitor;
 import org.redkale.annotation.Nullable;
 import org.redkale.source.DataNativeSqlStatement;
 import org.redkale.source.RowBound;
@@ -74,11 +76,11 @@ public class NativeParserNode {
             // 生成COUNT语句
             PlainSelect select = (PlainSelect) originStmt;
             exprDeParser.reset();
-            StringBuilder buffer = exprDeParser.getBuffer();
+            StringBuilder buffer = exprDeParser.getBuilder();
             NativeCountDeParser countDeParser = new NativeCountDeParser(exprDeParser, buffer);
             exprDeParser.setSelectVisitor(countDeParser);
             countDeParser.initCountSelect(select, countSelectItems);
-            select.accept(countDeParser, null);
+            select.accept((SelectVisitor) countDeParser, null);
             countSql = buffer.toString();
             if (RowBound.hasLimit(round)) {
                 if ("oracle".equals(dbtype)) {

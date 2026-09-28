@@ -239,7 +239,7 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                 public <S> StringBuilder visit(JdbcNamedParameter expr, S context) {
                     super.visit(expr, context);
                     fullJdbcNames.add(expr.getName());
-                    return buffer;
+                    return builder;
                 }
 
                 @Override
@@ -276,10 +276,10 @@ public class NativeParserInfo extends DataNativeSqlInfo {
                     public <S> StringBuilder visit(JdbcNamedParameter expr, S context) {
                         super.visit(expr, context);
                         updateNames.add(expr.getName());
-                        return buffer;
+                        return builder;
                     }
                 };
-                updateDeParser.setSelectVisitor(new SelectDeParser(updateDeParser, updateDeParser.getBuffer()));
+                updateDeParser.setSelectVisitor(new SelectDeParser(updateDeParser, updateDeParser.getBuilder()));
                 List<UpdateSet> updateSets = ((Update) stmt).getUpdateSets();
                 if (updateSets != null) {
                     for (UpdateSet updateSet : updateSets) {

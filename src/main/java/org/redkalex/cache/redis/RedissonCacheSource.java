@@ -620,7 +620,7 @@ public class RedissonCacheSource extends RedisSource {
         RScript.ReturnType rt = RScript.ReturnType.VALUE;
         final Class t = TypeToken.typeToClass(type);
         if (Collection.class.isAssignableFrom(t)) {
-            rt = RScript.ReturnType.MULTI;
+            rt = RScript.ReturnType.LIST;
         } else if (Map.class.isAssignableFrom(t)) {
             rt = RScript.ReturnType.MAPVALUE;
         }
@@ -661,7 +661,7 @@ public class RedissonCacheSource extends RedisSource {
                 .evalAsync(
                         RScript.Mode.READ_WRITE,
                         SCRIPT_DELEX,
-                        RScript.ReturnType.INTEGER,
+                        RScript.ReturnType.LONG,
                         List.of(key),
                         expectedValue));
     }
@@ -820,14 +820,14 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(key),
                         cursor.toString(),
                         String.valueOf(limit));
             } else {
                 String lua = "return redis.call('hscan', KEYS[1], ARGV[1]);";
                 future = script.evalAsync(
-                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
+                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.LIST, List.of(key), cursor.toString());
             }
         } else {
             if (limit > 0) {
@@ -835,7 +835,7 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(key),
                         cursor.toString(),
                         pattern,
@@ -845,7 +845,7 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(key),
                         cursor.toString(),
                         pattern);
@@ -876,14 +876,14 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(),
                         cursor.toString(),
                         String.valueOf(limit));
             } else {
                 String lua = "return redis.call('scan', ARGV[1]);";
                 future = script.evalAsync(
-                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString());
+                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.LIST, List.of(), cursor.toString());
             }
         } else {
             if (limit > 0) {
@@ -891,7 +891,7 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(),
                         cursor.toString(),
                         pattern,
@@ -899,7 +899,7 @@ public class RedissonCacheSource extends RedisSource {
             } else {
                 String lua = "return redis.call('scan', ARGV[1], 'match', ARGV[2]);";
                 future = script.evalAsync(
-                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(), cursor.toString(), pattern);
+                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.LIST, List.of(), cursor.toString(), pattern);
             }
         }
         return toFuture(future.thenApply(result -> {
@@ -920,14 +920,14 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(key),
                         cursor.toString(),
                         String.valueOf(limit));
             } else {
                 String lua = "return redis.call('sscan', KEYS[1], ARGV[1]);";
                 future = script.evalAsync(
-                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
+                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.LIST, List.of(key), cursor.toString());
             }
         } else {
             if (limit > 0) {
@@ -935,7 +935,7 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(key),
                         cursor.toString(),
                         pattern,
@@ -945,7 +945,7 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(key),
                         cursor.toString(),
                         pattern);
@@ -1390,14 +1390,14 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(key),
                         cursor.toString(),
                         String.valueOf(limit));
             } else {
                 String lua = "return redis.call('zscan', KEYS[1], ARGV[1]);";
                 future = script.evalAsync(
-                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.MULTI, List.of(key), cursor.toString());
+                        RScript.Mode.READ_ONLY, lua, RScript.ReturnType.LIST, List.of(key), cursor.toString());
             }
         } else {
             if (limit > 0) {
@@ -1405,7 +1405,7 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(key),
                         cursor.toString(),
                         pattern,
@@ -1415,7 +1415,7 @@ public class RedissonCacheSource extends RedisSource {
                 future = script.evalAsync(
                         RScript.Mode.READ_ONLY,
                         lua,
-                        RScript.ReturnType.MULTI,
+                        RScript.ReturnType.LIST,
                         List.of(key),
                         cursor.toString(),
                         pattern);
